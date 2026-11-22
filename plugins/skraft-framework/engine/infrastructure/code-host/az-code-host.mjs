@@ -2,7 +2,7 @@ import { pullRequestPage } from '../../domain/review/azure-pull-request.mjs'
 import { find as findByNumber, keepComment as keepThread, repositoryOf } from './az-repos.mjs'
 import { keepComment, workItem } from './az-boards.mjs'
 import { keepPullRequestComment } from './az-threads.mjs'
-import { NO_AZURE_REMOTE, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused, failedWrite } from './az-cli.mjs'
+import { AZ_NOT_FROM_INSTALLER, NO_AZ, NO_AZURE_REMOTE, NO_EXTENSION, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused, failedWrite } from './az-cli.mjs'
 import { branchOnRemote } from './git-push.mjs'
 import { readComment } from './az-read-back.mjs'
 
@@ -33,7 +33,38 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   bodyLimit: 4_000,
   // az sends a comment from a JSON file.
   takesRequestFile: true,
+  ...screenshotsOf(commandRunner),
 })
+
+/**
+ * How a pull request shows screenshots on Azure Repos: committed on the working branch, each
+ * linked by the Items route of the Git REST API at its commit. az sends no file as a binary
+ * body: `az devops invoke --in-file` parses its file as JSON, and `az rest --body @<file>` sends
+ * a binary file base64-encoded (read in the sources of azure-cli 2.90.0 and its azure-devops
+ * extension 1.0.10), so the pull request attachments route cannot be reached. That an Azure Repos
+ * pull request shows an image of that route is not measured (docs/v2/host-verification.md).
+ * @param {CommandRunner} commandRunner
+ */
+const screenshotsOf = (commandRunner) => ({
+  attachesFiles: false,
+  fileUrl: (/** @type {string} */ commit, /** @type {string} */ path) => itemUrl(commandRunner, commit, path),
+  screenshotsBlocked: () => extensionMissing(commandRunner),
+})
+
+/** @param {CommandRunner} commandRunner @param {string} commit @param {string} path relative to the working copy */
+const itemUrl = async (commandRunner, commit, path) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return null
+  const query = `path=${encodeURIComponent(`/${path}`)}&versionDescriptor.version=${encodeURIComponent(commit)}&versionDescriptor.versionType=commit&api-version=7.1`
+  return `${remote.organization}/${encodeURIComponent(remote.project)}/_apis/git/repositories/${encodeURIComponent(remote.repository)}/items?${query}`
+}
+
+/** Why az cannot commit nor link screenshots here: no az, or no azure-devops extension; null when it can. @param {CommandRunner} commandRunner */
+const extensionMissing = async (commandRunner) => {
+  const version = await run(commandRunner, ['az', '--version'])
+  if (!version.started) return version.error === AZ_NOT_FROM_INSTALLER ? AZ_NOT_FROM_INSTALLER : NO_AZ
+  return succeeded(await run(commandRunner, ['az', 'extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json'])) ? null : NO_EXTENSION
+}
 
 /**
  * The pull request of a branch, found, read whole by its number, opened, its description replaced.

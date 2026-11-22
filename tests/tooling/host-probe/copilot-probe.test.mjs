@@ -11,11 +11,14 @@ const SHARED_MCP_TOOLS = ['skraft_answer', 'skraft_doctor', 'skraft_init', 'skra
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 
-const probe = async (t, host, models = CONFIGURED_MODELS, agentCalls = false, incidentSession = false) => {
+/** What `gh pr create --help` prints since gh 2.103.3, trimmed to its flag. */
+const GH_HELP = '      --attach file          Attach an image or video file, in \'<file>#<image alt text>\' format\n'
+
+const probe = async (t, host, models = CONFIGURED_MODELS, agentCalls = false, incidentSession = false, ghHelp = () => GH_HELP) => {
   const workRoot = await mkdtemp(join(tmpdir(), 'skraft-host-probe-test-'))
   t.after(() => rm(workRoot, { recursive: true, force: true }))
   const home = join(workRoot, 'home')
-  const report = await runProbe({ sdk: simulatedSdk({ ...host, home }), environment: ENVIRONMENT, workRoot, home, models, agentCalls, incidentSession, timings: FAST })
+  const report = await runProbe({ sdk: simulatedSdk({ ...host, home }), environment: ENVIRONMENT, workRoot, home, models, agentCalls, incidentSession, timings: FAST, ghHelp })
   return { report, verdicts: Object.fromEntries(report.checks.map((item) => [item.id, item.verdict])) }
 }
 
@@ -70,6 +73,7 @@ test('on a host that behaves as the issues say, every host premise is measured, 
     'plugin-command-input': 'pass',
     'skraft-command-listed': 'pass',
     'plugin-hooks-quiet': 'pass',
+    'gh-pr-attach': 'pass',
   })
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-server-loaded').observed, { servers: [{ name: 'skraft', status: 'connected', sourcePlugin: 'skraft-framework' }], tools: SHARED_MCP_TOOLS })
   assert.deepEqual(report.checks.find((item) => item.id === 'skraft-mcp-loop-hidden').observed, { offered: [] })
@@ -472,4 +476,10 @@ test('with --incident-session, a session that records an option without reading 
   const { report, verdicts } = await probe(t, { incidentModel: 'guesses' }, CONFIGURED_MODELS, false, true)
   assert.equal(verdicts['incident-read-answered'], 'fail')
   assert.equal(report.checks.find((item) => item.id === 'incident-read-answered').observed.quotedToken, false)
+})
+
+test('the probe reads gh\'s help for --attach, which the engine uploads a pull request\'s screenshots with: a gh without it fails, no gh is inconclusive', async (t) => {
+  const verdictOf = async (help) => (await probe(t, {}, CONFIGURED_MODELS, false, false, help)).report.checks.find((item) => item.id === 'gh-pr-attach')
+
+  assert.deepEqual([(await verdictOf(() => GH_HELP)).verdict, (await verdictOf(() => '  -B, --base branch\n')).verdict, (await verdictOf(() => null)).verdict], ['pass', 'fail', 'inconclusive'])
 })

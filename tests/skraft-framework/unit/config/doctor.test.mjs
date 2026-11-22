@@ -102,6 +102,7 @@ test('the forge is reachable: doctor passes and lists every command of a compone
       { subject: 'node', status: 'ok', detail: 'Node v22.11.0' },
       { subject: 'config', status: 'ok', detail: '2 components: api, web' },
       { subject: 'forge', status: 'ok', detail: 'github, deduced from the Git remote' },
+      { subject: 'screenshots', status: 'ok', detail: 'attached to the pull request by the forge\'s client' },
       { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo (listed; skraft_repl starts it, never skraft)' },
       { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo --logger trx (listed; skraft_repl starts it, never skraft)' },
       { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:{baseSha} (listed; skraft_repl starts it, never skraft)' },
@@ -144,6 +145,20 @@ test('doctor names the forge a run uses and what chose it, and warns of what thi
   assert.deepEqual(await forgeOn({ remote: AZURE }), [true, { subject: 'forge', status: 'warn', detail: `azure-devops, deduced from the Git remote: ${UNREACHABLE}` }])
   assert.deepEqual(await forgeOn({ config: { forge: 'azure-devops' } }), [true, { subject: 'forge', status: 'warn', detail: `azure-devops, named in the configuration: ${UNREACHABLE}` }])
   assert.deepEqual(await forgeOn({ codeHost: new InMemoryCodeHost({ unavailable: SIGNED_OUT }) }), [true, { subject: 'forge', status: 'warn', detail: `github, deduced from the Git remote: ${SIGNED_OUT}` }])
+})
+
+/** The doctor's verdict and its screenshots line, for a working copy with a front end. */
+const screenshotsOn = async (codeHost, components = [API, MICROCKS_WEB]) => {
+  const report = await doctor({ components, codeHost }).doctor.check()
+  return [report.ok, report.checks.filter(({ subject }) => subject === 'screenshots')]
+}
+
+test('doctor says how a front end\'s screenshots reach the pull request, and warns, never failing, when the forge\'s client cannot show them', async () => {
+  const NO_ATTACH = 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots'
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost({ screenshotsBlocked: NO_ATTACH })), [true, [{ subject: 'screenshots', status: 'warn', detail: NO_ATTACH }]])
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost({ attachesFiles: false })), [true, [{ subject: 'screenshots', status: 'ok', detail: 'committed on the working branch and linked at their commit' }]])
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost(), [API]), [true, []])
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost({ unavailable: SIGNED_OUT })), [true, []])
 })
 
 test('doctor never looks a command\'s program up: with no program installed, every command that parses passes', async () => {

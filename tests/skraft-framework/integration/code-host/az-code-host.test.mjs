@@ -53,6 +53,20 @@ test('a pull request can be opened once the remote names an Azure DevOps reposit
   assert.deepEqual(forge.calls().slice(-3), [['--version'], ['extension', 'show', '--name=azure-devops', '--only-show-errors', '--output=json'], ['repos', 'show', ...ON_SHOP]])
 })
 
+test('on Azure Repos a screenshot is committed, never attached: each is shown by the Items route of the repository at its commit, and doctor asks only for az and its azure-devops extension', async (t) => {
+  const { forge, codeHost, withoutAz } = repository(t)
+  const host = codeHost()
+
+  assert.equal(host.attachesFiles, false)
+  assert.equal(await host.fileUrl('abc123', '.copilot-tracking/skraft-plans/pay by card/evidence/web/light-1.png'),
+    'https://dev.azure.com/acme/Shop%20Team/_apis/git/repositories/payment/items?path=%2F.copilot-tracking%2Fskraft-plans%2Fpay%20by%20card%2Fevidence%2Fweb%2Flight-1.png&versionDescriptor.version=abc123&versionDescriptor.versionType=commit&api-version=7.1')
+  assert.equal(await repository(t, { remote: null }).codeHost().fileUrl('abc123', 'a.png'), null)
+  assert.equal(await host.screenshotsBlocked(), null)
+  forge.set({ extension: false })
+  assert.equal(await host.screenshotsBlocked(), 'the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops')
+  assert.equal(await withoutAz().screenshotsBlocked(), 'az, the Azure CLI, is not installed')
+})
+
 // cmd.exe stands for itself: it keeps a mark of any start, git included, and answers nothing.
 test('under Windows an az that is not the Azure CLI installer\'s is refused before any process starts, and the reason says how to install it', { skip: process.platform === 'win32' && 'Windows rules are simulated here' }, async (t) => {
   const { root, cwd, forge } = repository(t)

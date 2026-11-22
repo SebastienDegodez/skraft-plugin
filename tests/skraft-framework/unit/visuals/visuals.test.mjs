@@ -17,6 +17,11 @@ const E2E = 'web $ npx playwright test'
 const TRACED = 'logs/runs/deliver-1-1/1.log'
 const EVIDENCE = `.copilot-tracking/skraft-plans/${SLUG}/evidence/${SLUG}`
 const RAW = 'https://github.com/acme/shop/raw/root-1'
+const SHOTS = 'web/skraft-visuals'
+/** Azure Repos' Items route of a file of the repository at a commit. */
+const ITEMS = (commit, path) => `https://dev.azure.com/acme/shop/_apis/git/repositories/shop/items?path=${encodeURIComponent(`/${path}`)}&versionDescriptor.version=${commit}&versionDescriptor.versionType=commit&api-version=7.1`
+/** A forge whose client attaches no file, Azure DevOps': the screenshots are committed and linked at their commit. */
+const azure = (options = {}) => new InMemoryCodeHost({ attachesFiles: false, fileUrl: ITEMS, ...options })
 
 const WORKFLOW = `digraph visuals {
   start    [shape=Mdiamond]
@@ -49,40 +54,90 @@ const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost,
   return host
 }
 
-test('the e2e run of a front end leaves its light and dark screenshots on the working branch, and the pull request shows them at that commit', async () => {
+test('on GitHub the screenshots stay where Playwright wrote them: gh attaches them to the pull request, which shows them light first and dark folded, and nothing is committed', async () => {
   const host = visualsRun()
 
   const outcome = await host.start(STORY)
 
   assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual([host.git.engineCommits, host.git.copies], [[], []])
+  const visuals = eventsOf(host, 'step.recorded').find(({ step }) => step === 'visuals')
+  assert.deepEqual({ outcome: visuals.outcome, next: visuals.next, reason: visuals.reason }, { outcome: 'recorded', next: 'publish', reason: '4 screenshots to attach to the pull request' })
+  assert.equal(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Screenshots'), [
+    '- web: e2e run passed (`npx playwright test`, evidence `logs/runs/deliver-1-1/1.log`); 4 screenshots attached to the pull request',
+    '',
+    `![Checkout form, card filled in](./${SHOTS}/checkout-light.png)`,
+    '',
+    `![Payment accepted](./${SHOTS}/accepted-light.png)`,
+    '',
+    '<details><summary>Dark theme</summary>',
+    '',
+    `![Checkout form, card filled in](./${SHOTS}/checkout-dark.png)`,
+    '',
+    `![Payment accepted](./${SHOTS}/accepted-dark.png)`,
+    '',
+    '</details>',
+  ].join('\n'))
+  assert.deepEqual(host.codeHost.attached, [[
+    { path: `${SHOTS}/checkout-light.png`, alt: 'Checkout form, card filled in' },
+    { path: `${SHOTS}/accepted-light.png`, alt: 'Payment accepted' },
+    { path: `${SHOTS}/checkout-dark.png`, alt: 'Checkout form, card filled in' },
+    { path: `${SHOTS}/accepted-dark.png`, alt: 'Payment accepted' },
+  ]])
+  assert.ok(host.codeHost.pullRequests[0].body.includes('![Payment accepted](https://github.com/user-attachments/assets/1-2)'), host.codeHost.pullRequests[0].body)
+  assert.match(eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish').reason, /^pull request #42 opened as a draft: \S+$/)
+})
+
+test('a screenshot gh did not attach is told by reading the body back, and the pull request is still opened; an update attaches them again, and the body gh rewrote counts as the one skraft wrote', async () => {
+  const host = visualsRun({ codeHost: new InMemoryCodeHost({ unattached: [`${SHOTS}/accepted-light.png`, `${SHOTS}/accepted-dark.png`] }) })
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  assert.equal(eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish').reason, `pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; 2 screenshots did not attach: ${SHOTS}/accepted-light.png, ${SHOTS}/accepted-dark.png`)
+  assert.ok(host.codeHost.pullRequests[0].body.includes(`![Payment accepted](./${SHOTS}/accepted-light.png)`))
+
+  host.codeHost.unattached.clear()
+  assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42')
+  assert.equal(host.codeHost.attached.at(-1).length, 4)
+  assert.ok(!host.codeHost.pullRequests[0].body.includes('](./'), host.codeHost.pullRequests[0].body)
+  assert.match((await host.publish()).reason, /pull request #42 is up to date/)
+  host.codeHost.pullRequests[0].body += '\nA reviewer\'s note.'
+  assert.match((await host.publish()).reason, /was edited since skraft last wrote its body/)
+})
+
+test('on a forge whose client attaches no file, the screenshots are committed on the working branch and the pull request shows each at its commit, from the address the forge gives', async () => {
+  const host = visualsRun({ codeHost: azure() })
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
   assert.deepEqual(host.git.engineCommits, [{
     dir: '.',
     paths: [`${EVIDENCE}/web/light-1.png`, `${EVIDENCE}/web/light-2.png`, `${EVIDENCE}/web/dark-1.png`, `${EVIDENCE}/web/dark-2.png`],
     message: 'docs(evidence): screenshots of web\n\nRefs: #42',
   }])
   assert.deepEqual(host.git.copies, [
-    { from: 'web/skraft-visuals/checkout-light.png', to: `${EVIDENCE}/web/light-1.png` },
-    { from: 'web/skraft-visuals/accepted-light.png', to: `${EVIDENCE}/web/light-2.png` },
-    { from: 'web/skraft-visuals/checkout-dark.png', to: `${EVIDENCE}/web/dark-1.png` },
-    { from: 'web/skraft-visuals/accepted-dark.png', to: `${EVIDENCE}/web/dark-2.png` },
+    { from: `${SHOTS}/checkout-light.png`, to: `${EVIDENCE}/web/light-1.png` },
+    { from: `${SHOTS}/accepted-light.png`, to: `${EVIDENCE}/web/light-2.png` },
+    { from: `${SHOTS}/checkout-dark.png`, to: `${EVIDENCE}/web/dark-1.png` },
+    { from: `${SHOTS}/accepted-dark.png`, to: `${EVIDENCE}/web/dark-2.png` },
   ])
-  const visuals = eventsOf(host, 'step.recorded').find(({ step }) => step === 'visuals')
-  assert.deepEqual({ outcome: visuals.outcome, next: visuals.next, reason: visuals.reason }, { outcome: 'recorded', next: 'publish', reason: '4 screenshots committed in root-1' })
+  assert.deepEqual(visualsStep(host), { outcome: 'recorded', next: 'publish', reason: '4 screenshots committed in root-1' })
   assert.equal(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Screenshots'), [
     '- web: e2e run passed (`npx playwright test`, evidence `logs/runs/deliver-1-1/1.log`); 4 screenshots committed',
     '',
-    `![Checkout form, card filled in](${RAW}/${EVIDENCE}/web/light-1.png)`,
+    `![Checkout form, card filled in](${ITEMS('root-1', `${EVIDENCE}/web/light-1.png`)})`,
     '',
-    `![Payment accepted](${RAW}/${EVIDENCE}/web/light-2.png)`,
+    `![Payment accepted](${ITEMS('root-1', `${EVIDENCE}/web/light-2.png`)})`,
     '',
     '<details><summary>Dark theme</summary>',
     '',
-    `![Checkout form, card filled in](${RAW}/${EVIDENCE}/web/dark-1.png)`,
+    `![Checkout form, card filled in](${ITEMS('root-1', `${EVIDENCE}/web/dark-1.png`)})`,
     '',
-    `![Payment accepted](${RAW}/${EVIDENCE}/web/dark-2.png)`,
+    `![Payment accepted](${ITEMS('root-1', `${EVIDENCE}/web/dark-2.png`)})`,
     '',
     '</details>',
   ].join('\n'))
+  assert.deepEqual(host.codeHost.attached, [[]])
 })
 
 /** The Screenshots section of the body the run wrote. */
@@ -102,7 +157,7 @@ test('without the developer\'s consent the e2e run still runs, but no screenshot
 
     assert.deepEqual([host.git.engineCommits, host.git.copies], [[], []])
     const told = `4 screenshots not published (consent): ${why}`
-    assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: `no screenshot committed: web: ${told}; kiosk: no traced e2e run: run the front end\'s e2e command through skraft_repl with gate(\'e2e\', <command>, { cwd: <its root> })` })
+    assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: `no screenshot recorded: web: ${told}; kiosk: no traced e2e run: run the front end\'s e2e command through skraft_repl with gate(\'e2e\', <command>, { cwd: <its root> })` })
     assert.deepEqual(eventsOf(host, 'visuals.recorded')[0].components[1].screenshots, [])
     assert.equal((await screenshots(host)).split('\n')[0], `- web: e2e run passed (\`npx playwright test\`, evidence \`logs/runs/deliver-1-1/1.log\`); ${told}`)
 
@@ -122,16 +177,16 @@ test('with no front end, the visuals node is skipped and runs nothing; without w
 
   const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), components: [API], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
   await always.start(STORY)
-  assert.deepEqual(visualsStep(always), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot committed: ' })
+  assert.deepEqual(visualsStep(always), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: ' })
   assert.equal(await screenshots(always), 'None recorded: no component of skraft-config.json is a front end (stack react, or an e2e command).')
 })
 
-test('screenshots are shown from the forge the remote names: its own raw route off github.com, their paths when it names none', async () => {
-  const enterprise = visualsRun({ codeHost: new InMemoryCodeHost({ repository: { host: 'ghe.acme.io', repository: 'payments/shop' } }) })
+test('committed screenshots are shown from the address the forge gives at their commit, their paths when it gives none', async () => {
+  const enterprise = visualsRun({ codeHost: azure({ fileUrl: (commit, path) => `https://ghe.acme.io/payments/shop/raw/${commit}/${path}` }) })
   await enterprise.start(STORY)
   assert.ok((await screenshots(enterprise)).includes(`![Payment accepted](https://ghe.acme.io/payments/shop/raw/root-1/${EVIDENCE}/web/light-2.png)`), await screenshots(enterprise))
 
-  const nowhere = visualsRun({ codeHost: new InMemoryCodeHost({ repository: null }) })
+  const nowhere = visualsRun({ codeHost: azure({ fileUrl: () => null }) })
   await nowhere.start(STORY)
   assert.deepEqual((await screenshots(nowhere)).split('\n').slice(1, 5), [
     '',
@@ -148,30 +203,33 @@ test('a title is kept as plain alt text: no markup, mention, issue reference or 
 
   await host.start(STORY)
 
-  assert.equal((await screenshots(host)).split('\n').at(-1), `![Paid img src x by octocat, fixes 12 x (y) link (z) code café 100](${RAW}/${EVIDENCE}/web/light-1.png)`)
-  assert.deepEqual(host.git.copies, [{ from: 'web/skraft-visuals/a b.png', to: `${EVIDENCE}/web/light-1.png` }])
+  const alt = 'Paid img src x by octocat, fixes 12 x (y) link (z) code café 100'
+  assert.equal((await screenshots(host)).split('\n').at(-1), `![${alt}](./${SHOTS}/a b.png)`)
+  assert.deepEqual(host.codeHost.attached, [[{ path: `${SHOTS}/a b.png`, alt }]])
 
-  const long = visualsRun({ screenshots: [{ title: `${'Checkout '.repeat(15)}end`, theme: 'light', path: 'skraft-visuals/a.png', bytes: 'PNG' }] })
+  const long = visualsRun({ codeHost: azure(), screenshots: [{ title: `${'Checkout '.repeat(15)}end`, theme: 'light', path: 'skraft-visuals/a.png', bytes: 'PNG' }] })
   await long.start(STORY)
-  assert.equal((await screenshots(long)).split('\n').at(-1), `![${'Checkout '.repeat(15).slice(0, 120)}](${RAW}/${EVIDENCE}/web/light-1.png)`)
+  assert.equal((await screenshots(long)).split('\n').at(-1), `![${'Checkout '.repeat(15).slice(0, 120)}](${ITEMS('root-1', `${EVIDENCE}/web/light-1.png`)})`)
 })
 
-test('a screenshot that is a symbolic link, lies outside its component or is no PNG is refused: nothing is committed, and the pull request says which', async () => {
-  const host = visualsRun()
-  host.git.refuses = ['web/skraft-visuals/accepted-light.png', 'web/skraft-visuals/accepted-dark.png']
+test('a screenshot that is a symbolic link, lies outside its component or is no PNG is refused: nothing is attached nor committed, and the pull request says which', async () => {
+  for (const codeHost of [new InMemoryCodeHost(), azure()]) {
+    const host = visualsRun({ codeHost })
+    host.git.refuses = ['web/skraft-visuals/accepted-light.png', 'web/skraft-visuals/accepted-dark.png']
 
-  assert.equal((await host.start(STORY)).status, 'done')
+    assert.equal((await host.start(STORY)).status, 'done')
 
-  assert.deepEqual(host.git.engineCommits, [])
-  const told = 'web: 4 screenshots not recorded: refused web/skraft-visuals/accepted-light.png, web/skraft-visuals/accepted-dark.png (a symbolic link, a file outside its component, or not a PNG)'
-  assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: `no screenshot committed: ${told}` })
+    assert.deepEqual([host.git.engineCommits, host.codeHost.attached], [[], [[]]])
+    const told = 'web: 4 screenshots not recorded: refused web/skraft-visuals/accepted-light.png, web/skraft-visuals/accepted-dark.png (a symbolic link, a file outside its component, or not a PNG)'
+    assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: `no screenshot recorded: ${told}` })
+  }
 })
 /**
  * A run on a forge whose body takes 1,000 characters, so that the folded sections go to the
  * comments of the run details, each at most `commentLimit` characters.
  */
 const detailsRun = async (commentLimit) => {
-  const host = visualsRun({ codeHost: new InMemoryCodeHost({ bodyLimit: 1_000, commentLimit }), screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
+  const host = visualsRun({ codeHost: azure({ bodyLimit: 1_000, commentLimit, fileUrl: (commit, path) => `${RAW.slice(0, -'/root-1'.length)}/${commit}/${path}` }), screenshots: CHECKOUT.filter(({ title, theme }) => theme === 'dark' || title === 'Payment accepted') })
   assert.equal((await host.start(STORY)).status, 'done')
   return host
 }
@@ -213,12 +271,12 @@ test('screenshots cut to fit a comment of the run details drop their dark theme 
 const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
 
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {
-  const host = visualsRun()
+  const host = visualsRun({ codeHost: azure() })
   host.git.commitFails = 'git commit failed: SECRET-STDERR'
 
   assert.equal((await host.start(STORY)).status, 'done')
 
-  assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot committed: web: 4 screenshots not recorded: Git could not commit them' })
+  assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: web: 4 screenshots not recorded: Git could not commit them' })
   assert.ok(!(await host.tracking.read(SLUG, 'pull-request-body.md')).includes('SECRET'))
 })
 const FRENCH_ISSUE = { title: 'Payer par carte', body: 'En tant que client, je veux payer par carte pour que la commande soit validée sans passer par la livraison.' }
@@ -230,24 +288,24 @@ test('a French story\'s screenshots are told in French: each e2e run, the dark t
   const host = visualsRun({ codeHost: new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE } }) })
   await host.start(FRENCH)
   assert.equal(await frenchShots(host), [
-    '- web : run e2e passed (`npx playwright test`, preuve `logs/runs/deliver-1-1/1.log`) ; 4 screenshots committed',
+    '- web : run e2e passed (`npx playwright test`, preuve `logs/runs/deliver-1-1/1.log`) ; 4 screenshots attached to the pull request',
     '',
-    `![Checkout form, card filled in](${RAW}/${EVIDENCE}/web/light-1.png)`,
+    `![Checkout form, card filled in](./${SHOTS}/checkout-light.png)`,
     '',
-    `![Payment accepted](${RAW}/${EVIDENCE}/web/light-2.png)`,
+    `![Payment accepted](./${SHOTS}/accepted-light.png)`,
     '',
     '<details><summary>Thème sombre</summary>',
     '',
-    `![Checkout form, card filled in](${RAW}/${EVIDENCE}/web/dark-1.png)`,
+    `![Checkout form, card filled in](./${SHOTS}/checkout-dark.png)`,
     '',
-    `![Payment accepted](${RAW}/${EVIDENCE}/web/dark-2.png)`,
+    `![Payment accepted](./${SHOTS}/accepted-dark.png)`,
     '',
     '</details>',
   ].join('\n'))
 
   const shot = (theme, n) => ({ title: `Step ${n}`, theme, path: `skraft-visuals/${theme}-${n}.png`, bytes: 'PNG' })
   const admin = { ...WEB, name: 'admin', root: 'admin', commands: { build: 'npm run build' } }
-  const many = visualsRun({ codeHost: new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE }, repository: null }), components: [API, WEB, admin], screenshots: [...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => shot('light', n)), ...[1, 2, 3, 4, 5, 6, 7].map((n) => shot('dark', n))] })
+  const many = visualsRun({ codeHost: azure({ issues: { 42: FRENCH_ISSUE }, fileUrl: () => null }), components: [API, WEB, admin], screenshots: [...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => shot('light', n)), ...[1, 2, 3, 4, 5, 6, 7].map((n) => shot('dark', n))] })
   await many.start(FRENCH)
   const lines = (await frenchShots(many)).split('\n')
   assert.equal(lines[1], '- admin : no traced e2e run: run the front end\'s e2e command through skraft_repl with gate(\'e2e\', <command>, { cwd: <its root> })')

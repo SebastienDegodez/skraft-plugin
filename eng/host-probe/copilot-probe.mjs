@@ -1226,6 +1226,24 @@ const pluginHooksCheck = async (context) => {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Check: gh attaches a pull request's screenshots. No forge is reached: gh's own help is read.
+
+const GH_ATTACH_EXPECTED = "`gh pr create --help` nomme l'option `--attach` : le moteur joint les captures d'écran d'un front end à la pull request qu'il ouvre sur GitHub, chaque référence `![alt](./<chemin>)` du corps réécrite par gh vers le fichier téléversé."
+
+/** The help of `gh pr create` on this machine; null when gh does not start. */
+export const ghCreateHelp = () => {
+  const run = spawnSync('gh', ['pr', 'create', '--help'], { encoding: 'utf8', timeout: 30_000 })
+  return run.status === 0 ? run.stdout : null
+}
+
+/** Whether gh names --attach; inconclusive without gh. @param {() => string | null} help */
+export const ghAttachCheck = (help) => {
+  const text = help()
+  if (text === null) return check({ id: 'gh-pr-attach', expected: GH_ATTACH_EXPECTED, observed: { gh: 'not started' } })
+  return check({ id: 'gh-pr-attach', expected: GH_ATTACH_EXPECTED, verdict: text.includes('--attach') ? 'pass' : 'fail', observed: { attach: text.includes('--attach') } })
+}
+
+// ---------------------------------------------------------------------------------------------
 // Check: a model session reads an incident question and answers it while the run is paused (#566).
 // The only check that sends a prompt; it runs with --incident-session.
 
@@ -1302,7 +1320,7 @@ const incidentCheck = async ({ sdk, client, dirs, incidentSession }) => {
  * `agentCalls`: whether the checks that start an agent run; `incidentSession`: whether the incident
  * check sends its prompt to the host default model.
  */
-export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = homedir(), models = {}, agentCalls = false, incidentSession = false, timings = {}, log = () => undefined }) => {
+export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = homedir(), models = {}, agentCalls = false, incidentSession = false, timings = {}, log = () => undefined, ghHelp = ghCreateHelp }) => {
   T = { ...DEFAULT_TIMINGS, ...timings }
   const root = workRoot ?? await mkdtemp(join(tmpdir(), 'skraft-host-probe-'))
   const dirs = { root, home, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b'), incident: join(root, 'incident') }
@@ -1332,6 +1350,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(await pluginHooksCheck({ sdk, dirs }))
     log('native tools…')
     checks.push(await nativeToolNames(sdk, client, dirs))
+    log('gh attachments…')
+    checks.push(ghAttachCheck(ghHelp))
   } finally {
     await client.stop().catch(() => undefined)
   }

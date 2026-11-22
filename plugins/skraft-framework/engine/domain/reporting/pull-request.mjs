@@ -23,13 +23,13 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   adrs: Array<{ path: string, number: number, title: string | null }>,
  *   reds: RedCommit[], evidence: EvidenceFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
- *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
+ *   visuals: import('./visuals.mjs').Visuals | null,
  *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
  *   testPlans: TrackedDocument[], matrices: TrackedDocument[],
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
- *   visuals: what the run's last visuals step recorded, null without one; repository: the one the
- *   remote names on its forge, where the kept screenshots are shown from; bodyLimit: the
+ *   visuals: what the run's last visuals step recorded, each screenshot with where the pull request
+ *   shows it, null without one; bodyLimit: the
  *   longest body its forge takes, commentLimit: the longest comment; language: the story's, which the
  *   description and the comments of the run details are written in; testPlans: the test plans DISTILL wrote, matrices: the
  *   consistency matrices DESIGN wrote, those of the latest attempt that wrote any, none when the journal
@@ -197,7 +197,7 @@ const SECTIONS = Object.freeze([
   folded('red', (facts) => redLines(facts.reds, wordsOf(facts)), (facts) => ({ count: counted(wordsOf(facts), facts.reds.length, wordsOf(facts).redCommit), open: false })),
   folded('gates', (facts) => gateLines(facts.evidence, wordsOf(facts)), (facts) => gateFold(facts.evidence, wordsOf(facts))),
   folded('review', (facts) => reviewLines(facts.review, wordsOf(facts)), (facts) => reviewFold(facts.review, wordsOf(facts))),
-  folded('screenshots', ({ visuals, repository, language }) => screenshotLines(visuals, repository, language)),
+  folded('screenshots', ({ visuals, language }) => screenshotLines(visuals, language)),
   domainHeavySection,
   shown('limitations', (facts) => (facts.prose === null ? notWritten('limitations')(facts) : [inert(facts.prose.limitations)])),
   (facts, counts) => folded('summary', ({ status, report, language }) => [status, '', ...reportTable(report, language), ...(domainHeavy(counts) ? [] : ['', wordsOf(facts).prune])])(facts),

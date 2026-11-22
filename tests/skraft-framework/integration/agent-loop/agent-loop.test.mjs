@@ -66,7 +66,7 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ by }) => by), ['cli-tty', 'cli-tty'])
 })
 
-test('the loop runs the visuals node: a front end\'s light and dark screenshots are committed on the working branch and the pull request shows them', async (t) => {
+test('the loop runs the visuals node: a front end\'s light and dark screenshots stay where Playwright wrote them, for gh to attach to the pull request', async (t) => {
   const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true } })
   issueForge(t, cwd)
   await skraft(cwd, ['init', SLUG, '--issue', '42', '--title', 'Pay by card'])

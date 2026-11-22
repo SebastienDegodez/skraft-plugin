@@ -25,7 +25,10 @@ const FAKE_GH = [
   "if (args[1] === 'set-default') { if (state.defaultRepo) said(state.defaultRepo); process.stderr.write('no default repository has been set\\n'); process.exit(1) }",
   "if (args[0] === 'repo') said(state.defaultBranch)",
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
+  "if (args[1] === 'create' && args.includes('--help')) said(state.help ?? 'FLAGS\\n      --attach file          Attach an image or video file')",
+  "if (args[1] === 'create' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(`Creating pull request\\n${state.created}`, 1)",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
+  "if (args[1] === 'edit' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(state.created, 1)",
   "if (args[1] === 'edit') said(state.created)",
   "if (args[0] === 'issue' && state.issue === undefined) { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
   "if (args[0] === 'issue' && state.issueFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
@@ -204,6 +207,31 @@ test('the pull request is opened with its body from a file, then found by its he
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true }), { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment' })
   assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: false, reason: 'gh could not update pull request #7 on github.example.com/acme/payment' })
   assert.equal(await host.defaultBranch(), null)
+})
+
+test('the screenshots of a pull request go with its body: gh uploads each one --attach names, the pull request opened even when one fails; the doctor asks gh whether it takes --attach', async (t) => {
+  const { root, forge, codeHost } = repository(t)
+  const host = codeHost()
+  const bodyFile = join(root, 'body.md')
+  const attachments = [{ path: 'web/skraft-visuals/checkout light.png', alt: 'Checkout form, card filled in' }, { path: 'web/skraft-visuals/paid.png', alt: 'Payment accepted' }]
+  const attached = ['--attach=./web/skraft-visuals/checkout light.png#Checkout form, card filled in', '--attach=./web/skraft-visuals/paid.png#Payment accepted']
+
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
+  assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
+  forge.set({ attachFails: true })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
+  assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments: [] }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
+  assert.deepEqual(forge.calls().filter(([command, sub]) => command === 'pr' && sub !== 'list').map((args) => args.filter((arg) => arg.startsWith('--attach='))), [attached, attached, attached, attached, []])
+  forge.set({ fails: true })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment' })
+
+  forge.set({})
+  assert.equal(host.attachesFiles, true)
+  assert.equal(await host.screenshotsBlocked(), null)
+  forge.set({ help: 'FLAGS\n  -B, --base branch' })
+  assert.equal(await host.screenshotsBlocked(), 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots')
+  assert.equal(await host.fileUrl('abc123', 'docs/a b.png'), 'https://github.example.com/acme/payment/raw/abc123/docs/a%20b.png')
 })
 
 test('the run\'s comment is kept on an issue, or the pull request its number names, of the forge the remote names: posted once, then rewritten by its URL, found again by its marker among the user\'s own comments, posted again once deleted; gh\'s output never reaches a reason', async (t) => {

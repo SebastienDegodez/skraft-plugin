@@ -388,6 +388,7 @@ export class InMemorySourceControl {
     this.diffs = []
   }
   async unavailable() { return this.missing }
+  storyLink(issue, closes) { return this.link(issue, closes) }
   async remoteUrl() { return this.remote }
   async repository(dir) { return this.folders[tidy(dir) || '.']?.top ?? null }
   /** The files the repository holds under dir, committed or left uncommitted, relative to dir. */
@@ -417,6 +418,7 @@ export class InMemorySourceControl {
   async existsAt() { return false }
   async commitFiles() { return { ok: true } }
   async commitCopies() { return { ok: true } }
+  async refusedImages() { return [] }
 }
 
 /** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
@@ -506,6 +508,7 @@ export class InMemoryGit {
     return null
   }
   async unavailable() { return this.missing }
+  storyLink(issue, closes) { return this.link(issue, closes) }
   async remoteUrl() { return this.remote }
   async repository(dir) {
     const at = this.locate(dir)
@@ -567,6 +570,7 @@ export class InMemoryGit {
     return { ok: true }
   }
   /** Each file copied where `to` says, relative to dir, then the copies committed alone; `copies` keeps them in order. */
+  async refusedImages(dir, files) { return files.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from) }
   async commitCopies(dir, copies, message) {
     const refused = copies.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from)
     if (refused.length > 0) return { ok: false, error: 'refused', refused }
@@ -684,7 +688,15 @@ export class InMemoryCodeHost {
    *   bodyLimit: the longest body the forge takes, GitHub's unless given; takesRequestFile: whether
    *   its client sends a JSON request file (az), false unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [], listBodyLimit = Number.POSITIVE_INFINITY } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [], listBodyLimit = Number.POSITIVE_INFINITY, attachesFiles = true, fileUrl, screenshotsBlocked = null, unattached = [] } = {}) {
+    /** whether the forge's client uploads the body's images (gh --attach); the files it fails to upload, by path */
+    this.attachesFiles = attachesFiles
+    this.unattached = new Set(unattached)
+    /** @type {Array<{ path: string, alt: string }>[]} the attachments of each create and edit, in order */
+    this.attached = []
+    /** the address of a committed file: GitHub's raw route on the repository the remote names unless given */
+    this.fileUrlOf = fileUrl ?? ((commit, path) => (this.named === null ? null : `https://${this.named.host}/${this.named.repository}/raw/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`))
+    this.blocked = screenshotsBlocked
     /** the longest description a listing by branch gives (Azure's Get Pull Requests: 400); a read by number gives it whole */
     this.listBodyLimit = listBodyLimit
     this.cut = cut
@@ -725,6 +737,14 @@ export class InMemoryCodeHost {
   }
   async unavailable() { return this.missing }
   storyLink(issue, closes) { return this.link(issue, closes) }
+  async fileUrl(commit, path) { return this.fileUrlOf(commit, path) }
+  async screenshotsBlocked() { return this.blocked }
+  /** The body as the forge keeps it: each reference to a file it uploaded rewritten to the uploaded asset, as gh does. */
+  uploaded(body, attachments = []) {
+    this.attached.push(attachments)
+    return attachments.filter(({ path }) => !this.unattached.has(path))
+      .reduce((text, { path }, index) => text.replaceAll(`](./${path})`, `](https://github.com/user-attachments/assets/${this.attached.length}-${index + 1})`), body)
+  }
   async issue(number) {
     this.issuesRead.push(number)
     const unreadable = this.missing ?? this.fails.issue
@@ -766,18 +786,18 @@ export class InMemoryCodeHost {
     const found = this.unseen.has('view') ? undefined : this.pullRequests.find((pull) => pull.number === number && !pull.hidden)
     return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body, head: found.head, fromFork: found.fork === true } : null }
   }
-  async create({ base, head, title, bodyFile, draft, issue }) {
+  async create({ base, head, title, bodyFile, draft, issue, attachments }) {
     this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
     if (this.fails.create) return { ok: false, reason: this.fails.create }
     const number = 41 + this.pullRequests.length + 1
     const url = `${this.pages}/pull/${number}`
-    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.read(bodyFile), hidden: this.unseen.has('create') })
+    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.uploaded(this.read(bodyFile), attachments), hidden: this.unseen.has('create') })
     return this.answered('create', { number, url, ...(this.fails.link ? { note: this.fails.link } : {}) })
   }
-  async edit({ number, bodyFile }) {
+  async edit({ number, bodyFile, attachments }) {
     this.calls.push(`edit #${number} ${bodyFile}`)
     if (this.fails.edit) return { ok: false, reason: this.fails.edit }
-    if (!this.unseen.has('edit')) this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
+    if (!this.unseen.has('edit')) this.pullRequests.find((pull) => pull.number === number).body = this.uploaded(this.read(bodyFile), attachments)
     return this.answered('edit')
   }
   async keepIssueComment({ number, marker, url, bodyFile }) {

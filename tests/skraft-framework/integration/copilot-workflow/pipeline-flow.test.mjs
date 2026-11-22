@@ -78,7 +78,7 @@ test('the four phases run on a real repository: each agent commits its part, the
   assert.equal(logs.at(-1), `${SLUG}: done: PUBLISH closed`)
 })
 
-test('a front end\'s e2e run leaves its light and dark screenshots committed on the working branch, and the pull request shows them', async (t) => {
+test('a front end\'s e2e run leaves its light and dark screenshots where Playwright wrote them, for gh to attach to the pull request', async (t) => {
   const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true, questionVersions: { pullRequest: 2, visuals: 1 } } })
   issueForge(t, cwd)
 

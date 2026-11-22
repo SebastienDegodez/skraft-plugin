@@ -3,7 +3,7 @@ import { gatesOf } from '../../domain/evidence/gate-names.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
 import { findComponentSkills } from '../pipeline/component-skills.mjs'
-import { forgeCheck } from './forge-check.mjs'
+import { forgeCheck, screenshotsCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { policyLines } from '../../domain/config/infrastructure-policy.mjs'
@@ -56,10 +56,10 @@ const check = async (deps) => {
   checks.push(configured.check)
   const vscode = vscodeCheck(await deps.copilotSdk.locate())
   if (!configured.ok) return report([...checks, vscode], null)
-  const forge = await forgeCheck(deps, configured.config.forge)
+  const forge = [await forgeCheck(deps, configured.config.forge), ...(await screenshotsCheck(deps, configured.config))]
   const commands = await configuredChecks(deps, configured.config)
   const models = await modelsOf(deps, configured.config)
-  return report([...checks, forge, ...commands, ...models.checks, vscode], models.assignments)
+  return report([...checks, ...forge, ...commands, ...models.checks, vscode], models.assignments)
 }
 
 /**

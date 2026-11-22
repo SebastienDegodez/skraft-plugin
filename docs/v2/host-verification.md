@@ -5,6 +5,28 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### À mesurer — captures d'écran jointes par gh, commitées sur Azure Repos (branche feat/engine-repl-enforcement)
+
+Le moteur ne commite plus les captures d'un front end sur GitHub : `gh pr create` et `gh pr edit`
+les téléversent (`--attach ./<chemin>#<alt>`), et le corps relu dit celles qui ne sont pas jointes.
+Sur Azure DevOps, `az` n'envoie aucun fichier binaire : `az devops invoke --in-file` lit son
+fichier comme du JSON, `az rest --body @<fichier>` envoie un binaire encodé en base64 (lu dans les
+sources d'azure-cli 2.90.0 et de son extension azure-devops 1.0.10, macOS) ; la route
+`pullRequests/{id}/attachments/{fileName}` (Learn, Git 7.1, corps `application/octet-stream`)
+reste donc hors d'atteinte, et les captures restent commitées sur la branche de travail, liées par
+la route Items à leur commit. Le contrôle de chaque fichier passe par Git seul (`git add --dry-run`,
+`git diff --no-index --raw`, `git cat-file blob`), et non plus par un `node -e`.
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| `gh pr create --help` nomme `--attach` (aide lue sur la machine du développeur) | gh **2.103.3** | pass (lecture de l'aide) | « Use `--attach` to upload an image or video… If the body references an attached file, such as `![alt](./login.png)`, that reference is rewritten… Paths in a `--body-file` are relative to its directory, falling back to the working directory… up to 50 files per command… If some attachments upload and others fail, the pull request is still created… exits with a non-zero status, but the new pull request's URL is still printed » |
+| `gh-pr-attach` (`eng/host-probe/copilot-probe.mjs`, aide de `gh pr create`, aucun appel réseau) | gh local | not measured (sonde non lancée sur cette branche) | — |
+| première version de gh qui propose `--attach` (le plan dit v2.88.0) | gh | not measured | — |
+| une référence `./<chemin>` relative au dossier de travail, le fichier du corps étant dans le dossier de suivi, est réécrite par `gh pr create` et `gh pr edit` ; un chemin qui contient une espace aussi | GitHub | not measured ; couvert par un faux gh qui garde l'argv | `infrastructure/code-host/gh-code-host.mjs` (`attachArgs`), test `integration/code-host/gh-code-host` |
+| `gh pr edit --attach` réécrit les références d'un corps remplacé ; une capture déjà jointe et jointe à nouveau ne s'ajoute pas en double | GitHub | not measured | `application/publish/pull-request.mjs` (`attachNote`, hash du corps sans les adresses d'images) |
+| la route Items (`…/_apis/git/repositories/<repo>/items?path=…&versionDescriptor.version=<sha>&versionDescriptor.versionType=commit&api-version=7.1`) est affichée comme image dans la description d'une pull request Azure Repos, pour un lecteur connecté | Azure Repos | not measured ; aucune organisation de test, l'équipe du propriétaire valide plus tard | `infrastructure/code-host/az-code-host.mjs` (`itemUrl`), faux az : test `integration/code-host/az-code-host` |
+| `git diff --no-index --raw -- /dev/null <fichier>` sous Windows (Git for Windows traduit `/dev/null`) | Git for Windows | not measured ; mesuré sur macOS (Git 2.x) : `100644` pour un fichier, `120000` pour un lien symbolique ; `git add --dry-run` refuse un chemin « beyond a symbolic link » | `infrastructure/source-control/git-source-control.mjs` (`isPngFile`) |
+
 ### À mesurer — `skraft_repl_reset` : permission, liste, atteinte (branche feat/engine-repl-enforcement)
 
 Le REPL est devenu deux outils : `skraft_repl` n'accepte plus `reset`, `skraft_repl_reset` termine

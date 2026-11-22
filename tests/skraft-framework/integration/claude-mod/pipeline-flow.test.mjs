@@ -22,7 +22,7 @@ const runOn = async (cwd, { acts, reviews, args = SLUG } = {}) => {
 
 const recorded = (events, step) => events.filter((event) => event.type === 'step.recorded' && event.step === step)
 
-test('/skraft on a repository with a front end leaves its light and dark screenshots committed on the working branch, and the pull request shows them', async (t) => {
+test('/skraft on a repository with a front end leaves its light and dark screenshots where Playwright wrote them, for gh to attach to the pull request', async (t) => {
   const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true } })
   issueForge(t, cwd)
 

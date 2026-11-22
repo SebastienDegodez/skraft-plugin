@@ -14,9 +14,11 @@ import { code } from './markdown-safety.mjs'
  *
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  * @typedef {'light' | 'dark'} Theme
- * @typedef {{ title: string, theme: Theme, path: string }} Screenshot
+ * @typedef {{ title: string, theme: Theme, path: string, url?: string | null }} Screenshot
  *   title: the alt text, made safe to publish; path: relative to the component's root, or to the
- *   working copy once kept.
+ *   working copy once kept; url: where the pull request shows it, set once the forge is known:
+ *   `./<path>` for a file the forge's client attaches, the file's address at the commit for a
+ *   committed one, null when the forge gives none.
  * @typedef {{ ok: true, screenshots: Screenshot[] } | { ok: false, reason: string }} ManifestReading
  * @typedef {{
  *   component: string, command: string | null, e2e: 'passed' | 'failed' | 'not-run', detail: string,
@@ -25,10 +27,10 @@ import { code } from './markdown-safety.mjs'
  *   detail: what became of its screenshots, or why its e2e run did not run or failed; evidence:
  *   the log of its e2e run, relative to the tracking folder; screenshots: those kept on the
  *   working branch, relative to the working copy.
- * @typedef {{ commit: string | null, components: ComponentVisuals[] }} Visuals
- *   commit: the commit that holds the kept screenshots, null when none was kept.
- * @typedef {{ host: string, repository: string } | null} Repository
- *   repository: `<owner>/<repo>`; null when the remote names none.
+ * @typedef {{ commit: string | null, attached?: boolean, components: ComponentVisuals[] }} Visuals
+ *   commit: the commit that holds the kept screenshots, null when none was committed; attached:
+ *   the screenshots stay where Playwright wrote them, and the forge's client attaches them to
+ *   the pull request (gh).
  */
 
 /** The manifest of an e2e run's screenshots, relative to the component's root. */
@@ -126,13 +128,13 @@ const WORDS = Object.freeze({
 /**
  * The Screenshots section of a pull request: what each front end's e2e run gave, then the light
  * screenshots, the dark ones folded below; in the story's language.
- * @param {Visuals | null} visuals @param {Repository} repository @param {import('./language.mjs').Language} language
+ * @param {Visuals | null} visuals @param {import('./language.mjs').Language} language
  */
-export const screenshotLines = (visuals, repository, language) => {
+export const screenshotLines = (visuals, language) => {
   const words = WORDS[language]
   if (visuals === null) return [words.none]
   if (visuals.components.length === 0) return [words.noFrontEnd]
-  return [...visuals.components.map((component) => componentLine(component, words)), ...imageLines(visuals, { repository, words })]
+  return [...visuals.components.map((component) => componentLine(component, words)), ...imageLines(visuals, words)]
 }
 
 /** @typedef {typeof WORDS.en} Words */
@@ -146,39 +148,38 @@ const componentLine = ({ component, command, e2e, detail, evidence }, words) => 
 /** A pull request shows at most this many screenshots of each theme of a component. */
 const SHOWN_PER_THEME = 6
 
-/** @typedef {{ repository: Repository, commit: string, words: Words }} At */
-
-/** @param {Visuals} visuals @param {{ repository: Repository, words: Words }} shown */
-const imageLines = ({ components, commit }, { repository, words }) => {
+/** @param {Visuals} visuals @param {Words} words */
+const imageLines = ({ components, commit }, words) => {
   if (components.every(({ screenshots }) => screenshots.length === 0)) return []
-  const at = { repository, commit: /** @type {string} */ (commit), words }
-  const dark = themeLines(components, 'dark', at)
+  const dark = themeLines(components, 'dark', words)
   return [
-    ...(repository === null ? ['', words.noRepository(code(at.commit))] : []),
-    ...themeLines(components, 'light', at),
+    ...(commit !== null && shownScreenshots({ commit, components }).some(({ url }) => !url) ? ['', words.noRepository(code(commit))] : []),
+    ...themeLines(components, 'light', words),
     ...(dark.length === 0 ? [] : ['', `<details><summary>${words.dark}</summary>`, ...dark, '', '</details>']),
   ]
 }
 
 /**
  * The screenshots of a theme, the first SHOWN_PER_THEME of each component, then where its others are.
- * @param {ComponentVisuals[]} components @param {Theme} theme @param {At} at
+ * @param {ComponentVisuals[]} components @param {Theme} theme @param {Words} words
  */
-const themeLines = (components, theme, at) => components.flatMap(({ component, screenshots }) => {
+const themeLines = (components, theme, words) => components.flatMap(({ component, screenshots }) => {
   const own = screenshots.filter((screenshot) => screenshot.theme === theme)
   const more = own.length - SHOWN_PER_THEME
   return [
-    ...own.slice(0, SHOWN_PER_THEME).flatMap(({ title, path }) => ['', `![${title}](${urlOf(at.repository, at.commit, path)})`]),
-    ...(more > 0 ? ['', at.words.more(more, theme, component, code(own[0].path.slice(0, own[0].path.lastIndexOf('/'))))] : []),
+    ...own.slice(0, SHOWN_PER_THEME).flatMap(({ title, path, url }) => ['', `![${title}](${url || encodedPath(path)})`]),
+    ...(more > 0 ? ['', words.more(more, theme, component, code(own[0].path.slice(0, own[0].path.lastIndexOf('/'))))] : []),
   ]
 })
 
 /**
- * A kept screenshot's address at its commit: the forge's raw route, which a private repository
- * serves to a signed-in viewer too; the path alone without a repository.
- * @param {Repository} repository @param {string} commit @param {string} path
+ * The screenshots a pull request shows: the first SHOWN_PER_THEME of each theme of each component.
+ * @param {Visuals} visuals @returns {Screenshot[]}
  */
-const urlOf = (repository, commit, path) => {
-  const encoded = path.split('/').map(encodeURIComponent).join('/')
-  return repository === null ? encoded : `https://${repository.host}/${repository.repository}/raw/${commit}/${encoded}`
-}
+export const shownScreenshots = ({ components }) => components.flatMap(({ screenshots }) => THEMES.flatMap((theme) => screenshots.filter((screenshot) => screenshot.theme === theme).slice(0, SHOWN_PER_THEME)))
+
+/** A path as a link: each segment encoded. @param {string} path */
+const encodedPath = (path) => path.split('/').map(encodeURIComponent).join('/')
+
+/** How the body refers to a screenshot the forge's client attaches, which it rewrites to the uploaded file. @param {string} path relative to the working copy */
+export const attachedReference = (path) => `./${path}`

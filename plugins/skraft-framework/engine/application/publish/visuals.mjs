@@ -4,12 +4,14 @@ import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { evidenceCopies, isFrontend, readManifest, VISUALS_MANIFEST } from '../../domain/reporting/visuals.mjs'
 import { readTrace } from '../evidence/run-trace-store.mjs'
+import { forgeAdapters } from '../config/forge.mjs'
 
 /**
  * The visuals of a run: each front end's last traced e2e run of `skraft_repl` (the engine starts no
- * command), the screenshots its manifest lists then kept in the story's evidence folder and committed on the working branch,
- * with the developer's consent. Visuals are evidence, never a gate: what stops them is told,
- * and the run goes on.
+ * command), then, with the developer's consent, the screenshots its manifest lists: left where
+ * Playwright wrote them for a forge whose client attaches them to the pull request (gh), else
+ * kept in the story's evidence folder and committed on the working branch. Visuals are
+ * evidence, never a gate: what stops them is told, and the run goes on.
  *
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/reporting/visuals.mjs').ComponentVisuals} ComponentVisuals
@@ -20,7 +22,7 @@ import { readTrace } from '../evidence/run-trace-store.mjs'
  *   workspace: import('../ports/workspace.mjs').Workspace,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   clock: import('../ports/clock.mjs').Clock,
- * }} VisualsDeps
+ * } & import('../config/forge.mjs').ForgeDeps} VisualsDeps
  * @typedef {{
  *   slug: string, journal: import('../journal/run-journal.mjs').OpenJournal,
  *   config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
@@ -44,7 +46,8 @@ const outcomeOf = (visuals) => {
   if (failed.length > 0) return { outcome: 'e2e-failed', reason: `the e2e run of ${failed.join(', ')} failed`, visuals }
   const count = visuals.components.flatMap(({ screenshots }) => screenshots).length
   if (visuals.commit !== null) return { outcome: 'recorded', reason: `${screenshotCount(count)} committed in ${visuals.commit}`, visuals }
-  return { outcome: 'not-recorded', reason: `no screenshot committed: ${visuals.components.map(({ component, detail }) => `${component}: ${detail}`).join('; ')}`, visuals }
+  if (count > 0) return { outcome: 'recorded', reason: `${screenshotCount(count)} to attach to the pull request`, visuals }
+  return { outcome: 'not-recorded', reason: `no screenshot recorded: ${visuals.components.map(({ component, detail }) => `${component}: ${detail}`).join('; ')}`, visuals }
 }
 
 /** @param {number} count */
@@ -119,7 +122,20 @@ const kept = async (deps, request, runs) => {
   if (copies.length === 0) return { commit: null, components: runs.map(({ visuals }) => unlisted(visuals)) }
   // A front end's screenshots are listed only once the visuals node has the consent's answer: false here means declined.
   if (request.config.publish.visuals !== true) return { commit: null, components: runs.map(({ visuals, copies: own }) => told(visuals, own, `not published (consent): ${CONFIG_FILE} sets publish.visuals to false`)) }
-  return committed(deps, request, runs)
+  const { codeHost } = await forgeAdapters(deps, request.config.forge)
+  return codeHost.attachesFiles ? attached(deps, runs) : committed(deps, request, runs)
+}
+
+/**
+ * The listed screenshots left where Playwright wrote them, for the forge's client to attach to
+ * the pull request; none when Git refuses one of them.
+ * @param {VisualsDeps} deps @param {E2eRun[]} runs @returns {Promise<Visuals>}
+ */
+const attached = async (deps, runs) => {
+  // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to SourceControl
+  const refused = await deps.sourceControl.refusedImages('.', runs.flatMap((run) => run.copies).map(({ from, within }) => ({ from, within })))
+  if (refused.length > 0) return { commit: null, attached: true, components: runs.map(({ visuals, copies: own }) => told(visuals, own, `not recorded: ${notCommitted(refused)}`)) }
+  return { commit: null, attached: true, components: runs.map(({ visuals, copies: own }) => ({ ...told(visuals, own, 'attached to the pull request'), screenshots: own.map(({ from, kept: shot }) => ({ ...shot, path: from })) })) }
 }
 
 /**

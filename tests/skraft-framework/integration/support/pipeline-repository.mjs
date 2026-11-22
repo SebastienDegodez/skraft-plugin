@@ -273,31 +273,28 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
 }
 
 /**
- * What a run of a repository with `frontend` left: its visuals step, the commit that holds the
- * screenshots, each byte for byte in the story's evidence folder, and the pull request's Screenshots
- * section, which links them at that commit on the forge the story's issue is on (issueForge).
- * @param {string} cwd @param {object[]} events
+ * What a run with a front end leaves on a GitHub remote, whichever driver ran it: the screenshots
+ * where Playwright wrote them, nothing committed, and the pull request's body referring to each by
+ * its path, which gh rewrites once it attached the file.
+ * @param {string} cwd @param {Array<Record<string, any>>} events
  */
 export const visualsKept = (cwd, events) => {
-  const forge = 'https://github.example.com/acme/payment/raw'
-  const evidence = `.copilot-tracking/skraft-plans/${SLUG}/evidence/${SLUG}/web`
+  const shots = 'web/skraft-visuals'
   const step = events.find((event) => event.type === 'step.recorded' && event.step === 'visuals')
-  const sha = git(cwd, 'log', '-1', '--format=%H', '--', evidence)
-  assert.deepEqual([step.outcome, step.next, step.reason], ['recorded', 'pr_writer', `2 screenshots committed in ${sha}`])
-  assert.equal(git(cwd, 'log', '-1', '--format=%B', sha), 'docs(evidence): screenshots of web\n\nRefs: #42')
-  assert.deepEqual(git(cwd, 'show', '--name-only', '--format=', sha).split('\n'), [`${evidence}/dark-1.png`, `${evidence}/light-1.png`])
-  for (const theme of ['light', 'dark']) assert.deepEqual(readFileSync(join(cwd, ...evidence.split('/'), `${theme}-1.png`)), screenshotBytes(theme))
+  assert.deepEqual([step.outcome, step.next, step.reason], ['recorded', 'pr_writer', '2 screenshots to attach to the pull request'])
+  assert.equal(git(cwd, 'log', '--format=%s', '--grep=docs(evidence)', '--fixed-strings'), '')
+  for (const theme of ['light', 'dark']) assert.deepEqual(readFileSync(join(cwd, 'web', 'skraft-visuals', `checkout-${theme}.png`)), screenshotBytes(theme))
   const body = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request-body.md'), 'utf8')
   assert.ok(body.includes([
     '<details><summary>Screenshots</summary>',
     '',
-    '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `logs/runs/deliver-1-1/13.log`); 2 screenshots committed',
+    '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `logs/runs/deliver-1-1/13.log`); 2 screenshots attached to the pull request',
     '',
-    `![Checkout, card paid](${forge}/${sha}/${evidence}/light-1.png)`,
+    `![Checkout, card paid](./${shots}/checkout-light.png)`,
     '',
     '<details><summary>Dark theme</summary>',
     '',
-    `![Checkout, card paid](${forge}/${sha}/${evidence}/dark-1.png)`,
+    `![Checkout, card paid](./${shots}/checkout-dark.png)`,
     '',
     '</details>',
   ].join('\n')), body)
