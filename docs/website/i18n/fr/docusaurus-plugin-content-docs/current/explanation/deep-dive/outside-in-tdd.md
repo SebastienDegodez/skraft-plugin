@@ -69,11 +69,11 @@ change jamais : écrit par un autre agent, il est l'oracle que le code doit sati
 se termine par un seul commit vert, enchaîné à la commande de test pour n'avoir lieu
 qu'une fois tous les tests passés ; un deuxième vert est refusé (`green-split`).
 
-Un seul test d'acceptation est rouge à la fois, à côté du walking skeleton tant que S1 n'est pas
-vert. DISTILL écrit le test du scénario suivant une
-fois le précédent passé, si bien qu'un rouge dans l'historique nomme toujours le scénario en
-cours. Le moteur ne voit jamais échouer les tests unitaires de la boucle interne ; la mutation,
-lancée en dernier sur toute la story, montre qu'ils détecteraient une erreur.
+DISTILL commite tous les tests d'acceptation rouges d'un coup, à côté du walking skeleton en échec,
+dans un seul commit de test : l'historique ne porte qu'un rouge pour toute la story, et la revue lit
+le run qui montre chaque test échouer sur son assertion métier. Le moteur ne voit jamais échouer les
+tests unitaires de la boucle interne ; la mutation, que le développeur lance sur sa branche hors du
+pipeline, montre qu'ils détecteraient une erreur.
 
 ## Pièges & anti-patterns
 
