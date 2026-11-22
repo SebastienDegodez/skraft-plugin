@@ -608,7 +608,7 @@ export const PLUGIN_AGENTS = Object.freeze([
   'solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer',
   'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
   'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
-  'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
+  'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
   'finding-refuter', 'pr-writer',
 ])
 

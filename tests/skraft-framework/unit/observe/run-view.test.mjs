@@ -22,7 +22,7 @@ const PENDING_GRAPH = Object.freeze({
     node('distill_review', 'review', 'DISTILL', 'coverage, business-alignment, testability, boundary-enforcement'),
     node('scenario_review', 'ask', 'DISTILL', 'scenario-review'),
     node('deliver', 'agent', 'DELIVER', 'software-engineer'),
-    node('deliver_review', 'call', 'DELIVER', 'test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity'),
+    node('deliver_review', 'call', 'DELIVER', 'test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity'),
     node('visuals', 'publish', 'DELIVER', 'publish playwright-visuals'),
     node('pr_writer', 'agent', 'PUBLISH', 'pr-writer'),
     node('publish', 'publish', 'PUBLISH', 'publish pull-request'),
@@ -252,10 +252,10 @@ test('the last pass of a review shows only the lenses that pass ran, and no verd
 
   const found = { lens: 'test-integrity', verdict: 'fail', findings: 1 }
   assert.deepEqual(seen, [
-    { step: 'deliver_review', visit: 1, verdict: null, lenses: [found, ...passing('architecture-boundaries', 'cold-reader', 'mock-fidelity')] },
-    { step: 'deliver_review', visit: 2, verdict: null, lenses: [found, ...passing('architecture-boundaries', 'cold-reader')] },
+    { step: 'deliver_review', visit: 1, verdict: null, lenses: [found, ...passing('architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity')] },
+    { step: 'deliver_review', visit: 2, verdict: null, lenses: [found, ...passing('architecture-boundaries', 'cold-reader', 'quality-gates')] },
   ])
-  assert.deepEqual((await host.view()).reviews.at(-1), { step: 'deliver_review', visit: 2, verdict: 'approved', lenses: [found, ...passing('architecture-boundaries', 'cold-reader')] })
+  assert.deepEqual((await host.view()).reviews.at(-1), { step: 'deliver_review', visit: 2, verdict: 'approved', lenses: [found, ...passing('architecture-boundaries', 'cold-reader', 'quality-gates')] })
 })
 
 test('the view of a delivered run shows its quality evidence: the traced run of each gate the delivery stands on, with its folder and its log', async () => {

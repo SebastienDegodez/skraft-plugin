@@ -22,18 +22,18 @@ test('skraft journal show prints the state of the chain, then the last steps and
   const json = JSON.parse((await skraft(cwd, ['journal', 'show', '--last', '1', '--json'])).stdout)
 
   assert.deepEqual(timeless(last.stdout), [
-    `skraft ${SLUG}: journal verified, 49 lines`,
+    `skraft ${SLUG}: journal verified, 50 lines`,
     'last 3 of 14 entries',
-    `42  <at>  visuals (DELIVER, pass 1, attempt 1): skipped → pr_writer`,
-    `45  <at>  pr_writer (PUBLISH, pass 1, attempt 1): done → publish`,
-    `47  <at>  publish (PUBLISH, pass 1, attempt 1): local → exit`,
+    `43  <at>  visuals (DELIVER, pass 1, attempt 1): skipped → pr_writer`,
+    `46  <at>  pr_writer (PUBLISH, pass 1, attempt 1): done → publish`,
+    `48  <at>  publish (PUBLISH, pass 1, attempt 1): local → exit`,
   ])
   assert.equal(last.status, 0)
   assert.equal(all.length, 15)
   assert.equal(all.find((line) => line.startsWith('14  ')), '14  <at>  adr-1: RATIFIED (by cli-tty)')
   assert.deepEqual({ ...json, entries: json.entries.map(({ at, ...entry }) => entry) }, {
-    slug: SLUG, chain: { state: 'verified', lines: 49, unverified: 0, reason: '' }, total: 14,
-    entries: [{ line: 47, kind: 'step', step: 'publish', phase: 'PUBLISH', pass: 1, attempt: 1, outcome: 'local', next: 'exit' }],
+    slug: SLUG, chain: { state: 'verified', lines: 50, unverified: 0, reason: '' }, total: 14,
+    entries: [{ line: 48, kind: 'step', step: 'publish', phase: 'PUBLISH', pass: 1, attempt: 1, outcome: 'local', next: 'exit' }],
   })
 })
 

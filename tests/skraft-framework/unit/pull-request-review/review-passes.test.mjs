@@ -27,9 +27,9 @@ test('a second pass after a commit that touches one file runs again only the len
   const outcome = await host.review()
 
   assert.deepEqual([outcome.status, outcome.pass], ['APPROVED', 2])
-  assert.deepEqual(asked(host, 1), ['test-integrity-lens', 'architecture-boundaries-lens'])
+  assert.deepEqual(asked(host, 1), ['test-integrity-lens', 'architecture-boundaries-lens', 'quality-gates-lens'])
   const second = host.events().filter((event) => event.type === 'review.lens' && event.visit === 2)
-  assert.deepEqual(second.map(({ lens, reused }) => [lens, reused]), [['cold-reader', true], ['test-integrity', undefined], ['architecture-boundaries', undefined]])
+  assert.deepEqual(second.map(({ lens, reused }) => [lens, reused]), [['cold-reader', true], ['test-integrity', undefined], ['architecture-boundaries', undefined], ['quality-gates', undefined]])
   assert.equal(host.events().filter((event) => event.type === 'step.started').at(-1).head, 'root-2')
   assert.ok((await host.reviews.read(SLUG, 'reviews/verdict-2/verdict.yaml')).endsWith('reused:\n  - lens: "cold-reader"\n'))
 })
@@ -229,10 +229,10 @@ test('a review whose machine sleeps while its lenses answer takes its lease back
       assert.deepEqual(host.events().map(({ type }) => type), ['step.started'])
     } else {
       assert.deepEqual([outcome.status, outcome.pass], ['APPROVED', 1])
-      assert.deepEqual(host.events().map(({ type }) => type), ['step.started', 'lease.reclaimed', 'review.lens', 'review.lens', 'review.lens', 'step.recorded'])
+      assert.deepEqual(host.events().map(({ type }) => type), ['step.started', 'lease.reclaimed', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded'])
       const { renewed, gapMs } = host.events()[1]
-      assert.deepEqual({ renewed, gapMs }, { renewed: '2026-10-20T09:00:00.000Z', gapMs: 360_000 })
-      assert.ok(host.progress.lines.includes(`${SLUG}: this session was paused for 360 s (the machine slept) and nobody took its lease meanwhile; it took it back and goes on`))
+      assert.deepEqual({ renewed, gapMs }, { renewed: '2026-10-20T09:00:00.000Z', gapMs: 480_000 })
+      assert.ok(host.progress.lines.includes(`${SLUG}: this session was paused for 480 s (the machine slept) and nobody took its lease meanwhile; it took it back and goes on`))
     }
   }
 })

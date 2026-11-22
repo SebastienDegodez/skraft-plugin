@@ -15,6 +15,7 @@ digraph review {
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
   architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   cold_reader             [shape=note, lens="cold-reader"]
+  quality_gates           [shape=note, lens="quality-gates"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
   refuter [shape=octagon, mandatory=true]
@@ -25,6 +26,7 @@ digraph review {
   lenses -> test_integrity -> refuter
   lenses -> architecture_boundaries -> refuter
   lenses -> cold_reader -> refuter
+  lenses -> quality_gates -> refuter
   lenses -> mock_fidelity -> refuter
   lenses -> contract_fidelity -> refuter
   refuter -> verdict

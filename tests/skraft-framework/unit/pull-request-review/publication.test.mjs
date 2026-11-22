@@ -240,6 +240,7 @@ test('the comment opens the review on a heading line, its passes and what its le
     'test-integrity': [by(says('test-integrity', 'fail', [finding('F1', 'high', 'the rule is gone', { gate: 'G9', location: '' })]), 'claude-sonnet-5')],
     'cold-reader': [by(says('cold-reader', 'fail', [finding('F1', 'medium', 'Apply hides the threshold', { gate: 'C1', location: 'src/Discount.cs:3' })]), 'claude-haiku-5')],
     'architecture-boundaries': [by(says('architecture-boundaries', 'pass'), 'claude-haiku-5')],
+    'quality-gates': [by(says('quality-gates', 'pass'), 'claude-haiku-5')],
     refuter: [by(refutes('confirmed', LONG_REASON), 'claude-opus-5'), by(refutes('refuted', LONG_REASON), 'claude-opus-5')],
   })
 
@@ -248,7 +249,7 @@ test('the comment opens the review on a heading line, its passes and what its le
   assert.equal(host.pullRequests.comments[0].body, [
     '### skraft review · #12 — NEEDS_REWORK (pass 1)', '',
     'Review: 1 to fix, 1 refuted', '',
-    '**Review** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader: claude-haiku-5 · refuter claude-opus-5', '',
+    '**Review** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader, quality-gates: claude-haiku-5 · refuter claude-opus-5', '',
     HEADER, RULE,
     '| To fix | high | test-integrity · G9 Iron Rule (F1) | - | the rule is gone | confirmed: Discount.cs:3 names the threshold in a constant, MinimumOrder, which the test file quotes word for… |',
     '',

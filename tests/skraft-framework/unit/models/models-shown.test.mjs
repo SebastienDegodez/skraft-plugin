@@ -30,7 +30,7 @@ test('under Copilot with no Copilot model configured, the log says the host choo
     `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · model chosen by the host`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · model chosen by the host`,
     `${SLUG}: software-engineer, attempt 1 — implementer · standard · model chosen by the host`,
-    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host`,
+    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host`,
     `${SLUG}: pr-writer, attempt 1 — economy · model chosen by the host`,
   ])
   const starts = host.events().filter((event) => event.type === 'step.started' && (event.agent !== undefined || event.lenses !== undefined))

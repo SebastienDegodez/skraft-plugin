@@ -79,6 +79,7 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
   'boundary-enforcement': { inputs: OWN_CHANGES },
   'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files', 'components'])) },
   'cold-reader': { inputs: CHANGES, blind: true, scope: 'code' },
+  'quality-gates': { inputs: Object.freeze(/** @type {InputKind[]} */ (['outputs', 'patch', 'files', 'components'])) },
   'mock-fidelity': { inputs: CHANGES_AND_COMPONENTS },
   'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS },
 })))

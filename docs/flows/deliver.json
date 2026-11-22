@@ -231,11 +231,12 @@
   "subs": {
     "deliver_review": {
       "kind": "lenses",
-      "count": 5,
+      "count": 6,
       "all": [
         "test_integrity",
         "architecture_boundaries",
         "cold_reader",
+        "quality_gates",
         "mock_fidelity",
         "contract_fidelity"
       ],
@@ -262,6 +263,12 @@
           "id": "cold_reader",
           "kind": "lens",
           "mono": "cold-reader",
+          "optional": true
+        },
+        {
+          "id": "quality_gates",
+          "kind": "lens",
+          "mono": "quality-gates",
           "optional": true
         },
         {
@@ -333,6 +340,12 @@
           "label": null
         },
         {
+          "id": "lenses->quality_gates",
+          "from": "lenses",
+          "to": "quality_gates",
+          "label": null
+        },
+        {
           "id": "lenses->mock_fidelity",
           "from": "lenses",
           "to": "mock_fidelity",
@@ -359,6 +372,12 @@
         {
           "id": "cold_reader->verdict#in",
           "from": "cold_reader",
+          "to": "verdict#in",
+          "label": null
+        },
+        {
+          "id": "quality_gates->verdict#in",
+          "from": "quality_gates",
           "to": "verdict#in",
           "label": null
         },
@@ -555,6 +574,7 @@
             "lenses->test_integrity",
             "lenses->architecture_boundaries",
             "lenses->cold_reader",
+            "lenses->quality_gates",
             "lenses->mock_fidelity",
             "lenses->contract_fidelity"
           ],
@@ -562,6 +582,7 @@
             "test_integrity",
             "architecture_boundaries",
             "cold_reader",
+            "quality_gates",
             "mock_fidelity",
             "contract_fidelity"
           ]
@@ -572,6 +593,7 @@
             "test_integrity->verdict#in",
             "architecture_boundaries->verdict#in",
             "cold_reader->verdict#in",
+            "quality_gates->verdict#in",
             "mock_fidelity->verdict#in",
             "contract_fidelity->verdict#in"
           ],
@@ -647,6 +669,7 @@
             "test_integrity",
             "architecture_boundaries",
             "cold_reader",
+            "quality_gates",
             "mock_fidelity",
             "contract_fidelity"
           ]
@@ -705,6 +728,7 @@
             "lenses->test_integrity",
             "lenses->architecture_boundaries",
             "lenses->cold_reader",
+            "lenses->quality_gates",
             "lenses->mock_fidelity",
             "lenses->contract_fidelity"
           ],
@@ -712,6 +736,7 @@
             "test_integrity",
             "architecture_boundaries",
             "cold_reader",
+            "quality_gates",
             "mock_fidelity",
             "contract_fidelity"
           ]
@@ -722,6 +747,7 @@
             "test_integrity->verdict#in",
             "architecture_boundaries->verdict#in",
             "cold_reader->verdict#in",
+            "quality_gates->verdict#in",
             "mock_fidelity->verdict#in",
             "contract_fidelity->verdict#in"
           ],
@@ -790,6 +816,7 @@
             "test_integrity",
             "architecture_boundaries",
             "cold_reader",
+            "quality_gates",
             "mock_fidelity",
             "contract_fidelity"
           ]

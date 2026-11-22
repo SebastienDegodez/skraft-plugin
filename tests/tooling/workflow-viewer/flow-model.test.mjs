@@ -64,6 +64,7 @@ describe('the flow drawn from a shipped workflow', () => {
       ['test-integrity', null, true],
       ['architecture-boundaries', null, true],
       ['cold-reader', null, null],
+      ['quality-gates', null, null],
       ['mock-fidelity', 'mock', null],
       ['contract-fidelity', 'contract', null],
     ])
@@ -115,7 +116,7 @@ describe('the side panel of a node', () => {
   test('shows a review with its lenses, their when= and mandatory=', () => {
     const fields = panelFields(review.nodes.verdict)
     const branches = fields.find(({ key }) => key === 'branches')
-    assert.equal(branches.value, 'test-integrity (mandatory), architecture-boundaries (mandatory), cold-reader, mock-fidelity (when=mock), contract-fidelity (when=contract)')
+    assert.equal(branches.value, 'test-integrity (mandatory), architecture-boundaries (mandatory), cold-reader, quality-gates, mock-fidelity (when=mock), contract-fidelity (when=contract)')
     assert.deepEqual(branches.links.map(({ to }) => to), ['reference/workflow-dot#reviews', 'reference/workflow-dot#conditional-lenses'])
     assert.equal(fields.find(({ key }) => key === 'mandatory').value, 'true')
     const refutedBy = fields.find(({ key }) => key === 'refutedBy')

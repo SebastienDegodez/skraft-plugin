@@ -59,7 +59,7 @@ test('the fan-in of review stays, under its id and without mandatory=false, what
 test('a .skraft/review.skraft.dot ejected before the refuter node, its lens nodes led straight to verdict, is refused with the node and the edges to add; one that renames the refuter or says mandatory=false is refused', async () => {
   const before = BUILT_IN_REVIEW.replace('  refuter [shape=octagon, mandatory=true]\n', '').replace('  refuter -> verdict\n', '').replaceAll(' -> refuter\n', ' -> verdict\n')
   const added = 'node verdict: its lens nodes lead straight to it, the form before the refuter node; add refuter [shape=octagon],'
-    + ' lead test_integrity, architecture_boundaries, cold_reader, mock_fidelity, contract_fidelity to refuter instead, and add refuter -> verdict'
+    + ' lead test_integrity, architecture_boundaries, cold_reader, quality_gates, mock_fidelity, contract_fidelity to refuter instead, and add refuter -> verdict'
   assert.deepEqual(await checkedReview(before), [`.skraft/review.skraft.dot: ${added}`])
   assert.deepEqual(await checked(BUILT_IN_WORKFLOW, [], { '.skraft/review.skraft.dot': before }), [`.skraft/review.skraft.dot: ${added}`])
 

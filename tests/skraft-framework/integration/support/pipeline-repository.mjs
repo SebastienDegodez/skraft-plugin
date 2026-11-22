@@ -540,7 +540,7 @@ export const NOMINAL = Object.freeze({
 export const LENSES = Object.freeze({
   design_review: ['consistency', 'architecture-compliance', 'fitness'],
   distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
-  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader'],
+  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates'],
 })
 
 /**

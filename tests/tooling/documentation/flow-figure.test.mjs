@@ -27,7 +27,7 @@ test("every committed flow is what the generator makes from today's workflow", a
 test('the DELIVER column, its folds and its sub-tasks come from the workflow the engine reads', async () => {
   const flow = await buildFlow(layout(), texts())
   assert.deepEqual(flow.order, ['scenario_review', 'deliver', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit'])
-  assert.deepEqual(sub(flow, 'deliver_review').all, ['test_integrity', 'architecture_boundaries', 'cold_reader', 'mock_fidelity', 'contract_fidelity'])
+  assert.deepEqual(sub(flow, 'deliver_review').all, ['test_integrity', 'architecture_boundaries', 'cold_reader', 'quality_gates', 'mock_fidelity', 'contract_fidelity'])
   const lenses = sub(flow, 'deliver_review').nodes
   assert.equal(lenses.find((n) => n.id === 'mock_fidelity').when, 'mock')
   assert.equal(lenses.find((n) => n.id === 'cold_reader').optional, true)
@@ -61,7 +61,7 @@ test('a lens added to or removed from the review, a max_visits changed: the figu
     .replace('  lenses -> cold_reader -> refuter\n', '')
   t.pipeline = t.pipeline.replace('deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]', 'deliver_review -> deliver [label="NEEDS_REWORK", max_visits=4]')
   const flow = await buildFlow(layout(), t)
-  assert.deepEqual(sub(flow, 'deliver_review').all, ['test_integrity', 'architecture_boundaries', 'mock_fidelity', 'contract_fidelity', 'security'])
+  assert.deepEqual(sub(flow, 'deliver_review').all, ['test_integrity', 'architecture_boundaries', 'quality_gates', 'mock_fidelity', 'contract_fidelity', 'security'])
   assert.equal(flow.edges.find((e) => e.id === 'deliver_review->deliver').maxVisits, 4)
   assert.equal(JSON.stringify(layout()), before)
   assert.match(renderSub(flow, 'deliver_review', 'fr'), /data-node="security"/)

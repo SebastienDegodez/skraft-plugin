@@ -21,8 +21,8 @@ test('the plugin\'s DELIVER review is a call to the plugin\'s .skraft/review.skr
 
   const call = workflow.nodes.deliver_review
   assert.equal(call.kind, 'call')
-  assert.deepEqual(call.lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'])
-  assert.deepEqual(call.branches.map(({ id, when }) => `${id} ${when}`), ['test_integrity null', 'architecture_boundaries null', 'cold_reader null', 'mock_fidelity mock', 'contract_fidelity contract'])
+  assert.deepEqual(call.lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity', 'contract-fidelity'])
+  assert.deepEqual(call.branches.map(({ id, when }) => `${id} ${when}`), ['test_integrity null', 'architecture_boundaries null', 'cold_reader null', 'quality_gates null', 'mock_fidelity mock', 'contract_fidelity contract'])
   assert.deepEqual(call.call, {
     workflow: 'review', with: {}, fanIn: 'verdict', mandatory: true,
     inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' },

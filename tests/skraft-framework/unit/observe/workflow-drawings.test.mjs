@@ -35,7 +35,7 @@ test('the workflows a run of this working copy can follow are drawn before any r
     id: 'verdict', kind: 'review', phase: null, runs: null, question: null, publish: null, calls: null, mandatory: true,
     refuter: { id: 'refuter', agent: 'finding-refuter', mandatory: true },
     lenses: [
-      { lens: 'test-integrity', when: null }, { lens: 'architecture-boundaries', when: null }, { lens: 'cold-reader', when: null },
+      { lens: 'test-integrity', when: null }, { lens: 'architecture-boundaries', when: null }, { lens: 'cold-reader', when: null }, { lens: 'quality-gates', when: null },
       { lens: 'mock-fidelity', when: 'mock' }, { lens: 'contract-fidelity', when: 'contract' },
     ],
   }])

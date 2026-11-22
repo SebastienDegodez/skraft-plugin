@@ -37,7 +37,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent: id }) => id)), [
     ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'],
     ['coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens'],
-    ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens'],
+    ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens'],
   ])
   assert.deepEqual(lensLabels(host).slice(0, 3), [
     `consistency-lens plugin skraft ${SLUG} · design_review · consistency · attempt 1`,
@@ -132,6 +132,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     'test-integrity-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
     'architecture-boundaries-lens': ['overview', 'context', 'patch', 'files', 'components'],
     'cold-reader-lens': ['patch', 'files'],
+    'quality-gates-lens': ['overview', 'outputs', 'patch', 'files', 'components'],
   })
   assert.ok(prompt('test-integrity-lens', 'deliver_review').includes([
     `  - Documents of this phase: ${TRACKING}/${CHANGE_LOG}`,
@@ -195,7 +196,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
 
   await host.start()
 
-  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
+  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'mock-fidelity-lens'])
   const mocks = host.agentRunner.batches.at(-1).at(-1).prompt
   assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, BDD, gates with a traced run): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
   assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] }])
@@ -209,7 +210,7 @@ test('a lens whose trigger matches a changed path or an added line runs with the
     } })(it),
   ])
   await contracts.start()
-  assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
+  assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'contract-fidelity-lens'])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [
     { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, bdd: true, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
     { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
@@ -225,8 +226,8 @@ test('a lens runs on the trigger its node names, whichever lens it is: none runs
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'mock-fidelity-lens'])
-  assert.deepEqual(host.events().find((event) => event.type === 'step.started' && event.step === 'deliver_review').lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'])
+  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'quality-gates-lens', 'mock-fidelity-lens'])
+  assert.deepEqual(host.events().find((event) => event.type === 'step.started' && event.step === 'deliver_review').lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity', 'contract-fidelity'])
 })
 
 test('a blind lens reads the changes without the decision records and design documents of the run: no ADR, no supersession registry, no context map, event model or scenario', async () => {

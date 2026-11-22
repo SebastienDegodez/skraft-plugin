@@ -147,7 +147,7 @@ test('each lens journals its own cost, and the review records what its lenses an
   assert.deepEqual(lensed.map((event) => event.cost), [0.25, 0.25, 0.25])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.equal(recorded.cost, 0.75)
-  assert.equal((await host.view()).costUsd, 0.75 * 3 + 0.25 * 1)
+  assert.equal((await host.view()).costUsd, 0.75 * 3 + 0.25 * 2)
 
   const batched = scripted({}, nominal)
   batched.agentRunner.batchCostUsd = 0.5

@@ -7,7 +7,7 @@ import { ejectedPipeline, edit, host, WITH_SECURITY } from './support.mjs'
 const LENSES = {
   design_review: ['consistency', 'architecture-compliance', 'fitness'],
   distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
-  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'],
+  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity', 'contract-fidelity'],
 }
 const PLUGIN_AGENTS = {
   'solution-researcher': 'plugin', 'solution-architect': 'plugin', 'acceptance-designer': 'plugin', 'software-engineer': 'plugin',

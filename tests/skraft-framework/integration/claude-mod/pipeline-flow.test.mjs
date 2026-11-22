@@ -74,7 +74,7 @@ test('/skraft runs the four phases on a real repository: each subagent commits i
     `skraft ${SLUG} — done`, '✓ RESEARCH', '✓ DESIGN', '✓ DISTILL', '✓ DELIVER', '✓ PUBLISH', 'PUBLISH closed',
     'review design_review: approved — consistency pass, architecture-compliance pass, fitness pass',
     'review distill_review: approved — coverage pass, business-alignment pass, testability pass, boundary-enforcement pass',
-    'review deliver_review: approved — test-integrity pass, architecture-boundaries pass, cold-reader pass',
+    'review deliver_review: approved — test-integrity pass, architecture-boundaries pass, cold-reader pass, quality-gates pass',
     'Quality evidence: build run 1, format run 2, lint run 3, test run 4, architecture run 5, coverage run 6',
   ].join('\n'))
 })

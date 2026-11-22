@@ -41,7 +41,7 @@ test('skraft review --pr hands the lenses, then the refuter, to the conducting a
 
   assert.equal(exit, 1)
   assert.deepEqual([step.status, step.pass, step.reasons], ['NEEDS_REWORK', 1, [`test-integrity F1 G9 blocker at ${TEST_FILE}:7: Assert.Equal(90m, total) became Assert.NotNull(total)`]])
-  assert.deepEqual(steps.map(({ dispatches }) => dispatches.map(({ agent }) => agent)), [['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens'], ['finding-refuter']])
+  assert.deepEqual(steps.map(({ dispatches }) => dispatches.map(({ agent }) => agent)), [['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens'], ['finding-refuter']])
   assert.equal(steps[0].then, `${SKRAFT_COMMAND} review --pr 12 --record`)
   const folder = join(repo.cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12')
   assert.equal(step.file, join(folder, 'reviews', 'verdict-1', 'verdict.yaml'))
@@ -103,11 +103,11 @@ test('skraft review prints its verdict for a human and refuses a malformed comma
   const nothing = await skraft(repo.cwd, ['review', '--pr', '13', '--record'], { env: repo.env })
 
   assert.equal(text.status, 0)
-  assert.ok(text.stdout.startsWith('skraft review #12: dispatch — start these 3 agents, one after the other, save each final reply as it is to its reply file, then record\nagent 1: test-integrity-lens on'), text.stdout)
+  assert.ok(text.stdout.startsWith('skraft review #12: dispatch — start these 4 agents, one after the other, save each final reply as it is to its reply file, then record\nagent 1: test-integrity-lens on'), text.stdout)
   assert.ok(text.stdout.endsWith(`then: ${SKRAFT_COMMAND} review --pr 12 --record\n`), text.stdout)
-  assert.equal(text.stderr, 'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host\n')
+  assert.equal(text.stderr, 'pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity) — reviewer · economy · model chosen by the host\n')
   assert.equal(record.status, 1)
-  assert.equal(record.stdout, 'skraft review #12: refused (not-recorded) — 3 handed over agents are not recorded yet: start each one, save its reply, then record\n')
+  assert.equal(record.stdout, 'skraft review #12: refused (not-recorded) — 4 handed over agents are not recorded yet: start each one, save its reply, then record\n')
   assert.equal(malformed.status, 2)
   assert.equal(nothing.stdout, 'skraft review #13: refused (nothing-to-record) — no agent was handed over; run the review without --record\n')
 })

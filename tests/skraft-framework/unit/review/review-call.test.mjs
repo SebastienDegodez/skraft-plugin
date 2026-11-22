@@ -26,7 +26,7 @@ test('NEEDS_REWORK returned by the call to .skraft/review.skraft.dot sends the D
   ])
   assert.ok(!prompt(host, 'test-integrity-lens', 'deliver_review').includes('No `.feature` file and no test plan'), 'a run hands test-integrity its test plan')
   const workflow = await host.tracking.read(SLUG, 'WORKFLOW.md')
-  assert.ok(workflow.includes('\n- [x] deliver_review — test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity: approved, pass 2\n'), workflow)
+  assert.ok(workflow.includes('\n- [x] deliver_review — test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity: approved, pass 2\n'), workflow)
 })
 
 test('a .skraft/review.skraft.dot bound to neither story nor documents reviews the changes alone: no context.md, no document of the run, no story in the briefs', async () => {

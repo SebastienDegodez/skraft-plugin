@@ -62,7 +62,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the tr
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'question.asked', 'question.answered', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'commits.checked', 'evidence.checked', 'step.recorded',
-    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
@@ -98,7 +98,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the tr
     'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · sonnet`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · haiku`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: scenario_review APPROVED`, `${SLUG}: DISTILL closed`,
     'phase DELIVER', `${SLUG}: software-engineer, attempt 1 — implementer · standard · sonnet`,
-    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`, `${SLUG}: deliver_review APPROVED: every lens passed`,
+    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`, `${SLUG}: deliver_review APPROVED: every lens passed`,
     `${SLUG}: visuals: no component of skraft-config.json is a front end (stack react, or an e2e command)`, `${SLUG}: DELIVER closed`,
     'phase PUBLISH', `${SLUG}: pr-writer, attempt 1 — economy · haiku`, `${SLUG}: publish: pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed`, `${SLUG}: PUBLISH closed`,
 

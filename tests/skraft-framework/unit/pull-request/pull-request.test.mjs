@@ -449,8 +449,8 @@ test('two reviews with the same lens each show what the refuter said of their ow
   assert.equal((await host.start()).status, 'done')
 
   const review = section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Review')
-  assert.ok(review.includes('**first_review** · 1 pass · lenses test-integrity: claude-haiku-5; architecture-boundaries, cold-reader: reviewer · refuter claude-sonnet-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity · G1 (F1) | `src/Checkout.cs:12` | the total is not asserted | one lens alone, against the lenses that passed; refuted: line 12 asserts 90 |'), review)
-  assert.ok(review.includes('**second_review** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader: reviewer · refuter claude-opus-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity · G1 (F1) | `src/Checkout.cs:12` | the total is still not asserted | one lens alone, against the lenses that passed; refuted: line 12 still asserts 90 |'), review)
+  assert.ok(review.includes('**first_review** · 1 pass · lenses test-integrity: claude-haiku-5; architecture-boundaries, cold-reader, quality-gates: reviewer · refuter claude-sonnet-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity · G1 (F1) | `src/Checkout.cs:12` | the total is not asserted | one lens alone, against the lenses that passed; refuted: line 12 asserts 90 |'), review)
+  assert.ok(review.includes('**second_review** · 1 pass · lenses test-integrity: claude-sonnet-5; architecture-boundaries, cold-reader, quality-gates: reviewer · refuter claude-opus-5\n\n' + HEADER + '\n' + RULE + '\n| To decide | medium | test-integrity · G1 (F1) | `src/Checkout.cs:12` | the total is still not asserted | one lens alone, against the lenses that passed; refuted: line 12 still asserts 90 |'), review)
 })
 
 test('a red commit the engine refused is not shown as evidence, only the one that replaced it', async () => {
