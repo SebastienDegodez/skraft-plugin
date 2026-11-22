@@ -37,6 +37,7 @@ Your first turn loads `outside-in-tdd`, `craft-discipline` and `clean-architectu
 | `test-design-mandates` | you decide whether a Domain unit test is allowed |
 | `test-refactoring-catalog` | you refactor a test |
 | `quality-gates-<stack>` of the component (`dotnet`, `javascript`, `python`, `typescript`; `typescript` for `react`) | your brief's feedback names a failing gate of that component, or your brief lists surviving mutants of it |
+| `playwright-evidence` | a group holds a `@visual` scenario of a `react` component: capture its screenshots during the real Playwright e2e run you make it pass with, never in a run of their own; publish nothing, the engine publishes them in the pull request |
 
 Each component line of your brief gives its `mocking:` strategy and whether `contract testing:` is on. Wire a component's test doubles with the listed `mocking-<strategy>-*` skill of that strategy and stack, never another strategy, with one exception: the Playwright e2e tests of a `react` component reach its back end through Microcks (`mocking-microcks-typescript`), whatever its strategy; with no listed skill for its stack, load the `mocking-strategy-roster` skill and apply the recipe it names for that stack, or stop `blocked` when it names none. Write a contract test only for a component whose line reads `contract testing: on`, with the listed `contract-testing` skills.
 
