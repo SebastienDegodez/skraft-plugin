@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -117,6 +117,16 @@ test('a pull request review keeps its own journal and files under .copilot-track
   assert.equal(await adapters.files.read('pr-12', 'reviews/verdict-1/changes.patch'), null)
   assert.deepEqual(readdirSync(join(cwd, '.copilot-tracking')), ['skraft-reviews'])
 })
+test('a workspace folder is listed as a folder, and a symbolic link to one as a file', async (t) => {
+  const { adapters, cwd } = adaptersIn(t)
+  mkdirSync(join(cwd, 'web', 'skraft-visuals'), { recursive: true })
+  symlinkSync(join(cwd, 'web'), join(cwd, 'linked'), process.platform === 'win32' ? 'junction' : 'dir')
+
+  const entries = await adapters.workspace.list('.')
+
+  assert.deepEqual(entries.sort((a, b) => a.name.localeCompare(b.name)), [{ name: 'linked', kind: 'file' }, { name: 'web', kind: 'dir' }])
+})
+
 test('a workspace file replaced takes its new text in one rename, leaving no other file beside it', async (t) => {
   const { adapters, cwd } = adaptersIn(t)
   writeFileSync(join(cwd, 'skraft-config.json'), '{ "trackingLayout": "namespaced" }\n')

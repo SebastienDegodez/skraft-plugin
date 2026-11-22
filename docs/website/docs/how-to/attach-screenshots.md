@@ -119,7 +119,8 @@ the dark ones folded. How they get there depends on the forge:
   a real organisation.
 
 skraft checks each file with Git alone before it attaches or commits it: a symbolic link, a path
-beyond one, or a file that is not a PNG is refused. Screenshots are evidence, not a gate: a
+beyond one, or a file that is not a PNG is refused. Before that, a front end whose root is itself a
+symbolic link has none of its files read, its manifest included. Screenshots are evidence, not a gate: a
 failing e2e run does not stop the run.
 
 ## Troubleshooting

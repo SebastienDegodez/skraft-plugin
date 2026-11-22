@@ -225,6 +225,18 @@ test('a screenshot whose path holds a # is refused when the manifest is read, gh
   }
 })
 
+test('a front end whose root is a symbolic link has none of its screenshots read: nothing is attached nor committed, and the pull request says why', async () => {
+  for (const codeHost of [new InMemoryCodeHost(), azure()]) {
+    const host = visualsRun({ codeHost })
+    host.workspace.links.add('web')
+
+    assert.equal((await host.start(STORY)).status, 'done')
+
+    assert.deepEqual([host.git.engineCommits, host.git.copies, host.codeHost.attached], [[], [], [[]]])
+    assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: web: screenshots not recorded: the component\'s root web is a symbolic link, or no folder: none of its files is read' })
+  }
+})
+
 test('a screenshot that is a symbolic link, lies outside its component or is no PNG is refused: nothing is attached nor committed, and the pull request says which', async () => {
   for (const codeHost of [new InMemoryCodeHost(), azure()]) {
     const host = visualsRun({ codeHost })

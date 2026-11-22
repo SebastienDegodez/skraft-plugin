@@ -310,6 +310,8 @@ export class InMemoryWorkspace {
     this.unreadable = new Map()
     /** @type {Array<[string, string]>} each file replaced in one rename, with its new text, in order */
     this.replaced = []
+    /** @type {Set<string>} the folders that are symbolic links, which a listing gives as files, as Node's readdir does */
+    this.links = new Set()
   }
   async read(path) {
     if (this.unreadable.has(tidy(path))) throw new Error(this.unreadable.get(tidy(path)))
@@ -329,7 +331,7 @@ export class InMemoryWorkspace {
       if (!key.startsWith(prefix) || key === dir) continue
       const [name, ...rest] = key.slice(prefix.length).split('/')
       if (name === '..') continue
-      entries.set(name, rest.length > 0 ? 'dir' : entries.get(name) ?? 'file')
+      entries.set(name, rest.length > 0 && !this.links.has(`${prefix}${name}`) ? 'dir' : entries.get(name) ?? 'file')
     }
     if (entries.size === 0 && dir !== '') return null
     return [...entries].map(([name, kind]) => ({ name, kind }))

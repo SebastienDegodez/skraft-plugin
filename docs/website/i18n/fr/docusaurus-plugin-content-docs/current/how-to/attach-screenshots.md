@@ -122,7 +122,9 @@ thème, les sombres repliées. Le chemin dépend de la forge :
   une vraie organisation.
 
 skraft contrôle chaque fichier avec Git seul avant de le joindre ou de le commiter : un lien
-symbolique, un chemin qui passe par l'un d'eux ou un fichier qui n'est pas un PNG est refusé. Les
+symbolique, un chemin qui passe par l'un d'eux ou un fichier qui n'est pas un PNG est refusé. Avant
+cela, un front end dont la racine est elle-même un lien symbolique n'a aucun de ses fichiers lu,
+manifeste compris. Les
 captures sont une preuve, pas une gate : un e2e en échec n'arrête pas le run.
 
 ## Dépannage

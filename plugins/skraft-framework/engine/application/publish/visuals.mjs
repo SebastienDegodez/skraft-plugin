@@ -1,5 +1,5 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
+import { joinRelative, normalizeRelative, pathUnder } from '../../domain/config/relative-path.mjs'
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { evidenceCopies, isFrontend, readManifest, VISUALS_MANIFEST } from '../../domain/reporting/visuals.mjs'
@@ -104,11 +104,25 @@ const listed = async (deps, request, { component, ran }) => {
  * @returns {Promise<import('../../domain/reporting/visuals.mjs').ManifestReading>}
  */
 const manifestOf = async ({ workspace }, component) => {
+  if (await rootLinked(workspace, component.root)) return { ok: false, reason: `the component's root ${component.root} is a symbolic link, or no folder: none of its files is read` }
   const reading = readManifest(await workspace.read(joinRelative(component.root, VISUALS_MANIFEST)))
   if (!reading.ok) return reading
   const missing = []
   for (const [index, { path }] of reading.screenshots.entries()) if ((await workspace.read(joinRelative(component.root, path))) === null) missing.push(index + 1)
   return missing.length === 0 ? reading : { ok: false, reason: `the file of screenshot ${missing.join(', ')} of ${VISUALS_MANIFEST} is missing` }
+}
+
+/**
+ * Whether the component's root is listed in its folder as anything but a folder: a symbolic link
+ * (a listing gives one as a file), or a file. The working copy itself, `.`, is never one.
+ * @param {VisualsDeps['workspace']} workspace @param {string} root relative to the working copy
+ */
+const rootLinked = async (workspace, root) => {
+  const at = normalizeRelative(root)
+  if (at === '.' || at.split('/').at(-1) === '..') return false
+  const name = at.slice(at.lastIndexOf('/') + 1)
+  const entries = await workspace.list(at.includes('/') ? at.slice(0, at.lastIndexOf('/')) : '.')
+  return (entries ?? []).some((entry) => entry.name === name && entry.kind !== 'dir')
 }
 
 /**
