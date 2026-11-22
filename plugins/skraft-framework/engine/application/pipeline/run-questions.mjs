@@ -1,7 +1,7 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
 import { BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
-import { namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
+import { namedFeatures } from '../../domain/pipeline/named-features.mjs'
 import { scenarioWriter } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'

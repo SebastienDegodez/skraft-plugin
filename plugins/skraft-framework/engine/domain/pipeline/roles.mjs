@@ -20,7 +20,7 @@ import { joinRelative } from '../config/relative-path.mjs'
  *   (consistency matrix, ADR names and supersessions) its attempts leave;
  *   scan: the engine scans the code for its structural commitments before each attempt;
  *   citations: the engine checks the citations of the research document its attempts leave;
- *   scenarios: the engine checks the Gherkin the test plan of its attempts names;
+ *   scenarios: the agent writes the story's scenarios, in the folders the components' bdd names;
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
  *   output holds (a summary line of at most 72 characters, no section left empty); proposal: it
  *   writes a proposal for surviving mutants in the file the engine creates, and changes no code;

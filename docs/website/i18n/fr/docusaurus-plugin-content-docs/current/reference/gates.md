@@ -17,7 +17,7 @@ Où chaque revue se place dans le pipeline : [Phases](./phases.md).
 | --- | --- | --- | --- |
 | Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | l'ingénieur logiciel la lance par `skraft_repl` ; le moteur contrôle la trace signée | DELIVER, à la soumission de la tentative |
 | Critère de revue | `G<n>`, et `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | une lentille, puis le moteur (DESIGN, DISTILL, DELIVER) ou `review-verdict.mjs` (DISCOVER, DISCUSS) | revues de chaque phase |
-| Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL) ; G9 (`test-integrity#patch`) | le moteur, sans lentille | après la tentative de l'architecte ; après la tentative du concepteur d'acceptation ; dans le patch d'une revue |
+| Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G11 (`testability#layout`) (DISTILL) ; G9 (`test-integrity#patch`) | le moteur, sans lentille | après la tentative de l'architecte ; après la tentative du concepteur d'acceptation ; dans le patch d'une revue |
 
 Un identifiant `G<n>` n'est unique que dans sa phase : G1 de DESIGN n'est pas G1 de DISTILL.
 La table d'une lentille, dans son descripteur d'agent, fait foi ; une lentille met
@@ -190,21 +190,6 @@ emplacement unitaire. Un test ne compte que sous un chemin de tests que le compo
 sous le `src/test` d'un module une classe `*IT` (Failsafe) est d'intégration et tout autre test
 (Surefire `*Test`, Cucumber) unitaire, et accepte aussi les modules `<context>-unit-test(s)` et
 `<context>-integration-test(s)` ; toute autre stack `unit/` et `integration/` sous le chemin des tests.
-
-**Contrôle du moteur.** G1 : après chaque tentative d'`acceptance-designer`, sans lentille
-([`gherkin-records`](./run-journal.md#statuses-and-codes)), le moteur lit les scénarios que nomme le
-plan de test et rapporte une ligne par faute : un `.feature` que le plan cite et qu'aucun dossier features de son
-composant ne tient, un scénario qui ne dit ni Given, ni When, ni Then, un outline dont les exemples
-laissent sans colonne un placeholder ouvert par son titre ou ses étapes, deux scénarios d'un même
-fichier qui partagent un titre, et une histoire qui compte moins de scénarios que son
-`ac-draft-{story}.md` ne déclare de critères d'acceptation (un outline compte une fois, quel que
-soit le nombre de lignes de ses exemples). Le plan déclare le périmètre : seuls les `.feature`
-que citent les lignes de ses tableaux sont lus, jamais ceux que sa prose mentionne, si bien que les
-fichiers d'une autre histoire ne sont jamais imputés à ce run,
-et une ligne de la matrice de couverture qui ne nomme aucun Gherkin écrit `—`. Les critères disent
-combien de scénarios il en faut : une histoire dont l'`ac-draft` n'en déclare aucun ne se voit
-demander aucun scénario. C'est un plancher sous G1, pas G1 :
-la lentille `coverage` juge toujours à quel critère répond chaque scénario.
 
 **Contrôle du moteur.** Les scénarios que DELIVER construit : après chaque tentative du passage
 du plan, le moteur lit le tableau `## Scenarios` du plan de test (`scenarios`) : identifiants dans

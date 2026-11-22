@@ -17,7 +17,7 @@ Where each review sits in the pipeline: [Phases](./phases.md).
 | --- | --- | --- | --- |
 | Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | the software engineer runs it through `skraft_repl`; the engine checks the signed trace | DELIVER, at the submission of the attempt |
 | Review criterion | `G<n>`, and `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | a lens, then the engine (DESIGN, DISTILL, DELIVER) or `review-verdict.mjs` (DISCOVER, DISCUSS) | each phase's reviews |
-| Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL); G9 (`test-integrity#patch`) | the engine, without a lens | after the architect's attempt; after the acceptance designer's attempt; in a review's patch |
+| Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G11 (`testability#layout`) (DISTILL); G9 (`test-integrity#patch`) | the engine, without a lens | after the architect's attempt; after the acceptance designer's attempt; in a review's patch |
 
 A `G<n>` id is unique only within its phase: DESIGN's G1 is not DISTILL's G1. A lens's table, in
 its agent descriptor, is the source; a lens puts the id in the `gate` field of each finding.
@@ -188,18 +188,6 @@ place counts as it (`tests/unit`, `tests/Orders.UnitTests`). .NET names its plac
 under a module's `src/test` a `*IT` class (Failsafe) is integration and any other test (Surefire
 `*Test`, Cucumber) unit, and accepts `<context>-unit-test(s)` and `<context>-integration-test(s)`
 modules too; any other stack `unit/` and `integration/` under the test path.
-
-**Engine check.** G1: after each `acceptance-designer` attempt, without a lens
-([`gherkin-records`](./run-journal.md#statuses-and-codes)), the engine reads the scenarios the test
-plan names and reports one line per fault: a `.feature` the plan cites that no features folder of its
-component holds, a scenario that says no Given, When or Then, an outline whose examples leave unfilled a
-placeholder its title or its steps open, two scenarios of one file sharing a title, and a story
-with fewer scenarios than its `ac-draft-{story}.md` declares acceptance criteria (an outline counts
-once, however many example rows it carries). The plan declares the perimeter: only the `.feature`
-files the rows of its tables cite are read, never one its prose mentions, so the files of another
-story are never charged to this run, and a coverage-matrix row that names no Gherkin writes `—`. The criteria answer how many scenarios it
-takes: a story whose `ac-draft` declares none is asked for none. This is a floor under G1, not G1 itself: the `coverage` lens still
-judges which criterion each scenario answers.
 
 **Engine check.** The scenarios DELIVER builds: after each attempt of the plan pass, the engine
 reads the `## Scenarios` table of the test plan (`scenarios`): ids in order, one title each, a

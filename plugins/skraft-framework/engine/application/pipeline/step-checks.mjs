@@ -8,7 +8,6 @@ import { proseProblems, readProse } from '../../domain/reporting/pull-request-pr
 import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { checkDesignRecords } from './design-records.mjs'
-import { checkGherkinRecords } from './gherkin-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
 import { checkEvidence, redRunOf } from './evidence-checks.mjs'
@@ -19,7 +18,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd' | 'evidence'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd' | 'evidence'} FailureCode
  * @typedef {{ repository: string, sha: string, subject: string, kind: string, verdict: string }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
@@ -55,7 +54,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'gherkin-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd', 'evidence'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd', 'evidence'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -240,9 +239,7 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 
 /**
  * The records a role keeps, each failure under its own code: the DESIGN records of a role that
- * keeps them, the citations of a role whose research document the engine checks, the scenarios of
- * a role whose test plan names them — and only where a component describes its behaviour in
- * Gherkin: a repository whose tests are written without it is asked for no `.feature`.
+ * keeps them, the citations of a role whose research document the engine checks.
  * @param {CheckDeps} deps @param {Parameters<typeof checkStep>[1]} step
  * @param {{ slug: string, base: import('../config/bases.mjs').Base[], config: SkraftConfig }} run
  * @returns {Promise<Failure[] | string>} a string: why the machine could not read them
@@ -250,7 +247,6 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 const keptRecords = async (deps, { role, precreated }, { slug, base, config }) => {
   if (role.records) return coded('design-records', await checkDesignRecords(deps, { slug, base }))
   if (role.citations) return researchRecords(deps, slug, precreated, config)
-  if (role.scenarios && writesGherkin(config)) return coded('gherkin-records', await checkGherkinRecords(deps, { slug, components: config.components }))
   return []
 }
 
@@ -260,9 +256,6 @@ const researchRecords = async (deps, slug, precreated, config) => {
   if (template === null || template === undefined) return 'RESEARCH template was not loaded'
   return coded('research-records', await checkResearchRecords(deps, { slug, template, roots: config.components.map(({ root }) => root) }))
 }
-
-/** Whether any component of the run describes its behaviour in Gherkin. @param {SkraftConfig} config */
-const writesGherkin = ({ components }) => components.some(({ bdd }) => bdd === true)
 
 /** @param {FailureCode} code @param {string[] | string} lines @returns {Failure[] | string} */
 const coded = (code, lines) => (typeof lines === 'string' ? lines : lines.map((line) => ({ code, line })))

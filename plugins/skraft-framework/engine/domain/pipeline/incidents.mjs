@@ -26,7 +26,7 @@ export const causeLines = ({ owner, log }) => [`Cause: ${CAUSES[owner]}.`, ...(l
 /** @type {Readonly<Record<string, Owner>>} */
 const OWNERS = Object.freeze({
   'missing-outputs': 'agent', 'invalid-result': 'agent', 'design-records': 'agent', 'research-records': 'agent',
-  'gherkin-records': 'agent', scenarios: 'agent', 'pull-request-prose': 'agent', 'agent-blocked': 'agent',
+  scenarios: 'agent', 'pull-request-prose': 'agent', 'agent-blocked': 'agent',
   'write-scope': 'agent', uncommitted: 'agent', 'adr-lifecycle': 'agent', 'commit-convention': 'agent', tdd: 'agent', evidence: 'agent', agent: 'agent',
   deterministic: 'agent', environment: 'environment', config: 'config', interrupted: 'interrupted',
 })
