@@ -35,9 +35,9 @@ const WORKFLOW = `digraph visuals {
 }`
 
 /** What Playwright leaves in web/ once its light and dark projects ran: each screenshot, then the manifest. */
-const playwrightWrites = (workspace, screenshots) => {
-  for (const { path, bytes } of screenshots) workspace.files.set(`web/${path}`, bytes)
-  workspace.files.set('web/skraft-visuals/manifest.json', JSON.stringify({ screenshots: screenshots.map(({ title, theme, path, scenario }) => ({ title, theme, path, scenario })) }))
+const playwrightWrites = (workspace, screenshots, root = 'web') => {
+  for (const { path, bytes } of screenshots) workspace.files.set(`${root}/${path}`, bytes)
+  workspace.files.set(`${root}/skraft-visuals/manifest.json`, JSON.stringify({ screenshots: screenshots.map(({ title, theme, path, scenario }) => ({ title, theme, path, scenario })) }))
 }
 
 const CHECKOUT = Object.freeze([
@@ -52,7 +52,7 @@ const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost,
   const host = scripted({
     workflow: WORKFLOW, components, codeHost, git: new InMemoryGit(), answers,
     config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2, visuals: 2 }, visuals: true }, ...config },
-  }, (it) => [agent({ trace: false, work: async () => { if (traced) { playwrightWrites(it.workspace, screenshots); await writeE2eTrace(it, { cwd: 'web', command: web.commands.e2e ?? 'npx playwright test', exitCode: exits[`web $ ${web.commands.e2e}`] ?? 0 }) } } })(it)])
+  }, (it) => [agent({ trace: false, work: async () => { if (traced) { playwrightWrites(it.workspace, screenshots, web.root); await writeE2eTrace(it, { cwd: web.root, command: web.commands.e2e ?? 'npx playwright test', exitCode: exits[`web $ ${web.commands.e2e}`] ?? 0 }) } } })(it)])
   return host
 }
 
@@ -242,6 +242,12 @@ test('a screenshot whose path holds a # is refused when the manifest is read, gh
 
     assert.deepEqual([host.git.engineCommits, host.codeHost.attached], [[], [[]]])
     assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: web: screenshots not recorded: the path of screenshot 2 of skraft-visuals/manifest.json holds a #, which gh reads as the start of its alt text: name the file without one' })
+
+    // The # in the root of the component, which every screenshot's path starts with.
+    const rooted = visualsRun({ codeHost, web: { ...WEB, root: 'web #2' } })
+    assert.equal((await rooted.start(STORY)).status, 'done')
+    assert.deepEqual([rooted.git.engineCommits, rooted.codeHost.attached], [[], [[]]])
+    assert.deepEqual(visualsStep(rooted), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: web: screenshots not recorded: the component\'s root web #2 holds a #, which gh reads as the start of an alt text: name its folder without one' })
   }
 })
 

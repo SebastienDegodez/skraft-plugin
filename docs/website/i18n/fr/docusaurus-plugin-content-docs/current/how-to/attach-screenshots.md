@@ -108,7 +108,7 @@ thème, les sombres repliées. Le chemin dépend de la forge :
 - **GitHub** : elles restent là où Playwright les a écrites, rien n'est commité. Le corps renvoie
   à chacune par son chemin depuis le dossier du fichier du corps
   (`../../../web/skraft-visuals/checkout.png`), et `gh pr create` ou `gh pr edit`, lancé depuis ce
-  dossier, la téléverse avec `--attach`, en réécrivant la référence. Une capture dont le chemin
+  dossier, la téléverse avec `--attach`, en réécrivant la référence. Une capture dont le chemin, ou la racine de son composant,
   contient un `#` est refusée à la lecture du manifeste : gh prend ce qui suit `#` pour le texte
   alternatif. Quand la description dépasse ce qu'une pull request accepte (60 000 caractères), la
   section Screenshots part dans un commentaire des détails du run : `gh pr comment --attach` publie

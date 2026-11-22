@@ -106,6 +106,7 @@ const listed = async (deps, request, { component, ran }) => {
  * @returns {Promise<import('../../domain/reporting/visuals.mjs').ManifestReading>}
  */
 const manifestOf = async ({ workspace }, component) => {
+  if (component.root.includes('#')) return { ok: false, reason: `the component's root ${component.root} holds a #, which gh reads as the start of an alt text: name its folder without one` }
   if (await rootLinked(workspace, component.root)) return { ok: false, reason: `the component's root ${component.root} is a symbolic link, or no folder: none of its files is read` }
   const reading = readManifest(await workspace.read(joinRelative(component.root, VISUALS_MANIFEST)))
   if (!reading.ok) return reading

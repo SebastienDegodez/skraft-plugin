@@ -106,7 +106,7 @@ the dark ones folded. How they get there depends on the forge:
 - **GitHub**: they stay where Playwright wrote them, nothing is committed. The body refers to each
   by its path from the folder of the body's file (`../../../web/skraft-visuals/checkout.png`), and
   `gh pr create` or `gh pr edit`, started from that folder, uploads it with `--attach`, rewriting the
-  reference. A screenshot whose path holds a `#` is refused when the manifest is read: gh takes
+  reference. A screenshot whose path, or its component's root, holds a `#` is refused when the manifest is read: gh takes
   what follows `#` for the alt text. When the description is longer than a pull request takes
   (60,000 characters), the Screenshots section goes to a comment of the run details:
   `gh pr comment --attach` posts that comment with its screenshots, and the comment it replaces is
