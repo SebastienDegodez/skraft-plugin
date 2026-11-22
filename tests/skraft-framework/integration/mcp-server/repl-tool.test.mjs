@@ -2,34 +2,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { SLUG, pipelineRepository } from '../support/pipeline-repository.mjs'
 import { skraft } from '../support/workspace.mjs'
-import { loop, startAgents } from '../agent-loop/simulated-conductor.mjs'
+import { toDeliveryAttempt } from './delivery-attempt.mjs'
 import { mcpHost } from './mcp-host.mjs'
 
 // A real server on a real repository: the pipeline is conducted to the attempt of its software
 // engineer, which is left open, and the REPL runs real programs for it.
 const BOUNDED = { timeout: 90_000 }
 const NODE = JSON.stringify(process.execPath)
-
-/** Conducts the loop until the software engineer is dispatched, and leaves its attempt open. @param {string} cwd */
-const toDeliveryAttempt = async (cwd) => {
-  const llm = scriptedLlm({ cwd })
-  let { step } = await loop(cwd, ['next'])
-  for (let turns = 0; turns < 100; turns += 1) {
-    if (step.status === 'dispatch' && step.dispatches.some(({ agent }) => agent === 'software-engineer')) return step
-    if (step.status === 'dispatch') {
-      startAgents(step, llm)
-      ;({ step } = await loop(cwd, ['record']))
-    } else {
-      assert.equal(step.status, 'waiting', step.reason)
-      const { question } = JSON.parse((await skraft(cwd, ['status', '--json'])).stdout)
-      await skraft(cwd, ['decide', question.key, question.options[0]])
-      ;({ step } = await loop(cwd, ['next']))
-    }
-  }
-  throw new Error('the software engineer was never dispatched')
-}
 
 const textOf = (result) => result.content.map(({ text }) => text).join('\n')
 

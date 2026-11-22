@@ -1,5 +1,7 @@
 import { composeCell } from '../../domain/repl/cell-result.mjs'
 import { refusalText } from '../../domain/repl/refusals.mjs'
+import { signingKeyOf } from '../evidence/run-trace-store.mjs'
+import { traceAbsent } from './repl-trace.mjs'
 import { bindAttempt, releaseLease, takeLease } from './repl-attempt.mjs'
 import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 
@@ -70,7 +72,7 @@ const startEntry = async (deps, state, bound) => {
   await reapOnce(deps, state)
   const lease = await takeLease(deps, bound)
   if (lease === null) return notStarted('repl-held-elsewhere')
-  const entry = /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set() })
+  const entry = /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set(), signingKey: await signingKeyOf(deps, bound.events), chain: Promise.resolve() })
   if (!(await startKernel(deps, entry))) {
     await releaseLease(deps, bound, lease)
     return notStarted('repl-failed')
@@ -110,7 +112,7 @@ const track = (entry, work) => {
 const eventsOf = (deps, entry) => ({
   onRun: (request) => track(entry, serveRun(deps, entry, request)),
   onKill: (rid, signal, graceSeconds) => entry.runs.get(rid)?.program?.kill(signal, graceSeconds * 1000),
-  onAbsent: () => undefined,
+  onAbsent: (notice) => { track(entry, traceAbsent(deps, entry, notice)) },
   onGone: (why) => { entry.gone = `repl-${why}`; endRuns(entry, 'SIGKILL', 0) },
 })
 

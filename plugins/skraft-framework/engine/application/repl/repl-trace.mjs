@@ -1,0 +1,68 @@
+import { absentRecord, runRecord, startRecord } from '../../domain/evidence/run-trace.mjs'
+import { appendRecord } from '../evidence/run-trace-store.mjs'
+
+/**
+ * What the server writes of a run, from what the program did: Git's HEAD before and after it,
+ * whether the tree was clean when it started, how it ended, and the hash of its log.
+ *
+ * @typedef {import('./repl-runs.mjs').Entry} Entry
+ * @typedef {import('./repl-runs.mjs').Run} Run
+ * @typedef {{ top: string | null, head: string | null, clean: boolean }} GitFacts
+ *   top: the repository holding the folder, relative to the working copy; null outside Git.
+ */
+
+/** The tracking folder holds the run's own files: it never makes the tree unclean. */
+const TRACKING = '.copilot-tracking/'
+
+/**
+ * @param {any} deps @param {string} cwd @returns {Promise<GitFacts>} never throws
+ */
+export const gitFacts = async (deps, cwd) => {
+  try {
+    const top = await deps.sourceControl.repository(cwd)
+    if (top === null) return { top: null, head: null, clean: true }
+    const head = await deps.sourceControl.head(top)
+    const changed = head === null ? [] : await deps.sourceControl.changedFiles(top, head)
+    return { top, head, clean: changed !== null && changed.every((file) => file.startsWith(TRACKING)) }
+  } catch {
+    return { top: null, head: null, clean: false }
+  }
+}
+
+/** @param {any} deps @param {string | null} top @returns {Promise<string | null>} */
+const headNow = async (deps, top) => {
+  try {
+    return top === null ? null : await deps.sourceControl.head(top)
+  } catch {
+    return null
+  }
+}
+
+/** @param {number} at */
+const iso = (at) => new Date(at).toISOString()
+
+/** The run has started: its line says so, so that a run left open is seen. @param {any} deps @param {Entry} entry @param {Run} run */
+export const traceStart = (deps, entry, run) => appendRecord(deps, entry, startRecord({ run: run.id, cell: run.cell, at: iso(run.startedAt), command: run.command, cwd: run.cwd, gate: run.gate, label: run.label }))
+
+/**
+ * The run is over: its log is written, then its line.
+ * @param {any} deps @param {Entry} entry @param {Run & { before: GitFacts }} run @param {import('../ports/program-launcher.mjs').ProgramResult} result
+ */
+export const traceEnd = async (deps, entry, run, result) => {
+  await deps.files.write(entry.slug, run.log, result.text)
+  const after = { headAfter: await headNow(deps, run.before.top), sha256: await deps.hasher.sha256(result.text) }
+  await appendRecord(deps, entry, endedRecord(run, result, after))
+}
+
+/** @param {Run & { before: GitFacts }} run @param {import('../ports/program-launcher.mjs').ProgramResult} result @param {{ headAfter: string | null, sha256: string }} after */
+const endedRecord = (run, result, { headAfter, sha256 }) => runRecord({
+  run: run.id, cell: run.cell, at: iso(run.startedAt), command: run.command, argv: run.argv, shell: run.shell, cwd: run.cwd, gate: run.gate, label: run.label,
+  durationMs: run.durationMs, exitCode: result.exitCode, signal: result.signal, timedOut: result.timedOut, killed: result.killed, started: result.started,
+  bytes: result.bytes, cut: result.cut, sha256, log: run.log, headBefore: run.before.head, headAfter, clean: run.before.clean,
+})
+
+/** A gate the cell declares the project has none of. @param {any} deps @param {Entry} entry @param {{ gate: unknown, component: unknown, reason: unknown, cell: number | null }} notice */
+export const traceAbsent = async (deps, entry, notice) => {
+  const record = absentRecord({ ...notice, at: iso(deps.clock.now().getTime()) })
+  if (record !== null) await appendRecord(deps, entry, record)
+}
