@@ -39,7 +39,7 @@ The cell is JavaScript. Variables stay from one call to the next and a cell may 
 | handle | `id`, `command`, `running`, `tail(n = 50)`, `output()`, `poll()` (the result, or `null` while it runs), `kill(signal = 'SIGTERM', grace = 5)` (`SIGTERM`, `SIGINT` or `SIGKILL`, a grace of 0 to 30 whole seconds, never past the run's timeout; any other returns a fixed refusal and the program goes on); `await handle` gives `{ exitCode, output, durationMs, head, log }` (`head`: the HEAD of the repository holding `cwd` when the program ended, the value of `headAfter` in the trace) |
 | `gate(name, command, options)` | `run` with the gate named: `build`, `format`, `lint`, `test`, `architecture`, `coverage` or `e2e` |
 | `absent(gate, component, reason)` | declares that the project's `AGENTS.md` names no such gate for the component |
-| `console.log` | prints into the call's result |
+| `console.log` | prints into the call's result; so do `console.error`, `process.stdout.write` and `process.stderr.write` |
 
 A call takes `code` (empty to wait for the cell in flight), `reset` and `workspace`; any other argument is refused. `reset: true` ends the kernel and its runs, even while a cell runs, starts a fresh kernel and runs `code` there; its result starts with `repl-reset`.
 

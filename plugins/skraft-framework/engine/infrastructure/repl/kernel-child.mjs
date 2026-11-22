@@ -99,6 +99,25 @@ const routeConsole = (kernel) => {
 }
 
 /**
+ * What a cell writes to the process's own stdout and stderr, which go nowhere, is printed as
+ * console.log is. Only the kernel's own process does this, never a test that imports it.
+ * @param {Kernel} kernel
+ */
+const routeStdio = (kernel) => {
+  for (const stream of [process.stdout, process.stderr]) {
+    stream.write = (/** @type {any} */ chunk, /** @type {any} */ encoding, /** @type {any} */ done) => written(kernel, { chunk, encoding, done })
+  }
+}
+
+/** @param {Kernel} kernel @param {{ chunk: any, encoding: any, done: any }} write */
+const written = (kernel, { chunk, encoding, done }) => {
+  kernel.printing?.write(kernel.cell?.id ?? null, Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), typeof encoding === 'string' ? encoding : 'utf8'))
+  const callback = typeof encoding === 'function' ? encoding : done
+  if (typeof callback === 'function') queueMicrotask(callback)
+  return true
+}
+
+/**
  * The REPL server on streams nothing reads; its `displayPrompt`, which it calls after an error a
  * cell raised, ends the cell with that error, `lastError`.
  * @param {Kernel} kernel
@@ -201,6 +220,7 @@ const FRAMEWORK_FRAME = /kernel-child\.mjs|\(node:|node:internal|node:vm|node:re
 // Started by the MCP server with `fork`; imported by the tests, which hand it a channel of their own.
 if (process.send !== undefined && process.argv[1] === fileURLToPath(import.meta.url)) {
   const kernel = startKernel(process)
+  routeStdio(kernel)
   process.on('disconnect', () => process.exit(0))
   for (const event of ['uncaughtException', 'unhandledRejection']) process.on(event, (error) => kernel.ipc.send({ t: 'print', cell: null, text: `${errorText(error)}\n` }))
 }

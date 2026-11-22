@@ -40,7 +40,7 @@ La cellule est du JavaScript. Les variables restent d'un appel au suivant et une
 | poignée | `id`, `command`, `running`, `tail(n = 50)`, `output()`, `poll()` (le résultat, ou `null` tant qu'il tourne), `kill(signal = 'SIGTERM', grace = 5)` (`SIGTERM`, `SIGINT` ou `SIGKILL`, une grâce de 0 à 30 secondes entières, jamais au-delà du délai du run ; tout autre rend un refus fixe et le programme continue) ; `await handle` donne `{ exitCode, output, durationMs, head, log }` (`head` : le HEAD du dépôt qui contient `cwd` à la fin du programme, la valeur de `headAfter` dans la trace) |
 | `gate(name, command, options)` | `run` avec la gate nommée : `build`, `format`, `lint`, `test`, `architecture`, `coverage` ou `e2e` |
 | `absent(gate, component, reason)` | déclare que l'`AGENTS.md` du projet ne nomme aucune gate de ce nom pour le composant |
-| `console.log` | écrit dans le résultat de l'appel |
+| `console.log` | écrit dans le résultat de l'appel ; de même `console.error`, `process.stdout.write` et `process.stderr.write` |
 
 Un appel prend `code` (vide pour attendre la cellule en cours), `reset` et `workspace` ; tout autre argument est refusé. `reset: true` arrête le noyau et ses runs, même pendant une cellule, démarre un noyau neuf et y exécute `code` ; son résultat commence par `repl-reset`.
 

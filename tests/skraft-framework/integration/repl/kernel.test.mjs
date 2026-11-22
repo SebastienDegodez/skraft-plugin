@@ -203,6 +203,14 @@ test('the kernel keeps the output of its last 50 runs; an older handle names the
   assert.equal(kept.value, "[\n  '[the output of r1 is no longer kept in the kernel: it is in 1.log]',\n  '[the output of r1 is no longer kept in the kernel: it is in 1.log]',\n  '1\\n'\n]")
 })
 
+test('what a cell writes to process.stdout and process.stderr comes back with it', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const written = await cell(kernel, "process.stdout.write('out\\n'); process.stderr.write('err\\n'); 1")
+
+  assert.equal(written.printed, 'out\nerr\n')
+})
+
 test('what a cell prints past 1 MiB comes back as its first and last half megabytes around a marker', BOUNDED, async (t) => {
   const { kernel } = await openKernel(t)
 
