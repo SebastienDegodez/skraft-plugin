@@ -116,6 +116,24 @@ test('a second call while a cell runs is refused as busy, and an empty call wait
   assert.equal(answers[2].text, '=> finished')
 })
 
+test('two calls at once share one kernel: the second is told the first cell runs, and closing leaves no kernel alive', async () => {
+  const kernels = new ScriptedKernelHost()
+  let release = () => undefined
+  kernels.script.set('slow', async () => { await new Promise((resolve) => { release = resolve }); return 'finished' })
+  const answers = []
+  const { host, repl } = replRun({ kernels, calls: { 2: async (one) => {
+    answers.push(...(await Promise.all([one.call({ code: 'slow', id: 1 }), one.call({ code: 'slow', id: 2 })])))
+    release()
+  } } })
+
+  await host.start()
+  await repl.close()
+
+  assert.equal(kernels.kernels.length, 1)
+  assert.deepEqual(answers.map(({ code }) => code), [null, 'repl-busy'])
+  assert.equal(kernels.kernels[0].stopped, true)
+})
+
 test('a run that finished while another cell went on is told at the start of the next result', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher()

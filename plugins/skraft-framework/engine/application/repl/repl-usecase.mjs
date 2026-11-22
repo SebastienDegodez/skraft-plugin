@@ -15,7 +15,9 @@ import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
  * @typedef {import('./repl-runs.mjs').Entry} Entry
  * @typedef {{ launched: boolean, cancelled: boolean }} Flight
  *   a call between its start and the start of its cell: a cancellation in that window is kept, so that the cell never runs.
- * @typedef {{ entry: Entry | null, reaped: boolean, flight?: Flight | null }} ReplState
+ * @typedef {{ entry: Entry | null, reaped: boolean, flights?: Map<unknown, Flight>, starting?: Promise<unknown> }} ReplState
+ *   flights: the calls in flight, by the id of their request; starting: the entry being looked
+ *   up or started, which the next call waits for, so that two calls at once share one kernel.
  * @typedef {{ ok: boolean, code: string | null, text: string }} ReplOutcome
  *   text: what the agent reads: the cell's result, or the refusal's code and fixed reason.
  */
@@ -29,12 +31,12 @@ const IDLE_MS = 15 * 60 * 1000
  * @param {any} deps @param {ReplState} state
  */
 export const createRepl = (deps, state) => Object.freeze({
-  /** @param {{ code: string }} request @returns {Promise<ReplOutcome>} */
+  /** @param {{ code: string, id?: unknown }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
   call: (request) => call(deps, state, request),
   /** Ends the kernel of an attempt that is over or unused; the server calls it every half minute. */
   sweep: () => sweep(deps, state),
-  /** The request in flight is cancelled: its awaits stop and the runs it started end. */
-  interrupt: () => interrupt(state),
+  /** The request is cancelled: its awaits stop and the runs it started end. @param {unknown} [id] */
+  interrupt: (id) => interrupt(state, id),
   /** The session closes: nothing is left running. */
   close: () => retire(deps, state),
 })
@@ -45,32 +47,55 @@ const keyOf = (deps, { slug, folder }) => `${deps.repl.root}|${slug}/${folder}`
 /** @param {string} code @param {string | null} [evidence] the file that holds the exception @returns {ReplOutcome} */
 const refused = (code, evidence = null) => ({ ok: false, code, text: refusalText(code, evidence) })
 
-/** @param {any} deps @param {ReplState} state @param {{ code: string }} request @returns {Promise<ReplOutcome>} */
-const call = async (deps, state, { code }) => {
-  state.flight ??= { launched: false, cancelled: false }
+/**
+ * The flight of a request: the one the server opened when the request arrived, else a new one.
+ * @param {ReplState} state @param {unknown} id @returns {Flight}
+ */
+export const openFlight = (state, id) => {
+  state.flights ??= new Map()
+  const flight = state.flights.get(id) ?? { launched: false, cancelled: false }
+  state.flights.set(id, flight)
+  return flight
+}
+
+/** @param {any} deps @param {ReplState} state @param {{ code: string, id?: unknown }} request @returns {Promise<ReplOutcome>} */
+const call = async (deps, state, { code, id }) => {
+  const flight = openFlight(state, id)
   try {
-    return await inAttempt(deps, state, code)
+    return await inAttempt(deps, state, { code, flight })
   } finally {
-    state.flight = null
+    state.flights?.delete(id)
   }
 }
 
-/** @param {any} deps @param {ReplState} state @param {string} code @returns {Promise<ReplOutcome>} */
-const inAttempt = async (deps, state, code) => {
+/** @param {any} deps @param {ReplState} state @param {{ code: string, flight: Flight }} request @returns {Promise<ReplOutcome>} */
+const inAttempt = async (deps, state, request) => {
   const bound = await bindAttempt(deps)
   if (!bound.ok) return refused(bound.code)
   try {
-    return await inEntry(deps, state, bound, code)
+    return await inEntry(deps, state, bound, request)
   } catch (error) {
     return refused('repl-unexpected', await keepUnexpected(deps, bound.slug, error))
   }
 }
 
-/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {string} code @returns {Promise<ReplOutcome>} */
-const inEntry = async (deps, state, bound, code) => {
+/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {{ code: string, flight: Flight }} request @returns {Promise<ReplOutcome>} */
+const inEntry = async (deps, state, bound, request) => {
   const held = await entryFor(deps, state, bound)
   if (!held.ok) return refused(held.code, held.evidence ?? null)
-  return evaluate(deps, state, held.entry, code, held.notice)
+  return evaluate(deps, held.entry, request, held.notice)
+}
+
+/**
+ * The entry of the attempt, one call after the other: a call that arrives while another starts
+ * the kernel waits for it and shares it.
+ * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
+ * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
+ */
+const entryFor = (deps, state, bound) => {
+  const found = (state.starting ?? Promise.resolve()).then(() => entryNow(deps, state, bound))
+  state.starting = found.catch(() => undefined)
+  return found
 }
 
 /**
@@ -79,7 +104,7 @@ const inEntry = async (deps, state, bound, code) => {
  * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
  * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
-const entryFor = async (deps, state, bound) => {
+const entryNow = async (deps, state, bound) => {
   const key = keyOf(deps, bound)
   const current = state.entry
   if (current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
@@ -161,10 +186,10 @@ const retire = async (deps, state) => {
   await releaseLease(deps, entry, entry.lease)
 }
 
-/** @param {any} deps @param {ReplState} state @param {Entry} entry @param {string} code @param {string | null} notice @returns {Promise<ReplOutcome>} */
-const evaluate = async (deps, state, entry, code, notice) => {
-  if (state.flight?.cancelled === true) return refused('repl-interrupted')
-  if (state.flight != null) state.flight.launched = true
+/** @param {any} deps @param {Entry} entry @param {{ code: string, flight: Flight }} request @param {string | null} notice @returns {Promise<ReplOutcome>} */
+const evaluate = async (deps, entry, { code, flight }, notice) => {
+  if (flight.cancelled) return refused('repl-interrupted')
+  flight.launched = true
   entry.lastUsed = deps.clock.now().getTime()
   const budget = deps.repl.budgetMs ?? DEFAULT_BUDGET_MS
   const waiting = code.trim() === ''
@@ -194,10 +219,10 @@ const partsOf = (entry, outcome, cellLog) => {
   return { finished, runs, printed: `${outcome.printed}${still}`, value: outcome.value, error: outcome.error, status: outcome.status, cellLog }
 }
 
-/** @param {ReplState} state */
-export const interrupt = (state) => {
-  const flight = state.flight
-  if (flight != null && !flight.launched) flight.cancelled = true
+/** A request not launched yet never launches its cell; a launched one interrupts it. @param {ReplState} state @param {unknown} [id] */
+export const interrupt = (state, id) => {
+  const flight = state.flights?.get(id)
+  if (flight !== undefined && !flight.launched) flight.cancelled = true
   else interruptCell(state)
 }
 

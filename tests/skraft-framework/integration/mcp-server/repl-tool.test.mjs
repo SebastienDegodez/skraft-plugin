@@ -61,6 +61,21 @@ test('in the attempt of the software engineer, a cell runs real programs, variab
   await host.close()
 })
 
+test('two skraft_repl calls sent together share one kernel, the one the orphan journal names, and the second is told the first cell runs', BOUNDED, async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  await toDeliveryAttempt(cwd)
+  const host = mcpHost({ roots: [cwd] })
+  await host.initialize()
+  t.after(() => host.close())
+  const code = 'await new Promise((done) => setTimeout(done, 3000)); process.pid'
+
+  const [first, second] = await Promise.all([host.call('skraft_repl', { code }), host.call('skraft_repl', { code })])
+  const journal = JSON.parse(readFileSync(join(cwd, '.copilot-tracking', 'skraft-repl', `${process.pid}.json`), 'utf8'))
+
+  assert.deepEqual([textOf(first), textOf(second).slice(0, 10)], [`=> ${journal.kernel.pid}`, 'repl-busy:'])
+})
+
 test('skraft_status answers while a cell runs, and a cancellation of the request ends the cell and the program it started', BOUNDED, async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])

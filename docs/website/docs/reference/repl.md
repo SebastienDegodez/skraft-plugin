@@ -26,7 +26,7 @@ the shell choice and the tree kill are written, not run. See `docs/v2/host-verif
 | Agents | the acceptance designer and the software engineer, whose descriptors name the tool; never a review lens |
 | Attempt | the call is bound to the open attempt of the active run: no open attempt, or an agent that commits no code, is refused with `repl-unavailable` |
 | Kernel | one child process per attempt, started by the first call and ended when the attempt closes, when another attempt calls, after 15 minutes unused with no run alive, when the session closes or when the kernel dies |
-| Concurrency | the call does not wait in the server's queue, so `skraft_status` and `skraft_precheck` answer while a cell runs; a second call while a cell runs is refused with `repl-busy` |
+| Concurrency | the call does not wait in the server's queue, so `skraft_status` and `skraft_precheck` answer while a cell runs; two calls sent at once share one kernel, the second waiting for it to start; a second call while a cell runs is refused with `repl-busy`; a cancellation names its request, so it reaches only that call |
 | Lease | `logs/runs/<step>-<visit>-<attempt>/.lock` names the server that holds the attempt's REPL; another server is refused with `repl-held-elsewhere` unless the holder is gone |
 
 ## What a cell can do <!-- #cell -->
