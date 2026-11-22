@@ -8,6 +8,7 @@ import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
 import { attachedReference, shownScreenshots } from '../../domain/reporting/visuals.mjs'
+import { scenarioOutcomesOf } from './scenario-outcomes.mjs'
 import { storyLanguage } from './story-language.mjs'
 import { keepRunDetails } from './run-details.mjs'
 import { failedOutcome, journalWrite, pushedBranch } from './forge-writes.mjs'
@@ -106,7 +107,7 @@ const factsOf = async (deps, request, run) => factsIn(deps, request, { run, lang
  * @param {OnForge} deps @param {PublishRequest} request
  * @param {{ run: import('../../domain/journal/run-state.mjs').RunState, language: import('../../domain/reporting/language.mjs').Language }} story
  */
-const factsIn = async (deps, { slug, journal }, { run, language }) => ({
+const factsIn = async (deps, { slug, journal, config }, { run, language }) => ({
   slug,
   story: run.story,
   language,
@@ -115,6 +116,7 @@ const factsIn = async (deps, { slug, journal }, { run, language }) => ({
   visuals: await shownVisuals(deps.codeHost, journal.events),
   testPlans: await trackedDocuments(deps, slug, testPlanPaths(journal.events)),
   matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
+  outcomes: await scenarioOutcomesOf(/** @type {any} */ (deps), { slug, events: journal.events, components: config.components }),
   ...journalFacts(journal.events, run, language),
 })
 

@@ -2,6 +2,7 @@ import { durationText, reportTable } from './run-report.mjs'
 import { SUMMARY_LENGTH } from './pull-request-prose.mjs'
 import { cell, code, embedded, inert, oneLine, openFence } from './markdown-safety.mjs'
 import { screenshotLines } from './visuals.mjs'
+import { qaCount, qaLines, qaTable } from './qa-evidence.mjs'
 import { detailParts, pointerOf, roomOf } from './run-details.mjs'
 import { layerCounts } from './test-plan-layers.mjs'
 import { counted, DESCRIPTION_WORDS, PULL_REQUEST_FILE } from './pull-request-words.mjs'
@@ -26,6 +27,7 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   visuals: import('./visuals.mjs').Visuals | null,
  *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
  *   testPlans: TrackedDocument[], matrices: TrackedDocument[],
+ *   outcomes: import('./scenario-outcomes.mjs').ScenarioOutcome[],
  * }} PullRequestFacts
  *   link: the line that links the pull request to its story, as its forge writes it; null for none.
  *   visuals: what the run's last visuals step recorded, each screenshot with where the pull request
@@ -33,7 +35,7 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   longest body its forge takes, commentLimit: the longest comment; language: the story's, which the
  *   description and the comments of the run details are written in; testPlans: the test plans DISTILL wrote, matrices: the
  *   consistency matrices DESIGN wrote, those of the latest attempt that wrote any, none when the journal
- *   names none or the tracking folder lost them.
+ *   names none or the tracking folder lost them; outcomes: what each scenario is proven to do.
  * @typedef {{ path: string, text: string }} TrackedDocument
  *   path: relative to the tracking folder; text: as the agent wrote it.
  * @typedef {{ title: string, body: string, description: string, details: string[] }} PullRequest
@@ -192,6 +194,8 @@ const SECTIONS = Object.freeze([
   shown('what', (facts) => (facts.prose === null ? notWritten('what')(facts) : [inert(facts.prose.what)])),
   shown('why', (facts) => (facts.prose === null ? notWritten('why')(facts) : [inert(facts.prose.why)])),
   shown('decisions', (facts) => decisionLines(facts)),
+  shown('qa', (facts) => qaLines(facts)),
+  folded('scenarios', (facts) => qaTable(facts), (facts) => ({ count: qaCount(facts), open: false })),
   folded('matrix', (facts) => documentLines(facts.matrices, wordsOf(facts), 'noMatrix')),
   folded('tests', (facts) => documentLines(facts.testPlans, wordsOf(facts), 'noTestPlan')),
   folded('red', (facts) => redLines(facts.reds, wordsOf(facts)), (facts) => ({ count: counted(wordsOf(facts), facts.reds.length, wordsOf(facts).redCommit), open: false })),

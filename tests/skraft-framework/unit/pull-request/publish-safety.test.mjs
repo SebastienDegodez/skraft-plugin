@@ -71,7 +71,7 @@ test('closing keywords, mentions and HTML an agent writes are made inert, a tag 
   assert.equal(section(body, 'What changes'), '`Closes #12`, `fixes GH-3` and `Resolved acme/shop#4`; see `fix https://github.com/acme/shop/issues/5` — thanks `@alice` bold then end')
   assert.equal(section(body, 'Review').split('\n').at(-3), '| Refuted | low | cold-reader · G1 (F1) | `` src/`odd`.cs:3 `` | ping `@bob`, this `fixes #8` | odd.cs:3 reads plainly, cc `@carol` x |')
   assert.equal(opening(body, 'Review'), '<details><summary>Review: 1 refuted</summary>')
-  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [10, 10])
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [11, 11])
   assert.equal(host.codeHost.calls.find((call) => call.startsWith('create ')), 'create main <- checkout (draft): Pay by card, `closes #9`')
 })
 
@@ -110,7 +110,7 @@ test('a test plan and a consistency matrix an agent wrote are shown inert: no co
   ].join('\n'))
   assert.equal(section(body, 'Consistency matrix'), 'From `details/2026-10-11/consistency-matrix-checkout.md` in the tracking folder:\n\n| ADR | Verdict |\n| --- | --- |\n| ADR-001 | kept |\n- consistency-gate: PASS')
   assert.equal(opening(body, 'RED evidence'), '<details><summary>RED evidence: 1 red commit</summary>')
-  assert.deepEqual([body.split('<details').length, body.split('</details>').length, body.includes('<!--')], [9, 9, false])
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length, body.includes('<!--')], [10, 10, false])
 })
 
 test('a red commit subject breaks no table: its pipes are escaped and its lines joined', async () => {
@@ -154,7 +154,7 @@ const testsOf = async (plan) => {
   await host.tracking.write(SLUG, PLAN, plan)
   await host.publish()
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [9, 9], body)
+  assert.deepEqual([body.split('<details').length, body.split('</details>').length], [10, 10], body)
   return section(body, 'Tests').replace(`From \`${PLAN}\` in the tracking folder:\n\n`, '')
 }
 

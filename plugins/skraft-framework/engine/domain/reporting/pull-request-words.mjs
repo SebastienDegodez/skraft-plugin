@@ -17,6 +17,7 @@ const EN = Object.freeze({
   many: (count) => count !== 1,
   headings: Object.freeze({
     what: 'What changes', why: 'Why', decisions: 'Decisions applied', matrix: 'Consistency matrix', tests: 'Tests',
+    qa: 'QA', scenarios: 'Scenario outcomes',
     red: 'RED evidence', gates: 'Quality evidence', review: 'Review', screenshots: 'Screenshots',
     domainHeavy: 'More Domain tests than acceptance tests', limitations: 'Out of scope and limitations',
     summary: 'Run summary', disclosure: 'AI disclosure',
@@ -83,6 +84,7 @@ const FR = Object.freeze({
   many: (count) => count > 1,
   headings: Object.freeze({
     what: 'Ce qui change', why: 'Pourquoi', decisions: 'Décisions appliquées', matrix: 'Matrice de cohérence', tests: 'Tests',
+    qa: 'QA', scenarios: 'Résultats des scénarios',
     red: 'Preuves RED', gates: 'Preuves de qualité', review: 'Revue', screenshots: 'Captures d\'écran',
     domainHeavy: 'Plus de tests Domain que de tests d\'acceptation', limitations: 'Hors périmètre et limites',
     summary: 'Résumé du run', disclosure: 'Mention de l\'IA',
