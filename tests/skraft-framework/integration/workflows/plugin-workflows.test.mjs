@@ -25,11 +25,3 @@ test('a called workflow is the DOT file of that name the plugin ships, none when
   assert.equal(await workflowSource.called('review'), readFileSync(join(PLUGIN_ROOT, 'workflows', 'review.skraft.dot'), 'utf8'))
   assert.equal(await workflowSource.called('team-review'), null)
 })
-
-test('a mutation run\'s workflow is the plugin\'s workflows/mutation.skraft.dot', async (t) => {
-  const workflowSource = createPluginWorkflows({ files: createNodeFiles(), pluginRoot: PLUGIN_ROOT, name: 'mutation' })
-
-  assert.equal(workflowSource.name, 'mutation')
-  assert.equal(await workflowSource.builtIn(), readFileSync(join(PLUGIN_ROOT, 'workflows', 'mutation.skraft.dot'), 'utf8'))
-  await assert.rejects(createPluginWorkflows({ files: createNodeFiles(), pluginRoot: tempFolder(t), name: 'mutation' }).builtIn(), { message: 'the plugin has no workflows/mutation.skraft.dot' })
-})

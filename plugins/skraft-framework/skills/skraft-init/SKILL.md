@@ -36,8 +36,8 @@ names another ref, leave it: the developer chose it.
 ## 3. The gate commands
 
 For each component, `commands` must hold at least one of `build`, `format`, `lint`, `test`,
-`architecture`, `coverage`, `e2e`; a component with none can prove nothing and the gates refuse
-the run. `mutation` counts for none of them: ask nothing about it here, *Mutation* declares it.
+`architecture`, `coverage`, `e2e`; a component with none can prove nothing: the engine refuses a delivery
+that holds no traced run of its gates. `mutation` counts for none of them: ask nothing about it here, *Mutation* declares it.
 
 `<cli> init` writes no command: every command is the developer's. For each component, load the
 skill of its stack and propose the lines of its *Gate command lines* table that this working copy
@@ -182,13 +182,14 @@ again. Then tell the developer, in one line each:
 
 ## Mutation
 
-Mutation testing is the developer's: no run of the pipeline mutates, and nothing is declared
-until they ask for it.
+Mutation testing is the developer's: no run of the pipeline mutates, the engine runs none, and
+nothing is declared until they ask for it. The `skraft-mutation` skill runs the command in the
+developer's session.
 
 1. For each component that has no `mutation` command, propose one from its stack's
    `quality-gates-<stack>` skill and the tool the working copy declares; keep a command already
    written. The `quality-gates-<stack>` skills hold no mutation line: propose the one whose report
-   the engine reads, relative to the component root:
+   the `skraft-mutation` recipe reads, relative to the component root:
 
    | Tool | Command | Report |
    |---|---|---|
@@ -200,7 +201,7 @@ until they ask for it.
    `./mvnw` or `./gradlew` replace `mvn` or `gradle` when the project ships them. For any other
    tool, or one writing elsewhere, propose a command that writes its result to the file
    `SKRAFT_MUTATION_RESULT` names; mutmut alone (`python -m mutmut run`) writes no report the
-   engine reads.
+   recipe reads.
 2. Show each component's `mutation` command, one line each, and ask the developer to confirm it,
    rewrite it, or leave the component out. Write each confirmed line yourself into
    `commands.mutation` of the component in `skraft-config.json`; a component left out gets no
@@ -211,6 +212,6 @@ until they ask for it.
 4. A command the developer writes either writes its result, score already computed, to the file
    the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves a report at one of the
    paths of the table above. `skraft-quality-bar` gives the result's form and the bar.
-5. Run `<cli> doctor`. Its `mutation` line names the components that declare a command; fix every
-   `<component>/mutation` failure. Then tell the developer that `skraft mutation` runs mutation on
-   the branch HEAD is on, in its own run.
+5. Run `<cli> doctor`. It lists each component's commands; fix every failure it names. Then tell
+   the developer that the `skraft-mutation` skill runs mutation on the branch HEAD is on, in their
+   session.

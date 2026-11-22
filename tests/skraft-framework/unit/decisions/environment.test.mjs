@@ -8,57 +8,6 @@ const BUILD = `api/build: command not found: dotnet; install it or change the co
 const QUESTION = environmentQuestion('gates', BUILD, { owner: 'config', log: `${TRACKING}/gates/api/build-1.log` })
 const toTheGates = (it) => [agent()(it), agent()(it), agent()(it), agent({ work: green() })(it)]
 const noDotnet = () => new ScriptedMachine({ installed: ['git'] })
-
-test('a gate the machine cannot run asks the human to fix it; the run waits, and RETRY runs the same gate node again', async () => {
-  const machine = noDotnet()
-  const host = scripted({ machine }, toTheGates)
-
-  const outcome = await host.start()
-
-  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'environment' })
-  assert.ok(outcome.reason.startsWith(QUESTION.split('\nFix it')[0]))
-  assert.match(outcome.reason, /Run `skraft doctor`.*Step verdicts:.*Incidents: gates signature .*1 occurrences/s)
-  assert.deepEqual(host.human.questions.slice(0, 1), [scenarioReview()])
-  assert.equal(host.human.questions[1].key, 'gates-1')
-  assert.ok(host.human.questions[1].text.startsWith(QUESTION.split('\nFix it')[0]))
-  assert.deepEqual(host.types().slice(-3), ['step.started', 'gate.ran', 'question.asked'])
-  assert.equal((await host.view()).current.step, 'gates')
-
-  assert.equal((await host.run()).status, 'waiting')
-  machine.installed.add('dotnet')
-  assert.equal((await host.decide({ answer: 'retry' })).ok, true)
-  assert.equal((await host.run()).status, 'done')
-
-  assert.equal(eventsOf(host, 'step.started').filter((event) => event.step === 'gates').length, 1)
-  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => [event.visit, event.attempt, event.outcome]), [[1, 1, 'pass']])
-  assert.equal(host.agentRunner.dispatches.length, 5)
-})
-
-test('a host that asks in a dialog retries at once; the same failure again stops the run', async () => {
-  const host = scripted({ machine: noDotnet(), answers: [{ answer: 'RETRY' }] }, toTheGates)
-
-  const outcome = await host.start()
-
-  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'blocked', code: 'repeated-failure' })
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['scenario_review-1', 'gates-1'])
-  assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['scenario_review-1', 'APPROVED', 'host'], ['gates-1', 'RETRY', 'host']])
-})
-
-test('ABORT ends the run blocked on the environment, and it stays blocked', async () => {
-  const host = scripted({ machine: noDotnet(), answers: [{ answer: 'ABORT' }] }, toTheGates)
-
-  const outcome = await host.start()
-
-  assert.deepEqual({ status: outcome.status, slug: outcome.slug, phase: outcome.phase, code: outcome.code }, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'environment' })
-  assert.ok(outcome.reason.startsWith(`aborted by a human: ${QUESTION.split('\nFix it')[0]}`))
-  assert.match(outcome.reason, /Run `skraft doctor`/)
-  assert.deepEqual(host.types().slice(-4), ['question.asked', 'question.answered', 'step.recorded', 'run.finished'])
-  const aborted = eventsOf(host, 'step.recorded').at(-1)
-  assert.deepEqual({ step: aborted.step, visit: aborted.visit, attempt: aborted.attempt, outcome: aborted.outcome, code: aborted.code, next: aborted.next }, { step: 'gates', visit: 1, attempt: 1, outcome: 'aborted', code: 'environment', next: null })
-  assert.deepEqual((await host.run()).code, 'environment')
-  assert.equal((await host.view()).status, 'blocked')
-})
-
 test('an agent step the machine cannot check asks the same question, and RETRY checks it again without running the agent', async () => {
   const host = scripted({}, (it) => [
     agent()(it), agent()(it), agent({ work: ({ git }) => { git.commit('test(checkout): pays', ['tests/PayTests.cs']); git.commits = async () => null } })(it), () => ({ ok: false, unavailable: true, text: '' }),
@@ -74,55 +23,6 @@ test('an agent step the machine cannot check asks the same question, and RETRY c
   assert.deepEqual(host.agentRunner.dispatches.map((dispatch) => dispatch.agent), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
   assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'distill').map((event) => [event.group, event.outcome]), [[undefined, 'done']])
 })
-
-test('a configuration the human leaves invalid in the dialog refuses to go on and runs no command; fixed, the run goes on without running an agent again', async () => {
-  const machine = noDotnet()
-  let host
-  let ranBeforeRetry = null
-  const breaksTheConfig = async () => {
-    machine.installed.add('dotnet')
-    await host.workspace.write('skraft-config.json', '{ invalid JSON')
-    ranBeforeRetry = machine.runs.length
-    return { answer: 'RETRY' }
-  }
-  host = scripted({ machine, answers: [breaksTheConfig] }, toTheGates)
-
-  const outcome = await host.start()
-
-  assert.deepEqual({ status: outcome.status, phase: outcome.phase, code: outcome.code }, { status: 'blocked', phase: 'DELIVER', code: 'config-invalid' })
-  assert.match(outcome.reason, /^skraft-config\.json is invalid: /)
-  assert.equal(machine.runs.length, ranBeforeRetry)
-  assert.equal(host.types().at(-1), 'question.answered')
-
-  await host.workspace.write('skraft-config.json', JSON.stringify({ components: [API], publish: SETTLED_PUBLISH }))
-  assert.equal((await host.run()).status, 'done')
-  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map((event) => event.outcome), ['pass'])
-  assert.equal(host.agentRunner.dispatches.length, 5)
-})
-
-test('ABORT in the dialog ends the run blocked on the environment, whatever the human left in skraft-config.json', async () => {
-  let host
-  const breaksThenAborts = async () => {
-    await host.workspace.write('skraft-config.json', '{ invalid JSON')
-    return { answer: 'ABORT' }
-  }
-  host = scripted({ machine: noDotnet(), answers: [breaksThenAborts] }, toTheGates)
-
-  const outcome = await host.start()
-
-  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'blocked', code: 'environment' })
-})
-
-test('each node counts its own questions: a ratification, then a gate the machine cannot run, asks adr-1 then gates-1', async () => {
-  const host = scripted({ machine: noDotnet(), answers: [{ answer: 'RATIFIED' }] }, (it) => [
-    agent()(it), architect({ [ADR_1]: adrText() })(it), agent()(it), agent({ work: green() })(it),
-  ])
-
-  await host.start()
-
-  assert.deepEqual(host.human.questions.map(({ key }) => key), ['adr-1', 'scenario_review-1', 'gates-1'])
-})
-
 test('every question is keyed by the node that asks it and its rank there: a node named environment keeps its answer when Git fails, and RETRY ratifies', async () => {
   const workflow = `digraph decision {
     start [shape=Mdiamond]
@@ -146,20 +46,4 @@ test('every question is keyed by the node that asks it and its rank there: a nod
   assert.equal((await host.run()).status, 'done')
   assert.deepEqual(git.engineCommits.map((commit) => commit.message), ['docs(adr): ratify ADR-001'])
   assert.deepEqual(host.human.questions.length, 2)
-})
-
-test('a human who fixes skraft-config.json in the dialog, then answers RETRY, gets the gates run with the fixed configuration', async () => {
-  const npmBuilt = { ...API, commands: { build: 'npm run build', test: 'npm test' } }
-  let host
-  const fixesTheConfig = async () => {
-    await host.workspace.write('skraft-config.json', JSON.stringify({ components: [npmBuilt] }))
-    return { answer: 'RETRY' }
-  }
-  host = scripted({ components: [{ ...API, commands: { build: 'dotnet build' } }], machine: new ScriptedMachine({ installed: ['git', 'npm'] }), answers: [fixesTheConfig] }, toTheGates)
-
-  const outcome = await host.start()
-
-  assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.human.questions.map((question) => question.key), ['scenario_review-1', 'gates-1'])
-  assert.deepEqual(host.machine.lines(), ['. $ dotnet build', '. $ npm run build', '. $ npm test'])
 })

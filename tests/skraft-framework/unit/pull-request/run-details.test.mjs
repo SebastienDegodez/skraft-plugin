@@ -9,7 +9,7 @@ const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullReques
 const STORY = { story: { issue: 42, title: 'Pay by card' } }
 const TEST_PLAN = `details/2026-10-11/test-plan-${SLUG}.md`
 const LONG_WHY = `${'Customers asked to pay by card.\n'.repeat(60)}End.`
-const POINTER = 'The run\'s other details (tests, consistency matrix, RED evidence, quality gates, review, screenshots, run summary, AI disclosure) are in this pull request\'s comments titled skraft · run details.'
+const POINTER = 'The run\'s other details (tests, consistency matrix, RED evidence, quality evidence, review, screenshots, run summary, AI disclosure) are in this pull request\'s comments titled skraft · run details.'
 
 /** Azure Repos' limits and link, the story's issue read as the forge double gives it unless `issues` says. */
 const azure = (more = {}) => new InMemoryCodeHost({ bodyLimit: 4_000, commentLimit: 140_000, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`, ...more })

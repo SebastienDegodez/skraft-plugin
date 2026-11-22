@@ -71,7 +71,7 @@ export const issueOf = (story) => story?.issue ?? null
 export const engineMessage = (subject, issue) => (issue === null ? subject : `${subject}\n\nRefs: #${issue}`)
 
 /**
- * @typedef {{ redByGateFailure: boolean, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Pass
+ * @typedef {{ issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Pass
  *   scenario: the scenario the pass works on, null for a pass that works on none (the gates or
  *   the review sent the story back, or the workflow builds no scenario).
  * @typedef {{ kind: CommitKind, red: Set<string>, seen: CommitKind[], greens: { count: number }, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Judging
@@ -90,9 +90,9 @@ export const engineMessage = (subject, issue) => (issue === null ? subject : `${
  * @param {Pass} pass
  * @returns {JudgedCommit[]}
  */
-export const judgeCommits = (commits, { redByGateFailure, issue, scenario, components }) => {
+export const judgeCommits = (commits, { issue, scenario, components }) => {
   // Stryker disable next-line ArrayDeclaration: no commit is in a repository named like the placeholder
-  const judging = { red: new Set(redByGateFailure ? commits.map((commit) => commit.repository) : []), seen: /** @type {CommitKind[]} */ ([]), greens: { count: 0 }, issue, scenario, components }
+  const judging = { red: new Set(), seen: /** @type {CommitKind[]} */ ([]), greens: { count: 0 }, issue, scenario, components }
   return commits.map((commit) => judgeOne(commit, judging))
 }
 

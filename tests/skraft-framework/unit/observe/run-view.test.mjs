@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, finding, green, lenses, PASSING_MATRIX, pipelineHost, refutes, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, finding, green, lenses, nominal, PASSING_MATRIX, pipelineHost, refutes, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
 
@@ -8,7 +8,6 @@ const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 const phases = (...states) => PHASES.map((phase, index) => ({ phase, state: states[index] }))
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 
-const GATES = 'build, format, lint, test, architecture, coverage'
 const UNTOUCHED = Object.freeze({ state: 'pending', outcome: null, visits: 0, attempts: 0, retries: 0, durationMs: 0, costUsd: null })
 const node = (id, kind, phase, what) => ({ id, kind, phase, what, ...UNTOUCHED })
 const edge = (from, to, label = null) => ({ from, to, label, taken: 0 })
@@ -23,7 +22,6 @@ const PENDING_GRAPH = Object.freeze({
     node('distill_review', 'review', 'DISTILL', 'coverage, business-alignment, testability, boundary-enforcement'),
     node('scenario_review', 'ask', 'DISTILL', 'scenario-review'),
     node('deliver', 'agent', 'DELIVER', 'software-engineer'),
-    node('gates', 'gate', 'DELIVER', GATES),
     node('deliver_review', 'call', 'DELIVER', 'test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity'),
     node('visuals', 'publish', 'DELIVER', 'publish playwright-visuals'),
     node('pr_writer', 'agent', 'PUBLISH', 'pr-writer'),
@@ -34,14 +32,14 @@ const PENDING_GRAPH = Object.freeze({
     edge('design_review', 'design', 'NEEDS_REWORK'), edge('design_review', 'adr', 'APPROVED'), edge('adr', 'distill', 'RATIFIED'), edge('adr', 'design', 'REJECTED'),
     edge('distill', 'distill_review'), edge('distill_review', 'distill', 'NEEDS_REWORK'), edge('distill_review', 'scenario_review', 'APPROVED'),
     edge('scenario_review', 'deliver', 'APPROVED'), edge('scenario_review', 'distill', 'REVISE'),
-    edge('deliver', 'gates'), edge('gates', 'deliver', 'FAIL'), edge('gates', 'deliver_review', 'PASS'),
+    edge('deliver', 'deliver_review'),
     edge('deliver_review', 'deliver', 'NEEDS_REWORK'), edge('deliver_review', 'visuals', 'APPROVED'),
     edge('visuals', 'pr_writer'), edge('pr_writer', 'publish'),
   ],
 })
 /** What lenses that all passed with no finding say. @param {...string} names */
 const passing = (...names) => names.map((lens) => ({ lens, verdict: 'pass', findings: 0 }))
-const NO_RUN = Object.freeze({ graph: PENDING_GRAPH, reviews: [], gates: [], agents: [] })
+const NO_RUN = Object.freeze({ graph: PENDING_GRAPH, reviews: [], evidence: [], agents: [] })
 /** The view less its graph and its agents, which the scenarios on them assert. */
 const core = ({ graph, agents, ...rest }) => rest
 
@@ -96,36 +94,13 @@ test('the view follows a run, its open step, its attempts and its cost', async (
 
   assert.deepEqual(seen, [{
     slug: SLUG, status: 'running', reason: '', phases: phases('open', 'pending', 'pending', 'pending', 'pending'),
-    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 1, costUsd: null, reviews: [], gates: [],
+    current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', question: null, visit: 1, attempt: 1 }, question: null, attempts: 1, costUsd: null, reviews: [], evidence: [],
   }, {
     slug: SLUG, status: 'running', reason: '', phases: phases('closed', 'open', 'pending', 'pending', 'pending'),
-    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', gates: null, question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: 0.75, reviews: [], gates: [],
+    current: { step: 'design', phase: 'DESIGN', agent: 'solution-architect', question: null, visit: 1, attempt: 1 }, question: null, attempts: 3, costUsd: 0.75, reviews: [], evidence: [],
   }])
   assert.deepEqual((await host.view()).status, 'blocked')
 })
-
-test('the view of a run at its gates names them, and of a completed run says done with each review verdict and each gate result', async () => {
-  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('feat(checkout): S1 pay', ['src/Pay.cs', 'tests/PayTests.cs']) })(it)])
-  const seen = []
-  host.machine.meanwhile['. $ dotnet build'] = async () => { seen.push((await host.view()).current) }
-
-  await host.start()
-
-  assert.deepEqual(seen, [{ step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1 }])
-  assert.deepEqual(core(await host.view()), {
-    slug: SLUG, status: 'done', reason: 'PUBLISH closed', phases: phases('closed', 'closed', 'closed', 'closed', 'closed'), current: null, question: null, attempts: 13, costUsd: null,
-    reviews: [
-      { step: 'design_review', visit: 1, verdict: 'approved', lenses: passing('consistency', 'architecture-compliance', 'fitness') },
-      { step: 'distill_review', visit: 1, verdict: 'approved', lenses: passing('coverage', 'business-alignment', 'testability', 'boundary-enforcement') },
-      { step: 'deliver_review', visit: 1, verdict: 'approved', lenses: passing('test-integrity', 'architecture-boundaries', 'cold-reader') },
-    ],
-    gates: [
-      { component: 'api', gate: 'build', command: 'dotnet build', status: 'pass', durationMs: 0, evidence: 'gates/api/build-1.log', survivors: undefined },
-      { component: 'api', gate: 'test', command: 'dotnet test', status: 'pass', durationMs: 0, evidence: 'gates/api/test-1.log', survivors: undefined },
-    ],
-  })
-})
-
 test('the view of a blocked run keeps the reason, and of a tampered journal says it is tampered', async () => {
   const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
   const blocked = await host.start()
@@ -185,7 +160,7 @@ test('before a run, the view draws the workflow\'s steps, each pending with what
   const host = pipelineHost()
 
   const idle = await host.view()
-  assert.deepEqual([idle.graph, idle.reviews, idle.gates], [PENDING_GRAPH, [], []])
+  assert.deepEqual([idle.graph, idle.reviews, idle.evidence], [PENDING_GRAPH, [], []])
 
   await host.init()
   assert.deepEqual((await host.view()).graph, PENDING_GRAPH)
@@ -209,12 +184,9 @@ const reworkedDesign = () => {
 
 test('the view marks each step of the run done or in progress, with its outcome, passes, attempts, time and cost, and the edges it took', async () => {
   const host = reworkedDesign()
-  const seen = []
-  host.machine.meanwhile['. $ dotnet build'] = async () => { seen.push((await host.view()).graph.nodes.filter((step) => step.state !== 'pending').map(({ id, state }) => [id, state])) }
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(seen[0].slice(-3), [['scenario_review', 'done'], ['deliver', 'done'], ['gates', 'open']])
   const { graph } = await host.view()
   assert.deepEqual(graph.nodes.map(({ id, state, outcome, visits, attempts, retries, costUsd }) => [id, state, outcome, visits, attempts, retries, costUsd]), [
     ['research', 'done', 'done', 1, 1, 0, 0.25],
@@ -225,17 +197,15 @@ test('the view marks each step of the run done or in progress, with its outcome,
     ['distill_review', 'done', 'approved', 1, 1, 0, 0.125],
     ['scenario_review', 'done', 'answered', 1, 1, 0, null],
     ['deliver', 'done', 'done', 1, 1, 0, null],
-    ['gates', 'done', 'pass', 1, 1, 0, null],
     ['deliver_review', 'done', 'approved', 1, 1, 0, 0.125],
     ['visuals', 'done', 'skipped', 1, 1, 0, null],
     ['pr_writer', 'done', 'done', 1, 1, 0, null],
     ['publish', 'done', 'local', 1, 1, 0, null],
   ])
-  assert.equal(graph.nodes.find((step) => step.id === 'gates').durationMs, 2_000)
   assert.deepEqual(graph.edges.filter((taken) => taken.taken > 0).map(({ from, to, taken }) => [from, to, taken]), [
     ['research', 'design', 1], ['design', 'design_review', 2],
     ['design_review', 'design', 1], ['design_review', 'adr', 1], ['adr', 'distill', 1], ['distill', 'distill_review', 1], ['distill_review', 'scenario_review', 1], ['scenario_review', 'deliver', 1],
-    ['deliver', 'gates', 1], ['gates', 'deliver_review', 1], ['deliver_review', 'visuals', 1], ['visuals', 'pr_writer', 1], ['pr_writer', 'publish', 1],
+    ['deliver', 'deliver_review', 1], ['deliver_review', 'visuals', 1], ['visuals', 'pr_writer', 1], ['pr_writer', 'publish', 1],
   ])
 })
 
@@ -258,23 +228,6 @@ test('the view shows the last pass of each review: what each lens said and how m
   ])
   assert.deepEqual((await host.view()).reviews[0], { step: 'design_review', visit: 2, verdict: 'approved', lenses: passing('consistency', 'architecture-compliance', 'fitness') })
 })
-
-test('the view shows the last result of each gate of each component, a test that failed then passed among them', async () => {
-  const clock = new FixedClock('2026-10-11T09:00:00.000Z')
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 }, clock, takesMs: 1_000 })
-  const host = scripted({ machine, clock }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: green() })(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; tddCycle('checkout', 'Refund')(h) } })(it)])
-  const seen = []
-  host.machine.meanwhile['. $ dotnet build'] = async () => { seen.push((await host.view()).gates.map(({ gate, status, evidence }) => [gate, status, evidence])) }
-
-  await host.start()
-
-  assert.deepEqual(seen, [[], [['build', 'pass', 'gates/api/build-1.log'], ['test', 'fail', 'gates/api/test-1.log']]])
-  assert.deepEqual((await host.view()).gates.map(({ gate, status, durationMs, evidence }) => [gate, status, durationMs, evidence]), [
-    ['build', 'pass', 1_000, 'gates/api/build-2.log'],
-    ['test', 'pass', 1_000, 'gates/api/test-2.log'],
-  ])
-})
-
 test('the last pass of a review shows only the lenses that pass ran, and no verdict until the pass records one', async () => {
   const mocks = ({ git }) => {
     git.adds('tests/CheckoutTests.cs', 'var server = WireMockServer.Start();')
@@ -303,4 +256,20 @@ test('the last pass of a review shows only the lenses that pass ran, and no verd
     { step: 'deliver_review', visit: 2, verdict: null, lenses: [found, ...passing('architecture-boundaries', 'cold-reader')] },
   ])
   assert.deepEqual((await host.view()).reviews.at(-1), { step: 'deliver_review', visit: 2, verdict: 'approved', lenses: [found, ...passing('architecture-boundaries', 'cold-reader')] })
+})
+
+test('the view of a delivered run shows its quality evidence: the traced run of each gate the delivery stands on, with its folder and its log', async () => {
+  const host = scripted({}, (it) => nominal(it))
+
+  assert.equal((await host.start()).status, 'done')
+
+  const { evidence } = await host.view()
+  assert.deepEqual(evidence.map(({ gate, folder, run, log }) => [gate, folder, run, log]), [
+    ['build', '.', 1, 'logs/runs/deliver-1-1/1.log'],
+    ['format', '.', 2, 'logs/runs/deliver-1-1/2.log'],
+    ['lint', '.', 3, 'logs/runs/deliver-1-1/3.log'],
+    ['test', '.', 4, 'logs/runs/deliver-1-1/4.log'],
+    ['architecture', '.', 5, 'logs/runs/deliver-1-1/5.log'],
+    ['coverage', '.', 6, 'logs/runs/deliver-1-1/6.log'],
+  ])
 })

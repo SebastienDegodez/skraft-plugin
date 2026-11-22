@@ -234,8 +234,8 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
   group in plan order and makes one green commit for the story. For each group, in one turn: run its
   acceptance tests filtered by their numbers; scenarios that already pass are covered by an earlier
   one: no code, name the covering scenario on the change-log line; write the code its red tests
-  demand, nothing more. After the last group run the gates once, then the chained commit, whose
-  unfiltered test run is the one run of the whole suite.
+  demand, nothing more. After the last group run the chained commit, whose unfiltered test run is the one run of the
+  whole suite and the `test` gate; then run each other gate on that commit.
 - A scenario's test that passes on its first run adds no behaviour: it is an example of the
   scenario whose code makes it pass, an `Examples` row of that one.
 

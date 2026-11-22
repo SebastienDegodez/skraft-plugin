@@ -2,7 +2,7 @@ import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
 
 /**
  * The tools the MCP server offers: each one is a command line of this driver, built from
- * arguments a model wrote, except skraft_answer, and skraft_mutation given an answer, which record
+ * arguments a model wrote, except skraft_answer, which records
  * a native human reply directly.
  * The commands that take terminal consent (`publish`, `journal
  * adopt`, `review --publish`, `migrate` that writes) are not tools: a person runs them in a
@@ -56,9 +56,8 @@ export const TOOLS = Object.freeze([
   }),
   tool({
     name: 'skraft_doctor', title: 'Check skraft is ready',
-    description: 'Checks the repository is ready for skraft: skraft-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails or a component has no gate command, set skraft up with skraft_init and the skraft-init skill.',
-    parameters: { run: { kind: 'boolean', description: 'run each command once' }, base: { kind: 'string', description: 'the ref the changes are measured from' } },
-    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['doctor', ...flag('--run', args.run), ...value('--base', args.base), '--json'],
+    description: 'Checks the repository is ready for skraft: skraft-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails, set skraft up with skraft_init and the skraft-init skill.',
+    annotations: { ...LOCAL, idempotentHint: true }, argv: () => ['doctor', '--json'],
   }),
   tool({
     name: 'skraft_init', title: 'Detect the components',
@@ -106,12 +105,6 @@ export const TOOLS = Object.freeze([
     annotations: READ_ONLY, argv: (args) => ['journal', 'show', ...value('--last', args.last), '--json'],
   }),
   tool({
-    name: 'skraft_gate', title: 'Run the gates',
-    description: 'Runs the gates of the components changed since the base of the story.',
-    parameters: { all: { kind: 'boolean', description: 'run the gates of every component' } },
-    annotations: LOCAL, argv: (args) => ['gate', ...flag('--all', args.all), '--json'],
-  }),
-  tool({
     name: 'skraft_precheck', title: 'Pre-check what the open attempt has written',
     description: 'Runs, inside your own attempt, the mechanical checks the engine runs when you submit — your outputs, your write scope, the records your role keeps, the prose you write, the scenarios your plan names, the lifecycle of the decisions you touched: it answers every anomaly with the check that found it, the artefact and the rule it breaks, so you correct them now instead of being sent back. It reads no result file and no commit, since you write them last. It starts no agent, changes nothing you wrote, and approves nothing: the engine runs these checks again at the submission, and the review still happens.',
     annotations: LOCAL, argv: () => ['precheck', '--json'],
@@ -130,18 +123,6 @@ export const TOOLS = Object.freeze([
     parameters: { pr: { kind: 'count', description: 'the pull request number' }, record: { kind: 'boolean', description: 'hand the saved agent replies to the review' } },
     required: ['pr'], annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }, loop: true,
     argv: (args) => ['review', '--pr', String(args.pr), ...flag('--record', args.record), '--json'],
-  }),
-  tool({
-    name: 'skraft_mutation', title: 'Run mutation on the branch',
-    description: 'Runs the mutation run of the branch HEAD is on, apart from any pipeline, until it needs agents or a person. On dispatch, start each listed agent with exactly its prompt, one after the other, write its final reply unchanged to its reply file, then do what then says. On waiting, ask the exact question through the offered native ask_user or askQuestions tool and relay only the returned human reply here, with key and answer.',
-    parameters: {
-      record: { kind: 'boolean', description: 'hand the saved agent replies to the mutation run' },
-      key: { kind: 'string', description: 'the exact key of the question the mutation run waits on' },
-      answer: { kind: 'text', description: 'the native human reply to that question' },
-      reason: { kind: 'text', description: 'the human refusal reason' },
-    },
-    annotations: LOCAL,
-    argv: (args) => ['mutation', ...flag('record', args.record), '--json'],
   }),
   tool({
     name: 'skraft_workflow_check', title: 'Check the workflow',

@@ -16,12 +16,12 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *
  * @typedef {import('./pull-request-prose.mjs').Prose} Prose
  * @typedef {import('./run-facts.mjs').RedCommit} RedCommit
- * @typedef {import('./run-facts.mjs').GateFact} GateFact
+ * @typedef {import('./run-facts.mjs').EvidenceFact} EvidenceFact
  * @typedef {import('./run-facts.mjs').ReviewFacts} ReviewFacts
  * @typedef {{
  *   slug: string, story: { issue?: number | null, title?: string | null } | null, link: string | null, prose: Prose | null,
- *   adrs: Array<{ path: string, number: number, title: string | null }>, unlocked: Array<{ node: string, reason: string }>,
- *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
+ *   adrs: Array<{ path: string, number: number, title: string | null }>,
+ *   reds: RedCommit[], evidence: EvidenceFact[], review: ReviewFacts, status: string,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
  *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
@@ -195,7 +195,7 @@ const SECTIONS = Object.freeze([
   folded('matrix', (facts) => documentLines(facts.matrices, wordsOf(facts), 'noMatrix')),
   folded('tests', (facts) => documentLines(facts.testPlans, wordsOf(facts), 'noTestPlan')),
   folded('red', (facts) => redLines(facts.reds, wordsOf(facts)), (facts) => ({ count: counted(wordsOf(facts), facts.reds.length, wordsOf(facts).redCommit), open: false })),
-  folded('gates', (facts) => gateLines(facts.gates, wordsOf(facts)), (facts) => gateFold(facts.gates, wordsOf(facts))),
+  folded('gates', (facts) => gateLines(facts.evidence, wordsOf(facts)), (facts) => gateFold(facts.evidence, wordsOf(facts))),
   folded('review', (facts) => reviewLines(facts.review, wordsOf(facts)), (facts) => reviewFold(facts.review, wordsOf(facts))),
   folded('screenshots', ({ visuals, repository, language }) => screenshotLines(visuals, repository, language)),
   domainHeavySection,
@@ -216,11 +216,10 @@ const shownDocument = ({ path, text }, words) => {
   return inertText === '' ? [] : [words.from(code(path)), '', inertText]
 }
 
-/** The gates that failed and those that passed, nothing when none ran; open while one failed. @param {GateFact[]} gates @param {Words} words @returns {Fold} */
-const gateFold = (gates, words) => {
-  if (gates.length === 0) return FOLDED
-  const failed = gates.filter(({ status }) => status === 'fail').length
-  return { count: `${failed > 0 ? `${failed} ${words.failed}, ` : ''}${counted(words, gates.length - failed, words.passed)}`, open: failed > 0 }
+/** The traced runs the delivery stands on, folded; never open. @param {EvidenceFact[]} evidence @param {Words} words @returns {Fold} */
+const gateFold = (evidence, words) => {
+  if (evidence.length === 0) return FOLDED
+  return { count: counted(words, evidence.length, words.passed), open: false }
 }
 
 /** The lines of the review by status, nothing when it holds none; open while one asks for an action. @param {ReviewFacts} review @param {Words} words @returns {Fold} */
@@ -231,7 +230,6 @@ const decisionLines = (facts) => {
   const words = wordsOf(facts)
   const lines = [
     ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.ratified}`),
-    ...facts.unlocked.map(({ node, reason }) => `- ${words.unlocked(code(node), oneLine(reason))}`),
   ]
   return lines.length > 0 ? lines : [words.noDecision]
 }
@@ -245,13 +243,13 @@ const redLines = (reds, words) => (reds.length === 0
     ...reds.map(({ sha, subject }) => `| ${code(sha)} | ${cell(subject)} |`),
   ])
 
-/** @param {GateFact[]} gates @param {Words} words */
-const gateLines = (gates, words) => (gates.length === 0
+/** @param {EvidenceFact[]} evidence @param {Words} words */
+const gateLines = (evidence, words) => (evidence.length === 0
   ? [words.noGate]
   : [
     words.gateHeader,
-    '| --- | --- | --- | --- | ---: | --- |',
-    ...gates.map(({ component, gate, command, status, durationMs, evidence }) => `| ${component} | ${gate} | ${cell(code(command))} | ${status} | ${durationText(durationMs)} | ${cell(code(evidence))} |`),
+    '| --- | --- | ---: | --- |',
+    ...evidence.map(({ gate, folder, run, log }) => `| ${gate} | ${cell(code(folder))} | ${run} | ${cell(code(log))} |`),
   ])
 
 /** One table per review step under its heading line. @param {ReviewFacts} review @param {Words} words */

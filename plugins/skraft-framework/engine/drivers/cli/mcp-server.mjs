@@ -2,14 +2,13 @@ import { offeredTools, refusalOf, toolListing } from './mcp-tools.mjs'
 import { offeredPrompts, promptListing, promptMessages, promptRefusalOf } from './mcp-prompts.mjs'
 import { chosenWorkspace, givenWorkingCopy, rootFolders } from './mcp-roots.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
-import { mutationAdapters } from './mutation-loop.mjs'
 import { createRepl, interrupt as interruptRepl } from '../../application/repl/repl-usecase.mjs'
 
 /**
  * `skraft mcp`: the commands of this driver served to an agent host as MCP tools, JSON-RPC over
  * stdin and stdout, one message per line. stdout carries only the protocol; the server's own log
  * goes to stderr. A tool runs the command line it stands for, in the same process, so a tool and
- * the command never differ. skraft_answer, and skraft_mutation given an answer, alone call Decide
+ * the command never differ. skraft_answer alone calls Decide
  * directly, without terminal consent or argv conversion of the human's text.
  *
  * @typedef {import('./run-cli.mjs').CliServices} CliServices
@@ -70,7 +69,7 @@ const STARTS = Object.freeze({
 /** What the host passes to its model when it connects. @param {boolean} loop */
 const instructionsFor = (loop) => [
   'skraft runs a delivery pipeline (research, design, distill, deliver) in the repository the host shares.',
-  'Before the first prompt in a repository, call skraft_doctor. When its config check fails, a component has no gate command, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init.',
+  'Before the first prompt in a repository, call skraft_doctor. When its config check fails, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init.',
   loop ? STARTS.loop : STARTS.host,
   'For a pipeline question, read skraft_status. For unforeseen only, follow skraft_answer host-llm guidance with observed model/cost/unit, without a human dialog. For every other kind, ask the EXACT text and options through the offered native ask_user or askQuestions tool, and request a refusal reason there. Relay ONLY its returned human reply with skraft_answer {key, answer, reason?, workspace}. After successful record resume the SAME workflow run ID; for the MCP loop call skraft_next in the same workspace. Missing native tool or dismissal: report the concrete blocker, leave paused and record nothing, never infer a human answer or use ordinary prose instead.',
   'Publishing, a review verdict comment and the V2 migration keep terminal consent: the person runs skraft publish, skraft review --publish or skraft migrate in their own terminal.',
@@ -281,22 +280,22 @@ const runTool = async (session, tool, args, token) => {
   if (place.directory === null) return refusedResult(place.reason)
   if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
   const captured = capturing(progress(session, token))
-  const services = { ...session.services.at(place.directory), confirm: async () => null, then: mcpThen(args.workspace), mutationThen: mcpMutationThen(args.workspace) }
-  const code = await guarded(session, tool, () => answering(tool, args)
-    ? recordAnswer(tool.name === 'skraft_mutation' ? mutationAdapters(services.adapters()) : services.adapters(), args, captured.console)
+  const services = { ...session.services.at(place.directory), confirm: async () => null, then: mcpThen(args.workspace) }
+  const code = await guarded(session, tool, () => answering(tool)
+    ? recordAnswer(services.adapters(), args, captured.console)
     : session.run(tool.argv(args), services, captured.console))
   return toolResult(code, captured)
 }
 
 /**
  * Whether the call relays a human reply, recorded directly without terminal consent: always for
- * skraft_answer, for skraft_mutation when it carries an answer.
+ * skraft_answer.
  * @param {SkraftTool} tool @param {Record<string, any>} args
  */
-const answering = (tool, args) => tool.name === 'skraft_answer' || (tool.name === 'skraft_mutation' && args.answer !== undefined)
+const answering = (tool) => tool.name === 'skraft_answer'
 
 /**
- * The reply recorded on the run whose adapters are given: the active pipeline's, or the branch's mutation run's.
+ * The reply recorded on the run whose adapters are given: the active pipeline's.
  * @param {import('./run-cli.mjs').CliAdapters} adapters @param {Record<string, any>} args @param {Console} console
  */
 const recordAnswer = async (adapters, { key, answer, reason, by, model, cost, costUnit }, console) => {
@@ -337,17 +336,6 @@ const caller = (workspace) => (/** @type {string} */ tool, /** @type {object} */
 const mcpThen = (workspace) => {
   const call = caller(workspace)
   return { next: call('skraft_next', {}), record: call('skraft_record', {}), review: ({ number }) => call('skraft_review', { pr: number, record: true }) }
-}
-
-/**
- * What a step of the mutation run names to call next: skraft_mutation, which records the human
- * reply too. A mutation run reviews no pull request, so its review goes on as a record would.
- * @param {string | undefined} workspace @returns {import('./agent-loop.mjs').LoopThen}
- */
-const mcpMutationThen = (workspace) => {
-  const call = caller(workspace)
-  const record = call('skraft_mutation', { record: true })
-  return { next: call('skraft_mutation', {}), record, decide: (key) => call('skraft_mutation', { key, answer: '<the reply>' }), review: () => record }
 }
 
 /**

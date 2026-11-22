@@ -2,13 +2,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { answerChoices, paneRows, viewRows, viewText } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
 
-const NO_STEP = Object.freeze({ graph: { nodes: [], edges: [] }, reviews: [], gates: [], agents: [] })
+const NO_STEP = Object.freeze({ graph: { nodes: [], edges: [] }, reviews: [], evidence: [], agents: [] })
 const RUNNING = {
   slug: 'checkout',
   status: 'running',
   reason: '',
   phases: [{ phase: 'RESEARCH', state: 'open' }, { phase: 'DESIGN', state: 'pending' }],
-  current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', gates: null, visit: 1, attempt: 2 },
+  current: { step: 'research', phase: 'RESEARCH', agent: 'solution-researcher', visit: 1, attempt: 2 },
   question: null,
   attempts: 1,
   costUsd: 0.25,
@@ -52,7 +52,7 @@ test('in the pane, each phase lists its steps of the workflow graph: done, in pr
   ])
 })
 
-test('the view shows the last pass of each review and the last result of each gate, by component', () => {
+test('the view shows the last pass of each review and the quality evidence, the traced run of each gate', () => {
   const view = {
     ...RUNNING,
     phases: [],
@@ -62,19 +62,16 @@ test('the view shows the last pass of each review and the last result of each ga
       { step: 'design_review', visit: 1, verdict: 'needs-rework', lenses: [{ lens: 'consistency', verdict: 'fail', findings: 2 }, { lens: 'fitness', verdict: 'pass', findings: 0 }] },
       { step: 'deliver_review', visit: 2, verdict: null, lenses: [{ lens: 'test-integrity', verdict: 'pass', findings: 0 }] },
     ],
-    gates: [
-      { component: 'api', gate: 'test', command: 'dotnet test', status: 'pass', durationMs: 1, evidence: 'gates/api/test-2.log', survivors: undefined },
-      { component: 'web', gate: 'lint', command: 'npx eslint .', status: 'fail', durationMs: 1, evidence: 'gates/web/lint-1.log', survivors: undefined },
-      { component: 'api', gate: 'mutation', command: 'dotnet stryker', status: 'fail', durationMs: 1, evidence: 'gates/api/mutation-1.log', survivors: 3 },
-      { component: 'api', gate: 'coverage', command: 'dotnet coverage', status: 'pass', durationMs: 1, evidence: 'gates/api/coverage-1.log', survivors: null },
+    evidence: [
+      { gate: 'build', folder: 'api', run: 1, log: 'logs/runs/deliver-1-1/1.log' },
+      { gate: 'test', folder: 'api', run: 4, log: 'logs/runs/deliver-1-1/4.log' },
     ],
   }
 
   assert.deepEqual(viewRows(view).slice(1), [
     { key: 'review-design_review', text: 'review design_review: needs-rework — consistency fail (2), fitness pass', tone: 'detail' },
     { key: 'review-deliver_review', text: 'review deliver_review: in progress, pass 2 — test-integrity pass', tone: 'detail' },
-    { key: 'gates-api', text: 'gates api: test pass, mutation fail (3 survivors), coverage pass', tone: 'detail' },
-    { key: 'gates-web', text: 'gates web: lint fail', tone: 'detail' },
+    { key: 'quality-evidence', text: 'Quality evidence: build run 1, test run 4', tone: 'detail' },
   ])
 })
 
@@ -93,12 +90,9 @@ test('the pane offers one answer button per option of the question the run waits
   assert.match(viewRows(judgment).find(({ key }) => key === 'question').text, /host-llm.*skraft_answer/)
 })
 
-test('the current node names its pass after the first, and a gate node shows its gates instead of an agent', () => {
-  const delivering = { ...RUNNING, phases: [], costUsd: null, current: { step: 'deliver', phase: 'DELIVER', agent: 'software-engineer', gates: null, visit: 2, attempt: 3 } }
+test('the current node names its pass after the first', () => {
+  const delivering = { ...RUNNING, phases: [], costUsd: null, current: { step: 'deliver', phase: 'DELIVER', agent: 'software-engineer', visit: 2, attempt: 3 } }
   assert.equal(viewText(delivering), 'skraft checkout — running\nagent: software-engineer (deliver, pass 2, attempt 3)')
-  const gating = { ...delivering, current: { step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'test'], visit: 1, attempt: 1 } }
-  assert.deepEqual(viewRows(gating).at(-1), { key: 'current', text: 'gates: build, test (gates)', tone: 'detail' })
-  assert.equal(viewRows({ ...gating, current: { ...gating.current, visit: 3 } }).at(-1).text, 'gates: build, test (gates, pass 3)')
 })
 
 test('a finished pipeline shows its closed phases and its reason', () => {

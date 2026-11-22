@@ -17,22 +17,6 @@ const pipeline = shipped('pipeline.skraft.dot')
 const review = shipped('review.skraft.dot', { called: true })
 const answersOf = (question) => questionSpec(question).options
 const SHIPPED = { pipeline, review }
-/** A workflow of a team that still loops on its surviving mutants: one proposal per file of survivors. */
-const PROPOSING = readWorkflow([
-  'digraph proposing {',
-  '  start [shape=Mdiamond]',
-  '  deliver [shape=box, agent="software-engineer", phase="DELIVER"]',
-  '  mutation [shape=parallelogram, gate="mutation"]',
-  '  kill_proposal [shape=box, agent="software-engineer", each="survivor-file", proposal=true]',
-  '  plan [shape=hexagon, question="mutation-plan"]',
-  '  exit [shape=Msquare]',
-  '  start -> deliver -> mutation',
-  '  mutation -> exit [label="PASS"]',
-  '  mutation -> kill_proposal [label="FAIL"]',
-  '  kill_proposal -> plan',
-  '  plan -> exit [label="APPLY"]',
-  '}',
-].join('\n')).workflow
 const DIRECTIONS = ['LR', 'TB']
 
 const drawn = (flow) => flow.nodes.filter((node) => node.type !== 'phase')
@@ -85,12 +69,6 @@ describe('the flow drawn from a shipped workflow', () => {
     ])
   })
 
-  test('the gates node carries its lock, the deliver node none', () => {
-    const flow = toFlow(pipeline, { direction: 'LR', answersOf })
-    assert.deepEqual(['gates', 'deliver'].map((id) => byId(flow, id).data.node.locked), [true, false])
-    assert.deepEqual(byId(flow, 'gates').data.node.gates, ['build', 'format', 'lint', 'test', 'architecture', 'coverage'])
-  })
-
   test('the call node targets the review workflow', () => {
     const node = byId(toFlow(pipeline, { direction: 'LR', answersOf }), 'deliver_review')
     assert.equal(node.type, 'call')
@@ -123,32 +101,15 @@ describe('the flow drawn from a shipped workflow', () => {
 
 describe('the side panel of a node', () => {
   test('lists every field the node sets, each linked to the reference', () => {
-    const fields = panelFields(pipeline.nodes.gates)
+    const fields = panelFields(pipeline.nodes.deliver)
     assert.deepEqual(fields.map(({ key, value }) => [key, value]), [
-      ['id', 'gates'],
-      ['kind', 'gate'],
-      ['phase', 'DELIVER'],
-      ['gates', 'build, format, lint, test, architecture, coverage'],
-      ['goal', 'true'],
-      ['locked', 'true'],
-    ])
-    const links = Object.fromEntries(fields.map(({ key, links }) => [key, links.map(({ to }) => to)]))
-    assert.deepEqual(links.phase, ['reference/phases#deliver'])
-    assert.deepEqual(links.locked, ['reference/workflow-dot#locked-nodes'])
-    assert.equal(links.gates.length, 6)
-    assert.ok(links.gates.every((to) => to === 'reference/gates#command-gates'))
-  })
-
-  test('shows an agent node with its agent, each= and proposal', () => {
-    const fields = panelFields(PROPOSING.nodes.kill_proposal)
-    assert.deepEqual(fields.map(({ key, value }) => [key, value]), [
-      ['id', 'kill_proposal'],
+      ['id', 'deliver'],
       ['kind', 'agent'],
       ['phase', 'DELIVER'],
       ['agent', 'software-engineer'],
-      ['each', 'survivor-file'],
-      ['proposal', 'true'],
     ])
+    const links = Object.fromEntries(fields.map(({ key, links }) => [key, links.map(({ to }) => to)]))
+    assert.deepEqual(links.phase, ['reference/phases#deliver'])
   })
 
   test('shows a review with its lenses, their when= and mandatory=', () => {

@@ -40,3 +40,13 @@ const lineOf = async (host, record, unsigned) => {
   const keyId = host.events().find((event) => typeof event.keyId === 'string').keyId
   return signedLine(body, await host.deps.hasher.hmacSha256(await host.deps.journalKeys.read(keyId), body))
 }
+
+/**
+ * A traced e2e run of a component, the way `skraft_repl` writes it: one signed line, its log beside it.
+ * @param {any} host @param {{ cwd: string, command: string, exitCode: number, folder?: string }} run
+ */
+export const writeE2eTrace = async (host, { cwd, command, exitCode, folder = 'logs/runs/deliver-1-1' }) => {
+  const record = { type: 'run', run: 1, cell: 1, at: 'then', command, argv: ['sh', '-c', command], shell: 'sh', cwd, gate: 'e2e', label: null, durationMs: 1, exitCode, signal: null, timedOut: false, killed: false, started: true, bytes: 0, cut: false, sha256: await host.deps.hasher.sha256(''), log: `${folder}/1.log`, headBefore: null, headAfter: null, clean: true }
+  await host.tracking.write(host.slug, `${folder}/1.log`, '')
+  await host.tracking.write(host.slug, `${folder}/runs.jsonl`, `${await lineOf(host, record, false)}\n`)
+}

@@ -1,14 +1,13 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { failureOf } from '../../domain/gates/gate-plan.mjs'
+import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { evidenceCopies, isFrontend, readManifest, VISUALS_MANIFEST } from '../../domain/reporting/visuals.mjs'
-import { evidenceLog, startCommand } from '../gates/gate-runs.mjs'
+import { readTrace } from '../evidence/run-trace-store.mjs'
 
 /**
- * The visuals of a run: each front end's e2e command run from its root, the screenshots its
- * manifest lists then kept in the story's evidence folder and committed on the working branch,
+ * The visuals of a run: each front end's last traced e2e run of `skraft_repl` (the engine starts no
+ * command), the screenshots its manifest lists then kept in the story's evidence folder and committed on the working branch,
  * with the developer's consent. Visuals are evidence, never a gate: what stops them is told,
  * and the run goes on.
  *
@@ -20,7 +19,6 @@ import { evidenceLog, startCommand } from '../gates/gate-runs.mjs'
  *   files: import('../ports/tracking-files.mjs').TrackingFiles,
  *   workspace: import('../ports/workspace.mjs').Workspace,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
- *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   clock: import('../ports/clock.mjs').Clock,
  * }} VisualsDeps
  * @typedef {{
@@ -32,9 +30,6 @@ import { evidenceLog, startCommand } from '../gates/gate-runs.mjs'
  *   copies: the screenshots its manifest lists, each with where it is kept.
  * @typedef {{ outcome: 'recorded' | 'not-recorded' | 'e2e-failed', reason: string, visuals: Visuals }} VisualsRecord
  */
-
-/** How long an e2e run may take: what the Claude Code mod's process runner allows at most. */
-const E2E_TIMEOUT_MS = 600_000
 
 /** @param {VisualsDeps} deps @param {VisualsRequest} request @returns {Promise<VisualsRecord>} */
 export const recordVisuals = async (deps, request) => {
@@ -56,38 +51,38 @@ const outcomeOf = (visuals) => {
 const screenshotCount = (count) => `${count} screenshot${count === 1 ? '' : 's'}`
 
 /**
- * A front end's e2e command, run from its root once an earlier manifest is emptied, then the
- * screenshots the manifest it wrote lists.
+ * A front end's last traced e2e run, then the screenshots the manifest it wrote lists.
  * @param {VisualsDeps} deps @param {VisualsRequest} request @param {Component} component
  * @returns {Promise<E2eRun>}
  */
 const e2eRun = async (deps, request, component) => {
-  const line = component.commands.e2e
-  if (line === undefined) return notRun(component)
-  await clearManifest(deps, component)
-  const tried = await startCommand(deps, component, { line, baseSha: null, timeoutMs: E2E_TIMEOUT_MS })
-  const failure = tried.result === null ? 'environment' : failureOf(tried.result)
-  const evidence = nextEvidence(request.journal, component)
-  await deps.files.write(request.slug, evidence, evidenceLog(component, failure, tried))
-  const ran = { component: component.name, command: line, evidence, screenshots: [] }
-  if (failure !== null) return { visuals: { ...ran, e2e: 'failed', detail: `no screenshots: ${tried.reason}` }, copies: [] }
+  const traced = await lastE2e(deps, request, component)
+  if (traced === null) return notRun(component)
+  const ran = { component: component.name, command: traced.command, evidence: traced.log, screenshots: [] }
+  if (traced.exitCode !== 0) return { visuals: { ...ran, e2e: 'failed', detail: 'no screenshots: the traced e2e run did not exit 0' }, copies: [] }
   return listed(deps, request, { component, ran })
+}
+
+/**
+ * The last run traced as the e2e gate of the component, in any attempt of the run.
+ * @param {VisualsDeps} deps @param {VisualsRequest} request @param {Component} component
+ * @returns {Promise<import('../../domain/evidence/run-trace.mjs').RunRecord | null>}
+ */
+const lastE2e = async (deps, { slug, journal, config }, component) => {
+  const folders = (await deps.files.list(slug, 'logs/runs')).filter((path) => path.endsWith('/runs.jsonl')).map((path) => path.slice(0, -'/runs.jsonl'.length)).sort()
+  for (const folder of folders.reverse()) {
+    const trace = await readTrace(/** @type {any} */ (deps), { slug, folder, events: journal.events })
+    const found = trace.ok ? trace.records.findLast((record) => record.type === 'run' && record.gate === 'e2e' && pathUnder(record.cwd, component.root) !== null) : undefined
+    if (found !== undefined) return /** @type {import('../../domain/evidence/run-trace.mjs').RunRecord} */ (found)
+  }
+  return null
 }
 
 /** @param {Component} component @returns {E2eRun} */
 const notRun = (component) => ({
-  visuals: { component: component.name, command: null, e2e: 'not-run', detail: `no e2e command; give it commands.e2e in ${CONFIG_FILE}`, evidence: null, screenshots: [] },
+  visuals: { component: component.name, command: null, e2e: 'not-run', detail: 'no traced e2e run: run the front end\'s e2e command through skraft_repl with gate(\'e2e\', <command>, { cwd: <its root> })', evidence: null, screenshots: [] },
   copies: [],
 })
-
-/** A manifest an earlier run left is emptied, so that only one this run wrote is read. @param {VisualsDeps} deps @param {Component} component */
-const clearManifest = async (deps, component) => {
-  const path = joinRelative(component.root, VISUALS_MANIFEST)
-  if ((await deps.workspace.read(path)) !== null) await deps.workspace.write(path, '')
-}
-
-/** Each e2e run keeps its own log, numbered by the visuals steps recorded before it. @param {VisualsRequest['journal']} journal @param {Component} component */
-const nextEvidence = (journal, component) => `visuals/${component.name}/e2e-${journal.events.filter((event) => event.type === 'visuals.recorded').length + 1}.log`
 
 /**
  * The screenshots the manifest lists, each file present, with where each is kept.

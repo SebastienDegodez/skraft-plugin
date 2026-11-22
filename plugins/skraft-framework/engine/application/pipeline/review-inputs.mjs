@@ -1,8 +1,10 @@
-import { GATE_ORDER } from '../../domain/gates/gate-plan.mjs'
+import { GATE_NAMES } from '../../domain/evidence/gate-names.mjs'
+import { pathUnder } from '../../domain/config/relative-path.mjs'
+import { qualityEvidence } from '../../domain/reporting/run-facts.mjs'
 
 /**
  * What a run hands a review: the base of its changes, its story, the documents its agents filled
- * or wrote, and its components with the gates that passed on them.
+ * or wrote, and its components with the gates that hold a traced run on them.
  *
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
@@ -37,7 +39,7 @@ const runInputs = (facts) => ({
   base: facts.run.base,
   story: facts.run.story,
   documents: documentsOf(facts),
-  components: facts.components.map((component) => ({ ...component, gates: passedGates(facts.events, component.name) })),
+  components: facts.components.map((component) => ({ ...component, gates: gatesWithRuns(facts.events, component) })),
 })
 
 /**
@@ -67,12 +69,12 @@ const writersOf = (workflow, run, phase) => workflow.order
   .filter((id) => workflow.nodes[id].kind === 'agent' && workflow.nodes[id].phase === phase && id in run.nodes)
   .map((id) => ({ step: id, agent: /** @type {string} */ (workflow.nodes[id].agent), documents: writtenBy(run.nodes[id]) }))
 
+/**
+ * The gates the delivery holds a traced run of under a component's folder, in gate order.
+ * @param {RunFacts['events']} events @param {{ root: string }} component
+ */
+const gatesWithRuns = (events, { root }) => GATE_NAMES.filter((gate) => qualityEvidence(events).some((fact) => fact.gate === gate && pathUnder(fact.folder, root) !== null))
+
 /** @param {RunState['nodes'][string]} node */
 const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
 
-/**
- * The gates whose last run on a component in this run passed, in gate order; only gate.ran
- * events name a component and a gate.
- * @param {RunFacts['events']} events @param {string} component
- */
-const passedGates = (events, component) => GATE_ORDER.filter((gate) => events.findLast((event) => event.component === component && event.gate === gate)?.status === 'pass')

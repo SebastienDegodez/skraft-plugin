@@ -88,7 +88,7 @@ test('the evidence the attempt stands on is journaled by run and hash, never by 
 
   const [checked] = host.events().filter((event) => event.type === 'evidence.checked')
   assert.deepEqual([checked.step, checked.visit, checked.attempt, checked.runs.length], ['deliver', 1, 1, 6])
-  assert.deepEqual(Object.keys(checked.runs[0]), ['run', 'gate', 'sha256'])
+  assert.deepEqual(Object.keys(checked.runs[0]), ['run', 'gate', 'cwd', 'log', 'sha256'])
 })
 
 test('only the components the story changed answer for their gates: another repository left as it was needs no run', async () => {

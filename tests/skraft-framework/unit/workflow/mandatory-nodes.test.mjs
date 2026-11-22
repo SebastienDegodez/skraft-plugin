@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW, MUTATION_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { scripted } from '../support/pipeline-host.mjs'
 import { DELIVER_LENSES, ejectedPipeline, edit, host, reviewWithLenses, withLenses } from './support.mjs'
 
@@ -32,7 +32,7 @@ test('a mandatory call dropped, turned into a review, or calling a file that lac
   const fanIn = withLenses(edit(BUILT_IN_WORKFLOW,
     [call, '  deliver_review_lenses [shape=component]\n  deliver_review_refuter [shape=octagon]\n  deliver_review [shape=tripleoctagon, mandatory=true]\n'],
     ['  deliver_review -> deliver [label="NEEDS_REWORK"', '  deliver_review_refuter -> deliver_review\n  deliver_review -> deliver [label="NEEDS_REWORK"'],
-    ['gates -> deliver_review [label="PASS"]', 'gates -> deliver_review_lenses [label="PASS"]']), 'deliver_review', DELIVER_LENSES)
+    ['  deliver -> deliver_review\n', '  deliver -> deliver_review_lenses\n']), 'deliver_review', DELIVER_LENSES)
   assert.deepEqual(await checked(fanIn), [
     `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
     lensMissing('test_integrity', 'test-integrity'), lensMissing('architecture_boundaries', 'architecture-boundaries'),
@@ -114,7 +114,7 @@ test('a mandatory lens dropped from review.skraft.dot stays missing when the pip
 
   const noCall = edit(decoy,
     ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', ''],
-    ['  gates -> deliver_review [label="PASS"]', '  gates -> visuals [label="PASS"]'],
+    ['  deliver -> deliver_review\n', '  deliver -> visuals\n'],
     ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]\n  deliver_review -> visuals [label="APPROVED"]\n', ''])
   assert.deepEqual(await checked(noCall), [
     `mandatory node deliver_review is missing as a call (shape=house); ${MANDATORY}`,
@@ -142,7 +142,7 @@ test('a mandatory review dropped, bypassed, or sending NEEDS_REWORK nowhere or t
   assert.deepEqual(await checked(turned), [`mandatory node design_review is missing as a review fan-in (shape=tripleoctagon); ${MANDATORY}`])
 
   const bypassed = edit(BUILT_IN_WORKFLOW,
-    ['research -> design -> design_review_lenses', 'research -> design -> quick\n  quick [shape=parallelogram, gate="build"]\n  quick -> design_review_lenses [label="PASS"]\n  quick -> adr [label="FAIL"]'])
+    ['research -> design -> design_review_lenses', 'research -> design -> quick\n  quick [shape=hexagon, question="scenario-review"]\n  quick -> design_review_lenses [label="APPROVED"]\n  quick -> design [label="REVISE", max_visits=1]\n  quick -> adr'])
   assert.deepEqual(await checked(bypassed), ['start', 'design'].map((from) => `${from} reaches the exit without passing mandatory node design_review; ${MANDATORY}`))
 
   const noRework = edit(BUILT_IN_WORKFLOW, ['  distill_review -> distill [label="NEEDS_REWORK", max_visits=2]\n', ''])
@@ -182,27 +182,4 @@ test('diff marks each mandatory node it lists as removed or changed', async () =
     '~ node deliver_review: workflow review → team-review (mandatory)',
     '+ workflow .skraft/team-review.skraft.dot',
   ])
-})
-
-test('an agent of a mandatory review\'s phase that leads to the exit around the review is refused, the DELIVER gates unlocked or not; one in a phase of its own is accepted', async () => {
-  const polish = edit(BUILT_IN_WORKFLOW,
-    ['adr -> distill   [label="RATIFIED"]', 'adr -> polish   [label="RATIFIED"]\n  polish [shape=box, agent="solution-architect", phase="DESIGN", writes="src/**"]\n  polish -> distill'])
-  assert.deepEqual(await checked(polish), [`polish reaches the exit without passing mandatory node design_review; ${MANDATORY}`])
-
-  const ownPhase = edit(polish, ['phase="DESIGN", writes="src/**"', 'phase="HARDENING", writes="src/**"'])
-  assert.deepEqual(await checked(ownPhase), [])
-
-  const tweak = edit(BUILT_IN_WORKFLOW,
-    ['gate="build,format,lint,test,architecture,coverage"', 'gate="build", unlock="the CI runs the other gates"'],
-    ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> tweak [label="APPROVED"]\n  tweak [shape=box, agent="software-engineer", writes="src/**"]\n  tweak -> visuals'])
-  assert.deepEqual(await checked(tweak), [`tweak reaches the exit without passing mandatory node deliver_review; ${MANDATORY}`])
-
-  const beforeGates = edit(BUILT_IN_WORKFLOW, ['  deliver -> gates\n', '  deliver -> lint_fix\n  lint_fix [shape=box, agent="software-engineer"]\n  lint_fix -> gates\n'])
-  assert.deepEqual(await checked(beforeGates), [])
-})
-
-test('a mandatory review the plugin\'s workflow runs only on some paths stays on the paths it is on there: mutation_review after kill_mutants', async () => {
-  const gated = edit(MUTATION_WORKFLOW, ['kill_mutants -> mutation_review_lenses', 'kill_mutants -> quick\n  quick [shape=parallelogram, gate="build"]\n  quick -> mutation_review_lenses [label="PASS"]\n  quick -> gates [label="FAIL"]'])
-  const errors = (await host({ files: ejectedPipeline(gated), builtIn: MUTATION_WORKFLOW }).commands.check()).errors
-  assert.deepEqual(errors, [`kill_mutants reaches the exit without passing mandatory node mutation_review; ${MANDATORY}`])
 })

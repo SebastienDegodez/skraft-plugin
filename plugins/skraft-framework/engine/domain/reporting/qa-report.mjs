@@ -1,18 +1,14 @@
 import { cell, code } from './markdown-safety.mjs'
-import { durationText } from './run-report.mjs'
-import { finalGates, isTestPlan, redCommits } from './run-facts.mjs'
+import { qualityEvidence, isTestPlan, redCommits } from './run-facts.mjs'
 import { lensesText, reviewPasses } from './review-passes.mjs'
 
 /**
  * qa-report.md: what a qualification team reads to judge the story, from the journal alone: the
- * test plan, each component's last gates with its mutation score and survivors, the red commits
+ * test plan, the traced runs the delivery stands on, the red commits
  * of its TDD cycles, each review's verdict. Every text an agent or a tool wrote sits in a code
  * span; the rest is the engine's.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
- * @typedef {import('./run-facts.mjs').GateFact} GateFact
- * @typedef {{ scope: string, bar: number, score: number, counted: number | null, survivors: string[] }} JournaledScore
- *   counted: the mutants a report counts, null for a score the mutation command computed
  */
 
 export const QA_REPORT_FILE = 'qa-report.md'
@@ -25,7 +21,7 @@ export const renderQaReport = ({ slug, status, events }) => [
   `Status: ${code(status)}`,
   '',
   ...section('Test plan', testPlanLines(events)),
-  ...section('Gates', gateLines(events)),
+  ...section('Quality evidence', gateLines(events)),
   ...section('TDD red commits', redCommitLines(events)),
   ...section('Reviews', reviewLines(events)),
 ].join('\n')
@@ -41,47 +37,12 @@ const testPlanLines = (events) => {
   return [`[${path}](${path}), written in ${step.phase}.`]
 }
 
-/** Each component's last gates, in the order they first ran. @param {RunEvent[]} events */
+/** The traced runs the delivery stands on. @param {RunEvent[]} events */
 const gateLines = (events) => {
-  const gates = finalGates(events)
-  if (gates.length === 0) return ['No gate has run yet.']
-  const blocks = [...new Set(gates.map((gate) => gate.component))].map((component) => componentLines(events, component, gates.filter((gate) => gate.component === component)))
-  return blocks.flatMap((block, index) => (index === 0 ? block : ['', ...block]))
+  const evidence = qualityEvidence(events)
+  if (evidence.length === 0) return ['No traced run has been checked yet.']
+  return ['| Gate | Folder | Run | Log |', '| --- | --- | ---: | --- |', ...evidence.map(({ gate, folder, run, log }) => `| ${gate} | ${code(folder)} | ${run} | [${log}](${log}) |`)]
 }
-
-/** @param {RunEvent[]} events @param {string} component @param {GateFact[]} gates */
-const componentLines = (events, component, gates) => [
-  `### ${component}`,
-  '',
-  '| Gate | Status | Time | Evidence |',
-  '| --- | --- | ---: | --- |',
-  ...gates.map(({ gate, status, durationMs, evidence }) => `| ${gate} | ${status} | ${durationText(durationMs)} | [${evidence}](${evidence}) |`),
-  ...mutationLines(events, component),
-]
-
-/**
- * The scores and survivors of the component's last mutation run; nothing when none ran, and no
- * score when its report was not read.
- * @param {RunEvent[]} events @param {string} component
- */
-const mutationLines = (events, component) => {
-  const last = events.findLast((event) => event.gate === 'mutation' && event.component === component)
-  if (last === undefined) return []
-  return ['', ...scoreLines(last.scores)]
-}
-
-/** @param {JournaledScore[] | null} scores */
-const scoreLines = (scores) => {
-  if (scores === null) return ['Mutation score: mutation report not read.']
-  if (scores.length === 0) return ['Mutation score: no mutant in the files the story changed.']
-  return [`Mutation score: ${scores.map(scoreText).join(', ')}.`, '', ...survivorLines(scores.flatMap((score) => score.survivors))]
-}
-
-/** `core 76 % (bar 80 %, 13 mutants)`, rounded down so that it never reads as the bar. @param {JournaledScore} score */
-const scoreText = ({ scope, bar, score, counted }) => `${scope} ${Math.floor(score)} % (bar ${bar} %${counted === null ? '' : `, ${counted} ${counted === 1 ? 'mutant' : 'mutants'}`})`
-
-/** @param {string[]} survivors */
-const survivorLines = (survivors) => (survivors.length === 0 ? ['No surviving mutant.'] : ['Surviving mutants:', '', ...survivors.map((line) => `- ${code(line)}`)])
 
 /** @param {RunEvent[]} events */
 const redCommitLines = (events) => {

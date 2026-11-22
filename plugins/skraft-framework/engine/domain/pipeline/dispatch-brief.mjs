@@ -14,9 +14,8 @@ import { issueOf } from './commits.mjs'
  *   visit: number, attempt: number, maxAttempts: number,
  *   skills: string[], nowhere: import('./component-skills.mjs').ComponentSkill[], inputs: string[], outputs: string[], result: string, scratch: { logs: string, tmp: string },
  *   allowed: string[], components: BriefComponent[], tdd: import('./roles.mjs').TddMode, commits: boolean,
- *   missing: string[], feedback: string[], instruction: string | null, sentBy: 'gate' | 'review' | 'ask' | 'answer' | null,
- *   mutants: { file: string, mutants: string[], group: number, of: number } | null,
- *   drafts: string[], proposal: boolean, language: import('../reporting/language.mjs').Language | null, checklists: string[],
+ *   missing: string[], feedback: string[], instruction: string | null, sentBy: 'review' | 'ask' | 'answer' | null,
+ *   drafts: string[], language: import('../reporting/language.mjs').Language | null, checklists: string[],
  *   scenario?: BriefScenario | null, policy?: string[],
  * }} Brief
  *   skills (the SKILL.md files of its components the agent reads first), inputs, outputs, result, scratch and missing are absolute paths;
@@ -27,10 +26,9 @@ import { issueOf } from './commits.mjs'
  *   told how its commits reference the story's issue. feedback: on a retry, why the
  *   previous attempt was refused; on a new pass, the gate failures, the review findings or the
  *   human's refusal or choice behind it, sentBy naming which; instruction: the human's answer to
- *   a block that opened this pass, told after what the block left. mutants: the group of surviving mutants the agent kills, one file's.
+ *   a block that opened this pass, told after what the block left. 
  *   drafts: the Proposed ADRs of the working copy, relative to it, told to an agent that keeps
- *   the DESIGN records; empty for any other. proposal: the agent proposes how to treat its
- *   mutants and changes no code. language: the story's, for an agent that writes the prose of the
+ *   the DESIGN records; empty for any other. language: the story's, for an agent that writes the prose of the
  *   pull request; null for any other. checklists: the absolute paths of the skills whose gates the
  *   review of its phase judges its outputs by, which it checks them against before its result.
  *   scenario: the scenario of the story the pass works on, null for a pass on none; policy: how
@@ -65,7 +63,6 @@ export const composeBrief = (brief) => [
   ...scenarioLines(brief),
   ...selfCheckLines(brief),
   ...section(DRAFTS, brief.drafts),
-  ...mutantLines(brief),
   ...missingLines(brief),
   ...feedbackLines(brief),
 ].join('\n')
@@ -85,7 +82,7 @@ const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, s
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */
-const workLines = ({ inputs, outputs, result, scratch, allowed, components, tdd, commits, story, sentBy, proposal, scenario = null }) => [
+const workLines = ({ inputs, outputs, result, scratch, allowed, components, tdd, commits, story, sentBy, scenario = null }) => [
   ...section('- Read first:', inputs),
   ...section('- Fill each output in place; keep the path, create no other copy:', outputs),
   `- Write your result as JSON to ${result}: ${RESULT_SHAPE}`,
@@ -93,7 +90,6 @@ const workLines = ({ inputs, outputs, result, scratch, allowed, components, tdd,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
   ...(scenario === null || scenario.kind === 'rework' ? commitLines(tdd, sentBy) : []),
-  ...(proposal ? [PROPOSAL_RULES] : []),
   ...(commits ? [COMMIT_EVERY_CHANGE, issueLine(story)] : []),
 ]
 
@@ -212,13 +208,13 @@ const componentLine = ({ name, root, stack, mocking, contractTesting, bdd, test 
  */
 const bddLine = (pairs) => (pairs.length === 0 ? 'off' : pairs.map(({ features, steps }) => (steps === null ? features : `${features} → ${steps}`)).join(', '))
 
-/** The commits whose code the gates step runs its commands on next: a TDD cycle's, a mutant killer's. */
-const GATED = Object.freeze(['cycle', 'kill'])
+/** The commits whose gates the engine checks the traced runs of: a TDD cycle's. */
+const GATED = Object.freeze(['cycle'])
 
-const GATES_TITLE = '- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:'
+const GATES_TITLE = '- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the engine checks the traced runs of your attempt:'
 
 /**
- * The gate commands an agent whose code the gates step judges next runs first, by component.
+ * The gate commands an agent that delivers runs through the REPL, by component.
  * @param {Brief['tdd']} tdd @param {BriefComponent[]} components
  */
 const gateLines = (tdd, components) => (GATED.includes(/** @type {string} */ (tdd)) ? [...section(GATES_TITLE, components.flatMap(gatesLine)), ...evidenceLine(tdd)] : [])
@@ -231,23 +227,13 @@ const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with 
 /** @param {BriefComponent} component */
 const gatesLine = ({ name, gates }) => (gates.length === 0 ? [] : [`${name}: ${gates.map(({ gate, line }) => `${gate}: ${line}`).join('; ')}`])
 
-/** The surviving mutants of the file the agent kills, or proposes how to treat. @param {Brief} brief */
-const mutantLines = ({ mutants, proposal }) => (mutants === null
-  ? []
-  : ['', `${proposal ? 'Propose how to treat' : 'Kill'} the surviving mutants of ${mutants.file} (group ${mutants.group} of ${mutants.of}):`, ...mutants.mutants.map((line) => `- ${line}`)])
-
-const PROPOSAL_RULES = [
-  '- Propose, change nothing: for each mutant of your output, replace its `outcome` line with one of `test: …`, `delete: …`, `equivalent: …`;',
-  '  change no file outside the tracking folder and make no commit. The developer chooses from your proposal; another step applies it.',
-].join('\n')
-
 /** The outputs the previous attempt left empty, or the pass a human reopened. @param {Brief} brief */
 const missingLines = ({ missing, attempt, maxAttempts, visit }) => (missing.length > 0
   ? ['', `Missing outputs from ${attempt > 1 ? `attempt ${attempt - 1} of ${maxAttempts}` : `pass ${visit - 1}`}:`, ...missing.map((path) => `- ${path}`)]
   : [])
 
 /**
- * Why the previous attempt was refused, or why the gates sent the work back. A pass a human
+ * Why the previous attempt was refused, or why the review or a human sent the work back. A pass a human
  * reopened after a block carries what the block left, then the human's instruction.
  * @param {Brief} brief
  */
@@ -274,33 +260,26 @@ const feedbackTitle = ({ attempt, maxAttempts, visit, sentBy }) => {
   if (attempt > 1) return `Refused in attempt ${attempt - 1} of ${maxAttempts}:`
   if (sentBy === 'review') return `The review sent the work back on pass ${visit - 1}, with these findings:`
   if (sentBy === 'answer') return 'A human chose how to go on:'
-  return sentBy === 'ask' ? `A human refused the work of pass ${visit - 1}:` : `The gates failed on pass ${visit - 1}:`
+  return sentBy === 'ask' ? `A human refused the work of pass ${visit - 1}:` : `A human chose how to go on after pass ${visit - 1}:`
 }
 
 /** A language as the brief names it. */
 const LANGUAGE_NAMES = Object.freeze({ en: 'English', fr: 'French' })
 
 /** What sent the work back into a new pass, by the kind of node that did. */
-const PASS_CAUSE = Object.freeze({ gate: 'the gates sent the work back', review: 'the review sent the work back', ask: 'a human sent the work back', answer: 'a human chose how to go on' })
+const PASS_CAUSE = Object.freeze({ review: 'the review sent the work back', ask: 'a human sent the work back', answer: 'a human chose how to go on' })
 
 const TDD_RULES = Object.freeze({
   cycle: [
     '- Commit each TDD cycle: `test(<story>): …` with the failing test, then `feat(<story>): …` or `fix(<story>): …` with the code that makes it pass,',
     '  then `refactor(<story>): …` if needed. Tests that pass from the start (coverage) go with the code they cover, or in a `refactor` commit;',
     '  lint and format fixes in a `style` commit. The engine refuses a feat or fix commit with no test commit since the last feat or fix',
-    '  (on a pass the gates sent back, their failure counts as that test),',
     '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
   ].join('\n'),
   red: [
     '- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call: the use cases the event model names, each answering',
     '  the empty value of its type, no behaviour; a test failing on a missing module proves nothing. The engine refuses any commit that is not `type(scope): subject`;',
     '  a refused commit stays refused until you rewrite it.',
-  ].join('\n'),
-  kill: [
-    '- Kill each mutant with a `test(<story>): …` commit whose test passes on the code as it is.',
-    '  Delete code that no behaviour asks for in a `refactor(<story>): …` commit. A bug a new test reveals takes that failing `test` commit, then `fix(<story>): …`.',
-    '  A mutant no test can tell apart from the code: change nothing for it; name it in your result summary, `<file>:<line>` and why.',
-    '  A commit that is not `type(scope): subject` is refused until you rewrite it.',
   ].join('\n'),
 })
 
@@ -320,6 +299,6 @@ export const storyLine = (story) => {
 
 /**
  * Stable across a resume: a host that memoises dispatches by label finds it again.
- * @param {{ slug: string, step: string, visit: number, attempt: number, group?: { index: number, of: number, each?: string | null } | null }} dispatch
+ * @param {{ slug: string, step: string, visit: number, attempt: number }} dispatch
  */
-export const dispatchLabel = ({ slug, step, visit, attempt, group = null }) => `skraft ${slug} · ${step}${visit > 1 ? ` · pass ${visit}` : ''}${group === null ? '' : ` · group ${group.index} of ${group.of}`} · attempt ${attempt}`
+export const dispatchLabel = ({ slug, step, visit, attempt }) => `skraft ${slug} · ${step}${visit > 1 ? ` · pass ${visit}` : ''} · attempt ${attempt}`

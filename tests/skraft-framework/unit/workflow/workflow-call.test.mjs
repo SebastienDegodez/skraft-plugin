@@ -80,7 +80,7 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
     'node deliver_review: attribute model is not supported on a house node (supported: label, shape, phase, workflow, mandatory, with_<input>)',
   ])
   assert.deepEqual(await errorsOf(ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"', 'agent="pr-writer", phase="PUBLISH", with_story="story"']))), [
-    'node pr_writer: attribute with_story is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)',
+    'node pr_writer: attribute with_story is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts)',
   ])
   const unphased = 'digraph mine {\n  start [shape=Mdiamond]\n  review [shape=house, workflow="review"]\n  exit [shape=Msquare]\n  start -> review -> exit\n}\n'
   assert.deepEqual(await errorsOf(ejectedPipeline(unphased)), ['node review has no phase; set phase="<PHASE>" on it or on a node before it'])

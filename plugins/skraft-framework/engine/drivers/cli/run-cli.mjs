@@ -2,7 +2,6 @@ import { createInit } from '../../application/pipeline/init-usecase.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
-import { createRunGate } from '../../application/gates/run-gate-usecase.mjs'
 import { createPrecheck } from '../../application/pipeline/precheck-usecase.mjs'
 import { createDoctor } from '../../application/diagnostics/doctor-usecase.mjs'
 import { createWorkflowCommands } from '../../application/workflow/workflow-commands-usecase.mjs'
@@ -14,16 +13,14 @@ import { prechecksTable } from '../../domain/reporting/run-prechecks.mjs'
 import { decideUsage } from '../../domain/decisions/questions.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { reviewThroughLoop } from './review-loop.mjs'
-import { mutationAdapters, mutationCommandThen, mutationThroughLoop } from './mutation-loop.mjs'
 import { serveMcp } from './mcp-server.mjs'
 
 /**
  * @typedef {{ out: (line: string) => void, err: (line: string) => void }} Console
- * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createRunGate>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
+ * @typedef {Parameters<typeof createInit>[0] & Parameters<typeof createDoctor>[0] & Parameters<typeof createConfigureComponents>[0] & Parameters<typeof createWorkflowCommands>[0] & import('./agent-loop.mjs').LoopAdapters & Parameters<typeof createPublish>[0] & Parameters<typeof createAdoptJournal>[0]} CliAdapters
  * @typedef {{
  *   pluginVersion: () => string, workingCopyName: () => string, adapters: (agentHost?: 'copilot') => CliAdapters, command: () => string,
  *   confirm: (question: string) => Promise<boolean | null>, then?: import('./agent-loop.mjs').LoopThen,
- *   mutationThen?: import('./agent-loop.mjs').LoopThen,
  * } & Partial<import('./mcp-server.mjs').McpServices>} CliServices
  *   adapters: for the host whose agents the run starts, none to check for both; command: how an
  *   agent runs this command line, `node "<absolute path of skraft.mjs>"`; confirm: the person's
@@ -243,14 +240,14 @@ const statusLines = (view) => [
 ]
 
 /**
- * The node the run stands on: a gate node by its gates, a question node by its question, an
- * agent node by its agent and attempt.
+ * The node the run stands on: a question node by its question, an agent node by its agent and
+ * attempt.
  * @param {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['current']>} current
  */
-const currentLine = ({ step, agent, gates, question, visit, attempt }) => {
+const currentLine = ({ step, agent, question, visit, attempt }) => {
   const pass = visit > 1 ? `, pass ${visit}` : ''
   if (agent !== null) return `agent: ${agent} (${step}${pass}, attempt ${attempt})`
-  return question ? `question: ${question} (${step}${pass})` : `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
+  return `question: ${question} (${step}${pass})`
 }
 
 /** How to answer the question the run waits on. @param {NonNullable<import('../../application/pipeline/observe-usecase.mjs').RunView['question']>} question */
@@ -262,7 +259,7 @@ const answerLine = (question) =>
 const decide = (args, services, console) => decideOn(services.adapters(), args, services, console)
 
 /**
- * The answer recorded on the run whose adapters are given: the active pipeline's, or the branch's mutation run's.
+ * The answer recorded on the run whose adapters are given: the active pipeline's.
  * @param {CliAdapters} adapters @param {string[]} args @param {CliServices} services @param {Console} console
  */
 const decideOn = async (adapters, args, services, console) => {
@@ -327,21 +324,6 @@ const loopStep = (step) => async (args, services, console) => {
   return done.status === 'blocked' || done.status === 'refused' ? 1 : 0
 }
 
-/**
- * `mutation [record] [--json]`, `mutation decide [<key>] <answer> [--reason <text>]`: the branch's mutation run, through the agent loop.
- * @param {string[]} args @param {CliServices} services @param {Console} console
- */
-const mutation = async (args, services, console) => {
-  if (args[0] === 'decide') return decideOn(mutationAdapters(services.adapters()), args.slice(1), services, console)
-  const [step, rest] = args[0] === 'record' ? [/** @type {const} */ ('record'), args.slice(1)] : [/** @type {const} */ ('next'), args]
-  const options = optionsOf(rest, { flags: ['--json'] })
-  if (options === undefined) return usage(console)
-  const then = services.mutationThen ?? mutationCommandThen(services.command())
-  const done = await mutationThroughLoop({ adapters: services.adapters('copilot'), then, log: console.err }, step)
-  print(options['--json'] === true, done, loopLines, console)
-  return done.status === 'blocked' || done.status === 'refused' ? 1 : 0
-}
-
 /** @param {import('./agent-loop.mjs').LoopStep} step */
 const loopLines = ({ status, slug, phase, code, reason, dispatches, then }) => [
   `${skraftOf(slug)}: ${status}${code ? ` (${code})` : ''}${phase ? ` in ${phase}` : ''} — ${reason}`,
@@ -371,15 +353,6 @@ const commandThen = (command) => ({
 })
 
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
-const gate = async (args, services, console) => {
-  const options = optionsOf(args, { flags: ['--all', '--json'] })
-  if (options === undefined) return usage(console)
-  const outcome = await createRunGate(services.adapters()).run({ scope: options['--all'] ? 'all' : 'touched' })
-  print(options['--json'] === true, outcome, gateLines, console)
-  return outcome.status === 'passed' ? 0 : 1
-}
-
-/** @param {string[]} args @param {CliServices} services @param {Console} console */
 const precheck = async (args, services, console) => {
   const options = optionsOf(args, { flags: ['--json'] })
   if (options === undefined) return usage(console)
@@ -394,21 +367,11 @@ const precheckLines = (outcome) => [
   `skraft precheck: ${outcome.reason}`,
 ]
 
-/** @param {Awaited<ReturnType<ReturnType<typeof createRunGate>['run']>>} outcome */
-const gateLines = (outcome) => [
-  ...outcome.gates.map((result) =>
-    result.status === 'pass'
-      ? `pass  ${result.component}/${result.gate}`
-      : `fail (${result.failure})  ${result.component}/${result.gate}: ${result.reason}`,
-  ),
-  `${skraftOf(outcome.slug)}: gates ${outcome.status}${outcome.code ? ` (${outcome.code})` : ''} — ${outcome.reason}`,
-]
-
 /** @param {string[]} args @param {CliServices} services @param {Console} console */
 const doctor = async (args, services, console) => {
-  const options = optionsOf(args, { flags: ['--run', '--json'], values: ['--base'] })
+  const options = optionsOf(args, { flags: ['--json'] })
   if (options === undefined) return usage(console)
-  const checked = await createDoctor(services.adapters()).check({ run: options['--run'] === true, base: /** @type {string | undefined} */ (options['--base']) ?? null })
+  const checked = await createDoctor(services.adapters()).check()
   const report = { plugin: services.pluginVersion(), ...checked }
   print(options['--json'] === true, report, doctorLines, console)
   return report.ok ? 0 : 1
@@ -546,14 +509,8 @@ const TABLE = [
   ['migrate', migrate, [{ synopsis: '[--dry-run] [--json]', summary: 'turn the v1 runs in progress and skraft-config.json into V2 ones' }]],
   ['next', loopStep('next'), [{ synopsis: '[--json]', summary: 'run the active pipeline until it needs agents or a human' }]],
   ['record', loopStep('record'), [{ synopsis: '[--json]', summary: 'hand the saved agent replies to the run, then go on' }]],
-  ['gate', gate, [{ synopsis: '[--all] [--json]', summary: 'run the gates of the changed components (all with --all)' }]],
   ['precheck', precheck, [{ synopsis: '[--json]', summary: "run, inside the open attempt, the mechanical checks the engine runs on its submission, and keep what it read" }]],
-  ['doctor', doctor, [{ synopsis: '[--run] [--base <ref>] [--json]', summary: 'check the configuration and that every command parses (--run: start each once)' }]],
-  ['mutation', mutation, [
-    { synopsis: '[--json]', summary: 'mutate the branch HEAD is on with the mutation workflow, in its own run, until it needs agents or a human' },
-    { synopsis: 'record [--json]', summary: "hand the saved agent replies to the branch's mutation run, then go on" },
-    { synopsis: 'decide [<key>] <answer> [--reason <text>]', summary: "answer the question the branch's mutation run waits on" },
-  ]],
+  ['doctor', doctor, [{ synopsis: '[--json]', summary: 'check the configuration, the forge, the models and the folders of the components; skraft starts none of their commands' }]],
   ['review', review, [{ synopsis: '--pr <number> [--publish] [--record] [--json]', summary: 'review one pull request with the review workflow (--publish: keep its verdict in a comment)' }]],
   ['workflow', workflow, [
     { synopsis: 'eject [review]', summary: 'copy the plugin pipeline into .skraft/ (review: the review alone)' },

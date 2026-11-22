@@ -22,7 +22,7 @@ test('a pull request from a fork without skraft-config.json: the stack is detect
   assert.deepEqual(JSON.parse(await host.reviews.read(SLUG, 'reviews/verdict-1/components.json')), [
     { name: 'shop', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: false, bdd: null, gates: [] },
   ])
-  assert.ok(host.prompt('mock-fidelity-lens').includes(`\n  - Components (stack, mocking strategy, contract testing, BDD, gates that passed): ${REVIEWS}/reviews/verdict-1/components.json\n`))
+  assert.ok(host.prompt('mock-fidelity-lens').includes(`\n  - Components (stack, mocking strategy, contract testing, BDD, gates with a traced run): ${REVIEWS}/reviews/verdict-1/components.json\n`))
   assert.deepEqual([...host.workspace.files.keys()].sort(), before)
 })
 

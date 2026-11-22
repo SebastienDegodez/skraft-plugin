@@ -16,7 +16,7 @@ const unnumbered = (lines) => lines.map((text) => text.replace(/-\d+\.log"/g, '-
 /** What the command printed, as a tool result gives it. @param {{ stdout: string, stderr: string }} run */
 const printed = ({ stdout, stderr }) => [stdout, stderr].filter(Boolean).map((text) => text.replace(/\n$/, ''))
 
-test('each tool answers what its command line prints in the same folder, a failing doctor or gate included, and is an error only when the command answered nothing', async (t) => {
+test('each tool answers what its command line prints in the same folder, a failing doctor included, and is an error only when the command answered nothing', async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   const host = mcpHost({ roots: [cwd] })
@@ -28,8 +28,6 @@ test('each tool answers what its command line prints in the same folder, a faili
     ['skraft_journal', {}, ['journal', 'show', '--json']],
     ['skraft_journal', { last: 1 }, ['journal', 'show', '--last', '1', '--json']],
     ['skraft_doctor', {}, ['doctor', '--json']],
-    ['skraft_doctor', { run: true, base: 'main' }, ['doctor', '--run', '--base', 'main', '--json']],
-    ['skraft_gate', { all: true }, ['gate', '--all', '--json']],
     ['skraft_precheck', {}, ['precheck', '--json']],
     ['skraft_workflow_check', {}, ['workflow', 'check', '--json']],
     ['skraft_workflow_diff', {}, ['workflow', 'diff', '--json']],
@@ -40,9 +38,6 @@ test('each tool answers what its command line prints in the same folder, a faili
     assert.deepEqual(unnumbered(texts(result)), unnumbered(printed(run)), name)
     assert.equal(result.isError, run.status !== 0 && run.stdout === '', name)
   }
-  const gate = await host.call('skraft_gate', { all: true })
-  assert.deepEqual([JSON.parse(gate.content[0].text).status, gate.isError], ['failed', false])
-  assert.equal(JSON.parse((await host.call('skraft_gate')).content[0].text).status, 'passed')
   const refused = await host.call('skraft_start', { slug: 'Check Out' })
   assert.deepEqual(refused, { content: [{ type: 'text', text: 'slug must be kebab-case: lowercase letters and digits, joined by single hyphens' }], isError: true })
   await host.close()

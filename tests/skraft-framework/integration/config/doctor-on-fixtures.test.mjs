@@ -45,7 +45,7 @@ const initThenDoctor = async (cwd, env, add = [], { gherkin = 'declined' } = {})
 
 // The stub PATH holds no container runtime: doctor warns of it after the infrastructure of each
 // component's tests, one line per row, never failing. The commands are written after init, as
-// `/skraft-init` would; none is a mutation command, so doctor's mutation line says no component declares one.
+// `/skraft-init` would.
 for (const [fixture, stack, commands, paths] of [
   ['payment', 'dotnet', ['build', 'format', 'test'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test'], {
@@ -67,8 +67,8 @@ for (const [fixture, stack, commands, paths] of [
     assert.equal(doctor.status, 1, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, 'ok    mutation',
-      ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'), 'WARN  container-runtime',
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`,
+      ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'),
       'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
     assert.match(checksOf(lines).find((line) => line.startsWith('FAIL')), /bdd: the component does not say whether it describes its behaviour in Gherkin; run \/skraft-init, or write "bdd" in skraft-config\.json$/)
@@ -81,7 +81,7 @@ for (const [fixture, stack, commands, paths] of [
     writeFileSync(file, `${JSON.stringify(answered, null, 2)}\n`)
     const again = await skraft(cwd, ['doctor'], { env: machine(t) })
     assert.equal(again.status, 0, again.stdout)
-    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, 3 with a warning`)
+    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, 2 with a warning`)
   })
 }
 
@@ -168,66 +168,8 @@ test('skraft init then doctor pass on a .NET API with its React front in a neigh
 
   assert.equal(init.stdout, 'skraft-config.json: payment-api (dotnet, .), payment-web (react, ../payment-web)\n')
   assert.equal(doctor.status, 0, doctor.stdout)
-  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm test \(parsed; doctor --run starts it\)$/m)
+  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm test \(listed; skraft_repl starts it, never skraft\)$/m)
 })
-
-test('doctor passes a command whose program is on no PATH, since it only parses it, and --run names the one that does not start', async (t) => {
-  const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
-  const env = machine(t, ['dotnet'])
-  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  answerAsTheSkillDoes(cwd, { bdd: false })
-  const config = readJson(join(cwd, 'skraft-config.json'))
-  config.components[0].commands.architecture = 'archunit-cli check'
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
-  commitAll(cwd)
-
-  const parsed = await skraft(cwd, ['doctor'], { env })
-  const started = await skraft(cwd, ['doctor', '--run'], { env })
-
-  assert.equal(parsed.status, 0, parsed.stdout)
-  assert.match(parsed.stdout, /^ok {4}payment\/architecture: archunit-cli check \(parsed; doctor --run starts it\)$/m)
-  assert.equal(started.status, 1)
-  assert.match(started.stdout, /^FAIL {2}payment\/architecture: archunit-cli did not start for payment\/architecture; install it or change commands\.architecture in skraft-config\.json$/m)
-})
-
-test('doctor passes on Microcks components without any container runtime on the machine, warning that their container scenarios will be indeterminate', async (t) => {
-  const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
-  const env = machine(t, ['python'])
-  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  answerAsTheSkillDoes(cwd, { bdd: false })
-
-  const report = await skraft(cwd, ['doctor', '--json'], { env })
-
-  assert.equal(report.status, 0)
-  const { checks } = JSON.parse(report.stdout)
-  assert.deepEqual(checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['forge', 'container-runtime', 'models/copilot'])
-  assert.equal(checks.find(({ subject }) => subject === 'container-runtime').detail, 'neither docker nor podman is on the PATH; the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs')
-  assert.equal(checks.find(({ detail }) => detail.includes('external gateway')).detail, 'payment-fastapi (python) external gateway: microcks (targeted), microcks (walking skeleton) — Microcks uber native image via Testcontainers, one container per test session; source plugin')
-})
-
-test('doctor --run starts each command once against the base it is given, main by default', async (t) => {
-  const cwd = join(tempFolder(t), 'payment')
-  mkdirSync(cwd)
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components: [
-    { name: 'payment', root: '.', stack: 'javascript', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'node --version {baseSha}' } },
-  ] }))
-  const mainSha = commitAll(cwd)
-  git(cwd, 'checkout', '-q', '-b', 'develop')
-  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'develop')
-  const developSha = git(cwd, 'rev-parse', 'HEAD')
-  const env = envWithPath(toolFolders())
-
-  const onMain = await skraft(cwd, ['doctor', '--run', '--json'], { env })
-  const onDevelop = await skraft(cwd, ['doctor', '--base', 'develop', '--run'], { env })
-  const dry = await skraft(cwd, ['doctor', '--base', 'develop', '--json'], { env })
-
-  assert.equal(onMain.status, 0, onMain.stdout)
-  assert.deepEqual(JSON.parse(onMain.stdout).checks[3], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
-  assert.equal(onDevelop.status, 0, onDevelop.stdout)
-  assert.equal(onDevelop.stdout.split(/\r?\n/)[4], `ok    payment/test: node --version ${developSha} passed`)
-  assert.equal(JSON.parse(dry.stdout).checks[3].detail, 'node --version {baseSha} (parsed; doctor --run starts it)')
-})
-
 test('doctor names a component root that is missing or a file; a folder it may not read stops it with the system\'s error', async (t) => {
   const cwd = join(tempFolder(t), 'payment')
   mkdirSync(join(cwd, 'locked'), { recursive: true })

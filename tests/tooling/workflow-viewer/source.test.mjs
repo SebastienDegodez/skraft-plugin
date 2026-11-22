@@ -5,7 +5,7 @@ import { readWorkflow } from '../../../plugins/skraft-framework/engine/domain/wo
 import { chooseSource, fetchLive, liveUrl, LIVE_LIMIT_BYTES } from '../../../docs/website/src/components/WorkflowViewer/source.mjs'
 
 const PIPELINE = readFileSync(new URL('../../../plugins/skraft-framework/workflows/pipeline.skraft.dot', import.meta.url), 'utf8')
-const NEWER = PIPELINE.replace('goal_gate=true, locked=true, phase="DELIVER"', 'goal_gate=true, locked=true, phase="DELIVER", shiny="yes"')
+const NEWER = PIPELINE.replace('deliver  [shape=box, agent="software-engineer", phase="DELIVER"]', 'deliver  [shape=box, agent="software-engineer", phase="DELIVER", shiny="yes"]')
 const BUNDLED = PIPELINE.replace('goal="Deliver the story"', 'goal="Bundled copy"')
 const read = (text) => readWorkflow(text)
 

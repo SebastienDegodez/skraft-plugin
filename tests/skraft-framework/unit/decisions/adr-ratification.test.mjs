@@ -28,7 +28,7 @@ test('a Proposed ADR and nobody to answer: the run waits on the question, and ru
   assert.equal(view.status, 'waiting')
   assert.equal(view.reason, RATIFY)
   assert.deepEqual(view.question, { key: 'adr-1', kind: 'adr-ratification', text: RATIFY, options: ['RATIFIED', 'REJECTED'], refusals: ['REJECTED'], header: 'ADR' })
-  assert.deepEqual(view.current, { step: 'adr', phase: 'DESIGN', agent: null, gates: null, question: 'adr-ratification', visit: 1, attempt: 1 })
+  assert.deepEqual(view.current, { step: 'adr', phase: 'DESIGN', agent: null, question: 'adr-ratification', visit: 1, attempt: 1 })
 })
 
 test('a run started again without an answer asks the same question again and still waits; nothing is journaled twice', async () => {

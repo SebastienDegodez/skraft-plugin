@@ -1,6 +1,6 @@
 import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
 import { checkMandatory } from '../../domain/workflow/mandatory.mjs'
-import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
+import { readWorkflow } from '../../domain/workflow/workflow.mjs'
 import { ejectedPath, withCalls } from './called-workflows.mjs'
 
 /**
@@ -11,7 +11,7 @@ import { ejectedPath, withCalls } from './called-workflows.mjs'
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * }} WorkflowFiles
  * @typedef {WorkflowFiles & { agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog }} WorkflowDeps
- * @typedef {{ ok: true, workflow: Workflow, name: string, unlocked: Array<{ node: string, reason: string }>, sources: Record<string, AgentSource> }
+ * @typedef {{ ok: true, workflow: Workflow, name: string, sources: Record<string, AgentSource> }
  *   | { ok: false, name: string, reason: string, errors: string[] }} WorkflowLoading
  */
 
@@ -58,8 +58,7 @@ export const readShippedCalls = async (deps) => {
 }
 
 /**
- * The workflow a run follows, refused with every error found: its own, the locked nodes of
- * the plugin's workflow it drops, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
+ * The workflow a run follows, refused with every error found: its own, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
  * @param {WorkflowDeps} deps
  * @param {{ agents?: boolean }} request
  * @returns {Promise<WorkflowLoading>}
@@ -68,11 +67,10 @@ export const loadWorkflow = async (deps, { agents = true }) => {
   const { name, builtIn, read } = await readWorkflows(deps)
   if (!read.ok) return refused(name, read.errors)
   const { workflow } = read
-  const locks = checkLocks(builtIn, workflow)
   const located = agents ? await locateAgents(deps.agentCatalog, workflow) : { sources: {}, errors: [] }
-  const errors = [...locks.errors, ...checkMandatory(builtIn, workflow), ...located.errors]
+  const errors = [...checkMandatory(builtIn, workflow), ...located.errors]
   if (errors.length > 0) return refused(name, errors)
-  return { ok: true, workflow, name, unlocked: locks.unlocked, sources: located.sources }
+  return { ok: true, workflow, name, sources: located.sources }
 }
 
 /**

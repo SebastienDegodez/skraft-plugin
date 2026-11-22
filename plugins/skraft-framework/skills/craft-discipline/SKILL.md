@@ -37,7 +37,7 @@ test run is this run: run no other.
 
 ### C3 — Build passes
 
-Run the component's `build` command: your brief's, else `commands.build` of the component in
+Run the component's `build` command through `skraft_repl` (`gate('build', …)`): your brief's, else `commands.build` of the component in
 `skraft-config.json`, else the stack's standard one (`dotnet build`).
 
 All projects compile without warnings. Treat warnings as errors. A test run that compiles the
@@ -45,7 +45,7 @@ project is the build: run no `build` apart when the test command has just compil
 
 ### C4 — Format and static analysis pass
 
-Run the component's `format` and `lint` commands the same way (brief, else `commands.format` and
+Run the component's `format` and `lint` commands the same way, through `skraft_repl` (brief, else `commands.format` and
 `commands.lint` in `skraft-config.json`); a missing command is skipped. When the formatter has a
 fix mode, run it first, then the check. Both report no finding, including one on a line the change
 did not write; commit those fixes as `style`.

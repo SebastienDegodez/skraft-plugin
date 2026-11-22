@@ -13,14 +13,14 @@
 /** The family of skills a stack reads: React reads the TypeScript ones. @param {Component['stack']} stack */
 const familyOf = (stack) => (stack === 'react' ? 'typescript' : stack)
 
-/** The agents that write tests against component code: a TDD cycle, and killing surviving mutants. */
-const WRITES_TESTS = Object.freeze(['cycle', 'kill'])
+/** The agents that write tests against component code: a TDD cycle. */
+const WRITES_TESTS = Object.freeze(['cycle'])
 
 /**
  * Whether the agent of that role writes tests against component code, or proposes the tests
  * that kill surviving mutants. @param {Role} role
  */
-export const writesComponentTests = (role) => role.proposal || WRITES_TESTS.includes(String(role.tdd))
+export const writesComponentTests = (role) => WRITES_TESTS.includes(String(role.tdd))
 
 /**
  * The skill names, in the order of the components, each with the component that asks for it; a

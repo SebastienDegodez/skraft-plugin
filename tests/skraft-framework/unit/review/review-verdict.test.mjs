@@ -119,7 +119,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Write no file, change nothing, start no agent.',
     ...answer('cold-reader'),
   ].join('\n'))
-  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing, BDD, gates that passed)': 'components' }
+  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing, BDD, gates with a traced run)': 'components' }
   const kinds = (dispatch) => [...new Set(dispatch.prompt.split('\n').filter((line) => /^  - .+: \//.test(line)).map((line) => line.slice(4, line.indexOf(':'))).map((title) => KIND[title] ?? 'patch'))]
   assert.deepEqual(Object.fromEntries(host.agentRunner.reviewed().map((dispatch) => [dispatch.agent, kinds(dispatch)])), {
     'consistency-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
@@ -196,8 +196,8 @@ test('a lens whose trigger matches a changed path or an added line runs with the
 
   assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
   const mocks = host.agentRunner.batches.at(-1).at(-1).prompt
-  assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, BDD, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
-  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'test'] }])
+  assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, BDD, gates with a traced run): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
+  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] }])
 
   const web = { ...API, name: 'web', root: 'web', bdd: false, paths: { src: ['src'], tests: ['tests'] } }
   const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }], commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }, web] }, (it) => [
@@ -210,8 +210,8 @@ test('a lens whose trigger matches a changed path or an added line runs with the
   await contracts.start()
   assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [
-    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, bdd: true, gates: ['build', 'test', 'architecture'] },
-    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'test'] },
+    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, bdd: true, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
+    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
   ])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
 })
@@ -773,7 +773,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
   const after = host.events().slice(host.events().findIndex((event) => event.type === 'question.answered'))
   assert.deepEqual(after.filter((event) => event.type === 'phase.closed' || event.type === 'step.started').slice(0, 4).map(({ type, phase, step }) => `${type} ${phase} ${step ?? ''}`.trim()), [
     // The resumed run picks up the open attempt of deliver: no new step.started for it, no question again.
-    'step.started DISTILL scenario_review', 'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER gates',
+    'step.started DISTILL scenario_review', 'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER deliver_review',
   ])
   assert.deepEqual(reviews(host).filter(([step]) => step !== 'design_review'), [
     ['distill_review', 1, 'needs-rework', 'distill'], ['distill_review', 2, 'needs-rework', 'distill'], ['distill_review', 3, 'needs-rework', null],

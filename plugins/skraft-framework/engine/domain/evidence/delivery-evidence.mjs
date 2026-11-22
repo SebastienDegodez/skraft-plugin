@@ -1,4 +1,5 @@
 import { normalizeRelative, pathUnder } from '../config/relative-path.mjs'
+import { GATE_NAMES } from './gate-names.mjs'
 import { openRuns } from './run-trace.mjs'
 
 /**
@@ -16,7 +17,7 @@ import { openRuns } from './run-trace.mjs'
  */
 
 /** The gates a component's runs are asked for, in the order a developer runs them. */
-export const REQUIRED_GATES = Object.freeze(['build', 'format', 'lint', 'test', 'architecture', 'coverage'])
+export const REQUIRED_GATES = GATE_NAMES
 
 /** The label of the run of the commit line. */
 export const GREEN_LABEL = 'green'

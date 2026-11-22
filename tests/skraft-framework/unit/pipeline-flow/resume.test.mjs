@@ -86,7 +86,7 @@ test('init on an initialised slug keeps its journal and its story', async () => 
   assert.deepEqual(host.codeHost.issuesRead, [7])
 })
 
-test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, entry and unlocked gates, its issue kept beside its DISCUSS artefacts', async () => {
+test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, entry, its issue kept beside its DISCUSS artefacts', async () => {
   const codeHost = new InMemoryCodeHost({ issues: { 42: { title: 'Pay by card', body: '## Acceptance criteria\n\n- paying 10 answers paid 10' } } })
   const host = pipelineHost({ codeHost })
   await host.tracking.write(SLUG, 'plans/2026-10-01/stories-v1.md', '# Stories\n')
@@ -95,7 +95,7 @@ test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, en
 
   const [started] = host.events()
   assert.deepEqual(
-    { slug: started.slug, story: started.story, workflow: started.workflow, base: started.base, artifacts: started.artifacts, start: started.start, unlocked: started.unlocked },
+    { slug: started.slug, story: started.story, workflow: started.workflow, base: started.base, artifacts: started.artifacts, start: started.start },
     {
       slug: SLUG,
       story: { issue: 42, title: 'Pay by card' },
@@ -103,7 +103,6 @@ test('a new run journals its slug, story, workflow, bases, DISCUSS artefacts, en
       base: [{ component: null, root: '.', repository: '.', ref: 'main', source: 'default', sha: 'root-0' }, { component: 'api', root: '.', repository: '.', ref: 'main', source: 'default', sha: 'root-0' }],
       artifacts: ['plans/2026-10-11/issue-42.md', 'plans/2026-10-01/stories-v1.md'],
       start: null,
-      unlocked: [],
     },
   )
   assert.equal(await host.tracking.read(SLUG, 'plans/2026-10-11/issue-42.md'), [

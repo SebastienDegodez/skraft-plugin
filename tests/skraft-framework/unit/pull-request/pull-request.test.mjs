@@ -43,7 +43,7 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '## Decisions applied',
     '',
-    'None recorded: no ADR was ratified and no locked gate was unlocked in this run.',
+    'None recorded: no ADR was ratified in this run.',
     '',
     '<details><summary>Consistency matrix</summary>',
     '',
@@ -77,12 +77,16 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '',
     '</details>',
     '',
-    '<details><summary>Quality gates: 2 passed</summary>',
+    '<details><summary>Quality evidence: 6 passed</summary>',
     '',
-    '| Component | Gate | Command | Result | Time | Evidence |',
-    '| --- | --- | --- | --- | ---: | --- |',
-    '| api | build | `dotnet build` | pass | 0 s | `gates/api/build-1.log` |',
-    '| api | test | `dotnet test` | pass | 0 s | `gates/api/test-1.log` |',
+    '| Gate | Folder | Run | Evidence |',
+    '| --- | --- | ---: | --- |',
+    '| build | `.` | 1 | `logs/runs/deliver-1-1/1.log` |',
+    '| format | `.` | 2 | `logs/runs/deliver-1-1/2.log` |',
+    '| lint | `.` | 3 | `logs/runs/deliver-1-1/3.log` |',
+    '| test | `.` | 4 | `logs/runs/deliver-1-1/4.log` |',
+    '| architecture | `.` | 5 | `logs/runs/deliver-1-1/5.log` |',
+    '| coverage | `.` | 6 | `logs/runs/deliver-1-1/6.log` |',
     '',
     '</details>',
     '',
@@ -116,12 +120,11 @@ test('the run ends by opening a draft pull request from its branch to its base, 
     '| distill_review | DISTILL | 1 | 1 | 0 | 0 s | - | approved |',
     '| scenario_review | DISTILL | 1 | 1 | 0 | 0 s | - | answered |',
     '| deliver | DELIVER | 1 | 1 | 0 | 0 s | - | done |',
-    '| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |',
     '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | in progress |',
-    '| Total | | | 13 | 0 | 0 s | - | |',
+    '| Total | | | 12 | 0 | 0 s | - | |',
     '',
     'To find the tests that kill no mutant on their own, the developer runs `/skraft:prune-tests` on a component; it proposes, the developer decides each test.',
     '',
@@ -296,8 +299,8 @@ test('a working copy in no Git repository has no base to open a pull request int
   assert.deepEqual(host.codeHost.calls, [])
   const body = await host.tracking.read(SLUG, 'pull-request-body.md')
   assert.equal(section(body, 'RED evidence'), 'None recorded: no red commit was accepted in this run.')
-  assert.equal(section(body, 'Quality gates'), 'None recorded: no gate ran in this run.')
-  assert.equal(opening(body, 'Quality gates'), '<details><summary>Quality gates</summary>')
+  assert.equal(section(body, 'Quality evidence'), 'None recorded: no traced run was checked in this run.')
+  assert.equal(opening(body, 'Quality evidence'), '<details><summary>Quality evidence</summary>')
   assert.equal(section(body, 'Review'), 'Every lens of the last pass of each review passed without a finding.')
   assert.ok(section(body, 'AI disclosure').startsWith('This pull request was prepared by skraft with AI agents (the host named no model). What changes'), body)
 })
@@ -465,7 +468,7 @@ test('a red commit the engine refused is not shown as evidence, only the one tha
   assert.ok(evidence.includes('| test(checkout): pay fails first \\| twice |'), evidence)
 })
 
-test('the decisions the description shows: each ADR ratified in the run with its title, each locked gate unlocked with its reason', async () => {
+test('the decisions the description shows: each ADR ratified in the run with its title', async () => {
   const adr = '---\nadr: 1\ntitle: Card payment\nstatus: Proposed\nsupersedes: null\nratified_by: null\n---\n\n# ADR-001 — Card payment\n\n**Status:** Proposed\n'
   const untitled = '---\nadr: 3\nstatus: Proposed\nsupersedes: null\nratified_by: null\n---\n\n# ADR-003\n\n**Status:** Proposed\n'
   const dropped = adr.replace('adr: 1', 'adr: 2').replace('Card payment', 'Card tokens')
@@ -482,39 +485,7 @@ test('the decisions the description shows: each ADR ratified in the run with its
     '- ADR-001 Card payment (`docs/adr/adr-001-card-payment.md`), ratified in this run',
     '- ADR-003 (`docs/adr/adr-003-refunds.md`), ratified in this run',
   ].join('\n'))
-
-  const unlocked = edit(BUILT_IN_WORKFLOW, ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
-  const skipping = scripted({ config: CONSENTED, workflow: unlocked }, (it) => nominal(it))
-  await skipping.start()
-  assert.equal(section(await skipping.tracking.read(SLUG, 'pull-request-body.md'), 'Decisions applied'), '- Locked gate `gates` skipped, unlocked: the team runs the gates in its own CI')
 })
-
-test('a component the machine could not gate shows only the gates that ran once fixed', async () => {
-  const fixing = async (question) => {
-    await ungated.workspace.write('skraft-config.json', JSON.stringify({ ...CONSENTED, components: [{ ...API, commands: { build: 'dotnet build', test: 'dotnet test' } }] }))
-    return { answer: 'RETRY' }
-  }
-  const ungated = scripted({ config: CONSENTED, components: [{ ...API, commands: {} }], answers: [fixing] }, (it) => [
-    agent()(it), agent()(it), agent()(it), agent()(it),
-  ])
-  assert.equal((await ungated.start()).status, 'done')
-  assert.deepEqual(section(await ungated.tracking.read(SLUG, 'pull-request-body.md'), 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ')[1]), ['build', 'test'])
-})
-
-/** A workflow whose gates lead to the pull request, passed or failed. */
-const ONWARD = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  gates [shape=parallelogram, gate="build,test"]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> deliver -> gates\n  gates -> publish\n  gates -> publish [label="FAIL"]\n  publish -> exit\n}'
-
-test('a gate that failed is never folded away: its section stays open, and its summary counts what failed', async () => {
-  const host = scripted({ config: CONSENTED, workflow: ONWARD, machine: new ScriptedMachine({ exits: { '. $ dotnet test': 1 } }) }, (it) => [agent({ work: tddCycle() })(it)])
-
-  assert.equal((await host.start()).status, 'done')
-
-  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
-  assert.deepEqual(section(body, 'Quality gates').split('\n').slice(2).map((row) => row.split(' | ').slice(1, 4)), [['build', '`dotnet build`', 'pass'], ['test', '`dotnet test`', 'fail']])
-  assert.equal(opening(await host.tracking.read(SLUG, 'pull-request.md'), 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
-})
-
 test('a pr-writer alone before the publish node needs no design record, and a publish the machine stopped resumes without opening its step twice', async () => {
   const alone = 'digraph p {\n  start [shape=Mdiamond]\n  pr_writer [shape=box, agent="pr-writer", phase="PUBLISH"]\n  publish [shape=parallelogram, publish="pull-request"]\n  exit [shape=Msquare]\n  start -> pr_writer -> publish -> exit\n}'
   const host = scripted({ config: CONSENTED, workflow: alone }, () => [])
@@ -573,7 +544,7 @@ test('a pull request opened without the link to its story\'s work item says so i
 })
 
 const AZURE_HOST = (more = {}) => new InMemoryCodeHost({ bodyLimit: 4_000, commentLimit: 140_000, link: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`, ...more })
-const DETAILS_LINE = 'The run\'s other details (tests, consistency matrix, RED evidence, quality gates, review, screenshots, run summary, AI disclosure) are in this pull request\'s comments titled skraft · run details.'
+const DETAILS_LINE = 'The run\'s other details (tests, consistency matrix, RED evidence, quality evidence, review, screenshots, run summary, AI disclosure) are in this pull request\'s comments titled skraft · run details.'
 const LONG_WHY = `${'Customers asked to pay by card.\n'.repeat(60)}End.`
 
 test('on a forge that takes 4,000 characters, the description keeps what decides and ends with the fixed line; the folded sections go to one kept comment, skraft · run details', async () => {
@@ -632,23 +603,6 @@ test('a body whose decisive sections are past 60,000 characters keeps what waits
   assert.ok(section(body, 'Why').endsWith(`\n\n${CUT}`), section(body, 'Why').slice(-200))
   assert.ok(section(body, 'What changes').endsWith('Checkout records it.\nDone.'), section(body, 'What changes').slice(-200))
 })
-
-test('a body that only an open section can bring under the limit cuts every other decisive section first, then that one, the folded ones going to the comment', async () => {
-  const filter = `dotnet test --filter=${'Pay'.repeat(22_000)}`
-  const api = { ...API, commands: { ...API.commands, test: filter } }
-  const host = scripted({ config: CONSENTED, workflow: ONWARD, components: [api], machine: new ScriptedMachine({ exits: { [`. $ ${filter}`]: 1 } }) }, (it) => [agent({ work: tddCycle() })(it)])
-
-  assert.equal((await host.start()).status, 'done')
-
-  const body = await host.tracking.read(SLUG, 'pull-request-body.md')
-  assert.ok(body.length <= 60_000 && body.length > 59_900, String(body.length))
-  assert.equal(opening(body, 'Quality gates'), '<details open><summary>Quality gates: 1 failed, 1 passed</summary>')
-  assert.match(section(body, 'Quality gates'), /--filter=(?:Pay)+P?a?\n\n\[cut: [^\n]*\]$/, section(body, 'Quality gates').slice(-200))
-  assert.deepEqual(['Tests', 'Consistency matrix', 'RED evidence'].map((heading) => opening(body, heading)), [undefined, undefined, undefined])
-  assert.equal(body.split('<details').length, body.split('</details>').length)
-  assert.ok(host.codeHost.pullRequestComments[0].body.includes('<summary>Run summary'))
-})
-
 const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
 
 const NO_TEST_PLAN = 'None recorded: the tracking folder holds no test plan of this run (DISTILL writes it).'

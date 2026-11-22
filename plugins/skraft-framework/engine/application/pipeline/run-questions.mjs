@@ -1,9 +1,8 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
+import { BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
 import { scenarioWriter } from '../../domain/pipeline/roles.mjs'
-import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
@@ -59,40 +58,6 @@ const RATIFICATION = {
 }
 
 /**
- * The mutation plan: the proposals the step before it wrote, asked once; APPLY or the developer's
- * instruction goes on to the node that applies them, STOP ends the run.
- * @type {Questionnaire}
- */
-const MUTATION_PLAN = {
-  plan: async ({ deps, slug, journal }) => {
-    const proposals = proposalsOf(journal.events).map((path) => `${trackingFolder(slug, deps.files.folder)}/${path}`)
-    return { text: mutationPlanText(proposals), subjects: proposals }
-  },
-  act: async (context, asked) => planChosen(context, asked),
-}
-
-/**
- * The outputs the last recorded step wrote on its last visit, each once, relative to the tracking folder.
- * @param {RunEvent[]} events
- */
-const proposalsOf = (events) => {
-  const last = /** @type {RunEvent} */ (events.findLast((event) => event.type === 'step.recorded'))
-  const started = events.filter((event) => event.type === 'step.started' && event.step === last.step && event.visit === last.visit)
-  return [...new Set(started.flatMap((event) => event.outputs))]
-}
-
-/**
- * What the developer chose: the proposals applied, their own instruction with the proposals it
- * departs from, or the run ended.
- * @param {Context} context @param {AskedQuestion} asked @returns {Act}
- */
-const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
-  if (answer === STOP) return { stop: `a human stopped the run at ${step}; the proposals are in ${subjects.join(', ')}` }
-  const paths = subjects.map((path) => deps.files.location(slug, path.slice(trackingFolder(slug, deps.files.folder).length + 1))).join(', ')
-  return { failures: answer === APPLY ? [`Apply the proposals in ${paths}`] : [/** @type {string} */ (answer), `The proposals it departs from: ${paths}`] }
-}
-
-/**
  * The scenario review: the story's scenarios, the groups DELIVER makes them pass in and the one
  * red of their acceptance tests, read by a human once before DELIVER builds them; REVISE sends
  * their corrections to DISTILL.
@@ -120,7 +85,7 @@ const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'mutation-plan': MUTATION_PLAN, 'scenario-review': SCENARIO_REVIEW })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'scenario-review': SCENARIO_REVIEW })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {

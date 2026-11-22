@@ -37,7 +37,7 @@ test('a story of three scenarios in two groups is delivered in one dispatch afte
   ])
   assert.deepEqual(recorded(host, 'distill').map(({ group, next, groups }) => [group, next, groups]), [[undefined, 'distill_review', [{ index: 1, scenarios: [1, 2] }, { index: 2, scenarios: [3] }]]], 'the plan leaves by its edge to the review')
   assert.deepEqual(host.events().filter((event) => event.type === 'phase.closed').map(({ phase }) => phase), ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH'])
-  assert.deepEqual(recorded(host, 'deliver').map(({ group, green, next }) => [group, green, next]), [[undefined, { group: 2 }, 'gates']])
+  assert.deepEqual(recorded(host, 'deliver').map(({ group, green, next }) => [group, green, next]), [[undefined, { group: 2 }, 'deliver_review']])
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ group, groups }) => [group, groups]), [[undefined, undefined]])
 })
 
@@ -293,27 +293,6 @@ test('a run stopped in the middle of the delivery resumes the same dispatch', as
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /distill|deliver/.test(label)), [`skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`])
 })
-
-test('a pass the gates send back after the story is delivered fixes the whole story: a red, then a fix, the gate failure standing for the red, no group told and no acceptance test changed', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine }, (it) => [...research(it), agent()(it), agent()(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; tddCycle(SLUG, 'Fix')(h) } })(it)])
-
-  const outcome = await host.start()
-
-  assert.equal(outcome.status, 'done', outcome.reason)
-  assert.deepEqual(labels(host).filter((label) => /deliver/.test(label)), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`])
-  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ kind, verdict }) => [kind, verdict]), [['red', 'ok'], ['green', 'ok'], ['refactor', 'ok']])
-  const reworked = promptOf(host, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
-  assert.doesNotMatch(reworked, /- Groups, in the order/)
-  assert.match(reworked, /- Acceptance tests DISTILL committed, which you never change \(a wrong one, or one failing on a build or setup error: stop blocked, naming it\):\n- root-1 "test\(checkout\): walking skeleton": tests\/Integration\/WalkingSkeletonTests.cs\n/)
-  assert.match(reworked, /Commit each TDD cycle/)
-
-  const touching = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const refused = scripted({ machine: touching }, (it) => [...research(it), agent({ work: reds(1, ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs']) })(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): weaken the acceptance test', ['tests/Acceptance/S1AcceptanceTests.cs']) })(it), unavailable])
-  await refused.start()
-  assert.deepEqual(recorded(refused, 'deliver').at(-1).failures, ['commit root-3 "test(checkout): weaken the acceptance test" changes the acceptance tests, which DISTILL owns; undo that change, and if a test is wrong, stop blocked naming it'])
-})
-
 test('the exact green of the story names its scenarios and runs the whole test command, no filter', async () => {
   const LONG = 'Customer   pays "$5" by `card` with a \\ voucher that the shop accepts only on weekdays before noon'
   const host = scripted({}, (it) => [...research(it), agent({ plan: [[LONG, 'api', '@walking-skeleton @happy-path'], ['Customer gets a receipt', 'api', '']], work: designing(2) })(it), unavailable])

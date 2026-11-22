@@ -9,7 +9,7 @@ import { readTrace } from '../evidence/run-trace-store.mjs'
  * attempt ends on. Nothing here runs a program.
  *
  * @typedef {{ code: 'evidence', line: string }} EvidenceFailure
- * @typedef {{ ok: true, failures: EvidenceFailure[], checked: Array<{ run: number, gate: string, sha256: string }> } | { ok: false, reason: string }} EvidenceCheck
+ * @typedef {{ ok: true, failures: EvidenceFailure[], checked: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }> } | { ok: false, reason: string }} EvidenceCheck
  *   checked: the runs the evidence stands on, by id and hash, never their output; ok false: the machine could not read Git.
  */
 
@@ -25,7 +25,7 @@ export const checkEvidence = async (deps, { slug, folder, events, config, base }
   if (typeof subjects === 'string') return { ok: false, reason: subjects }
   const lines = evidenceFailures(trace.records, subjects, config.components.map(({ root }) => root))
   const runs = /** @type {import('../../domain/evidence/run-trace.mjs').RunRecord[]} */ (trace.records.filter((record) => record.type === 'run'))
-  return { ok: true, failures: lines.map((line) => ({ code: 'evidence', line })), checked: runs.map(({ run, gate, sha256 }) => ({ run, gate: gate ?? '', sha256 })) }
+  return { ok: true, failures: lines.map((line) => ({ code: 'evidence', line })), checked: runs.map(({ run, gate, cwd, log, sha256 }) => ({ run, gate: gate ?? '', cwd, log, sha256 })) }
 }
 
 /**

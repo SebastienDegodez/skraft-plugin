@@ -1,8 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, API, DOCS_FOLDERS, nominal, REFS_42, scripted, SLUG } from '../support/pipeline-host.mjs'
-import { ALL_KILLED, strykerReport } from '../support/mutation-reports.mjs'
 import { UNLISTABLE_ADRS, waitingOnEnvironment } from '../support/decisions.mjs'
 
 // On a repository with no docs folders, the agent's tools may only create files in existing
@@ -56,36 +55,6 @@ test('a folder of the role the machine cannot list gets no .gitkeep: the run ask
   assert.ok(outcome.reason.startsWith(waitingOnEnvironment('adr', UNLISTABLE_ADRS).split('\nThe run so far')[0]))
   assert.equal(host.workspace.files.has('docs/adr/.gitkeep'), false)
   assert.deepEqual(folderCommits(host), [['docs/domain/event-model/.gitkeep']])
-})
-
-const REPORT = 'StrykerOutput/reports/mutation-report.json'
-const STRYKER = '. $ dotnet stryker'
-/** A workflow with the mutation loop, whose proposal for surviving mutants is the acceptance designer's. */
-const DESIGNER_PROPOSES = MUTATION_WORKFLOW.replace('kill_proposal [shape=box, agent="software-engineer"', 'kill_proposal [shape=box, agent="acceptance-designer"')
-
-test('a node that proposes for surviving mutants gets no folder of its agent\'s role: it changes nothing in the working copy', async () => {
-  const host = withoutDocsFolders({ components: [GHERKIN], machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }], workflow: MUTATION_WORKFLOW, files: { '.skraft/pipeline.skraft.dot': DESIGNER_PROPOSES } }, (it) => {
-    const [research, design, distill, deliver] = nominal(it)
-    const removingScenarios = async () => {
-      await deliver()
-      it.workspace.files.delete('docs/features/.gitkeep')
-    }
-    const killing = agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the checkout mutants`, ['tests/CheckoutTests.cs']) })(it)
-    return [research, design, distill, removingScenarios, agent()(it), killing]
-  })
-  let runs = 0
-  host.machine.meanwhile[STRYKER] = async () => {
-    runs += 1
-    host.machine.exits[STRYKER] = runs === 1 ? 1 : 0
-    await host.workspace.write(REPORT, runs === 1 ? strykerReport({ '/work/src/Checkout.cs': [[12, 'Equality', '!=', 'Survived']] }, { projectRoot: '/work/src' }) : ALL_KILLED)
-  }
-
-  const outcome = await host.start()
-
-  assert.equal(outcome.status, 'done', outcome.reason)
-  assert.ok(host.agentRunner.dispatches.some(({ label }) => label === `skraft ${SLUG} · kill_proposal · group 1 of 1 · attempt 1`), host.agentRunner.dispatches.map(({ label }) => label).join('\n'))
-  assert.equal(host.workspace.files.has('docs/features/.gitkeep'), false)
-  assert.deepEqual(folderCommits(host), [['docs/adr/.gitkeep', 'docs/domain/event-model/.gitkeep'], ['docs/features/.gitkeep']])
 })
 
 test('a component that writes no Gherkin has no features folder created for it: the engine creates what its configuration names, and nothing else', async () => {

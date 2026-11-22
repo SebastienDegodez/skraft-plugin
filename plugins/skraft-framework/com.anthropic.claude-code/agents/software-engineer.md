@@ -70,7 +70,7 @@ Your brief lists every group of the story in plan order (`- 1 of G — S1 "…" 
 
 ## Pass after the story is delivered
 
-Your brief lists no groups: the gates or the DELIVER review sent the story back, or the pass handles surviving mutants.
+Your brief lists no groups: the DELIVER review or a human sent the story back.
 
 - Commit each inner cycle as your brief's commit lines say: the failing unit test after RED, the code after the wiring check. Change no acceptance test your brief lists.
 - **Refactor commit** only for test code (`test-refactoring-catalog`) or a change your brief's feedback names, under green; never to clean up a green written dirty.

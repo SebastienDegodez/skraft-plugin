@@ -13,7 +13,7 @@ import { FAMILY } from '../config/model-assignment.mjs'
  *   wrote in the tracking folder; context: the story's artifacts and what the agents of the
  *   other phases filled or wrote; patch: the changes since the run's base; files: the paths
  *   those changes touch; components: each component's stack, mocking strategy, contract testing
- *   and BDD choice, as the configuration gives them, and the gates that passed on it in this run.
+ *   and BDD choice, as the configuration gives them, and the gates that hold a traced run on it in this run.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
  * @typedef {'mock' | 'contract'} TriggerName what a lens node's `when=` names

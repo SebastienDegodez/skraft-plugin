@@ -44,33 +44,3 @@ test('a pre-commit hook that refuses the ratification commit asks a human to fix
   assert.deepEqual(agentsOf(mod.spawns), NOMINAL_AGENTS)
   assert.deepEqual(dialogs.map(({ header }) => header), ['ADR', 'Environment', 'Scenarios'])
 })
-
-test('a test command that crashes in the gates (exit 139) requests a host judgment, never a human dialog or an engineer retry', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  const fixed = join(cwd, '..', 'crash-fixed')
-  const crashing = checkWith([
-    `if (${inWorkingCopy(cwd)} && !fs.existsSync(${JSON.stringify(fixed)})) {`,
-    "  console.error('Segmentation fault (core dumped)')",
-    '  process.exit(139)',
-    '}',
-  ].join('\n'))
-  const fixesTheCrash = (brief, context) => {
-    writeFileSync(fixed, 'fixed\n')
-    findsNothingToChange(brief, context)
-  }
-
-  const { mod, dialogs, outcome } = await runOn(cwd, { acts: { 'acceptance-designer': [acceptanceWith(crashing)], 'software-engineer': [NOMINAL['software-engineer'], fixesTheCrash] } })
-
-  const events = eventsOf(cwd)
-  const log = runFile(cwd, 'gates/app/test-1.log')
-  const asked = lastOf(events, 'question.asked', 'unforeseen')
-  assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['waiting', 'DELIVER', 'unforeseen'])
-  assert.deepEqual([asked.step, asked.options, asked.incident.owner, asked.incident.log], ['gates', ['RETRY', 'RETRY_WITH_NOTE', 'SEND_TO:deliver', 'STOP'], 'unknown', log])
-  assert.match(asked.text, /This is not a human question/)
-  assert.equal(dialogs.some(({ header }) => header === 'Incident'), false)
-  assert.deepEqual(recorded(events, 'gates'), [])
-  assert.ok(readFileSync(log, 'utf8').includes('Segmentation fault'), readFileSync(log, 'utf8'))
-  assert.equal(journalText(cwd).includes('Segmentation fault'), false)
-  assert.deepEqual(agentsOf(mod.spawns), ['solution-researcher', 'solution-architect', 'acceptance-designer', 'software-engineer'])
-  t.diagnostic('cost: 1 engineer dispatch; the crash is held for one host judgment, with no paid model call in this test')
-})

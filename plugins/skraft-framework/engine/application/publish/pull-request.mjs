@@ -3,7 +3,7 @@ import { adrNumber, adrTitle } from '../../domain/decisions/adr.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { PULL_REQUEST_BODY_FILE, PULL_REQUEST_FILE, renderPullRequest } from '../../domain/reporting/pull-request.mjs'
 import { readProse } from '../../domain/reporting/pull-request-prose.mjs'
-import { finalGates, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPaths } from '../../domain/reporting/run-facts.mjs'
+import { qualityEvidence, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPaths } from '../../domain/reporting/run-facts.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
@@ -127,15 +127,14 @@ const trackedDocuments = async ({ files }, slug, paths) => {
 }
 
 /**
- * What the journal alone tells: the gates unlocked, the red commits, the gates, the review, the
+ * What the journal alone tells: the red commits, the gates, the review, the
  * run report and the models; the run's status in the story's language.
  * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {import('../../domain/journal/run-state.mjs').RunState} run
  * @param {import('../../domain/reporting/language.mjs').Language} language
  */
 const journalFacts = (events, run, language) => ({
-  unlocked: events[0].unlocked,
   reds: redCommits(events),
-  gates: finalGates(events),
+  evidence: qualityEvidence(events),
   review: reviewFacts(events),
   status: statusLine(run, language),
   report: runReport(events),

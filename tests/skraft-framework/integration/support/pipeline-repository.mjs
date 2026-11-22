@@ -49,61 +49,6 @@ export const SKELETON = "export const pay = () => ''\n"
 
 export const PAY = 'export const pay = (amount) => `paid ${amount}`\n'
 export const WRONG_PAY = 'export const pay = (amount) => `owed ${amount}`\n'
-/** A pay that answers nothing to pay for zero, a branch `tests/unit/check.mjs` never takes: `>` mutated to `>=` survives. */
-export const PAY_OR_NOTHING = "export const pay = (amount) => (amount > 0 ? `paid ${amount}` : 'nothing to pay')\n"
-
-/** `tests/unit/zero.mjs`: the test that kills the `>=` mutant of PAY_OR_NOTHING. */
-export const ZERO_CHECK = [
-  "import { pay } from '../../src/pay.mjs'",
-  "if (pay(0) !== 'nothing to pay') {",
-  '  console.error(`pay(0) answered ${pay(0)}`)',
-  '  process.exit(1)',
-  '}',
-  '',
-].join('\n')
-
-/** A software engineer that kills the `>=` mutant of PAY_OR_NOTHING with a test of its own. @type {Act} */
-export const killsZero = (brief, { cwd, slug }) => {
-  fillOutputs(brief, 'Killed the zero mutant.\n')
-  commit(cwd, `test(${slug}): pay nothing for zero`, { 'tests/unit/zero.mjs': ZERO_CHECK })
-  writeResult(brief, { status: 'done', summary: 'mutant killed' })
-}
-
-/** A software engineer that proposes the test that kills the `>=` mutant of PAY_OR_NOTHING, and changes no code. @type {Act} */
-export const proposesZero = (brief) => {
-  fillOutputs(brief, 'test: tests/unit/zero.mjs asserts that pay(0) answers nothing to pay.\n')
-  writeResult(brief, { status: 'done', summary: 'proposal written' })
-}
-
-/** The mutation command of the `app` component: a mutation tool in miniature, by node's absolute path. */
-export const MUTATION_COMMAND = `"${process.execPath}" tools/mutate.mjs`
-
-/**
- * `tools/mutate.mjs`: each mutant is one text replacement in `src/pay.mjs`; a mutant some test of
- * `tests/unit/` fails on is killed. It writes the mutation-testing-elements report where
- * StrykerJS writes it, and exits 0 whatever survives, as StrykerJS does without a break threshold:
- * the engine judges the score from the report.
- */
-export const MUTATE = [
-  "import { spawnSync } from 'node:child_process'",
-  "import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'",
-  "const file = 'src/pay.mjs'",
-  "const source = existsSync(file) ? readFileSync(file, 'utf8') : ''",
-  "const tests = readdirSync('tests/unit').filter((name) => name.endsWith('.mjs'))",
-  "const killedBy = () => tests.some((name) => spawnSync(process.execPath, [`tests/unit/${name}`]).status !== 0)",
-  "const mutants = [['paid', 'owed', 'StringLiteral'], [' > ', ' >= ', 'EqualityOperator']].flatMap(([from, to, mutatorName], index) => {",
-  '  const at = source.indexOf(from)',
-  '  if (at < 0) return []',
-  '  writeFileSync(file, `${source.slice(0, at)}${to}${source.slice(at + from.length)}`)',
-  '  const line = source.slice(0, at).split(\'\\n\').length',
-  "  return [{ id: String(index + 1), mutatorName, replacement: to.trim(), location: { start: { line, column: 1 }, end: { line, column: 1 } }, status: killedBy() ? 'Killed' : 'Survived' }]",
-  '})',
-  'if (source !== \'\') writeFileSync(file, source)',
-  "mkdirSync('reports/mutation', { recursive: true })",
-  "writeFileSync('reports/mutation/mutation.json', JSON.stringify({ schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: { [file]: { language: 'javascript', source, mutants } } }))",
-  '',
-].join('\n')
-
 /** The ADR the architect drafts: Proposed until a human ratifies it. */
 export const ADR = [
   '---',
@@ -141,8 +86,6 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   security [shape=box, agent="acme-security-reviewer"]
   distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
-  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
-  mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
   exit     [shape=Msquare]
   design_review_lenses [shape=component]
   design_review_consistency [shape=note, lens="consistency"]
@@ -160,19 +103,7 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   distill -> distill_review_lenses -> distill_review_coverage -> distill_review_refuter -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
-  deliver -> gates
-  gates -> deliver [label="FAIL", max_visits=3]
-  gates -> mutation [label="PASS"]
-  mutation -> kill_mutants [label="FAIL", max_visits=5]
-  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
-  mutation_review_lenses [shape=component]
-  mutation_review_test_integrity [shape=note, lens="test-integrity"]
-  mutation_review_refuter [shape=octagon]
-  mutation_review [shape=tripleoctagon, mandatory=true]
-  kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter -> mutation_review
-  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
-  mutation_review -> gates [label="APPROVED"]
-  mutation -> deliver_review [label="PASS"]
+  deliver -> deliver_review
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
   deliver_review -> exit [label="APPROVED"]
 }
@@ -192,14 +123,14 @@ const faulty = (replacements) => replacements.reduce((text, [from, to]) => {
  */
 export const REFUSED_WORKFLOWS = Object.freeze([
   {
-    fault: 'locked gates dropped without unlock',
-    workflow: faulty([['gate="build,format,lint,test,architecture,coverage"', 'gate="build,format,lint,test"']]),
-    reason: 'locked node gates drops architecture, coverage; keep them, or skip the node with unlock="<reason>"',
+    fault: 'a gate node of an earlier engine',
+    workflow: faulty([['  exit     [shape=Msquare]\n', '  exit     [shape=Msquare]\n  gates    [shape=parallelogram, gate="build,test", phase="DELIVER"]\n']]),
+    reason: 'node gates: a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline); node gates: publish node needs exactly one outgoing edge, has 0; node gates is unreachable from start; node gates never reaches an exit',
   },
   {
     fault: 'a loop without max_visits',
-    workflow: faulty([['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]']]),
-    reason: 'loop gates -> deliver -> gates has no max_visits',
+    workflow: faulty([['deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]', 'deliver_review -> deliver [label="NEEDS_REWORK"]']]),
+    reason: 'loop deliver_review -> deliver -> deliver_review has no max_visits',
   },
   {
     fault: 'a node the start cannot reach',
@@ -238,40 +169,6 @@ export const dropMandatoryLens = (cwd) => {
   return '.skraft/pipeline.skraft.dot is invalid: mandatory node test_integrity (lens test-integrity between lenses and verdict of review) is missing; this node is mandatory and cannot be removed'
 }
 
-/**
- * A repository workflow: the plugin's, with the mutation loop it no longer runs put back between
- * the gates and the delivery review, the one place a repository copy may run it: a kill reaches
- * the pull request only through the delivery review.
- */
-export const MUTATION_LOOP_WORKFLOW = [
-  ['  visuals  [shape=parallelogram', `  mutation [shape=parallelogram, gate="mutation", goal_gate=true]
-  kill_proposal [shape=box, agent="software-engineer", each="survivor-file", proposal=true]
-  mutation_plan [shape=hexagon, question="mutation-plan"]
-  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
-  mutation_review_lenses [shape=component]
-  mutation_review_test_integrity [shape=note, lens="test-integrity"]
-  mutation_review_refuter [shape=octagon]
-  mutation_review [shape=tripleoctagon]
-  mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true]
-  visuals  [shape=parallelogram`],
-  ['  gates -> deliver_review [label="PASS"]\n', `  gates -> mutation [label="PASS"]
-  mutation -> deliver_review [label="PASS"]
-  mutation -> kill_proposal [label="FAIL", max_visits=5]
-  kill_proposal -> mutation_plan
-  mutation_plan -> kill_mutants [label="APPLY"]
-  kill_mutants -> mutation_review_lenses
-  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter
-  mutation_review_refuter -> mutation_review
-  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=2]
-  mutation_review -> mutation_gates [label="APPROVED"]
-  mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
-  mutation_gates -> mutation [label="PASS"]
-`],
-].reduce((text, [old, now]) => {
-  if (!text.includes(old)) throw new Error(`${JSON.stringify(old)} is not in the plugin's workflow`)
-  return text.replace(old, now)
-}, readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
-
 /** A repository workflow: the plugin's, its design review with the repository lens last. */
 export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8')
   .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_acme_security [shape=note, lens="${SECURITY_LENS}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
@@ -287,8 +184,7 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
 }
 
 /**
- * A repository on `main` with one JavaScript component `app` at its root, mutated by
- * `tools/mutate.mjs`, the tracking folder and the mutation reports ignored, and the Git identity a developer's machine has, which the engine commits a
+ * A repository on `main` with one JavaScript component `app` at its root,, the tracking folder and the reports folder ignored, and the Git identity a developer's machine has, which the engine commits a
  * ratification with. Its skraft-config.json has answered the publish consent with `publish`
  * (no pull request), unless `publish` is null, when the run asks. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
  * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts,
@@ -320,20 +216,12 @@ export const PLAYWRIGHT = [
   '',
 ].join('\n')
 
-/** The `web` front end: a build that passes, a mutation run with nothing to mutate, and an e2e command that runs PLAYWRIGHT, by node's absolute path. */
+/** The `web` front end: a build that passes and an e2e command that runs PLAYWRIGHT, by node's absolute path. */
 export const WEB = Object.freeze({
   name: 'web', root: 'web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
-  commands: { build: `"${process.execPath}" tools/build.mjs`, mutation: `"${process.execPath}" tools/mutate.mjs`, e2e: `"${process.execPath}" tools/playwright.mjs` },
+  commands: { build: `"${process.execPath}" tools/build.mjs`, e2e: `"${process.execPath}" tools/playwright.mjs` },
 })
-
-/** `web/tools/mutate.mjs`: a StrykerJS report of no file. */
-const NOTHING_TO_MUTATE = [
-  "import { mkdirSync, writeFileSync } from 'node:fs'",
-  "mkdirSync('reports/mutation', { recursive: true })",
-  "writeFileSync('reports/mutation/mutation.json', JSON.stringify({ schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} }))",
-  '',
-].join('\n')
 
 /**
  * With `frontend`, the repository also holds WEB, its screenshots folder ignored as a developer
@@ -354,7 +242,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     components: [{
       name: 'app', root: '.', stack: 'javascript', bdd: false, mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
-      commands: { test: TEST_COMMAND, mutation: MUTATION_COMMAND },
+      commands: { test: TEST_COMMAND },
       ...(contractTesting ? { contractTesting: true } : {}),
     }, ...(frontend ? [WEB] : [])],
   }
@@ -362,14 +250,11 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     mkdirSync(join(cwd, 'web', 'tools'), { recursive: true })
     writeFileSync(join(cwd, 'web', 'tools', 'build.mjs'), "console.log('built')\n")
     writeFileSync(join(cwd, 'web', 'tools', 'playwright.mjs'), PLAYWRIGHT)
-    writeFileSync(join(cwd, 'web', 'tools', 'mutate.mjs'), NOTHING_TO_MUTATE)
     writeFileSync(join(cwd, 'web', '.gitignore'), 'skraft-visuals/\n')
   }
   writeFileSync(join(cwd, 'skraft-config.json'), `${JSON.stringify(config, null, 2)}\n`)
   writeFileSync(join(cwd, 'skraft-config.local.json'), `${JSON.stringify({ configurationConfirmed: true })}\n`)
   writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\nreports/\nskraft-config.local.json\n')
-  mkdirSync(join(cwd, 'tools'))
-  writeFileSync(join(cwd, 'tools', 'mutate.mjs'), MUTATE)
   writeFileSync(join(cwd, 'README.md'), '# payment\n')
   for (const folder of skills) writeFile(join(cwd, ...folder.split('/'), 'SKILL.md'), `---\nname: ${folder.split('/').at(-1)}\n---\n`)
   if (security) {
@@ -406,7 +291,7 @@ export const visualsKept = (cwd, events) => {
   assert.ok(body.includes([
     '<details><summary>Screenshots</summary>',
     '',
-    '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `visuals/web/e2e-1.log`); 2 screenshots committed',
+    '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `logs/runs/deliver-1-1/13.log`); 2 screenshots committed',
     '',
     `![Checkout, card paid](${forge}/${sha}/${evidence}/light-1.png)`,
     '',
@@ -435,7 +320,7 @@ export const issueProgressKept = (cwd, events) => {
     `<!-- skraft:issue-progress slug=${SLUG} -->`, `### skraft · ${SLUG} — run done`, '', 'done', '',
     '- [x] RESEARCH', '- [x] DESIGN', '- [x] DISTILL', '- [x] DELIVER', '- [x] PUBLISH', '',
   ].join('\n')), body)
-  assert.ok(body.includes('\nQuality gates:\n- app/test pass · `gates/app/test-1.log`\n\nPull request: none opened or updated by this run.\n'), body)
+  assert.ok(body.includes('\nQuality evidence:\n- build · `.` · `logs/runs/deliver-1-1/1.log`\n- format · `.` · `logs/runs/deliver-1-1/2.log`\n- lint · `.` · `logs/runs/deliver-1-1/3.log`\n- test · `.` · `logs/runs/deliver-1-1/4.log`\n- architecture · `.` · `logs/runs/deliver-1-1/5.log`\n- coverage · `.` · `logs/runs/deliver-1-1/6.log`\n\nPull request: none opened or updated by this run.\n'), body)
 }
 
 /**

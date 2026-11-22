@@ -29,18 +29,3 @@ test('the text of an error a Copilot agent call throws reaches neither the outco
   assert.deepEqual(outcome, { paused: 'research-1' })
   assert.equal(modelFacing({ outcome, logs, calls, cwd, slug: 'checkout' }).includes(SENTINEL), false)
 })
-
-test('what a failing gate writes on stderr stays in its evidence log, out of the outcome, the log, the journal, the prompts and the questions put to the person', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(WRONG_PAY)] } })
-  const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
-  const session = firstOptionPerson()
-
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session))
-
-  const stderr = 'pay(10) answered owed 10'
-  assert.equal(outcome.status, 'done')
-  assert.ok(evidenceLogs(cwd, SLUG).includes(stderr))
-  const dialogs = session.asked.map(({ message }) => message)
-  assert.equal(modelFacing({ outcome, logs, calls, cwd, slug: SLUG, toolResults: dialogs }).includes(stderr), false)
-})

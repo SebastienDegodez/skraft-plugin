@@ -19,7 +19,7 @@ test('eject copies the plugin\'s pipeline into .skraft/pipeline.skraft.dot, stam
   assert.deepEqual([...workspace.files.keys()], ['skraft-config.json', PIPELINE])
   assert.equal(await workspace.read(PIPELINE), STAMPED)
   assert.equal(await workspace.read('skraft-config.json'), '{ "baseBranch": "develop" }')
-  assert.deepEqual(await commands.check(), { ok: true, name: PIPELINE, errors: [], unlocked: [], warnings: [], reason: `${PIPELINE} is valid: ${VALID}` })
+  assert.deepEqual(await commands.check(), { ok: true, name: PIPELINE, errors: [], warnings: [], reason: `${PIPELINE} is valid: ${VALID}` })
 
   assert.deepEqual(await commands.eject({ pluginVersion: '2.1.0' }), { ok: false, path: PIPELINE, reason: `${PIPELINE} already exists; edit it, or remove it` })
   assert.equal(await workspace.read(PIPELINE), STAMPED)
@@ -31,7 +31,7 @@ test('eject review copies the plugin\'s review alone into .skraft/review.skraft.
   assert.deepEqual(await commands.eject(REVIEW), { ok: true, path: REVIEW_COPY, reason: `${REVIEW_COPY} holds the skraft 2.0.0 review; every call to review runs it` })
   assert.deepEqual([...workspace.files.keys()], [REVIEW_COPY])
   assert.equal(await workspace.read(REVIEW_COPY), STAMPED_REVIEW)
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: `skraft and ${REVIEW_COPY} are valid: ${VALID}` })
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], warnings: [], reason: `skraft and ${REVIEW_COPY} are valid: ${VALID}` })
   await commands.eject({ pluginVersion: '2.0.0' })
   assert.equal((await commands.check()).reason, `${PIPELINE} and ${REVIEW_COPY} are valid: ${VALID}`)
 

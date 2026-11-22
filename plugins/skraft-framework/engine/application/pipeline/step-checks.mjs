@@ -24,7 +24,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
  *   environment: null, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
- *   evidence?: Array<{ run: number, gate: string, sha256: string }>,
+ *   evidence?: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }>,
  * } | { commits: CheckedCommit[], environment: string }} StepCheck
  *   environment: why the machine could not check the step (Git failing); the step then stays
  *   open. uncommitted: the files in its scope the agent changed
@@ -113,9 +113,9 @@ const contentHash = async ({ workspace, hasher }, path) => {
  * @param {CheckContext} context
  * @param {{
  *   role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
- *   visitHeads: Head[], engineBefore?: Array<{ path: string, hash: string | null }>, redByGateFailure: boolean, scenario: ScenarioPass | null,
+ *   visitHeads: Head[], engineBefore?: Array<{ path: string, hash: string | null }>, scenario: ScenarioPass | null,
  *   evidence?: { folder: string, events: any[] } | null,
- * }} step evidence: where the attempt's runs are traced, for the role that delivers code; visitHeads: the heads when the pass started; engineBefore: the engine files as the attempt found them; redByGateFailure: the gates sent the work back, their failure standing for a red test;
+ * }} step evidence: where the attempt's runs are traced, for the role that delivers code; visitHeads: the heads when the pass started; engineBefore: the engine files as the attempt found them;
  *   scenario: the scenario the pass works on, null for none
  * @returns {Promise<StepCheck>}
  */
@@ -136,7 +136,7 @@ export const checkStep = async (context, step) => {
  * The runs the REPL traced for an attempt that delivers code, checked against its final commit;
  * nothing for any other role. A string when the machine could not read Git.
  * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ failures: Failure[], checked: Array<{ run: number, gate: string, sha256: string }> } | string>}
+ * @returns {Promise<{ failures: Failure[], checked: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }> } | string>}
  */
 const evidenceOf = async ({ deps, slug, config, base }, { role, evidence }) => {
   if (role.tdd !== 'cycle' || evidence === null || evidence === undefined) return { failures: [], checked: [] }
@@ -405,7 +405,7 @@ const isRootFile = (path, root) => {
  * the scenario the pass works on; the environment reason when the machine cannot list them.
  * @param {CheckDeps} deps
  * @param {Pick<CheckContext, 'config' | 'base' | 'story'>} run
- * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null, carried?: Carried | null }} step
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null, carried?: Carried | null }} step
  * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], scenario: import('./scenario-checks.mjs').ScenarioRecord }>}
  */
 const checkCommits = async (deps, run, step) => {
@@ -424,7 +424,7 @@ const checkCommits = async (deps, run, step) => {
  * @param {import('../../domain/pipeline/commits.mjs').StepCommit[]} history
  * @param {{ issue: number | null, components: Component[] }} run @param {Parameters<typeof checkCommits>[2]} step
  */
-const judgedPass = (history, { issue, components }, { redByGateFailure, scenario, plan }) => judgeCommits(history, { redByGateFailure, issue, scenario: scenarioJudging(scenario, plan, components), components })
+const judgedPass = (history, { issue, components }, { scenario, plan }) => judgeCommits(history, { issue, scenario: scenarioJudging(scenario, plan, components), components })
 
 /** @param {JudgedCommit[]} judged @param {number | null} issue @returns {Failure[]} */
 const commitFailures = (judged, issue) => judged

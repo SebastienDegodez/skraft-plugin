@@ -1,7 +1,7 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
-import { createReviewStore, createTrackingStore, MUTATION_FOLDER, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
+import { createReviewStore, createTrackingStore, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
 import { createReviewFolder } from './tracking/review-folder.mjs'
 import { createNodeRunLock } from './tracking/lock-file.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
@@ -72,8 +72,7 @@ const trackedState = (files, cwd) => {
 }
 
 /**
- * What the plugin ships, the agents the working copy adds to it for the host that starts them,
- * and the mutation run's workflow with the folder it keeps.
+ * What the plugin ships, the agents the working copy adds to it for the host that starts them.
  * @param {ReturnType<typeof createNodeFiles>} files
  * @param {{ pluginRoot: string, cwd: string, agentHost: import('./agents/agent-catalog.mjs').AgentHost | undefined }} where
  */
@@ -81,19 +80,7 @@ const pluginContent = (files, { pluginRoot, cwd, agentHost }) => ({
   templates: createPluginTemplates({ files, pluginRoot }),
   workflowSource: createPluginWorkflows({ files, pluginRoot }),
   agentCatalog: createAgentCatalog({ files, pluginRoot, root: cwd, host: agentHost }),
-  mutationRun: mutationRun(files, { pluginRoot, cwd }),
 })
-
-/**
- * What a mutation run keeps apart from the pipelines, in `.copilot-tracking/skraft-mutation/`,
- * and the workflow it follows: the adapters that replace the pipeline's for it.
- * @param {ReturnType<typeof createNodeFiles>} files @param {{ pluginRoot: string, cwd: string }} where
- */
-const mutationRun = (files, { pluginRoot, cwd }) => {
-  const runs = createTrackingStore({ files, root: cwd, parts: MUTATION_FOLDER })
-  const workflowSource = createPluginWorkflows({ files, pluginRoot, name: 'mutation' })
-  return Object.freeze({ ...runs, runLock: createNodeRunLock({ root: cwd, folder: MUTATION_FOLDER }), workflowSource })
-}
 
 /** How long a command may run, by kind: git, and the developer's commands (gates). */
 const GIT_TIMEOUT_MS = 300_000

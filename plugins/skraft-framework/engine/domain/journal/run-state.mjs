@@ -8,15 +8,13 @@ import { instructionOf } from '../decisions/questions.mjs'
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
  *   question: string | null, outputs: string[], missing: string[], feedback: string[], instruction: string | null,
- *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, heads: Head[], group: number | null,
+ *   sentBy: 'review' | 'ask' | 'answer' | null, heads: Head[],
  * }} OpenAttempt
  *   sentBy: the kind of node whose failures or refusal opened this visit, null otherwise;
- *   instruction: the human's answer to a block that opened this visit, apart from its feedback; group:
- *   which of the visit's groups of surviving mutants the attempt works on, from 1.
+ *   instruction: the human's answer to a block that opened this visit, apart from its feedback.
  * @typedef {{
- *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[], firstHeads: Head[],
- *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, redByGateFailure: boolean,
- *   groups: Group[],
+ *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[], firstHeads: Head[], gates: string[] | null,
+ *   sentBy: 'review' | 'ask' | 'answer' | null,
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
@@ -24,10 +22,7 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   the tracking folder the node's attempts wrote, outputs included. heads: the first
  *   attempt's of this visit; firstHeads: those of the node's first visit, from which a delivery
  *   reopened after a block lists the commits of the earlier visits' attempts. sentBy: what sent
- *   the run back into this visit, kept for each of its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
- *   commit; a visit the review or a human refusal opened has no failing test, so its agent
- *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file.
- * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup} Group
+ *   the run back into this visit, kept for each of its attempts. gates: the gates a step of an earlier engine ran, kept to tell a retired node.
  * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[] }} Oracle
  *   the red commit holding a scenario's acceptance test: files relative to the working copy.
  * @typedef {{
@@ -175,7 +170,6 @@ const openAttempt = (event) => ({
   feedback: event.feedback,
   ...causeOf(event),
   heads: event.heads,
-  group: event.group ?? null,
 })
 
 /** What opened the attempt's visit: the kind of node, a human's instruction. @param {RunEvent} event */
@@ -188,21 +182,12 @@ const nodeOf = (event) => ({ agent: event.agent ?? null, gates: event.gates ?? n
  * A new visit starts from the attempt's heads and feedback; a later attempt keeps the visit's.
  * @param {NodeState | undefined} before @param {OpenAttempt} open
  * @param {RunEvent} event the step.started of the attempt
- * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'redByGateFailure' | 'groups' | 'open' | 'last'>}
+ * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'gates' | 'open' | 'last'>}
  */
 const thisVisit = (before, open, event) => {
-  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: redByGates(open.feedback, open.sentBy), groups: event.groups ?? [], open, last: null }
-  return { heads: before.heads, sentBy: before.sentBy, redByGateFailure: before.redByGateFailure, groups: before.groups, open, last: before.last }
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, gates: open.gates, open, last: null }
+  return { heads: before.heads, sentBy: before.sentBy, gates: open.gates, open, last: before.last }
 }
-
-/**
- * Whether the failures that opened a visit stand for its red commit: the gates' do; a review's
- * findings, a human's refusal or choice name no failing test.
- * @param {string[] | undefined} feedback @param {OpenAttempt['sentBy']} sentBy
- */
-export const redByGates = (feedback, sentBy) => (feedback?.length ?? 0) > 0 && !NO_RED.includes(String(sentBy))
-
-const NO_RED = Object.freeze(['review', 'ask', 'answer'])
 
 /** @param {RunState} run @param {RunEvent} event */
 const recorded = (run, event) => {

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
-import { MUTATION_BARS } from '../../plugins/skraft-framework/engine/domain/gates/mutation-bar.mjs'
+import { MUTATION_BARS } from '../../plugins/skraft-framework/engine/domain/config/quality-bar.mjs'
 
 const repoRoot = resolve(join(dirname(fileURLToPath(import.meta.url)), '../..'))
 const barPath = join(repoRoot, 'plugins/skraft-framework/skills/skraft-quality-bar/SKILL.md')

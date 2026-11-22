@@ -105,9 +105,9 @@ test('skraft status prints the view of the active pipeline, as text or JSON', as
   assert.equal(json.code, 0)
   const { graph, ...view } = JSON.parse(json.out.join('\n'))
   assert.deepEqual(view, {
-    slug: 'checkout', status: 'running', reason: '', phases: PHASES.map((phase) => ({ phase, state: 'pending' })), current: null, question: null, attempts: 0, costUsd: null, reviews: [], gates: [], agents: [],
+    slug: 'checkout', status: 'running', reason: '', phases: PHASES.map((phase) => ({ phase, state: 'pending' })), current: null, question: null, attempts: 0, costUsd: null, reviews: [], evidence: [], agents: [],
   })
-  assert.deepEqual([graph.nodes.length, graph.edges.length, graph.nodes[0]], [13, 18, {
+  assert.deepEqual([graph.nodes.length, graph.edges.length, graph.nodes[0]], [12, 16, {
     id: 'research', kind: 'agent', phase: 'RESEARCH', what: 'solution-researcher', state: 'pending', outcome: null, visits: 0, attempts: 0, retries: 0, durationMs: 0, costUsd: null,
   }])
   assert.deepEqual((await inProcess(cwd, ['status'])).out, ['skraft checkout: running', ...PHASES.map((phase) => `${phase}  pending`)])
@@ -218,42 +218,4 @@ test('skraft init --from-artifacts is refused without DISCUSS stories, and on a 
 
   await inProcess(cwd, ['init', 'checkout'])
   assert.deepEqual(await inProcess(cwd, ['init', 'checkout', '--from-artifacts']), { code: 1, out: [], err: ['checkout already has a journal; resume it without --from-artifacts'] })
-})
-
-test('skraft status names the gate node a waiting run stands on, as the pane does, and how to answer its question', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  // The engineer leaves code whose test command the machine reports as not found (exit 127): the gates stop the run, their node open.
-  const breaksTheTests = deliverWith(`process.exit(127)\n${PAY}`)
-  const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [breaksTheTests] } })
-  const { ctx } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, pluginRoot)), { message: 'paused at adr-1' })
-  assert.deepEqual((await inProcess(cwd, ['status'])).out.slice(-3, -1), ['question: adr-ratification (adr)', 'answer: skraft decide adr-1 RATIFIED|REJECTED (--reason <text> with REJECTED)'])
-  assert.deepEqual(await inProcess(cwd, ['decide', 'RATIFIED']), { code: 0, out: [`${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on`], err: [] })
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, pluginRoot)), { message: 'paused at scenario_review-1' })
-  assert.equal((await inProcess(cwd, ['decide', 'APPROVED'])).code, 0)
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, pluginRoot)), { message: 'paused at gates-1' })
-
-  const status = await inProcess(cwd, ['status'])
-
-  assert.equal(status.code, 0)
-  assert.deepEqual(status.out.slice(0, -1), [
-    `skraft ${SLUG}: waiting`, 'RESEARCH  closed', 'DESIGN  closed', 'DISTILL  closed', 'DELIVER  open', 'PUBLISH  pending',
-    'gates: build, format, lint, test, architecture, coverage (gates)',
-    'answer: skraft decide gates-1 RETRY|ABORT',
-  ])
-  const testLog = tracking(cwd, SLUG, 'gates', 'app', 'test-1.log')
-  assert.equal(withoutReportSummary(status.out.at(-1)), [
-    `gates cannot run on this machine: app/test: exited 127 (evidence: ${testLog}).`,
-    'Cause: the machine: a program, a service, a permission or a Git hook it lacks or refuses.',
-    `Output: ${testLog}`,
-    'Fix it, then RETRY: gates runs again where it stopped, using no new attempt; or ABORT: the run ends.',
-    `The run so far (commits, refusals, incidents): ${tracking(cwd, SLUG, 'run-report.md')}`,
-  ].join('\n'))
-  assert.deepEqual(JSON.parse((await inProcess(cwd, ['status', '--json'])).out.join('\n')).current, {
-    step: 'gates', phase: 'DELIVER', agent: null, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], question: null, visit: 1, attempt: 1,
-  })
-  const refused = await inProcess(cwd, ['decide', 'gates-1', 'LATER'])
-  assert.deepEqual(refused, { code: 1, out: [], err: ['the answer must be one of RETRY, ABORT'] })
-  assert.equal((await inProcess(cwd, ['decide', 'a', 'b', 'c'])).code, 2)
-  assert.deepEqual((await inProcess(cwd, ['decide', 'ABORT', '--reason', 'no time'])).code, 0)
 })

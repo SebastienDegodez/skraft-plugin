@@ -64,59 +64,6 @@ test('an agent refused with the same signature twice stops without another attem
     [1, 2, [`research/2026-10-11/${SLUG}-research.md`], ['result is missing']],
   ])
 })
-
-test('a loop that reached its max_visits asks a human; an instruction runs the node it loops back to again, its loop budget reset', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1, '../web $ npx eslint .': 1 } })
-  let apiRuns = 0
-  let webRuns = 0
-  machine.meanwhile['. $ dotnet test'] = () => { if (apiRuns < 5) machine.exits['. $ dotnet test'] = ++apiRuns }
-  machine.meanwhile['../web $ npx eslint .'] = () => { if (webRuns < 4) machine.exits['../web $ npx eslint .'] = ++webRuns }
-  const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => {
-    if (n === 6) Object.assign(machine.exits, { '. $ dotnet test': 0, '../web $ npx eslint .': 0 })
-    if (n === 1) return green(SLUG, 'Pass1')(h)
-    tddCycle(SLUG, `Pass${n}`)(h)
-    h.git.commit(`refactor(checkout): pass ${n} of the cart`, ['../web/src/Cart.tsx'])
-  } })(it))
-  const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
-  const host = scripted({ machine, git, components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
-
-  const waiting = await host.start()
-  await host.decide({ answer: 'Mock the bank gateway in the tests' })
-  const outcome = await host.run()
-
-  const failures = [`api/test: exited 4 (evidence: ${TRACKING}/gates/api/test-4.log)`, `web/lint: exited 3 (evidence: ${TRACKING}/gates/web/lint-3.log)`]
-  const text = `deliver is blocked: gates -> deliver was taken as often as its max_visits allows.\nLeft by gates (2):\n- ${failures[0]}\n- ${failures[1]}\n An instruction runs deliver again on a new pass with what is left above and the instruction; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
-  assert.deepEqual(withoutReportSummary(waiting), { status: 'waiting', slug: SLUG, phase: 'DELIVER', code: 'blocked', reason: `${text} Answer with skraft decide deliver-1 "<instruction>"|STOP.` })
-  assert.deepEqual(withoutReportSummary(eventsOf(host, 'question.asked').map(({ key, step, visit, text: asked }) => [key, step, visit, asked])), [['scenario_review-1', 'scenario_review', 1, scenarioReview().text], ['deliver-1', 'deliver', 4, text]])
-  assert.equal(outcome.status, 'done')
-  assert.deepEqual(eventsOf(host, 'step.recorded').filter((event) => event.step === 'gates').map(({ visit, outcome: result, code, next, ceiling }) => [visit, result, code, next, ceiling]), [
-    [1, 'fail', null, 'deliver', undefined], [2, 'fail', null, 'deliver', undefined], [3, 'fail', null, 'deliver', undefined], [4, 'fail', 'loop-ceiling', null, 'deliver'], [5, 'fail', null, 'deliver', undefined], [6, 'pass', null, 'deliver_review', undefined],
-  ])
-  const resumed = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 5 · attempt 1`)
-  assert.ok(resumed.prompt.endsWith(`\n\nWhat pass 4 left when it was blocked:\n- ${failures[0]}\n- ${failures[1]}\n\nA human refused the work of pass 4:\n- Mock the bank gateway in the tests`), resumed.prompt)
-})
-
-test('a loop stopped at its max_visits by an edge out of a step that refused nothing leaves nothing: the reopened pass is told the instruction alone (#500)', async () => {
-  // A gate whose PASS edge loops back to design: a pass that passed leaves no failures.
-  const looping = edit(WITH_SECURITY,
-    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  lint_design [shape=parallelogram, gate="lint"]'],
-    ['  security -> design_review_lenses\n', '  security -> lint_design\n  lint_design -> design [label="PASS", max_visits=1]\n  lint_design -> design_review_lenses [label="FAIL"]\n'])
-  const host = scripted({ ...withSecurity, files: { '.skraft/pipeline.skraft.dot': looping } }, (it) => [agent()(it), agent()(it), agent()(it), agent()(it), agent()(it), agent()(it), unavailable])
-
-  const waiting = await host.start()
-  await host.decide({ answer: INSTRUCTION })
-  await host.run()
-
-  const text = `design is blocked: lint_design -> design was taken as often as its max_visits allows. An instruction runs design again on a new pass with it; STOP ends the run.\nThe run so far (commits, refusals, incidents): ${TRACKING}/run-report.md`
-  assert.deepEqual(withoutReportSummary(waiting), { status: 'waiting', slug: SLUG, phase: 'DESIGN', code: 'blocked', reason: `${text} Answer with skraft decide design-1 "<instruction>"|STOP.` })
-  const reopened = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · design · pass 3 · attempt 1`)
-  assert.ok(reopened.prompt.endsWith(`\n\nA human refused the work of pass 2:\n- ${INSTRUCTION}`), reopened.prompt)
-  assert.ok(!reopened.prompt.includes('left when it was blocked'), reopened.prompt)
-  assert.deepEqual(eventsOf(host, 'step.started').filter((event) => event.step === 'design').map(({ visit, feedback, instruction, sentBy }) => [visit, feedback, instruction, sentBy]), [
-    [1, [], undefined, undefined], [2, [], undefined, undefined], [3, [], INSTRUCTION, 'ask'],
-  ])
-})
-
 /** The journal's lines chained and signed again, after an edit, as the machine that wrote them would. */
 const resigned = async (host, lines) => {
   const key = await host.deps.journalKeys.read(JSON.parse(lines[0]).keyId)
@@ -128,31 +75,6 @@ const resigned = async (host, lines) => {
   }
   return out
 }
-
-test('a loop stopped at its max_visits by a journal written before the ceiling was journaled stays blocked, as it was, and asks nothing', async () => {
-  const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  let testRuns = 0
-  machine.meanwhile['. $ dotnet test'] = () => { machine.exits['. $ dotnet test'] = ++testRuns }
-  const passes = [1, 2, 3, 4].map((n) => (it) => agent({ work: n === 1 ? green(SLUG, 'Pass1') : tddCycle(SLUG, `Pass${n}`) })(it))
-  const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
-  const append = host.tracking.append.bind(host.tracking)
-  host.tracking.append = async (slug, line) => {
-    if (line.includes('"type":"question.asked"') && line.includes('"kind":"blocked"')) throw new Error('written before the blocked question existed')
-    return append(slug, line)
-  }
-  await assert.rejects(host.start(), /written before the blocked question existed/)
-  host.tracking.append = append
-  const older = (await host.tracking.lines(SLUG)).map((line) => line.replace(',"ceiling":"deliver"', ''))
-  const lines = await resigned(host, older)
-  host.tracking.rewriteJournal(SLUG, () => lines)
-
-  const outcome = await host.run()
-
-  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'loop-ceiling'])
-  assert.deepEqual(eventsOf(host, 'question.asked').map(({ key }) => key), ['scenario_review-1'])
-  assert.equal(host.types().at(-1), 'run.finished')
-})
-
 test('a lens that reaches no verdict asks a human; an instruction runs the review again, each lens it asks reading the instruction', async () => {
   const host = scripted({}, (it) => [...nominal(it).slice(0, 2), unavailable])
   host.agentRunner.review = lenses({ fitness: [says('fitness', 'inconclusive', [finding('F1', 'low', 'the research document is empty')])] })

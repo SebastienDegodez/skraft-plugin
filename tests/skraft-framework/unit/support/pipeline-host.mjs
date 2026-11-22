@@ -4,16 +4,14 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { answerYaml, withContext } from './answer-yaml.mjs'
 import { writeDeliveryTrace } from './delivery-trace.mjs'
-import { strykerWritesItsReports } from './mutation-reports.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
-import { createStartMutation } from '../../../../plugins/skraft-framework/engine/application/mutation/start-mutation-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import { createPrecheck } from '../../../../plugins/skraft-framework/engine/application/pipeline/precheck-usecase.mjs'
 import {
-  BUILT_IN_MUTATION, BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
   ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine,
 } from './in-memory-host.mjs'
 
@@ -37,7 +35,7 @@ export const PROSE_TEMPLATE_FR = readFileSync(new URL('../../../../plugins/skraf
 export const API = Object.freeze({
   name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
-  commands: { build: 'dotnet build', test: 'dotnet test', mutation: 'dotnet stryker' },
+  commands: { build: 'dotnet build', test: 'dotnet test' },
   bdd: false,
 })
 
@@ -79,13 +77,12 @@ export const pipelineHost = ({
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
-    workflowSource: follows === 'pipeline' ? new InMemoryWorkflowSource(workflow) : new InMemoryWorkflowSource(workflow ?? BUILT_IN_MUTATION, undefined, follows),
+    workflowSource: follows === 'pipeline' ? new InMemoryWorkflowSource(workflow) : new InMemoryWorkflowSource(workflow ?? undefined, follows),
     agentCatalog: catalog,
     forges: { [forge]: { codeHost, pullRequests: new InMemoryPullRequests({ repository: codeHost.named }) } },
     runLock: new InMemoryRunLock(tracking, owner),
     timer: new ManualTimer(clock),
   }
-  strykerWritesItsReports(deps)
   const host = {
     deps,
     slug,
@@ -106,7 +103,7 @@ export const pipelineHost = ({
     events: () => tracking.journal(slug),
     types: () => tracking.journal(slug).map((event) => event.type),
     /** @param {object} [request] */
-    init: (request = {}) => (follows === 'mutation' ? createStartMutation(deps).start() : createInit(deps).init({ slug, ...request })),
+    init: (request = {}) => createInit(deps).init({ slug, ...request }),
     run: () => createRunPipeline(deps).run({ slug }),
     view: () => createObserve(deps).view(),
     report: () => createObserve(deps).report(),

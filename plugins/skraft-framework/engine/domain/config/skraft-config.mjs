@@ -1,4 +1,4 @@
-import { GATE_ORDER, STORY_GATES } from '../gates/gate-plan.mjs'
+import { GATE_NAMES } from '../evidence/gate-names.mjs'
 import { normalizeRelative } from './relative-path.mjs'
 import { mergePatch } from './merge-patch.mjs'
 import { PLUGIN_DEFAULTS } from './model-assignment.mjs'
@@ -97,8 +97,8 @@ const GONE_KEYS = Object.freeze({
 
 /** @param {string} label @param {string} key */
 const keyError = (label, key) => (key in GONE_KEYS ? `${label}: ${key} is gone; ${GONE_KEYS[key]}` : `${label}: unknown key ${key} (allowed: ${COMPONENT_KEYS.join(', ')})`)
-/** The gates, and `e2e`, which doctor checks but no gate runs. */
-export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
+/** The gates, `e2e` and `mutation`, which the commands of a component may name: the engine runs none of them. */
+export const COMMAND_NAMES = Object.freeze([...GATE_NAMES, 'mutation', 'e2e'])
 /** What only the team's file holds. */
 const TEAM_KEYS = Object.freeze(['components'])
 /** What only the developer's skraft-config.local.json holds. */
@@ -106,8 +106,6 @@ export const CONFIRMED_KEY = 'configurationConfirmed'
 
 /** Why a config with no component cannot be checked or gated. */
 export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
-/** Why a component with no gate command cannot prove anything. */
-export const NO_GATE = `no gate command; give it at least one of ${STORY_GATES.join(', ')} in ${CONFIG_FILE}`
 
 /**
  * The team's file, and the developer's beside it when given, over the plugin's defaults.

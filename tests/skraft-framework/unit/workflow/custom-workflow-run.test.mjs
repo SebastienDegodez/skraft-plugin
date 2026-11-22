@@ -158,14 +158,14 @@ test('a repository agent that declares no outputs is asked for its result only',
 })
 
 test('a workflow that cannot run is refused at init, with every reason, and nothing is journaled', async () => {
-  const broken = edit(BUILT_IN_WORKFLOW, ['  gates -> deliver [label="FAIL", max_visits=3]', '  gates -> deliver [label="FAIL"]'], ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  orphan   [shape=box, agent="solution-researcher"]'])
+  const broken = edit(BUILT_IN_WORKFLOW, ['  deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]', '  deliver_review -> deliver [label="NEEDS_REWORK"]'], ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  orphan   [shape=box, agent="solution-researcher"]'])
   const host = pipelineHost(repositoryWorkflow(broken))
 
   const outcome = await host.init()
 
   assert.deepEqual(outcome, {
     ok: false, slug: SLUG, created: false, code: 'workflow-invalid',
-    reason: '.skraft/pipeline.skraft.dot is invalid: node orphan: agent node needs exactly one outgoing edge, has 0; node orphan is unreachable from start; node orphan never reaches an exit; loop gates -> deliver -> gates has no max_visits',
+    reason: '.skraft/pipeline.skraft.dot is invalid: node orphan: agent node needs exactly one outgoing edge, has 0; node orphan is unreachable from start; node orphan never reaches an exit; loop deliver_review -> deliver -> deliver_review has no max_visits',
   })
   assert.deepEqual(host.events(), [])
   assert.equal(await host.tracking.current(), null)
@@ -178,50 +178,6 @@ test('a repository agent nobody provides refuses the workflow, naming it', async
 
   assert.deepEqual([outcome.code, outcome.reason], ['workflow-invalid', '.skraft/pipeline.skraft.dot is invalid: node security: agent acme-security-reviewer not found in the plugin, .claude/agents/ or .github/agents/'])
 })
-
-test('the locked gates removed without unlock are refused; kept with unlock they are skipped, journaled with the reason', async () => {
-  const removed = edit(BUILT_IN_WORKFLOW,
-    ['  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]\n', ''],
-    ['deliver -> gates\n', 'deliver -> deliver_review\n'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', ''])
-  const refused = pipelineHost(repositoryWorkflow(removed))
-  assert.deepEqual([(await refused.init()).code, (await refused.init()).reason], ['workflow-invalid', '.skraft/pipeline.skraft.dot is invalid: locked node gates is missing; keep it with unlock="<reason>" to skip it'])
-
-  const unlocked = edit(BUILT_IN_WORKFLOW,
-    ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
-  const host = scripted(repositoryWorkflow(unlocked), nominal)
-
-  const outcome = await host.start()
-
-  assert.equal(outcome.status, 'done')
-  assert.deepEqual(host.events()[0].unlocked, [{ node: 'gates', reason: 'the team runs the gates in its own CI' }])
-  assert.deepEqual(host.machine.runs, [])
-  const gates = host.events().filter((event) => event.step === 'gates')
-  assert.deepEqual(gates.map(({ type, outcome: result, code, failures, reason, next, gates: names }) => [type, result, code, failures, reason, next, names?.length]), [
-    ['step.started', undefined, undefined, undefined, undefined, undefined, 6],
-    ['step.recorded', 'skipped', null, [], 'unlocked: the team runs the gates in its own CI', 'deliver_review', undefined],
-  ])
-  assert.ok(host.progress.lines.includes(`${SLUG}: gates skipped, unlocked: the team runs the gates in its own CI`))
-})
-
-test('a skipped gate still takes its edge, and stops the run once that edge reached its max_visits', async () => {
-  const looped = edit(BUILT_IN_WORKFLOW,
-    ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'],
-    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  check    [shape=parallelogram, gate="test", phase="DELIVER"]'],
-    ['  gates -> deliver_review [label="PASS"]', '  gates -> check   [label="PASS", max_visits=1]\n  check -> deliver [label="FAIL"]\n  check -> deliver_review [label="PASS"]'])
-  const host = scripted({ ...repositoryWorkflow(looped), answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it), agent()(it)])
-  host.machine.exits['. $ dotnet test'] = 1
-
-  const outcome = await host.start()
-
-  const reason = 'gates -> check was already taken 1 times, its max_visits'
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DELIVER', code: 'loop-ceiling', reason })
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && event.step === 'gates').map(({ visit, outcome: result, code, next, reason: why }) => [visit, result, code, next, why]), [
-    [1, 'skipped', null, 'check', 'unlocked: the team runs the gates in its own CI'],
-    [2, 'skipped', 'loop-ceiling', null, reason],
-  ])
-})
-
 test('a workflow that became invalid stops the run; one whose node of the run is gone stops it as changed', async () => {
   const host = scripted(withSecurity, (it) => [agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await host.start()
@@ -258,19 +214,4 @@ test('a run whose last step, or the node it led to, left the workflow stops as c
   await target.deps.workspace.write('.skraft/pipeline.skraft.dot', WITHOUT_SECURITY)
   assert.deepEqual(await target.run(), { status: 'blocked', slug: SLUG, phase: null, code: 'workflow-changed', reason: 'the workflow has no node security any more; restore the workflow the run started with' })
   assert.equal(target.events().filter((event) => event.type === 'step.recorded').at(-1).next, 'security')
-})
-
-test('a skipped gate interrupted before it was recorded is not started twice', async () => {
-  const unlocked = edit(BUILT_IN_WORKFLOW, ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
-  const host = scripted(repositoryWorkflow(unlocked), nominal)
-  const append = host.tracking.append.bind(host.tracking)
-  let crashes = 1
-  host.tracking.append = async (slug, line) => {
-    if (line.includes('"outcome":"skipped"') && crashes-- > 0) throw new Error('host interrupted')
-    return append(slug, line)
-  }
-  await assert.rejects(host.start(), /host interrupted/)
-
-  assert.equal((await host.run()).status, 'done')
-  assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
 })
