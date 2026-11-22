@@ -1,12 +1,14 @@
 import repl from 'node:repl'
 import { Console } from 'node:console'
 import { PassThrough, Writable } from 'node:stream'
+import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { inspect } from 'node:util'
 import { createOutput } from '../process/output-cut.mjs'
 import { refusalOfKill } from '../../domain/repl/refusals.mjs'
 import { createPrintWindow } from './print-window.mjs'
 import { loadLibrary } from './repl-library.mjs'
+import { notInstalled, projectRequire } from './repl-require.mjs'
 
 /**
  * The process behind one `skraft_repl` attempt: a `node:repl` server on streams of its own, whose
@@ -100,9 +102,11 @@ export const startKernel = (ipc, { libFolder = null } = {}) => {
  * @param {Kernel} kernel @param {string | null} folder
  */
 const announce = async (kernel, folder) => {
+  const root = folder === null ? null : dirname(dirname(folder))
+  if (root !== null) kernel.server.context.require = projectRequire(root)
   const library = folder === null ? { lib: {}, loaded: [], failed: [] } : await loadLibrary(folder)
   Object.assign(globalThis, { lib: Object.freeze(library.lib) })
-  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed } })
+  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed, notInstalled: root !== null && notInstalled(root) } })
 }
 
 /** What a cell prints, and what runs later print, goes to the server as `print`. @param {Kernel} kernel */

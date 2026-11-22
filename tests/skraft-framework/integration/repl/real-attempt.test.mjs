@@ -70,6 +70,31 @@ test('the project\'s REPL library under .repl/lib is in every cell as lib.<name>
   assert.equal(lines[3], "=> [ 'hello', 0, 'undefined' ]")
 })
 
+test('require in a cell finds the packages of .repl first, then those of the working copy', BOUNDED, async (t) => {
+  const answers = []
+  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: "[require('fake-dep').name, require('root-dep').name, require('node:path').sep.length]" })) })
+  for (const [folder, name] of [[join(root, '.repl', 'node_modules', 'fake-dep'), 'from .repl'], [join(root, 'node_modules', 'root-dep'), 'from the working copy']]) {
+    mkdirSync(folder, { recursive: true })
+    writeFileSync(join(folder, 'index.js'), `module.exports = { name: ${JSON.stringify(name)} }\n`)
+  }
+  writeFileSync(join(root, '.repl', 'package.json'), JSON.stringify({ private: true, dependencies: { 'fake-dep': '1.0.0' } }))
+
+  await host.start()
+
+  assert.equal(answers[0].text, "=> [ 'from .repl', 'from the working copy', 1 ]")
+})
+
+test('a .repl/package.json with dependencies and no .repl/node_modules is told at the first result', BOUNDED, async (t) => {
+  const answers = []
+  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: '1' })) })
+  mkdirSync(join(root, '.repl'))
+  writeFileSync(join(root, '.repl', 'package.json'), JSON.stringify({ private: true, dependencies: { 'fake-dep': '1.0.0' } }))
+
+  await host.start()
+
+  assert.equal(answers[0].text, 'lib: the packages of .repl/package.json are not installed: run npm ci --prefix .repl in the working copy\n=> 1')
+})
+
 test('a cell that prints 8 MiB leaves a cell log of 1 MiB at most, its first and last lines kept', BOUNDED, async (t) => {
   const { host } = realRun(t, async (repl) => {
     await repl.call({ code: "const line = 'x'.repeat(1023); console.log('first'); for (let i = 0; i < 8192; i += 1) console.log(line); console.log('last')" })

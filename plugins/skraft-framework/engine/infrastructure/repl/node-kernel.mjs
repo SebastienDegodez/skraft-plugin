@@ -63,7 +63,7 @@ const notReady = (state, reject) => {
 /**
  * The kernel says it is alive at once, then ready once it has loaded the project's REPL library,
  * each module of which it bounds itself.
- * @param {State} state @param {any} message @param {{ alive: () => void, ready: (lib: { loaded: string[], failed: string[] }) => void }} starting
+ * @param {State} state @param {any} message @param {{ alive: () => void, ready: (lib: { loaded: string[], failed: string[], notInstalled: boolean }) => void }} starting
  */
 const route = (state, message, starting) => {
   const handler = FROM_KERNEL[message?.t]
@@ -72,8 +72,8 @@ const route = (state, message, starting) => {
   else if (handler !== undefined) handler(state, message)
 }
 
-/** @param {any} lib @returns {{ loaded: string[], failed: string[] }} */
-const libraryOf = (lib) => ({ loaded: namesOf(lib?.loaded), failed: namesOf(lib?.failed) })
+/** @param {any} lib @returns {{ loaded: string[], failed: string[], notInstalled: boolean }} */
+const libraryOf = (lib) => ({ loaded: namesOf(lib?.loaded), failed: namesOf(lib?.failed), notInstalled: lib?.notInstalled === true })
 
 /** @param {unknown} names */
 const namesOf = (names) => (Array.isArray(names) ? names.filter((name) => typeof name === 'string') : [])
@@ -136,7 +136,7 @@ const outcome = (state, cell, status, { value = null, error = null } = {}) => {
   return { status, printed: text, value, error }
 }
 
-/** @param {State} state @param {{ loaded: string[], failed: string[] }} lib what the kernel loaded of the project's REPL library */
+/** @param {State} state @param {{ loaded: string[], failed: string[], notInstalled: boolean }} lib what the kernel loaded of the project's REPL library */
 const kernelOf = (state, lib) => Object.freeze({
   lib,
   pid: state.child.pid ?? null,

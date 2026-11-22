@@ -27,12 +27,15 @@ const endOf = (run) => {
 /** One line per run: its id, how it stands, how long it took, its command and its log. @param {RunLine} run */
 export const runLine = (run) => `r${run.id} ${endOf(run)} (${seconds(run.durationMs)}) ${shown(run.command)} - ${run.log}`
 
+const NOT_INSTALLED = 'lib: the packages of .repl/package.json are not installed: run npm ci --prefix .repl in the working copy'
+
 /**
  * What the first result of a kernel says of the project's REPL library: the modules it loaded,
  * then each one it could not.
- * @param {{ loaded: string[], failed: string[] }} lib @returns {string[]}
+ * @param {{ loaded: string[], failed: string[], notInstalled?: boolean }} lib @returns {string[]}
  */
-export const libraryLines = ({ loaded, failed }) => [
+export const libraryLines = ({ loaded, failed, notInstalled = false }) => [
+  ...(notInstalled ? [NOT_INSTALLED] : []),
   ...(loaded.length === 0 ? [] : [`lib: ${loaded.join(', ')}`]),
   ...failed.map((name) => `lib: ${name} could not be loaded (it threw, or took more than 10 seconds); the kernel goes on without it`),
 ]
