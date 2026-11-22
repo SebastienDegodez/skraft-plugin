@@ -135,6 +135,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
   })
   assert.ok(prompt('test-integrity-lens', 'deliver_review').includes([
     `  - Documents of this phase: ${TRACKING}/${CHANGE_LOG}`,
+    `  - Documents of this phase: ${TRACKING}/logs/runs/deliver-1-1/runs.jsonl`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${ISSUE}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${MATRIX}`,

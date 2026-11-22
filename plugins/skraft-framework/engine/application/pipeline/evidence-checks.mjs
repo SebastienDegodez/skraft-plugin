@@ -1,60 +1,37 @@
-import { isTouchedBy } from '../../domain/evidence/touched-components.mjs'
-import { evidenceFailures } from '../../domain/evidence/delivery-evidence.mjs'
-import { baseOf } from '../config/bases.mjs'
 import { readTrace } from '../evidence/run-trace-store.mjs'
 
 /**
- * The evidence of a DELIVER attempt: what `skraft_repl` traced of its runs, read from the
- * attempt's folder, checked against the components the story changed and the commit the
- * attempt ends on. Nothing here runs a program.
+ * What `skraft_repl` traced of an attempt, read from the attempt's folder through its signatures,
+ * kept for the readers of the journal: the DELIVER review, which judges the quality evidence, the
+ * run view and the scenario review. Nothing here runs a program nor refuses an attempt.
  *
- * @typedef {{ code: 'evidence', line: string }} EvidenceFailure
- * @typedef {{ ok: true, failures: EvidenceFailure[], checked: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }> } | { ok: false, reason: string }} EvidenceCheck
- *   checked: the runs the evidence stands on, by id and hash, never their output; ok false: the machine could not read Git.
+ * @typedef {{ run: number, gate: string, cwd: string, log: string, sha256: string }} TracedRun
+ *   the run by id and hash, never its output.
  */
 
 /**
- * @param {any} deps
- * @param {{ slug: string, folder: string, events: any[], config: import('../../domain/config/skraft-config.mjs').SkraftConfig, base: import('../config/bases.mjs').Base[] }} attempt
- * @returns {Promise<EvidenceCheck>}
+ * Every run the delivering attempt traced, in the order they ran; null when its trace cannot be
+ * read (an edited or unsigned line), so that nothing stands for it.
+ * @param {any} deps @param {{ slug: string, folder: string, events: any[] }} attempt
+ * @returns {Promise<TracedRun[] | null>}
  */
-export const checkEvidence = async (deps, { slug, folder, events, config, base }) => {
-  const trace = await readTrace(deps, { slug, folder, events })
-  if (!trace.ok) return { ok: true, failures: [{ code: 'evidence', line: trace.reason }], checked: [] }
-  const subjects = await touchedSubjects(deps, config.components, base)
-  if (typeof subjects === 'string') return { ok: false, reason: subjects }
-  const lines = evidenceFailures(trace.records, subjects, config.components.map(({ root }) => root))
-  const runs = /** @type {import('../../domain/evidence/run-trace.mjs').RunRecord[]} */ (trace.records.filter((record) => record.type === 'run'))
-  return { ok: true, failures: lines.map((line) => ({ code: 'evidence', line })), checked: runs.map(({ run, gate, cwd, log, sha256 }) => ({ run, gate: gate ?? '', cwd, log, sha256 })) }
+export const tracedRuns = async (deps, attempt) => {
+  const trace = await readTrace(deps, attempt)
+  if (!trace.ok) return null
+  return trace.records.flatMap((record) => (record.type === 'run' ? [factOf(record)] : []))
 }
+
+/** @param {import('../../domain/evidence/run-trace.mjs').RunRecord} record @returns {TracedRun} */
+const factOf = ({ run, gate, cwd, log, sha256 }) => ({ run, gate: gate ?? '', cwd, log, sha256 })
 
 /**
  * The traced run of the acceptance tests the designer labelled `red`: the last one of the attempt,
  * which the review of DISTILL reads in place of a log; null when the trace holds none or cannot be read.
  * @param {any} deps @param {{ slug: string, folder: string, events: any[] }} attempt
- * @returns {Promise<{ run: number, gate: string, cwd: string, log: string, sha256: string } | null>}
+ * @returns {Promise<TracedRun | null>}
  */
-export const redRunOf = async (deps, { slug, folder, events }) => {
-  const trace = await readTrace(deps, { slug, folder, events })
+export const redRunOf = async (deps, attempt) => {
+  const trace = await readTrace(deps, attempt)
   const found = trace.ok ? trace.records.findLast((record) => record.type === 'run' && record.label === 'red') : undefined
-  if (found === undefined || found.type !== 'run') return null
-  return { run: found.run, gate: found.gate ?? '', cwd: found.cwd, log: found.log, sha256: found.sha256 }
-}
-
-/**
- * The components the story changed since their base, with the commit their repository stands
- * on; a string when Git cannot tell.
- * @param {any} deps @param {import('../../domain/config/skraft-config.mjs').Component[]} components @param {import('../config/bases.mjs').Base[]} base
- */
-const touchedSubjects = async (deps, components, base) => {
-  const subjects = []
-  for (const component of components) {
-    const sha = baseOf(base, component.name)?.sha ?? null
-    const changed = sha === null ? null : await deps.sourceControl.changedFiles(component.root, sha)
-    if (changed !== null && !isTouchedBy(component, components, changed)) continue
-    const head = await deps.sourceControl.head(component.root)
-    if (head === null) return `Git cannot tell the commit ${component.root} stands on`
-    subjects.push({ name: component.name, root: component.root, head })
-  }
-  return subjects
+  return found === undefined || found.type !== 'run' ? null : factOf(found)
 }

@@ -1,6 +1,7 @@
 import { GATE_NAMES } from '../../domain/evidence/gate-names.mjs'
 import { pathUnder } from '../../domain/config/relative-path.mjs'
 import { qualityEvidence } from '../../domain/reporting/run-facts.mjs'
+import { runsFolder } from '../../domain/evidence/run-trace.mjs'
 
 /**
  * What a run hands a review: the base of its changes, its story, the documents its agents filled
@@ -54,7 +55,7 @@ const documentsOf = ({ workflow, run, phase, events }) => {
     .filter(([id]) => (workflow.nodes[id].phase === phase) === same)
     .flatMap(([, state]) => writtenBy(state))
   return {
-    outputs: [...new Set([...ofPhase(true), ...redLogsOf(events, workflow, phase)])],
+    outputs: [...new Set([...ofPhase(true), ...redLogsOf(events, workflow, phase), ...tracesOf(events, workflow, phase)])],
     context: [...new Set([...run.artifacts, ...ofPhase(false)])],
     artifacts: run.artifacts,
     phases: workflow.phases.map((each) => ({ phase: each, steps: writersOf(workflow, run, each) })).filter(({ steps }) => steps.length > 0),
@@ -68,6 +69,17 @@ const documentsOf = ({ workflow, run, phase, events }) => {
 const redLogsOf = (events, workflow, phase) => events
   .filter((event) => event.type === 'evidence.checked' && event.red === true && workflow.nodes[event.step]?.phase === phase)
   .map((event) => event.runs[0].log)
+
+/**
+ * The trace of the runs of the last delivering attempt of each node of the phase whose trace the
+ * engine could read: what the review judges the quality evidence by.
+ * @param {RunFacts['events']} events @param {Workflow} workflow @param {string} phase @returns {string[]}
+ */
+const tracesOf = (events, workflow, phase) => {
+  const kept = events.filter((event) => event.type === 'evidence.checked' && event.red !== true && workflow.nodes[event.step]?.phase === phase)
+  const last = new Map(kept.map((event) => [event.step, `${runsFolder(event.step, event.visit, event.attempt)}/runs.jsonl`]))
+  return [...last.values()]
+}
 
 /**
  * The agent nodes of a phase that ran, each with the documents it filled or wrote.

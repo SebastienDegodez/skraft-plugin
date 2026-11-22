@@ -130,13 +130,13 @@ When valid, `skraft workflow check` prints `<file> is valid: phases RESEARCH, DE
 ## Retired attributes {/* #retired-attributes */}
 
 skraft runs no gate and no mutation any more: the software engineer runs each gate through
-`skraft_repl`, and the engine checks the traced runs of its attempt ([Gates](./gates.md#command-gates)).
+`skraft_repl`, and the DELIVER review reads the traced runs of its attempt ([Gates](./gates.md#command-gates)).
 A repository workflow ejected earlier that still holds a gate node or one of these attributes is
 refused, one message per attribute:
 
 | Found | Message |
 | --- | --- |
-| a gate node (`gate="…"`) | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
+| a gate node (`gate="…"`) | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
 | `goal_gate`, `locked`, `unlock` | `<attribute> is gone with the gate node: skraft runs no gate` |
 | `each`, `proposal` | `<attribute> is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node` |
 

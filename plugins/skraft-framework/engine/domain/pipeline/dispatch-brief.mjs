@@ -221,10 +221,10 @@ const componentLine = ({ name, root, stack, mocking, contractTesting, bdd, test 
  */
 const bddLine = (pairs) => (pairs.length === 0 ? 'off' : pairs.map(({ features, steps }) => (steps === null ? features : `${features} → ${steps}`)).join(', '))
 
-/** The commits whose gates the engine checks the traced runs of: a TDD cycle's. */
+/** The commits whose gates the agent runs through the REPL, which the DELIVER review reads: a TDD cycle's. */
 const GATED = Object.freeze(['cycle'])
 
-const GATES_TITLE = '- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the engine checks the traced runs of your attempt:'
+const GATES_TITLE = '- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:'
 
 /**
  * The gate commands an agent that delivers runs through the REPL, by component.
@@ -235,7 +235,7 @@ const gateLines = (tdd, components) => (GATED.includes(/** @type {string} */ (td
 /** What the engine requires of the runs of an attempt that delivers: for `cycle` only. @param {Brief['tdd']} tdd */
 const evidenceLine = (tdd) => (tdd === 'cycle' ? [EVIDENCE] : [])
 
-const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The engine refuses your submission for a gate with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. A run left open is refused: await it or kill it."
+const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The DELIVER review reports a gate of a component you changed with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
 
 /** @param {BriefComponent} component */
 const gatesLine = ({ name, gates }) => (gates.length === 0 ? [] : [`${name}: ${gates.map(({ gate, line }) => `${gate}: ${line}`).join('; ')}`])

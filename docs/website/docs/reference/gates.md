@@ -58,7 +58,7 @@ message per attribute:
 
 | Found in the workflow | Message |
 | --- | --- |
-| a node of shape `parallelogram` or a `gate` attribute | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
+| a node of shape `parallelogram` or a `gate` attribute | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
 | `goal_gate`, `locked` or `unlock` | `<attribute> is gone with the gate node: skraft runs no gate` |
 | `each` or `proposal` | `<attribute> is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node` |
 

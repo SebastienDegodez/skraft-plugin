@@ -14,7 +14,7 @@ const PLUGIN_AGENTS = {
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
   'finding-refuter': 'plugin', 'pr-writer': 'plugin',
 }
-const GATE_GONE = 'a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline)'
+const GATE_GONE = 'a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline)'
 /** The line, from 1, of the first line of the text that starts with `start`. */
 const lineOf = (text, start) => text.split('\n').findIndex((line) => line.startsWith(start)) + 1
 const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, lenses: [], question: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, publish: null, when: null, fanOut: null, branches: [], mandatory: null, call: null, refutedBy: null, ...fields })

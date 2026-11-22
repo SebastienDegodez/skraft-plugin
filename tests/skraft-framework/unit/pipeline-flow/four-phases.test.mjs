@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
-const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The engine refuses your submission for a gate with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. A run left open is refused: await it or kill it."
+const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The DELIVER review reports a gate of a component you changed with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -183,7 +183,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1 <the rules of the story, as your implementation plan names them>" -m "Refs: #42"',
     '  in Windows PowerShell 5.1:',
     '  dotnet test; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(checkout): S1 <the rules of the story, as your implementation plan names them>" -m "Refs: #42" } }',
-    '- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the engine checks the traced runs of your attempt:',
+    '- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:',
     '- api: build: dotnet build; test: dotnet test',
     EVIDENCE,
   ].join('\n'))
@@ -446,14 +446,14 @@ test('the engineer works on every component, each with its test command when it 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
-  assert.ok(deliver.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the engine checks the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .\n${EVIDENCE}`), deliver)
+  assert.ok(deliver.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .\n${EVIDENCE}`), deliver)
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
   assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
-  assert.ok(engineer.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the engine checks the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n${EVIDENCE}`), engineer)
+  assert.ok(engineer.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n${EVIDENCE}`), engineer)
 })
 
 test('the test and gate commands the engineer is given have the run\'s base in place of {baseSha}', async () => {

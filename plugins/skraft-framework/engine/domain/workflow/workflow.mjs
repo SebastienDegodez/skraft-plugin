@@ -321,7 +321,7 @@ const attributeReasons = (id, kind, attributes) => {
 
 /** What an ejected workflow still says of the nodes and attributes the engine dropped, and what replaces them. */
 const GONE_ATTRIBUTES = Object.freeze({
-  gate: 'a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline)',
+  gate: 'a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline)',
   goal_gate: 'goal_gate is gone with the gate node: skraft runs no gate',
   locked: 'locked is gone with the gate node: skraft runs no gate',
   unlock: 'unlock is gone with the gate node: skraft runs no gate',

@@ -322,7 +322,7 @@ const noScenarioComponent = (context, { node, phase }) => ((writesScenarios(node
  * @returns {{ code: string, reason: string }}
  */
 const blockedBy = (context, next) => {
-  if (next.cause === 'node-retired') return { code: 'node-retired', reason: `the node ${next.missingNode} was retired: skraft runs no gate and no mutation any more. The software engineer runs the gates through skraft_repl, and the engine checks the traced runs of its attempt; start the story again with the plugin's workflow` }
+  if (next.cause === 'node-retired') return { code: 'node-retired', reason: `the node ${next.missingNode} was retired: skraft runs no gate and no mutation any more. The software engineer runs the gates through skraft_repl, and the DELIVER review reads the traced runs of its attempt; start the story again with the plugin's workflow` }
   if (next.cause === 'workflow-changed') return { code: 'workflow-changed', reason: `the workflow has no node ${next.missingNode} any more; restore the workflow the run started with` }
   const event = /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (next.last)
   if (next.cause === 'route') return { code: event.code, reason: event.reason }
@@ -789,11 +789,11 @@ const judgeAttempt = async (context, run, next, attempt) => {
 }
 
 /**
- * The runs a delivering attempt's evidence stands on, journaled by id and hash once the attempt holds it.
+ * The runs a delivering attempt traced, journaled by id and hash for the DELIVER review and the run view.
  * @param {Context} context @param {WorkStep} next @param {Extract<Awaited<ReturnType<typeof checkStep>>, { environment: null }>} checked
  */
 const keepEvidence = async ({ journal }, { node, visit, attempt }, checked) => {
-  if (checked.evidence === undefined || checked.evidence.length === 0 || failedCheck(checked)) return
+  if (checked.evidence === undefined || checked.evidence === null || failedCheck(checked)) return
   await journal.append('evidence.checked', { step: node.id, visit, attempt, ...(checked.red === true ? { red: true } : {}), runs: checked.evidence })
 }
 

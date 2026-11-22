@@ -13,7 +13,7 @@
 // The acceptance designer (DISTILL) writes the story's scenarios, the groups its implementation plan delivers them in, the failing walking skeleton and the failing acceptance test of every scenario, in one test commit;
 // the software engineer (DELIVER) makes every group pass in the plan's order in one dispatch and one green commit, the walking skeleton passing too; the engine refuses a second green.
 // scenario-review asks a human, once, to read the scenarios, their groups and the failing tests before DELIVER builds them: APPROVED goes on, REVISE sends DISTILL back with the corrections.
-// The pipeline runs no gate and no mutation: the engineer runs each gate through skraft_repl and the engine checks the traced runs of its attempt; mutation testing is a recipe of the developer's session (the skraft-mutation skill).
+// The pipeline runs no gate and no mutation: the engineer runs each gate through skraft_repl and the DELIVER review reads the traced runs of its attempt; mutation testing is a recipe of the developer's session (the skraft-mutation skill).
 digraph skraft {
   graph [version="2", goal="Deliver the story"]
 

@@ -125,7 +125,7 @@ export const REFUSED_WORKFLOWS = Object.freeze([
   {
     fault: 'a gate node of an earlier engine',
     workflow: faulty([['  exit     [shape=Msquare]\n', '  exit     [shape=Msquare]\n  gates    [shape=parallelogram, gate="build,test", phase="DELIVER"]\n']]),
-    reason: 'node gates: a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the engine checks the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline); node gates: publish node needs exactly one outgoing edge, has 0; node gates is unreachable from start; node gates never reaches an exit',
+    reason: 'node gates: a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline); node gates: publish node needs exactly one outgoing edge, has 0; node gates is unreachable from start; node gates never reaches an exit',
   },
   {
     fault: 'a loop without max_visits',
