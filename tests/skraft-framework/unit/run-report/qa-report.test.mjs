@@ -13,7 +13,7 @@ const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 
 /** The sha of the red commit whose subject is given, short. @param {ReturnType<typeof scripted>} host @param {string} subject */
 const shaOf = (host, subject) => host.events().filter((event) => event.type === 'commits.checked').flatMap((event) => event.commits).find((commit) => commit.subject === subject).sha.slice(0, 7)
-test('before DISTILL the QA report has no test plan, no red commit and no gate; a run blocked by an agent frames its reason', async () => {
+test('before DISTILL the QA report has no test plan, no scenario, no red commit and no gate; a run blocked by an agent frames its reason', async () => {
   const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: { status: 'blocked', summary: 'Fixes #12 | ask @team <b>now</b>' } })(it)])
 
   await host.start()
@@ -27,6 +27,10 @@ test('before DISTILL the QA report has no test plan, no red commit and no gate; 
     '## Test plan',
     '',
     'No test plan yet: DISTILL writes it.',
+    '',
+    '## Scenarios',
+    '',
+    'No scenario yet: DISTILL lists them.',
     '',
     '## Quality evidence',
     '',

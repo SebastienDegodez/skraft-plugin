@@ -12,6 +12,7 @@ import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
 import { assignmentsText, modelText, onHost } from '../../domain/reporting/agent-models.mjs'
 import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
+import { scenarioOutcomesOf } from '../publish/scenario-outcomes.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
 import { openActiveRun } from './active-run.mjs'
@@ -220,11 +221,12 @@ const runFrom = async (context) => {
  * run-report.md, qa-report.md and WORKFLOW.md, written again from the journal after each step.
  * @param {Context} context
  */
-const writeReports = async ({ deps, slug, journal, loaded }) => {
+const writeReports = async ({ deps, slug, journal, loaded, config }) => {
   const run = deriveRun(journal.events)
   const status = statusLine(run)
   await deps.files.write(slug, RUN_REPORT_FILE, renderRunReport({ slug, status, report: runReport(journal.events) }))
-  await deps.files.write(slug, QA_REPORT_FILE, renderQaReport({ slug, status, events: journal.events }))
+  const outcomes = await scenarioOutcomesOf(deps, { slug, events: journal.events, components: config.components })
+  await deps.files.write(slug, QA_REPORT_FILE, renderQaReport({ slug, status, events: journal.events, outcomes }))
   await deps.files.write(slug, WORKFLOW_FILE, renderWorkflowView({ slug, workflow: loaded.workflow, run }))
 }
 

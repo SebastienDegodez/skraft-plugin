@@ -12,11 +12,11 @@ const componentsOf = (host) => JSON.parse(host.workspace.files.get('skraft-confi
  * commit line, unless `trace` changes it.
  * @param {any} host
  * @param {{ step: string, visit: number, attempt: number }} step
- * @param {{ omit?: string[], absent?: string[], edit?: (run: any) => any, open?: boolean, unsigned?: boolean, edited?: boolean }} [trace]
+ * @param {{ omit?: string[], absent?: string[], edit?: (run: any) => any, open?: boolean, unsigned?: boolean, edited?: boolean, log?: (run: any) => string }} [trace]
  *   omit: `<component>/<gate>` never run; absent: declared absent; edit: changes each run of the trace;
- *   edited: each line changed after it was signed
+ *   edited: each line changed after it was signed; log: the text of each run's log, '' unless given
  */
-export const writeDeliveryTrace = async (host, { step, visit, attempt }, { omit = [], absent = [], edit = (run) => run, open = false, unsigned = false, edited = false } = {}) => {
+export const writeDeliveryTrace = async (host, { step, visit, attempt }, { omit = [], absent = [], edit = (run) => run, open = false, unsigned = false, edited = false, log = () => '' } = {}) => {
   const folder = `logs/runs/${step}-${visit}-${attempt}`
   const records = []
   let run = 0
@@ -28,7 +28,7 @@ export const writeDeliveryTrace = async (host, { step, visit, attempt }, { omit 
       run += 1
       const head = await host.git.head(await host.git.repository(component.root))
       records.push(edit({ type: 'run', run, cell: 1, at: 'then', command: `${gate} ${component.name}`, argv: ['sh', '-c', gate], shell: 'sh', cwd: component.root, gate, label: gate === 'test' ? 'green' : null, durationMs: 1, exitCode: 0, signal: null, timedOut: false, killed: false, started: true, bytes: 0, cut: false, sha256: await host.deps.hasher.sha256(''), log: `${folder}/${run}.log`, headBefore: head, headAfter: head, clean: gate !== 'test' }))
-      await host.tracking.write(host.slug, `${folder}/${run}.log`, '')
+      await host.tracking.write(host.slug, `${folder}/${run}.log`, log(records.at(-1)))
     }
   }
   if (open) records.push({ type: 'start', run: run + 1, cell: 1, at: 'then', command: 'npm test', cwd: '.', gate: 'test', label: null })

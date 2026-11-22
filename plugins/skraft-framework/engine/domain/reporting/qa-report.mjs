@@ -13,14 +13,15 @@ import { lensesText, reviewPasses } from './review-passes.mjs'
 
 export const QA_REPORT_FILE = 'qa-report.md'
 
-/** @param {{ slug: string, status: string, events: RunEvent[] }} report */
-export const renderQaReport = ({ slug, status, events }) => [
+/** @param {{ slug: string, status: string, events: RunEvent[], outcomes: import('./scenario-outcomes.mjs').ScenarioOutcome[] }} report */
+export const renderQaReport = ({ slug, status, events, outcomes }) => [
   '<!-- markdownlint-disable-file -->',
   `# QA report — ${slug}`,
   '',
   `Status: ${code(status)}`,
   '',
   ...section('Test plan', testPlanLines(events)),
+  ...section('Scenarios', scenarioLines(outcomes)),
   ...section('Quality evidence', gateLines(events)),
   ...section('TDD red commits', redCommitLines(events)),
   ...section('Reviews', reviewLines(events)),
@@ -36,6 +37,20 @@ const testPlanLines = (events) => {
   const path = step.outputs.find(isTestPlan)
   return [`[${path}](${path}), written in ${step.phase}.`]
 }
+
+/** Each scenario, what proves it or why it is not proven. @param {import('./scenario-outcomes.mjs').ScenarioOutcome[]} outcomes */
+const scenarioLines = (outcomes) => (outcomes.length === 0 ? ['No scenario yet: DISTILL lists them.'] : outcomes.map(scenarioLine))
+
+/** @param {import('./scenario-outcomes.mjs').ScenarioOutcome} outcome */
+const scenarioLine = (outcome) => {
+  const named = `${outcome.index === 0 ? '' : `S${outcome.index} `}${oneLineOf(outcome.title)} (${[outcome.component, ...outcome.ac].join(', ')})`
+  if (outcome.status !== 'passed') return `- ${named}: not proven: ${outcome.reason}`
+  const { red, green, suite } = outcome
+  return `- ${named}: passed (red ${red}, green ${green}, suite run ${suite?.run} on ${suite?.sha}, ${outcome.named ? 'named in its log' : 'suite green; the log does not name this test'})`
+}
+
+/** @param {string} text */
+const oneLineOf = (text) => text.replace(/\s+/g, ' ')
 
 /** The traced runs the delivery stands on. @param {RunEvent[]} events */
 const gateLines = (events) => {
