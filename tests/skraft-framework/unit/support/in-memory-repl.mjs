@@ -68,8 +68,9 @@ class ScriptedKernel {
     const printed = []
     const run = (command, { cwd = '.', timeout = 600, gate = null, label = null } = {}) => this.ask({ cell: this.cells, command, cwd, timeout, gate, label })
     const work = (this.script.get(code) ?? (async () => null))({ run, print: (text) => printed.push(text), id: this.cells })
-    const settled = work.then((value) => ({ status: 'done', printed: printed.join(''), value, error: null }), (error) => ({ status: 'error', printed: printed.join(''), value: null, error: error.message }))
-    return this.within(settled, printed, budgetMs)
+    const restarted = new Promise((resolve) => { this.restartCell = () => resolve({ status: 'restarted', printed: printed.join(''), value: null, error: null }) })
+    const ended = work.then((value) => ({ status: 'done', printed: printed.join(''), value, error: null }), (error) => ({ status: 'error', printed: printed.join(''), value: null, error: error.message }))
+    return this.within(Promise.race([ended, restarted]), printed, budgetMs)
   }
   async wait(budgetMs) {
     if (this.flying === null) return this.left ?? { status: 'done', printed: '', value: null, error: null }
@@ -86,7 +87,13 @@ class ScriptedKernel {
     this.events.onRun({ rid, ...request })
     return exited
   }
-  interrupt() { this.interrupts += 1 }
+  /** A kernel that restarts on interrupt behaves as the real one whose cell will not stop. */
+  interrupt() {
+    this.interrupts += 1
+    if (!this.restartsOnInterrupt || this.flying === null) return
+    this.restartCell()
+    this.die('restarted')
+  }
   chunk(rid, text) { this.chunks.push([rid, text]) }
   exited(rid, result) { this.exits.get(rid)?.(result) }
   stop() { this.stopped = true }
@@ -96,8 +103,10 @@ class ScriptedKernel {
 
 /** The kernels the REPL starts, one per attempt, each scripted by the test. */
 export class ScriptedKernelHost {
-  constructor({ fails = false } = {}) {
+  /** @param {{ fails?: boolean, restartsOnInterrupt?: boolean }} [options] restartsOnInterrupt: a cell interrupted never stops, and its kernel is restarted */
+  constructor({ fails = false, restartsOnInterrupt = false } = {}) {
     this.fails = fails
+    this.restartsOnInterrupt = restartsOnInterrupt
     /** @type {ScriptedKernel[]} */
     this.kernels = []
     /** Cell behaviours every kernel starts with, by code. @type {Map<string, Function>} */
@@ -106,6 +115,7 @@ export class ScriptedKernelHost {
   async start(events) {
     if (this.fails) throw new Error('no kernel')
     const kernel = new ScriptedKernel(events, 4000 + this.kernels.length)
+    kernel.restartsOnInterrupt = this.restartsOnInterrupt
     for (const [code, behaviour] of this.script) kernel.on(code, behaviour)
     this.kernels.push(kernel)
     return kernel

@@ -25,7 +25,7 @@ the shell choice and the tree kill are written, not run. See `docs/v2/host-verif
 | --- | --- |
 | Agents | the acceptance designer and the software engineer, whose descriptors name the tool; never a review lens |
 | Attempt | the call is bound to the open attempt of the active run: no open attempt, or an agent that commits no code, is refused with `repl-unavailable` |
-| Kernel | one child process per attempt, started by the first call and ended when the attempt closes, when another attempt calls, after 15 minutes unused with no run alive, when the session closes or when the kernel dies. It must say it is ready within ten seconds, else the call answers `repl-failed`; it runs with Node flags of its own, never the server's, and a heap of 2 GiB at most: past it the kernel ends and the call answers `repl-crashed`. A kernel ends with every process its cells started by themselves: its process group under POSIX, its tree under Windows |
+| Kernel | one child process per attempt, started by the first call and ended when the attempt closes, when another attempt calls, after 15 minutes unused with no cell nor run alive, when the session closes or when the kernel dies. It must say it is ready within ten seconds, else the call answers `repl-failed`; it runs with Node flags of its own, never the server's, and a heap of 2 GiB at most: past it the kernel ends and the call answers `repl-crashed`. A kernel ends with every process its cells started by themselves: its process group under POSIX, its tree under Windows |
 | Concurrency | the call does not wait in the server's queue, so `skraft_status` and `skraft_precheck` answer while a cell runs; two calls sent at once share one kernel, the second waiting for it to start; a second call while a cell runs is refused with `repl-busy`; a cancellation names its request, so it reaches only that call |
 | Lease | `logs/runs/<step>-<visit>-<attempt>/.lock` names the server that holds the attempt's REPL; the server renews it every 30 seconds. Another server is refused with `repl-held-elsewhere` unless the holder is gone (the system says no process runs under its pid, or one that started at another time) or has not renewed the lease for five minutes; a holder whose start time cannot be read is never taken for gone |
 
@@ -42,6 +42,8 @@ The cell is JavaScript. Variables stay from one call to the next and a cell may 
 | `console.log` | prints into the call's result |
 
 A call takes `code` (empty to wait for the cell in flight), `reset` and `workspace`; any other argument is refused. `reset: true` ends the kernel and its runs, even while a cell runs, starts a fresh kernel and runs `code` there; its result starts with `repl-reset`.
+
+A cell lives 7260 seconds at most (the longest run and a minute): past it the cell is interrupted, its kernel restarted three seconds later if it still runs, and the next call answers `repl-restarted`.
 
 A cell that runs past 90 seconds answers with what it printed so far while its runs go on. A call with empty code then waits for the cell and gets its end. A run that finishes while another cell goes on is told at the start of the next result (`[run-done r3 exit 0 …]`).
 

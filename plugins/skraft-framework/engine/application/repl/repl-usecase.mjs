@@ -28,6 +28,8 @@ const DEFAULT_BUDGET_MS = 90_000
 const IDLE_MS = 15 * 60 * 1000
 /** How long ending a kernel waits for its runs to be over. */
 const RETIRE_WAIT_MS = 10_000
+/** How long a cell may run: the longest run, 7200 s, and a minute more. */
+const CELL_MS = 7_260_000
 
 /**
  * @param {any} deps @param {ReplState} state
@@ -212,13 +214,24 @@ const settledWithin = (deps, pending, ms) => new Promise((resolve) => {
 const evaluate = async (deps, entry, { code, flight }, notice) => {
   if (flight.cancelled) return refused('repl-interrupted')
   flight.launched = true
-  entry.lastUsed = deps.clock.now().getTime()
+  const startedAt = (entry.lastUsed = deps.clock.now().getTime())
   const budget = deps.repl.budgetMs ?? DEFAULT_BUDGET_MS
   const waiting = code.trim() === ''
   const outcome = waiting ? await entry.kernel.wait(budget) : await entry.kernel.evaluate(code, budget)
   if (outcome.status === 'busy') return refused('repl-busy')
   if (!waiting) entry.cells += 1
+  entry.cellSince = cellSince(entry, outcome, waiting ? null : startedAt)
   return present(deps, entry, outcome, notice)
+}
+
+/**
+ * Since when the cell in flight runs: the start of a cell still running, kept across the waits
+ * for it; null once it has ended.
+ * @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {number | null} startedAt null when the call waited
+ */
+const cellSince = (entry, outcome, startedAt) => {
+  if (outcome.status !== 'running') return null
+  return startedAt ?? entry.cellSince ?? null
 }
 
 /** @param {any} deps @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {string | null} notice @returns {Promise<ReplOutcome>} */
@@ -262,9 +275,23 @@ const sweep = async (deps, state) => {
   if (entry === null) return
   const bound = await bindAttempt(deps)
   const open = bound.ok && keyOf(deps, bound) === entry.key
-  const idle = deps.clock.now().getTime() - entry.lastUsed > IDLE_MS && liveRuns(entry).length === 0
-  if (!open || idle) return retire(deps, state)
+  if (!open || isIdle(deps, entry)) return retire(deps, state)
+  endOverdueCell(deps, state, entry)
   await renew(deps, state, entry)
+}
+
+/** Unused for 15 minutes, with no cell in flight and no run alive. @param {any} deps @param {Entry} entry */
+const isIdle = (deps, entry) => deps.clock.now().getTime() - entry.lastUsed > IDLE_MS && entry.cellSince == null && liveRuns(entry).length === 0
+
+/**
+ * A cell that has run past its limit is interrupted; the kernel ends it if it still runs three
+ * seconds later, and the next call is told the kernel was restarted.
+ * @param {any} deps @param {ReplState} state @param {Entry} entry
+ */
+const endOverdueCell = (deps, state, entry) => {
+  if (entry.cellSince == null || deps.clock.now().getTime() - entry.cellSince <= CELL_MS) return
+  entry.cellSince = null
+  interruptCell(state)
 }
 
 /** The lease of a kernel kept is renewed; one another server took over ends the kernel. @param {any} deps @param {ReplState} state @param {Entry} entry */

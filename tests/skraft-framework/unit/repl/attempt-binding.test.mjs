@@ -257,6 +257,26 @@ test('a kernel that dies is told with the cell it was running, and the next call
   assert.match(answers[1].text, /^repl-crashed: the kernel ended by itself: its variables are gone, and the runs it had started were ended\n/)
 })
 
+test('a cell that has run for two hours is interrupted by the sweep, and the next wait is told its kernel was restarted', async () => {
+  const kernels = new ScriptedKernelHost({ restartsOnInterrupt: true })
+  kernels.script.set('forever', async () => new Promise(() => undefined))
+  const seen = []
+  const { host } = replRun({ kernels, calls: { 2: async (one, run) => {
+    await one.call({ code: 'forever' })
+    run.clock.sleep(7200_000)
+    await one.sweep()
+    seen.push(kernels.kernels[0].interrupts)
+    run.clock.sleep(61_000)
+    await one.sweep()
+    seen.push(kernels.kernels[0].interrupts, await one.call({ code: '' }))
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(seen.slice(0, 2), [0, 1])
+  assert.match(seen[2].text, /^repl-restarted: /)
+})
+
 test('a kernel whose attempt is over, or that no one has used for 15 minutes with no run alive, is ended by the sweep; one with a run alive is kept', async () => {
   const kernels = new ScriptedKernelHost()
   const outcomes = []
