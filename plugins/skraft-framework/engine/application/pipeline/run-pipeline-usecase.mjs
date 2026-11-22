@@ -35,6 +35,7 @@ import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { storyLanguage } from '../publish/story-language.mjs'
 import { checkStep, engineHashes, headsOf } from './step-checks.mjs'
+import { runsFolder } from '../../domain/evidence/run-trace.mjs'
 import { acceptanceFiles, scenarioPassOf } from './scenario-checks.mjs'
 import { commitForAgent } from './agent-commits.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
@@ -803,10 +804,20 @@ const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
   if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits })
   if (checked.environment !== null) return escalate(context, next, checked.environment)
+  await keepEvidence(context, next, checked)
   const committed = await commitDone(context, run, next, checked)
   if (committed !== null && 'environment' in committed) return escalate(context, next, committed.environment, committed.incident, committed.incidents)
   await recordAttempt(context, run, next, { ...attempt, checked, committed })
   return null
+}
+
+/**
+ * The runs a delivering attempt's evidence stands on, journaled by id and hash once the attempt holds it.
+ * @param {Context} context @param {WorkStep} next @param {Extract<Awaited<ReturnType<typeof checkStep>>, { environment: null }>} checked
+ */
+const keepEvidence = async ({ journal }, { node, visit, attempt }, checked) => {
+  if (checked.evidence === undefined || checked.evidence.length === 0 || failedCheck(checked)) return
+  await journal.append('evidence.checked', { step: node.id, visit, attempt, runs: checked.evidence })
 }
 
 /**
@@ -832,11 +843,21 @@ const checkAttempt = ({ deps, slug, config, journal }, run, { node, visit, attem
   return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
     role, outputs, precreated, result, scenario,
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    carried: carriedOf(scenario, run.nodes[node.id], { events: journal.events, step: node.id, visit }),
-    engineBefore: engine,
+    ...whatTheAttemptLeft(journal, { run, scenario, engine }, { node, visit, attempt }),
     redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
   })
 }
+
+/**
+ * What the checks read besides the working copy: the commits earlier visits carried, the engine files as the attempt
+ * found them, and where its runs are traced.
+ * @param {{ events: any[] }} journal @param {{ run: RunState, scenario: any, engine: Array<{ path: string, hash: string | null }> }} state @param {Pick<WorkStep, 'node' | 'visit' | 'attempt'>} at
+ */
+const whatTheAttemptLeft = ({ events }, { run, scenario, engine }, { node, visit, attempt }) => ({
+  carried: carriedOf(scenario, run.nodes[node.id], { events, step: node.id, visit }),
+  engineBefore: engine,
+  evidence: { folder: runsFolder(node.id, visit, attempt), events },
+})
 
 /**
  * Records the attempt: refused, or done with the node it leads to.

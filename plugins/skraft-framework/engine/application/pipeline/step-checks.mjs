@@ -11,6 +11,7 @@ import { checkDesignRecords } from './design-records.mjs'
 import { checkGherkinRecords } from './gherkin-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
+import { checkEvidence } from './evidence-checks.mjs'
 import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './scenario-checks.mjs'
 
 /**
@@ -18,11 +19,12 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd' | 'evidence'} FailureCode
  * @typedef {{ repository: string, sha: string, subject: string, kind: string, verdict: string }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
  *   environment: null, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
+ *   evidence?: Array<{ run: number, gate: string, sha256: string }>,
  * } | { commits: CheckedCommit[], environment: string }} StepCheck
  *   environment: why the machine could not check the step (Git failing); the step then stays
  *   open. uncommitted: the files in its scope the agent changed
@@ -53,7 +55,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'gherkin-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'gherkin-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd', 'evidence'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -112,7 +114,8 @@ const contentHash = async ({ workspace, hasher }, path) => {
  * @param {{
  *   role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
  *   visitHeads: Head[], engineBefore?: Array<{ path: string, hash: string | null }>, redByGateFailure: boolean, scenario: ScenarioPass | null,
- * }} step visitHeads: the heads when the pass started; engineBefore: the engine files as the attempt found them; redByGateFailure: the gates sent the work back, their failure standing for a red test;
+ *   evidence?: { folder: string, events: any[] } | null,
+ * }} step evidence: where the attempt's runs are traced, for the role that delivers code; visitHeads: the heads when the pass started; engineBefore: the engine files as the attempt found them; redByGateFailure: the gates sent the work back, their failure standing for a red test;
  *   scenario: the scenario the pass works on, null for none
  * @returns {Promise<StepCheck>}
  */
@@ -123,8 +126,22 @@ export const checkStep = async (context, step) => {
   if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
-  const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
-  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario }
+  const evidence = await evidenceOf(context, step)
+  if (typeof evidence === 'string') return { ...environmentOnly(evidence), commits: commits.checked }
+  const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found, ...evidence.failures]
+  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario, evidence: evidence.checked }
+}
+
+/**
+ * The runs the REPL traced for an attempt that delivers code, checked against its final commit;
+ * nothing for any other role. A string when the machine could not read Git.
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step
+ * @returns {Promise<{ failures: Failure[], checked: Array<{ run: number, gate: string, sha256: string }> } | string>}
+ */
+const evidenceOf = async ({ deps, slug, config, base }, { role, evidence }) => {
+  if (role.tdd !== 'cycle' || evidence === null || evidence === undefined) return { failures: [], checked: [] }
+  const checked = await checkEvidence(deps, { slug, folder: evidence.folder, events: evidence.events, config, base })
+  return checked.ok ? { failures: checked.failures, checked: checked.checked } : checked.reason
 }
 
 /**

@@ -2,6 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
+const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The engine refuses your submission for a gate with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. A run left open is refused: await it or kill it."
+
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
 const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
@@ -59,7 +61,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     'step.started', 'commits.checked', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'question.asked', 'question.answered', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
-    'step.started', 'commits.checked', 'step.recorded',
+    'step.started', 'commits.checked', 'evidence.checked', 'step.recorded',
     'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
@@ -183,6 +185,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1 <the rules of the story, as your implementation plan names them>" -m "Refs: #42"',
     '- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:',
     '- api: build: dotnet build; test: dotnet test',
+    EVIDENCE,
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
     `- .copilot-tracking/skraft-plans/${SLUG}`,
@@ -443,14 +446,14 @@ test('the engineer works on every component, each with its test command when it 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
-  assert.ok(deliver.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .`), deliver)
+  assert.ok(deliver.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .\n${EVIDENCE}`), deliver)
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
   assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
-  assert.ok(engineer.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test`), engineer)
+  assert.ok(engineer.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n${EVIDENCE}`), engineer)
 })
 
 test('the test and gate commands the engineer is given have the run\'s base in place of {baseSha}', async () => {
@@ -459,5 +462,5 @@ test('the test and gate commands the engineer is given have the run\'s base in p
   await host.start()
 
   assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test --filter Since=root-0\n'))
-  assert.ok(host.agentRunner.dispatches[3].prompt.endsWith('\n- api: test: dotnet test --filter Since=root-0'), host.agentRunner.dispatches[3].prompt)
+  assert.ok(host.agentRunner.dispatches[3].prompt.endsWith(`\n- api: test: dotnet test --filter Since=root-0\n${EVIDENCE}`), host.agentRunner.dispatches[3].prompt)
 })

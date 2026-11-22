@@ -9,6 +9,7 @@ import { join } from 'node:path'
 import { actsAs, scriptedModHost } from '../../claude-mod/support/scripted-mod-host.mjs'
 import { CHECK, SLUG, briefOf, fillOutputs, scriptedLlm, writeResult } from '../../support/pipeline-repository.mjs'
 import { git, journal } from '../../support/workspace.mjs'
+import { traceDelivery } from '../../support/delivery-trace.mjs'
 
 /** What the person answers, by dialog header; a header not here is closed. */
 const ANSWERS = Object.freeze({ ADR: 'RATIFIED', Scenarios: 'APPROVED' })
@@ -122,7 +123,8 @@ export const inWorkingCopy = (cwd) => `path.relative(fs.realpathSync.native(proc
  * changes nothing and says so.
  * @type {import('../../support/pipeline-repository.mjs').Act}
  */
-export const findsNothingToChange = (brief) => {
+export const findsNothingToChange = (brief, { cwd, slug }) => {
   fillOutputs(brief, 'The tests pass here; nothing to change.\n')
+  traceDelivery(cwd, slug)
   writeResult(brief, { status: 'done', summary: 'nothing to change' })
 }

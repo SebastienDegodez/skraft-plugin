@@ -221,7 +221,12 @@ const GATES_TITLE = '- Gate commands: before you write your result, run those of
  * The gate commands an agent whose code the gates step judges next runs first, by component.
  * @param {Brief['tdd']} tdd @param {BriefComponent[]} components
  */
-const gateLines = (tdd, components) => (GATED.includes(/** @type {string} */ (tdd)) ? section(GATES_TITLE, components.flatMap(gatesLine)) : [])
+const gateLines = (tdd, components) => (GATED.includes(/** @type {string} */ (tdd)) ? [...section(GATES_TITLE, components.flatMap(gatesLine)), ...evidenceLine(tdd)] : [])
+
+/** What the engine requires of the runs of an attempt that delivers: for `cycle` only. @param {Brief['tdd']} tdd */
+const evidenceLine = (tdd) => (tdd === 'cycle' ? [EVIDENCE] : [])
+
+const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The engine refuses your submission for a gate with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. A run left open is refused: await it or kill it."
 
 /** @param {BriefComponent} component */
 const gatesLine = ({ name, gates }) => (gates.length === 0 ? [] : [`${name}: ${gates.map(({ gate, line }) => `${gate}: ${line}`).join('; ')}`])

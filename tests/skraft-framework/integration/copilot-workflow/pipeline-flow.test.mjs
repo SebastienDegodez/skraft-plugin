@@ -9,6 +9,7 @@ import {
   issueProgressKept, scriptedLlm, visualsKept, writeResult, writesOnly,
 } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
+import { traceDelivery } from '../support/delivery-trace.mjs'
 import { ISSUE, NO_PULL_REQUEST, issueFile, issueForge } from '../support/issue-forge.mjs'
 
 /**
@@ -189,6 +190,7 @@ test('a second feat commit in the delivery is refused: the story takes one, what
     fillOutputs(brief, 'Paid by card.\n')
     commit(cwd, `feat(${SLUG}): S1 pay by card`, { 'src/pay.mjs': PAY }, brief)
     commit(cwd, `feat(${SLUG}): pay by card again`, { 'src/again.mjs': PAY }, brief)
+    traceDelivery(cwd, SLUG)
     writeResult(brief, { status: 'done', summary: 'delivered' })
   }
 

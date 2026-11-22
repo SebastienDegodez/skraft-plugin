@@ -4,6 +4,8 @@ import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine } from '../
 import { agent, API, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment, withoutReportSummary } from '../support/decisions.mjs'
 
+const EVIDENCE = "- Evidence: run every gate command through `skraft_repl` with `gate(name, command, { cwd: <the component's root> })`, on your last commit, a clean tree; the run of the commit line, labelled `green`, is the run of `test`. The engine refuses your submission for a gate with no passing traced run on that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. A run left open is refused: await it or kill it."
+
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const deliver = (it) => agent({ work: green() })(it)
 /** The engineer's work on pass n: the green of the scenario on the first, a TDD cycle on a pass the gates sent back. */
@@ -40,7 +42,7 @@ test('DELIVER does not close while a gate fails: the engineer gets a new pass wi
     `- ${TRACKING}/details/2026-10-11/test-plan-${SLUG}.md`,
     '- Fill each output in place; keep the path, create no other copy:',
   ].join('\n')), second.prompt)
-  assert.ok(second.prompt.endsWith(`\n- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n\nThe gates failed on pass 1:\n- ${failure}`), second.prompt)
+  assert.ok(second.prompt.endsWith(`\n- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n${EVIDENCE}\n\nThe gates failed on pass 1:\n- ${failure}`), second.prompt)
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, feedback, outputs, result }) => [visit, attempt, feedback, outputs, result]), [
     [1, 1, [], ['changes/2026-10-11/change-log.md'], 'results/deliver-1-1.json'],
     [2, 1, [failure], ['changes/2026-10-11/change-log.md'], 'results/deliver-2-1.json'],

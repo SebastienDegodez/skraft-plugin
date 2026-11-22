@@ -17,6 +17,9 @@
  * @typedef {StartRecord | RunRecord | AbsentRecord} TraceRecord
  */
 
+/** Where the runs of an attempt are traced, relative to the run's tracking folder. @param {string} step @param {number} visit @param {number} attempt */
+export const runsFolder = (step, visit, attempt) => `logs/runs/${step}-${visit}-${attempt}`
+
 /** The gates a component's commands may be recorded under. */
 export const GATES = Object.freeze(['build', 'format', 'lint', 'test', 'architecture', 'coverage', 'e2e'])
 

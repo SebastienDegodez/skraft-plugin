@@ -10,7 +10,7 @@ const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
 
 /** A delivery attempt whose software engineer works as `work` says, with the REPL scripted by the test. */
 const delivery = ({ work, kernels = new ScriptedKernelHost(), launcher = new ScriptedLauncher(), commits = true }) => {
-  const host = scripted({}, (it) => nominal(it).map((behaviour, index) => (index !== 3 ? behaviour : agent({ work: async (repos) => { await work(repl, host, repos); if (commits) green(SLUG, 'Checkout', '')(repos) } })(it))))
+  const host = scripted({}, (it) => [...nominal(it).map((behaviour, index) => (index !== 3 ? behaviour : agent({ trace: false, work: async (repos) => { await work(repl, host, repos); if (commits) green(SLUG, 'Checkout', '')(repos) } })(it))), () => ({ ok: false, unavailable: true, text: '' })])
   host.deps.repl = { root: '/work', kernels, launcher, orphans: new InMemoryOrphans(), locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: 100, created: 'server-start' }, budgetMs: 40 }
   const repl = createRepl(host.deps, { entry: null, reaped: false })
   return { host, kernels, launcher }

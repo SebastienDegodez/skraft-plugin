@@ -1,4 +1,5 @@
 import { deriveRun, openNode } from '../../domain/journal/run-state.mjs'
+import { runsFolder } from '../../domain/evidence/run-trace.mjs'
 import { roleOf } from '../../domain/pipeline/roles.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
@@ -25,7 +26,7 @@ export const bindAttempt = async (deps) => {
   const loaded = await loadWorkflow(deps, { agents: false })
   const node = loaded.ok ? loaded.workflow.nodes[found.step] : undefined
   if (node?.kind !== 'agent' || roleOf(node).tdd === null) return UNAVAILABLE
-  const folder = `logs/runs/${found.step}-${found.open.visit}-${found.open.attempt}`
+  const folder = runsFolder(found.step, found.open.visit, found.open.attempt)
   return { ok: true, slug: opened.slug, step: found.step, folder, events: opened.journal.events }
 }
 

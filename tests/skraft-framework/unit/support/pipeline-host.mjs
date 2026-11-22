@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { answerYaml, withContext } from './answer-yaml.mjs'
+import { writeDeliveryTrace } from './delivery-trace.mjs'
 import { strykerWritesItsReports } from './mutation-reports.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
 import { createStartMutation } from '../../../../plugins/skraft-framework/engine/application/mutation/start-mutation-usecase.mjs'
@@ -146,11 +147,11 @@ const passingMatrix = (slug) => Object.freeze([`details/2026-10-11/consistency-m
 export const PASSING_MATRIX = passingMatrix(SLUG)
 
 /**
- * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: Function, answer?: object, plan?: Array<[string, string?, string?]>, exemption?: string }} [behaviour]
+ * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: Function, answer?: object, trace?: false | Parameters<typeof writeDeliveryTrace>[2], plan?: Array<[string, string?, string?]>, exemption?: string }} [behaviour]
  *   plan: the scenarios the acceptance designer lists on the pass that writes them, each `[title, component, tags]`;
  *   one walking skeleton in the first component unless given; exemption: the walking skeleton exemption it declares under them
  */
-export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work, answer, plan, exemption } = {}) => (host) => async () => {
+export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work, answer, plan, exemption, trace } = {}) => (host) => async () => {
   const step = asked(host)
   const matrix = records && step.agent === 'solution-architect'
   const [matrixPath, matrixText] = passingMatrix(host.slug)
@@ -163,6 +164,7 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   }
   if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
   await (work ?? scenarioWork(host, step, exemption))(host)
+  if (step.agent === 'software-engineer' && trace !== false) await writeDeliveryTrace(host, step, trace)
   return answer
 }
 

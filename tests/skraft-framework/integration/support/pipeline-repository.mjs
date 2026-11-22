@@ -2,6 +2,7 @@
 // agents act as a model would: they read their brief, fill the outputs it lists, write the
 // result JSON it names, change files and make real Git commits. The gates then run the
 // repository's real test command. No doubles: every driver test stages the same repository.
+import { traceDelivery } from './delivery-trace.mjs'
 import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
@@ -577,6 +578,7 @@ export const deliverWith = (code) => (brief, { cwd, slug }) => {
     commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, test, brief)
     commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
   }
+  traceDelivery(cwd, slug)
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }
 
