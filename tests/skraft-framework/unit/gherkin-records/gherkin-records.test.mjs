@@ -37,6 +37,9 @@ const matrix = (cited) => ['| # | Scenario | Feature File |', ...cited.map((name
 
 const RED = 'test(checkout): acceptance of the card payment'
 
+/** The Scenarios table of a plan whose scenarios each cite one criterion of the story, S1 the walking skeleton. @param {string} criteria */
+const citing = (criteria) => [...criteria.matchAll(/^## AC-(\d+)/gm)].map(([, number], at) => [`Criterion ${number}`, undefined, `${at === 0 ? '@walking-skeleton ' : '@happy-path '}@AC-${number}`])
+
 /**
  * An acceptance designer that writes its test plan, its acceptance criteria and the Gherkin files
  * given, drops the working copy files named, and commits the lot beside its acceptance test, in
@@ -49,7 +52,7 @@ const designer = ({ features = {}, elsewhere = {}, cited = ['pay-by-card.feature
   fill: false,
   work: (host) => {
     const { git, workspace, tracking } = host
-    tracking.write(SLUG, PLAN, `${matrix(cited)}\n${notes}${scenarioTable(host)}`)
+    tracking.write(SLUG, PLAN, `${matrix(cited)}\n${notes}${scenarioTable(host, citing(criteria))}`)
     tracking.write(SLUG, CRITERIA, criteria)
     for (const [path, text] of Object.entries(tracked)) tracking.write(SLUG, path, text)
     for (const path of drop) workspace.files.delete(path)
@@ -103,7 +106,7 @@ const receipt = (host, step) => JSON.parse(host.tracking.files.get(`${SLUG}/logs
 const prechecking = (answers) => agent({
   fill: false,
   work: async (host) => {
-    host.tracking.write(SLUG, PLAN, `${matrix(['pay-by-card.feature'])}\n${scenarioTable(host)}`)
+    host.tracking.write(SLUG, PLAN, `${matrix(['pay-by-card.feature'])}\n${scenarioTable(host, citing(ONE_CRITERION))}`)
     host.tracking.write(SLUG, CRITERIA, ONE_CRITERION)
     host.workspace.files.delete('docs/features/.gitkeep')
     answers.push(await host.precheck())
