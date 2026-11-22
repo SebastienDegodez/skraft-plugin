@@ -71,6 +71,8 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   `skraft_repl`, which records each run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Only `infrastructure/process/` and
   `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`. The journal of the programs a killed MCP server left behind
   is `.copilot-tracking/skraft-repl/<pid>.json`, outside any story's tracking folder.
+- `.repl/` of a working copy belongs to the project: the engine reads it, never writes it;
+  `skraft init` ignores `.repl/node_modules/`.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
   fallback between them; an issue it cannot read refuses the run.
@@ -133,7 +135,12 @@ the probe or a test says otherwise.
   author-reviewed incidents and records `by: 'known-signature'`, never a human provenance.
 - **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole;
   every `run()` of `skraft_repl` too: a timeout always set (7200 s at most), an output cap, its
-  process group (its tree under Windows) ended as a whole.
+  process group (its tree under Windows) ended as a whole. The REPL's bounds are fixed by code:
+  a call answers at 90 s, a cell lives 7260 s, a kernel starts within 10 s (each `.repl/lib`
+  module loads within 10 s), 8 live runs per attempt, a run's log 64 MiB written as it runs, a
+  result 24 KiB, a cell's printed output 1 MiB, the output of the last 50 runs kept, a 2 GiB heap,
+  a kill's grace 30 s at most and never past the timeout; a lease is taken over only when its
+  holder is gone or has not renewed it for 5 minutes.
 - **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
 - **A check counts once seen failing**, and a report says what it examined.
 

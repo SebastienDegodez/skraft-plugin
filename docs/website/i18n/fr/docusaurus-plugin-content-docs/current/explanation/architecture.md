@@ -190,6 +190,14 @@ de la revue DELIVER. Une décision que seule la machine peut trancher (un progra
 conteneurs qui ne répond pas) arrive à un humain par la même question `environment` que toute
 autre étape. Les règles : [Commits](../reference/gates.md#commits).
 
+Les commandes qu'un agent lance pendant sa tentative passent par `skraft_repl` : le serveur, pas la
+cellule, démarre chaque programme et en écrit la trace signée. Un noyau ne doit jamais tenir le
+serveur : chaque borne a une valeur fixée par le code (un run de 7200 s au plus, une cellule de
+7260 s, une réponse d'appel à 90 s, huit runs vivants, un journal de 64 Mio écrit à mesure, 1 Mio
+de ce qu'une cellule affiche, un tas de 2 Gio, un démarrage en dix secondes), et le noyau s'arrête
+avec tout ce que ses cellules ont lancé. `.repl/` appartient au projet : le moteur le lit, ne
+l'écrit jamais. Le détail : [Le REPL d'une tentative](../reference/repl.md).
+
 ## Alternatives écartées
 
 **Un moteur autonome, serveur ou binaire.** Un exécuteur hors de l'hôte piloterait les agents de

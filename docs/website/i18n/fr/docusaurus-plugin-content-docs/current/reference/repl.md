@@ -17,7 +17,8 @@ Non mesuré : la persistance de « toujours autoriser », une session interactiv
 VS Code, Copilot CLI (quelles sessions d'agent reçoivent l'outil, en headless, est mesuré ; s'il
 demande avant un appel ne l'est pas), le délai d'appel MCP de l'hôte, et si un hôte envoie
 `notifications/cancelled`. Windows : le choix du shell et l'arrêt de l'arbre sont écrits, pas
-lancés. Voir `docs/v2/host-verification.md`.
+lancés. Non mesurés non plus : `reset: true` sur un hôte qui n'envoie jamais d'annulation, et
+`.repl/lib` (chargement, `require`) sous Windows. Voir `docs/v2/host-verification.md`.
 :::
 
 ## Qui le reçoit, et quand <!-- #who -->
@@ -70,6 +71,29 @@ Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans l
 | `lost` | un noyau démarre pour une tentative dont la trace contient un `start` sans `run` (un serveur tué pendant le run) | id du run, heure de la clôture ; le premier résultat suivant dit `rN lost with the server that started it` |
 
 Un arbre est propre quand Git ne liste aucun fichier non commité hors du dossier de suivi. Chaque ligne se termine par un HMAC de la clé du journal du run, gardée hors de la copie de travail : la trace montre une altération, elle ne l'empêche pas, car une commande lancée par un agent peut lire la clé aussi.
+
+## Bornes et cycle de vie <!-- #bounds -->
+
+Chaque borne est fixée par le moteur ; aucune n'est configurable.
+
+| Borne | Valeur | Au-delà |
+| --- | --- | --- |
+| un run | 1 à 7200 s, son `timeout` | délai dépassé : son groupe de processus (son arbre sous Windows) s'arrête, quelle que soit la grâce d'un `kill` |
+| un `kill` | `SIGTERM`, `SIGINT` ou `SIGKILL`, une grâce de 0 à 30 secondes entières | refusé, le programme continue |
+| runs vivants d'une tentative | 8 | le `run()` suivant ne démarre pas |
+| un appel | répond au bout de 90 s | la cellule continue ; un appel vide l'attend |
+| une cellule | 7260 s | interrompue, son noyau redémarré trois secondes plus tard : `repl-restarted` |
+| démarrage du noyau | 10 s pour se dire vivant | `repl-failed` |
+| un module de `.repl/lib` | 10 s pour se charger | laissé de côté, le noyau continue |
+| le journal d'un run | ses 64 premiers Mio, écrits à mesure | le reste n'est pas écrit ; `cut` dans la trace |
+| un résultat | 24 Kio | le reste dans `cell-<n>.log` |
+| ce qu'une cellule affiche | 1 Mio : ses 512 premiers et 512 derniers Kio | un marqueur entre les deux |
+| sorties gardées par un noyau | ses 50 derniers runs | une poignée plus ancienne nomme son journal |
+| tas du noyau | 2 Gio | le noyau s'arrête : `repl-crashed` |
+| un bail | renouvelé toutes les 30 s | non renouvelé depuis cinq minutes : un autre serveur peut reprendre la tentative |
+| l'arrêt d'un noyau | attend ses runs 10 s | ils ont reçu `SIGKILL` ; le groupe ou l'arbre du noyau s'arrête avec lui |
+
+Un noyau vit du premier appel d'une tentative jusqu'à la fermeture de la tentative, l'appel d'une autre tentative, 15 minutes sans cellule ni run vivants, la fermeture de la session, un appel avec `reset: true`, ou la mort du noyau.
 
 ## Limites et refus <!-- #limits -->
 

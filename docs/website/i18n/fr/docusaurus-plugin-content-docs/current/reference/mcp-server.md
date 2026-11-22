@@ -52,7 +52,7 @@ JSON.
 | `skraft_journal` | `last?` | `journal show [--last <n>] --json` | tout hôte |
 | `skraft_gate` | `all?` | `gate [--all] --json` | tout hôte |
 | `skraft_precheck` | — | `precheck --json` | tout hôte |
-| `skraft_repl` | `code` | le REPL de la tentative ouverte, [`skraft_repl`](./repl.md) ; pas de ligne de commande : le cas d'usage répond, hors de la file | tout hôte ; les agents qui le nomment |
+| `skraft_repl` | `code`, `reset` | le REPL de la tentative ouverte, [`skraft_repl`](./repl.md) ; `reset: true` arrête d'abord son noyau et ses runs, même en pleine cellule ; pas de ligne de commande : le cas d'usage répond, hors de la file | tout hôte ; les agents qui le nomment |
 | `skraft_review` | `pr`, `record?` | `review --pr <n> [--record] --json` | VS Code |
 | `skraft_workflow_check` | — | `workflow check --json` | tout hôte |
 | `skraft_workflow_diff` | — | `workflow diff --json` | tout hôte |

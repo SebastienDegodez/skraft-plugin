@@ -16,7 +16,9 @@ until the session allows the tool by its name, and then reaches the engine, `Bas
 Not measured: "always allow" persisting, an interactive session, autopilot, VS Code, Copilot CLI
 (which agent sessions offer the tool, headless, is measured; whether it asks before a call is
 not), the host's MCP call timeout, and whether a host sends `notifications/cancelled`. Windows:
-the shell choice and the tree kill are written, not run. See `docs/v2/host-verification.md`.
+the shell choice and the tree kill are written, not run. Not measured either: `reset: true` on a
+host that never sends a cancellation, and `.repl/lib` (loading, `require`) under Windows. See
+`docs/v2/host-verification.md`.
 :::
 
 ## Who gets it, and when <!-- #who -->
@@ -69,6 +71,29 @@ The server, not the cell, starts every program and writes `runs.jsonl` in the at
 | `lost` | a kernel starts for an attempt whose trace holds a `start` with no `run` (a server killed while the run went on) | run id, when it was closed; the first result after it says `rN lost with the server that started it` |
 
 A tree is clean when Git lists no uncommitted file but the tracking folder's. Each line ends with an HMAC of the run's journal key, kept outside the working copy: the trace is tamper-evident, not tamper-proof, because a command an agent runs can read the key too.
+
+## Bounds and lifecycle <!-- #bounds -->
+
+Every bound is fixed by the engine; none is configurable.
+
+| Bound | Value | Past it |
+| --- | --- | --- |
+| a run | 1 to 7200 s, its `timeout` | timed out: its process group (its tree under Windows) ends, whatever grace a `kill` gave |
+| a `kill` | `SIGTERM`, `SIGINT` or `SIGKILL`, a grace of 0 to 30 whole seconds | refused, the program goes on |
+| live runs of an attempt | 8 | the next `run()` does not start |
+| a call | answers after 90 s | the cell goes on; an empty call waits for it |
+| a cell | 7260 s | interrupted, its kernel restarted three seconds later: `repl-restarted` |
+| kernel start | 10 s to say it is alive | `repl-failed` |
+| one module of `.repl/lib` | 10 s to load | left out, the kernel goes on |
+| a run's log | its first 64 MiB, written as it runs | the rest is not written; `cut` in the trace |
+| a result | 24 KiB | the rest in `cell-<n>.log` |
+| what a cell prints | 1 MiB: its first and last 512 KiB | a marker between them |
+| outputs a kernel keeps | its last 50 runs | an older handle names its log |
+| kernel heap | 2 GiB | the kernel ends: `repl-crashed` |
+| a lease | renewed every 30 s | not renewed for five minutes: another server may take the attempt over |
+| ending a kernel | waits 10 s for its runs | they were sent `SIGKILL`; the kernel's own group or tree ends with it |
+
+A kernel lives from the first call of an attempt until the attempt closes, another attempt calls, 15 minutes pass with no cell nor run alive, the session closes, `reset: true` is called, or the kernel dies.
 
 ## Limits and refusals <!-- #limits -->
 
