@@ -69,7 +69,7 @@ The tracking folder is `.copilot-tracking/skraft-plans/<slug>/`, the one that ho
 | Kind | Example | Owner | Where |
 |---|---|---|---|
 | Decided business case (in the acceptance criteria) | motorcycle + age 21 → refused | you | a scenario and its acceptance test, value copied verbatim |
-| Undecided business case (absent from the acceptance criteria) | a 120-year-old driver | the business | no active scenario and no test; name it in your answer as an open question for the business; never invent a value or a verdict. Blocked only when a decided criterion depends on it |
+| Undecided business case (absent from the acceptance criteria) | a 120-year-old driver | the business | no scenario and no test; as soon as the story needs the case, stop, blocked, naming it as the open question for the business; never invent a value or a verdict |
 | Technical input case, no business meaning | wrong type, `NaN`, infinity, `null`/`undefined`, a number written as text | software-engineer | a test-plan unit row with `Extraction Reason` `branch_unreachable_via_AC`, citing the DESIGN decision; never a scenario |
 | Implementation-derived branch | exhaustive-enum fallback, defensive guard, combinatorial sweep of a decided rule (a `PolicyService`) | software-engineer | a Domain unit row gated by `test-design-mandates` Mandate 4 |
 
