@@ -26,8 +26,8 @@ Find every gate of a component the DELIVER changes touch that the trace of the s
 | Q0 | Trace verified | Each trace of `trace.json` is `verified`; an `invalid` one is one finding, never a missing run per gate. | blocker |
 | Q1 | Run traced | Each of `build`, `format`, `lint`, `test`, `architecture`, `coverage` of a touched component, and `e2e` of a touched component whose `e2e` is `true` in the components file, has a `run` line, or an `absent` line naming the component with a reason; `test` is never absent. A `start` with no `run` after it, or a `lost` line, is no run. | blocker |
 | Q2 | Run passed | That last run `started`, ended with `exitCode` 0, neither `killed` nor `timedOut`. A run killed by a reset of the REPL is no pass. | blocker |
-| Q3 | On the final commit | That last run's `headAfter` is the final commit: a fix committed after it leaves the gate unproven. | blocker |
-| Q4 | Clean tree | That last run started on a `clean` tree; the commit line, the `test` run labelled `green` that commits, is the one run that may start on uncommitted files. | high |
+| Q3 | On the final commit | That last run's `headAfter` is the final commit, or it ran before the commit line that made it: a lower id than the `test` run labelled `green` whose `headAfter` is the final commit, and a `headAfter` equal to that green run's `headBefore`. A fix committed after it leaves the gate unproven. | blocker |
+| Q4 | Clean tree | That last run started on a `clean` tree, unless it ran before the commit line that made the final commit (Q3) or is that commit line: those start on the uncommitted files the commit records. | high |
 
 ## Output
 

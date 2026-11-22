@@ -20,14 +20,20 @@ et comment lire les constats de la lentille.
 
 ## 1. Lancer chaque gate par le REPL
 
-Pour chaque composant que l'histoire a modifié, l'ingénieur lance les six gates, dans des cellules de
-`skraft_repl` ([Le REPL](../reference/repl.md)) :
+Pour chaque composant que l'histoire a modifié, l'ingénieur lance `build`, `format`, `lint` et
+`architecture` dans une cellule de `skraft_repl` ([Le REPL](../reference/repl.md)), avant la ligne de
+commit, qui termine la dernière de ces cellules ; chaque gate passe avant elle, et aucun commit
+`style` n'en rattrape une. `coverage`, puis `e2e`, tournent après, sur ce commit et un arbre propre :
 
 ```js
 await gate('build', 'dotnet build --nologo', { cwd: 'api' })
 await gate('format', 'dotnet format --verify-no-changes', { cwd: 'api' })
 await gate('lint', 'dotnet build -warnaserror', { cwd: 'api' })
 await gate('architecture', 'dotnet test api/Architecture.Tests', { cwd: 'api' })
+await run(commitLine, { gate: 'test', label: 'green' })
+```
+
+```js
 await gate('coverage', 'node scripts/coverage.mjs', { cwd: 'api' })
 ```
 
@@ -59,15 +65,15 @@ Les rapports montrent les exécutions sous « Preuves de qualité » ([Gates](..
 ## 4. Lire les constats de `quality-gates`
 
 La lentille signale, par composant touché et par gate, une exécution qu'elle ne peut pas accepter.
-L'ingénieur relance la gate par le REPL, sur un arbre propre, puis commite ; le log de chaque
+L'ingénieur relance les gates par le REPL, dans la cellule que termine la ligne de commit ; le log de chaque
 exécution est sous `logs/runs/<step>-<visit>-<attempt>/`.
 
 | Constat | Ce que fait l'ingénieur |
 | --- | --- |
 | une exécution manque : pas de ligne de run, un démarrage sans run, un run perdu | lancer la gate avec `gate(name, command, { cwd })` |
 | une exécution n'a pas réussi : tuée, délai dépassé, sortie non nulle | corriger le code ou le test d'après le log de l'exécution, relancer |
-| la dernière exécution n'est pas sur le dernier commit | relancer après le dernier commit |
-| elle a démarré sur un arbre modifié (hors l'exécution de la ligne de commit) | commiter ou annuler le changement, relancer |
+| la dernière exécution n'est pas sur le dernier commit, ni lancée avant la ligne de commit qui l'a fait | relancer la cellule |
+| elle a démarré sur un arbre modifié (hors les exécutions avant la ligne de commit, et la sienne) | commiter ou annuler le changement, relancer |
 
 Une gate déclarée `absent` avec une raison est acceptée, jamais `test`. Sur une pull request relue hors
 d'un run, la lentille n'a pas de trace et passe.

@@ -20,14 +20,20 @@ the lens findings.
 
 ## 1. Run each gate through the REPL
 
-For each component the story changed, the engineer runs the six gates, in cells of `skraft_repl`
-([The REPL](../reference/repl.md)):
+For each component the story changed, the engineer runs `build`, `format`, `lint` and
+`architecture` in one cell of `skraft_repl` ([The REPL](../reference/repl.md)), before the commit
+line, which ends the last of these cells; every gate passes before it, and no `style` commit catches
+one up. `coverage`, then `e2e`, run after, on that commit and a clean tree:
 
 ```js
 await gate('build', 'dotnet build --nologo', { cwd: 'api' })
 await gate('format', 'dotnet format --verify-no-changes', { cwd: 'api' })
 await gate('lint', 'dotnet build -warnaserror', { cwd: 'api' })
 await gate('architecture', 'dotnet test api/Architecture.Tests', { cwd: 'api' })
+await run(commitLine, { gate: 'test', label: 'green' })
+```
+
+```js
 await gate('coverage', 'node scripts/coverage.mjs', { cwd: 'api' })
 ```
 
@@ -58,15 +64,15 @@ The reports show the runs under "Quality evidence" ([Gates](../reference/gates.m
 ## 4. Read the `quality-gates` findings
 
 The lens reports, per touched component and gate, a run it cannot accept. The engineer
-runs the gate again through the REPL, on a clean tree, then commits; the log of each run is under
+runs the gates again through the REPL, in the cell that ends with the commit line; the log of each run is under
 `logs/runs/<step>-<visit>-<attempt>/`.
 
 | Finding | What the engineer does |
 | --- | --- |
 | a run is missing: no run line, a start with no run, a lost run | run the gate with `gate(name, command, { cwd })` |
 | a run did not pass: killed, timed out, exit not 0 | fix the code or the test from the run's log, run again |
-| the last run is not on the final commit | run again after the last commit |
-| it started on a dirty tree (the commit line's run excepted) | commit or discard the change, run again |
+| the last run is not on the final commit, nor run before the commit line that made it | run the cell again |
+| it started on a dirty tree (the runs before the commit line, and its own, excepted) | commit or discard the change, run again |
 
 A gate declared `absent` with a reason is accepted, never `test`. On a pull request reviewed outside
 a run, the lens has no trace and passes.

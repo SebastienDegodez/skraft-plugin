@@ -227,8 +227,8 @@ a pull request through `skraft review --pr`.
 | **Q0** | `quality-gates` | Each trace of `trace.json` is `verified`; an `invalid` one (`unsigned-line`, `no-key`, `wrong-signature`) is one finding, never a missing run per gate. | blocker |
 | **Q1** | `quality-gates` | Each gate of a touched component has a run line in the trace, or an `absent` line with a reason (never for `test`); a start with no run and a lost run are no run. | blocker |
 | **Q2** | `quality-gates` | The last run of the gate passed: not killed, not timed out, exit 0. | blocker |
-| **Q3** | `quality-gates` | That run ended on the final commit of the change log. | blocker |
-| **Q4** | `quality-gates` | That run started on a clean tree; the commit line's `green` run is the one exception. | high |
+| **Q3** | `quality-gates` | That run ended on the final commit of the change log, or ran before the commit line that made it: before its `green` run, on the commit that run started from. | blocker |
+| **Q4** | `quality-gates` | That run started on a clean tree; the runs before the commit line that made the final commit, and its `green` run, are the exceptions. | high |
 
 `quality-gates` runs only in a run's DELIVER review (`when="delivery"`), never on a pull request: a pull request has no trace.
 `mock-fidelity` runs only on changes that touch mocks (`when="mock"`), `contract-fidelity` only on

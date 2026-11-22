@@ -110,6 +110,37 @@ test('the line of a run holds Git\'s HEAD before and after it, so that a commit 
   assert.equal(ended[1].headAfter, during)
 })
 
+test('the gates a cell runs before its commit line are traced on the commit that line starts from, in its cell (numbered across a reset), before it: what the lens takes for that commit\'s gates', async () => {
+  const kernels = new ScriptedKernelHost()
+  const { host, launcher } = delivery({
+    kernels,
+    commits: false,
+    work: async (repl, one, { git }) => {
+      kernels.script.set('warm-up', async () => {})
+      kernels.script.set('gates then commit', async ({ run }) => {
+        git.change('src/Checkout.cs')
+        for (const [at, gate] of ['build', 'format', 'lint', 'architecture'].entries()) { const pending = run(`npm run ${gate}`, { gate }); await sleep(2); launcher.started[at].program.finish(); await pending }
+        const line = run('npm test && git commit', { gate: 'test', label: 'green' })
+        await sleep(2)
+        green(SLUG, 'Checkout', '')({ git })
+        launcher.started[4].program.finish()
+        await line
+      })
+      await repl.call({ code: 'warm-up' })
+      await repl.reset()
+      await repl.call({ code: 'gates then commit' })
+    },
+  })
+
+  await host.start()
+
+  const ended = traced(host).filter(({ type }) => type === 'run')
+  const line = ended.at(-1)
+  assert.deepEqual(ended.map(({ run, cell, gate, label }) => [run, cell, gate, label]), [[1, 2, 'build', null], [2, 2, 'format', null], [3, 2, 'lint', null], [4, 2, 'architecture', null], [5, 2, 'test', 'green']])
+  assert.deepEqual(ended.slice(0, 4).map(({ clean, headBefore, headAfter }) => [clean, headBefore, headAfter]), Array.from({ length: 4 }, () => [false, line.headBefore, line.headBefore]))
+  assert.notEqual(line.headAfter, line.headBefore)
+})
+
 test('the awaited handle gives the HEAD the run ended on, the very value its line holds', async () => {
   const kernels = new ScriptedKernelHost()
   let awaited = null

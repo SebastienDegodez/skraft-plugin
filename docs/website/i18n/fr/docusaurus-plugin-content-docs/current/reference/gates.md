@@ -229,8 +229,8 @@ lentilles jugent une pull request par `skraft review --pr`.
 | **Q0** | `quality-gates` | Chaque trace de `trace.json` est `verified` ; une trace `invalid` (`unsigned-line`, `no-key`, `wrong-signature`) est un seul constat, jamais un run manquant par gate. | blocker |
 | **Q1** | `quality-gates` | Chaque gate d'un composant touché a une ligne de run dans la trace, ou une ligne `absent` avec une raison (jamais pour `test`) ; un démarrage sans run et un run perdu ne sont pas un run. | blocker |
 | **Q2** | `quality-gates` | Le dernier run de la gate a réussi : ni tué, ni expiré, sortie 0. | blocker |
-| **Q3** | `quality-gates` | Ce run s'est terminé sur le dernier commit du journal des changements. | blocker |
-| **Q4** | `quality-gates` | Ce run a démarré sur un arbre propre ; le run `green` de la ligne de commit est la seule exception. | high |
+| **Q3** | `quality-gates` | Ce run s'est terminé sur le dernier commit du journal des changements, ou a tourné avant la ligne de commit qui l'a fait : avant son run `green`, sur le commit d'où ce run est parti. | blocker |
+| **Q4** | `quality-gates` | Ce run a démarré sur un arbre propre ; les runs d'avant la ligne de commit qui a fait le dernier commit, et son run `green`, sont les exceptions. | high |
 
 `quality-gates` ne tourne que dans la revue DELIVER d'un run (`when="delivery"`), jamais sur une pull request : une pull request n'a pas de trace.
 `mock-fidelity` ne tourne que sur des changements qui touchent des mocks (`when="mock"`),
