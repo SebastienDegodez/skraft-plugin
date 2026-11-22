@@ -49,7 +49,8 @@ answer, so a failing doctor still answers its JSON.
 | `skraft_report` | — | `report --json` | every host |
 | `skraft_journal` | `last?` | `journal show [--last <n>] --json` | every host |
 | `skraft_precheck` | — | `precheck --json` | every host |
-| `skraft_repl` | `code`, `reset` | the REPL of the open attempt, [`skraft_repl`](./repl.md); `reset: true` ends its kernel and runs first, even mid-cell; no command line: the use case answers, outside the queue | every host; the agents that name it |
+| `skraft_repl` | `code` | the REPL of the open attempt, [`skraft_repl`](./repl.md); no command line: the use case answers, outside the queue | every host; the agents that name it |
+| `skraft_repl_reset` | — | ends the kernel of the open attempt and its runs, even mid-cell ([`skraft_repl_reset`](./repl.md#cell)); no command line: the use case answers, outside the queue, never refused as busy; marked destructive | every host; the agents that name it |
 | `skraft_review` | `pr`, `record?` | `review --pr <n> [--record] --json` | VS Code |
 | `skraft_workflow_check` | — | `workflow check --json` | every host |
 | `skraft_workflow_diff` | — | `workflow diff --json` | every host |
@@ -57,8 +58,8 @@ answer, so a failing doctor still answers its JSON.
 | `skraft_migrate` | — | `migrate --dry-run --json` | every host |
 
 `skraft_status`, `skraft_report`, `skraft_journal`, `skraft_workflow_check`,
-`skraft_workflow_diff` and `skraft_migrate` are marked read-only. Calls run one after the other.
-When the host sends a `progressToken`, each line of the command's log reaches it as a
+`skraft_workflow_diff` and `skraft_migrate` are marked read-only. Calls run one after the other,
+except `skraft_repl` and `skraft_repl_reset`, which wait in no queue. When the host sends a `progressToken`, each line of the command's log reaches it as a
 `notifications/progress` while the call runs.
 
 A step of `skraft_start`, `skraft_next`, `skraft_record` or `skraft_review` names in `then` the

@@ -42,7 +42,7 @@ the engine journals the signed trace of those runs and hands it to the DELIVER r
 
 | Rule | Detail |
 | --- | --- |
-| Who runs | the software engineer, through `skraft_repl`, in each component the story changed |
+| Who runs | the software engineer, through `skraft_repl`, in each component the story changed; `skraft_repl_reset` ends a kernel that will not stop, its runs traced as killed |
 | Absent gate | a gate the project's documents name no command for is declared with `absent(gate, component, reason)`; `test` is never absent |
 | Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signed; one folder per attempt |
 | Judgement | the `quality-gates` lens of the DELIVER review (below); the engine refuses no attempt for a run |

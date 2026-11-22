@@ -1,12 +1,12 @@
 ---
-title: "Le REPL d'une tentative : skraft_repl"
-description: "Le REPL JavaScript où un agent lance ses commandes de projet : l'API d'une cellule, la trace signée de chaque run, les limites, les refus, le non mesuré."
+title: "Le REPL d'une tentative : skraft_repl et skraft_repl_reset"
+description: "Le REPL JavaScript où un agent lance ses commandes et l'outil qui en arrête le noyau : API d'une cellule, trace signée, limites, refus, non mesuré."
 persona: software-engineer
 ---
 
-# Le REPL d'une tentative : `skraft_repl`
+# Le REPL d'une tentative : `skraft_repl` et `skraft_repl_reset`
 
-`skraft_repl` est un [outil MCP](./mcp-server.md) qui donne à l'agent d'une tentative ouverte un REPL JavaScript (node) persistant. L'agent y lance les commandes de son projet (build, format, lint, test, architecture, couverture, bout en bout), et le moteur note ce que chaque programme a fait. Le moteur lit ces runs à la soumission d'une tentative DELIVER : voir [Gates](./gates.md).
+`skraft_repl` est un [outil MCP](./mcp-server.md) qui donne à l'agent d'une tentative ouverte un REPL JavaScript (node) persistant. L'agent y lance les commandes de son projet (build, format, lint, test, architecture, couverture, bout en bout), et le moteur note ce que chaque programme a fait. Le moteur lit ces runs à la soumission d'une tentative DELIVER : voir [Gates](./gates.md). Un second outil, `skraft_repl_reset`, arrête le noyau de la tentative et ses runs, même pendant une cellule ; le `skraft_repl` suivant démarre un noyau neuf.
 
 Pourquoi le moteur enregistre les runs au lieu de lire ce qu'un agent en dit : [Architecture](../explanation/architecture.md).
 
@@ -17,7 +17,8 @@ Non mesuré : la persistance de « toujours autoriser », une session interactiv
 VS Code, Copilot CLI (quelles sessions d'agent reçoivent l'outil, en headless, est mesuré ; s'il
 demande avant un appel ne l'est pas), le délai d'appel MCP de l'hôte, et si un hôte envoie
 `notifications/cancelled`. Windows : le choix du shell et l'arrêt de l'arbre sont écrits, pas
-lancés. Non mesurés non plus : `reset: true` sur un hôte qui n'envoie jamais d'annulation, et
+lancés. Non mesurés non plus : `skraft_repl_reset` sur un hôte qui n'envoie jamais d'annulation, sa
+permission et sa portée sur un hôte réel (les sondes le couvrent et restent à lancer), et
 `.repl/lib` (chargement, `require`) sous Windows. Voir `docs/v2/host-verification.md`.
 :::
 
@@ -25,15 +26,15 @@ lancés. Non mesurés non plus : `reset: true` sur un hôte qui n'envoie jamais 
 
 | Règle | Détail |
 | --- | --- |
-| Agents | le concepteur d'acceptation et l'ingénieur logiciel, dont les descripteurs nomment l'outil ; jamais une lentille de revue |
-| Tentative | l'appel est lié à la tentative ouverte du run actif : sans tentative ouverte, ou pour un agent qui ne commite aucun code, il est refusé par `repl-unavailable` |
+| Agents | le concepteur d'acceptation et l'ingénieur logiciel, dont les descripteurs nomment les deux outils ; jamais une lentille de revue. Un agent qui nomme `skraft_repl` nomme aussi `skraft_repl_reset` : le contrôle des descripteurs refuse l'un sans l'autre |
+| Tentative | l'appel est lié à la tentative ouverte du run actif : sans tentative ouverte, ou pour un agent qui ne commite aucun code, il est refusé par `repl-unavailable`, et `skraft_repl_reset` aussi |
 | Noyau | un processus enfant par tentative, démarré au premier appel et arrêté quand la tentative se ferme, quand une autre tentative appelle, après 15 minutes sans usage, sans cellule ni run vivants, quand la session se ferme ou quand le noyau meurt. Il doit se dire vivant en dix secondes et être prêt en trente, sa bibliothèque chargée, sinon il est arrêté et l'appel répond `repl-failed` ; il tourne avec ses propres options Node, jamais celles du serveur, et un tas de 2 Gio au plus : au-delà le noyau s'arrête et l'appel répond `repl-crashed`. Un noyau s'arrête avec tous les processus que ses cellules ont lancés elles-mêmes : son groupe de processus sous POSIX, son arbre sous Windows |
-| Concurrence | l'appel n'attend pas dans la file du serveur : `skraft_status` et `skraft_precheck` répondent pendant qu'une cellule tourne ; deux appels envoyés ensemble partagent un seul noyau, le second attendant son démarrage ; un second appel pendant une cellule est refusé par `repl-busy` ; une annulation nomme sa requête et n'atteint que cet appel |
-| Bail | `logs/runs/<étape>-<visite>-<tentative>/.lock` nomme le serveur qui tient le REPL de la tentative ; le serveur le renouvelle toutes les 30 secondes. Un autre serveur est refusé par `repl-held-elsewhere`, sauf si le détenteur a disparu (le système dit qu'aucun processus ne tourne sous son pid, ou qu'un processus démarré à une autre heure y tourne) ou n'a pas renouvelé le bail depuis cinq minutes ; un détenteur dont l'heure de démarrage ne peut pas être lue n'est jamais tenu pour disparu |
+| Concurrence | l'appel n'attend pas dans la file du serveur : `skraft_status` et `skraft_precheck` répondent pendant qu'une cellule tourne ; deux appels envoyés ensemble partagent un seul noyau, le second attendant son démarrage ; un second appel pendant une cellule est refusé par `repl-busy` ; une annulation nomme sa requête et n'atteint que cet appel. `skraft_repl_reset` n'attend pas non plus dans la file du serveur, et n'est jamais refusé pour occupation : il n'attend qu'un noyau en train de démarrer ou de s'arrêter |
+| Bail | `logs/runs/<étape>-<visite>-<tentative>/.lock` nomme le serveur qui tient le REPL de la tentative ; le serveur le renouvelle toutes les 30 secondes. Un autre serveur est refusé par `repl-held-elsewhere`, pour `skraft_repl_reset` aussi, sauf si le détenteur a disparu (le système dit qu'aucun processus ne tourne sous son pid, ou qu'un processus démarré à une autre heure y tourne) ou n'a pas renouvelé le bail depuis cinq minutes ; un détenteur dont l'heure de démarrage ne peut pas être lue n'est jamais tenu pour disparu |
 
 ## Ce qu'une cellule peut faire <!-- #cell -->
 
-La cellule est du JavaScript. Les variables restent d'un appel au suivant et une cellule peut faire `await` au premier niveau. Un `const` ou un `let` de premier niveau vit aussi longtemps que le noyau : le déclarer une seconde fois échoue (Node 22 : `Identifier '<nom>' has already been declared`), et le résultat ajoute une indication fixe : déclarer avec `var`, ou sous un nouveau nom, une variable réutilisée d'une cellule à l'autre, ou appeler avec `reset: true`.
+La cellule est du JavaScript. Les variables restent d'un appel au suivant et une cellule peut faire `await` au premier niveau. Un `const` ou un `let` de premier niveau vit aussi longtemps que le noyau : le déclarer une seconde fois échoue (Node 22 : `Identifier '<nom>' has already been declared`), et le résultat ajoute une indication fixe : déclarer avec `var`, ou sous un nouveau nom, une variable réutilisée d'une cellule à l'autre, ou appeler `skraft_repl_reset` pour un noyau neuf.
 
 | Nom | Fait |
 | --- | --- |
@@ -43,7 +44,9 @@ La cellule est du JavaScript. Les variables restent d'un appel au suivant et une
 | `absent(gate, component, reason)` | déclare que l'`AGENTS.md` du projet ne nomme aucune gate de ce nom pour le composant |
 | `console.log` | écrit dans le résultat de l'appel ; de même `console.error`, `process.stdout.write` et `process.stderr.write` |
 
-Un appel prend `code` (vide pour attendre la cellule en cours), `reset` et `workspace` ; tout autre argument est refusé. `reset: true` arrête le noyau et ses runs, même pendant une cellule, démarre un noyau neuf et y exécute `code` ; son résultat commence par `repl-reset`.
+Un appel de `skraft_repl` prend `code` (vide pour attendre la cellule en cours) et `workspace` ; tout autre argument, `reset` compris, est refusé sans être répété.
+
+`skraft_repl_reset` ne prend que `workspace`. Il arrête le noyau de la tentative ouverte et les runs qu'il a lancés, même pendant une cellule (`SIGKILL`, puis dix secondes au plus pour qu'ils finissent), et répond `repl-reset` ; l'appel en cours répond `repl-reset` lui aussi. Le `skraft_repl` suivant démarre un noyau neuf, répond d'abord `repl-fresh`, et ses variables sont perdues ; les ids de runs continuent. Sans noyau en marche, il n'arrête rien et répond `repl-no-kernel`. Une cellule qui ne s'arrête pas, ou un noyau auquel l'agent ne se fie plus : appeler `skraft_repl_reset`, puis `skraft_repl`.
 
 Une cellule vit 7260 secondes au plus (le plus long run et une minute) : au-delà elle est interrompue, son noyau redémarré trois secondes plus tard si elle tourne encore, et l'appel suivant répond `repl-restarted`.
 
@@ -92,8 +95,9 @@ Chaque borne est fixée par le moteur ; aucune n'est configurable.
 | tas du noyau | 2 Gio | le noyau s'arrête : `repl-crashed` |
 | un bail | renouvelé toutes les 30 s | non renouvelé depuis cinq minutes : un autre serveur peut reprendre la tentative |
 | l'arrêt d'un noyau | attend ses runs 10 s | ils ont reçu `SIGKILL` ; le groupe ou l'arbre du noyau s'arrête avec lui |
+| `skraft_repl_reset` | n'attend ni cellule ni autre outil | jamais `repl-busy` ; il arrête le noyau comme ci-dessus |
 
-Un noyau vit du premier appel d'une tentative jusqu'à la fermeture de la tentative, l'appel d'une autre tentative, 15 minutes sans cellule ni run vivants, la fermeture de la session, un appel avec `reset: true`, ou la mort du noyau.
+Un noyau vit du premier appel d'une tentative jusqu'à la fermeture de la tentative, l'appel d'une autre tentative, 15 minutes sans cellule ni run vivants, la fermeture de la session, un appel de `skraft_repl_reset`, ou la mort du noyau.
 
 ## Limites et refus <!-- #limits -->
 
@@ -105,11 +109,14 @@ Un noyau vit du premier appel d'une tentative jusqu'à la fermeture de la tentat
 | `repl-restarted` | une cellule ne s'arrêtait pas et le noyau a été arrêté : ses variables sont perdues |
 | `repl-crashed` | le noyau s'est arrêté seul : ses variables sont perdues |
 | `repl-trace-failed` | en tête de chaque résultat dès qu'une ligne de la trace ou le journal d'un run n'a pas pu s'écrire : la trace est incomplète |
-| `repl-reset` | en tête du résultat d'un appel avec `reset: true` : le noyau a été arrêté et un neuf démarré, ses variables sont perdues |
-| `repl-fresh` | en tête du premier résultat après que le balayage ou la session a arrêté le noyau de la tentative : un neuf a démarré, ses variables sont perdues |
+| `repl-reset` | la réponse de `skraft_repl_reset`, et la tête de l'appel en cours qu'il a arrêté : le noyau et ses runs ont été arrêtés, ses variables sont perdues |
+| `repl-no-kernel` | la réponse de `skraft_repl_reset` quand aucun noyau de la tentative ne tourne : rien n'a été arrêté |
+| `repl-fresh` | en tête du premier résultat après qu'un reset, le balayage ou la session a arrêté le noyau de la tentative : un neuf a démarré, ses variables sont perdues |
 | `repl-failed` | le noyau n'a pas pu démarrer ; le refus nomme le `logs/unexpected.log` du run, qui dit pourquoi |
 | `repl-unexpected` | skraft lui-même a échoué pendant l'appel ; le refus nomme le `logs/unexpected.log` du run, qui contient l'exception |
 
 Les textes sont fixés par le moteur. Le résultat d'une cellule porte la sortie et les erreurs de la cellule, seul endroit où la règle des messages fixes du moteur ne s'applique pas ; une exception du moteur lui-même va au `logs/unexpected.log` du run, que rien ne relit et que le refus nomme. Une exception levée avant que l'appel soit lié à une tentative va au journal du serveur, et l'appel répond un texte fixe. Une annulation de la requête (`notifications/cancelled`) arrête les attentes de la cellule, termine les runs qu'elle a lancés et répond `interrupted` ; une annulation reçue avant que l'appel ait lancé sa cellule est conservée : la cellule ne tourne jamais et l'appel répond `repl-interrupted` ; une cellule qui ne s'arrête toujours pas au bout de trois secondes termine le noyau. Une interruption ne peut pas casser une boucle synchrone : elle termine le noyau. Arrêter un noyau termine ses runs par SIGKILL et les attend dix secondes au plus ; un run demandé pendant que le noyau s'arrête ne démarre jamais, et la trace le note non démarré (`the attempt's REPL was ended`).
+
+Non proposés, à dessein : un `timeout_ms` par appel (un appel répond à 90 s, un run prend son `timeout`), un `title` d'appel, le rechargement d'un fichier `.mjs` local à chaque import, la conservation des liaisons qu'une cellule annulée n'avait pas validées, `process` comme module à importer, et des sessions nommées ou un historique des cellules. Le REPL est un noyau par tentative, et ses bornes sont celles du moteur.
 
 Chaque programme tourne avec les droits du développeur, comme dans `Bash` : le REPL n'est pas un bac à sable. Un serveur tué sans nettoyage laisse ses programmes dans `.copilot-tracking/skraft-repl/<pid>.json` ; le serveur suivant qui démarre un noyau termine ceux dont l'heure de démarrage enregistrée correspond encore, jamais un processus que le système a réutilisé. L'heure de démarrage de chaque processus est demandée au système (`ps`, PowerShell sous Windows) une seule fois, pendant que le serveur continue de répondre à ses autres appels. Ce journal reste sous `.copilot-tracking/skraft-repl/`, hors du dossier de suivi de toute story : il appartient au serveur, pas à un run.

@@ -802,8 +802,8 @@ parts:
             label_en: "Attempt REPL"
             sidebar_position: 12
             doc: reference/repl
-            purpose_fr: "skraft_repl : l'API d'une cellule, la trace signee de chaque run, les limites, les refus et ce qui n'est pas mesure."
-            purpose_en: "skraft_repl: the cell API, the signed trace of every run, the limits, the refusals and what is not measured."
+            purpose_fr: "skraft_repl et skraft_repl_reset : l'API d'une cellule, la trace signee de chaque run, les limites, les refus et ce qui n'est pas mesure."
+            purpose_en: "skraft_repl and skraft_repl_reset: the cell API, the signed trace of every run, the limits, the refusals and what is not measured."
       - id: catalogue
         title_fr: "Catalogue agentique"
         title_en: "Agentic catalogue"

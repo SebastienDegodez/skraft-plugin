@@ -119,6 +119,8 @@ the probe or a test says otherwise.
   refused value. One exception, `skraft_repl` alone: its `code` is agent-written JavaScript that
   may start any program, only during the open attempt of an agent that commits code and whose
   `tools:` names it; unknown keys are still refused and `workspace` is checked as for every tool.
+  `skraft_repl_reset` ends the open attempt's kernel and its runs, waits in no queue and is never
+  refused as busy; it takes only `workspace`.
 - **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
   or a tool result, except the output and the errors of an agent's own cell in a `skraft_repl`
   result, capped at 24 KiB, which never reach the journal. An exception goes only to `logs/unexpected.log` of the run's tracking folder,

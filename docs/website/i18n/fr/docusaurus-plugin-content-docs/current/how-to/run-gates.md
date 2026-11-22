@@ -31,6 +31,9 @@ await gate('architecture', 'dotnet test api/Architecture.Tests', { cwd: 'api' })
 await gate('coverage', 'node scripts/coverage.mjs', { cwd: 'api' })
 ```
 
+Une cellule qui ne s'arrête pas, ou un noyau auquel l'ingénieur ne se fie plus : `skraft_repl_reset`
+arrête le noyau et ses runs, puis le `skraft_repl` suivant en démarre un neuf, aux variables perdues.
+
 La gate `test` est l'exécution de la ligne de commit : toute la suite de tests non filtrée, enchaînée à
 `git add` et `git commit`, étiquette `green`. Cette exécution est l'exécution `test` ; l'ingénieur ne
 relance pas `test` une seconde fois. La commande de chaque gate est celle que `skraft-config.json`
