@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createRepl } from '../../../../plugins/skraft-framework/engine/application/repl/repl-usecase.mjs'
 import { createRunDigests } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/run-digests.mjs'
@@ -17,12 +17,12 @@ const BOUNDED = { timeout: 60_000 }
 const NODE = JSON.stringify(process.execPath)
 const SERVER_CREATED = await processCreation(process.pid)
 
-const realRun = (t, call) => {
+const realRun = (t, call, { kernels = createNodeKernelHost() } = {}) => {
   const root = tempFolder(t)
   mkdirSync(join(root, 'api'))
   const orphans = createOrphanJournal({ folder: join(root, '.copilot-tracking', 'skraft-repl') })
   const host = scripted({}, (it) => nominal(it).map((behaviour, index) => (index === 3 ? agent({ work: async (repos) => { await call(repl, root); green(SLUG, 'Checkout', '')(repos) } })(it) : behaviour)))
-  host.deps.repl = { root, kernels: createNodeKernelHost(), launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: SERVER_CREATED }, budgetMs: 30_000, digests: createRunDigests() }
+  host.deps.repl = { root, kernels, launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: SERVER_CREATED }, budgetMs: 30_000, digests: createRunDigests() }
   const repl = createRepl(host.deps, { entry: null, reaped: false })
   t.after(() => repl.close())
   return { host, repl, root, orphans }
@@ -93,6 +93,24 @@ test('a .repl/package.json with dependencies and no .repl/node_modules is told a
   await host.start()
 
   assert.equal(answers[0].text, 'lib: the packages of .repl/package.json are not installed: run npm ci --prefix .repl in the working copy\n=> 1')
+})
+
+test('a kernel whose REPL library never lets it be ready is ended at the start deadline, and the next call, once the module is gone, answers', BOUNDED, async (t) => {
+  const answers = []
+  const { host, root } = realRun(t, async (repl, folder) => {
+    const asked = Date.now()
+    answers.push(await repl.call({ code: '1' }), Date.now() - asked)
+    rmSync(join(folder, '.repl', 'lib', 'spin.mjs'))
+    answers.push(await repl.call({ code: '2', reset: true }))
+  }, { kernels: createNodeKernelHost({ startMs: 3000 }) })
+  mkdirSync(join(root, '.repl', 'lib'), { recursive: true })
+  writeFileSync(join(root, '.repl', 'lib', 'spin.mjs'), 'while (true) {}\n')
+
+  await host.start()
+
+  assert.equal(answers[0].code, 'repl-failed')
+  assert.ok(answers[1] < 8000, `refused after ${answers[1]} ms`)
+  assert.match(answers[2].text, /\n=> 2$/)
 })
 
 test('a real kernel started again by a reset gives its first run the next id of the attempt', BOUNDED, async (t) => {

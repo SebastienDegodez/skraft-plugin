@@ -27,7 +27,7 @@ host that never sends a cancellation, and `.repl/lib` (loading, `require`) under
 | --- | --- |
 | Agents | the acceptance designer and the software engineer, whose descriptors name the tool; never a review lens |
 | Attempt | the call is bound to the open attempt of the active run: no open attempt, or an agent that commits no code, is refused with `repl-unavailable` |
-| Kernel | one child process per attempt, started by the first call and ended when the attempt closes, when another attempt calls, after 15 minutes unused with no cell nor run alive, when the session closes or when the kernel dies. It must say it is ready within ten seconds, else the call answers `repl-failed`; it runs with Node flags of its own, never the server's, and a heap of 2 GiB at most: past it the kernel ends and the call answers `repl-crashed`. A kernel ends with every process its cells started by themselves: its process group under POSIX, its tree under Windows |
+| Kernel | one child process per attempt, started by the first call and ended when the attempt closes, when another attempt calls, after 15 minutes unused with no cell nor run alive, when the session closes or when the kernel dies. It must say it is alive within ten seconds and be ready within thirty, its library loaded, else it is ended and the call answers `repl-failed`; it runs with Node flags of its own, never the server's, and a heap of 2 GiB at most: past it the kernel ends and the call answers `repl-crashed`. A kernel ends with every process its cells started by themselves: its process group under POSIX, its tree under Windows |
 | Concurrency | the call does not wait in the server's queue, so `skraft_status` and `skraft_precheck` answer while a cell runs; two calls sent at once share one kernel, the second waiting for it to start; a second call while a cell runs is refused with `repl-busy`; a cancellation names its request, so it reaches only that call |
 | Lease | `logs/runs/<step>-<visit>-<attempt>/.lock` names the server that holds the attempt's REPL; the server renews it every 30 seconds. Another server is refused with `repl-held-elsewhere` unless the holder is gone (the system says no process runs under its pid, or one that started at another time) or has not renewed the lease for five minutes; a holder whose start time cannot be read is never taken for gone |
 
@@ -83,8 +83,8 @@ Every bound is fixed by the engine; none is configurable.
 | live runs of an attempt | 8 | the next `run()` does not start |
 | a call | answers after 90 s | the cell goes on; an empty call waits for it |
 | a cell | 7260 s | interrupted, its kernel restarted three seconds later: `repl-restarted` |
-| kernel start | 10 s to say it is alive | `repl-failed` |
-| one module of `.repl/lib` | 10 s to load | left out, the kernel goes on |
+| kernel start | 10 s to say it is alive, 30 s in all to be ready, its library loaded | the kernel and its group end: `repl-failed` |
+| `.repl/lib` | 10 s per module, 20 s for the whole library | a module left out, the kernel goes on; a module that never yields ends the start at its 30 s |
 | a run's log | its first 64 MiB, written as it runs | the rest is not written; `cut` in the trace |
 | a result | 24 KiB | the rest in `cell-<n>.log` |
 | what a cell prints | 1 MiB: its first and last 512 KiB | a marker between them |

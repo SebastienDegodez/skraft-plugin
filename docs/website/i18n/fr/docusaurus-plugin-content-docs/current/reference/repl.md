@@ -27,7 +27,7 @@ lancés. Non mesurés non plus : `reset: true` sur un hôte qui n'envoie jamais 
 | --- | --- |
 | Agents | le concepteur d'acceptation et l'ingénieur logiciel, dont les descripteurs nomment l'outil ; jamais une lentille de revue |
 | Tentative | l'appel est lié à la tentative ouverte du run actif : sans tentative ouverte, ou pour un agent qui ne commite aucun code, il est refusé par `repl-unavailable` |
-| Noyau | un processus enfant par tentative, démarré au premier appel et arrêté quand la tentative se ferme, quand une autre tentative appelle, après 15 minutes sans usage, sans cellule ni run vivants, quand la session se ferme ou quand le noyau meurt. Il doit se dire prêt en dix secondes, sinon l'appel répond `repl-failed` ; il tourne avec ses propres options Node, jamais celles du serveur, et un tas de 2 Gio au plus : au-delà le noyau s'arrête et l'appel répond `repl-crashed`. Un noyau s'arrête avec tous les processus que ses cellules ont lancés elles-mêmes : son groupe de processus sous POSIX, son arbre sous Windows |
+| Noyau | un processus enfant par tentative, démarré au premier appel et arrêté quand la tentative se ferme, quand une autre tentative appelle, après 15 minutes sans usage, sans cellule ni run vivants, quand la session se ferme ou quand le noyau meurt. Il doit se dire vivant en dix secondes et être prêt en trente, sa bibliothèque chargée, sinon il est arrêté et l'appel répond `repl-failed` ; il tourne avec ses propres options Node, jamais celles du serveur, et un tas de 2 Gio au plus : au-delà le noyau s'arrête et l'appel répond `repl-crashed`. Un noyau s'arrête avec tous les processus que ses cellules ont lancés elles-mêmes : son groupe de processus sous POSIX, son arbre sous Windows |
 | Concurrence | l'appel n'attend pas dans la file du serveur : `skraft_status` et `skraft_precheck` répondent pendant qu'une cellule tourne ; deux appels envoyés ensemble partagent un seul noyau, le second attendant son démarrage ; un second appel pendant une cellule est refusé par `repl-busy` ; une annulation nomme sa requête et n'atteint que cet appel |
 | Bail | `logs/runs/<étape>-<visite>-<tentative>/.lock` nomme le serveur qui tient le REPL de la tentative ; le serveur le renouvelle toutes les 30 secondes. Un autre serveur est refusé par `repl-held-elsewhere`, sauf si le détenteur a disparu (le système dit qu'aucun processus ne tourne sous son pid, ou qu'un processus démarré à une autre heure y tourne) ou n'a pas renouvelé le bail depuis cinq minutes ; un détenteur dont l'heure de démarrage ne peut pas être lue n'est jamais tenu pour disparu |
 
@@ -83,8 +83,8 @@ Chaque borne est fixée par le moteur ; aucune n'est configurable.
 | runs vivants d'une tentative | 8 | le `run()` suivant ne démarre pas |
 | un appel | répond au bout de 90 s | la cellule continue ; un appel vide l'attend |
 | une cellule | 7260 s | interrompue, son noyau redémarré trois secondes plus tard : `repl-restarted` |
-| démarrage du noyau | 10 s pour se dire vivant | `repl-failed` |
-| un module de `.repl/lib` | 10 s pour se charger | laissé de côté, le noyau continue |
+| démarrage du noyau | 10 s pour se dire vivant, 30 s en tout pour être prêt, sa bibliothèque chargée | le noyau et son groupe s'arrêtent : `repl-failed` |
+| `.repl/lib` | 10 s par module, 20 s pour toute la bibliothèque | un module laissé de côté, le noyau continue ; un module qui ne rend jamais la main arrête le démarrage à ses 30 s |
 | le journal d'un run | ses 64 premiers Mio, écrits à mesure | le reste n'est pas écrit ; `cut` dans la trace |
 | un résultat | 24 Kio | le reste dans `cell-<n>.log` |
 | ce qu'une cellule affiche | 1 Mio : ses 512 premiers et 512 derniers Kio | un marqueur entre les deux |

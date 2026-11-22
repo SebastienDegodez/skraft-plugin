@@ -11,31 +11,33 @@ import { pathToFileURL } from 'node:url'
  * @typedef {{ lib: Record<string, unknown>, loaded: string[], failed: string[] }} Library
  */
 
-/** How long one module may take to load. */
+/** How long one module may take to load, and the whole library: the server ends a kernel whose start takes 30 s. */
 const LOAD_MS = 10_000
+const LIBRARY_MS = 20_000
 
 /** @param {string} folder the absolute `.repl/lib` folder @returns {Promise<Library>} */
 export const loadLibrary = async (folder) => {
   /** @type {Library} */
   const library = { lib: {}, loaded: [], failed: [] }
-  for (const name of await modulesIn(folder)) await loadOne(library, folder, name)
+  const until = Date.now() + LIBRARY_MS
+  for (const name of await modulesIn(folder)) await loadOne(library, folder, { file: name, ms: Math.min(LOAD_MS, until - Date.now()) })
   return library
 }
 
 /** @param {string} folder @returns {Promise<string[]>} the module file names, sorted; none when the folder is absent */
 const modulesIn = (folder) => readdir(folder).then((names) => names.filter((name) => name.endsWith('.mjs')).sort(), () => [])
 
-/** @param {Library} library @param {string} folder @param {string} file */
-const loadOne = async (library, folder, file) => {
+/** A module past the library's time is not loaded. @param {Library} library @param {string} folder @param {{ file: string, ms: number }} module */
+const loadOne = async (library, folder, { file, ms }) => {
   const name = file.slice(0, -'.mjs'.length)
-  const loaded = await withinLimit(import(pathToFileURL(join(folder, file)).href))
+  const loaded = ms <= 0 ? null : await withinLimit(import(pathToFileURL(join(folder, file)).href), ms)
   if (loaded === null) library.failed.push(name)
   else Object.assign(library, { lib: { ...library.lib, [name]: loaded } }, { loaded: [...library.loaded, name] })
 }
 
-/** The module's namespace, null when it threw or took too long. @param {Promise<unknown>} loading */
-const withinLimit = (loading) => new Promise((resolve) => {
-  const timer = setTimeout(() => resolve(null), LOAD_MS)
+/** The module's namespace, null when it threw or took too long. @param {Promise<unknown>} loading @param {number} ms */
+const withinLimit = (loading, ms) => new Promise((resolve) => {
+  const timer = setTimeout(() => resolve(null), ms)
   timer.unref()
   loading.then((namespace) => { clearTimeout(timer); resolve(namespace) }, () => { clearTimeout(timer); resolve(null) })
 })

@@ -187,7 +187,7 @@ The commands an agent runs during its attempt go through `skraft_repl`: the serv
 starts each program and writes its signed trace. A kernel must never hold the server: each bound
 has a value fixed by code (a run of 7200 s at most, a cell of 7260 s, a call answered at 90 s,
 eight live runs, a 64 MiB log written as it runs, 1 MiB of what a cell prints, a 2 GiB heap, a
-start within ten seconds), and the kernel ends with everything its cells started. `.repl/` belongs
+start bounded to 30 s, its library loaded), and the kernel ends with everything its cells started. `.repl/` belongs
 to the project: the engine reads it, never writes it. The detail: [The REPL of an
 attempt](../reference/repl.md).
 
