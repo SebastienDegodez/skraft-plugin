@@ -5,6 +5,33 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### 2026-11-22 — `skraft_repl` : permission, liste, atteinte (lot D, branche feat/engine-repl-evidence)
+
+Le REPL d'une tentative laisse tourner n'importe quel programme (`run()`), hors des règles `Bash`
+de l'hôte : sa permission est la seule garde. Les agents ne reçoivent l'outil que par ces mesures.
+Darwin, Node 22.23.2.
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| `claude-repl-permission` (`eng/host-probe/claude-repl-permission-probe.mjs`, deux sessions `claude -p`, `Bash` refusé, deux appels de modèle, 0,63 USD) | Claude Code **2.1.325** | pass | outil non listé : appelé, refusé par l'hôte (`permission_denials`), le moteur n'est jamais atteint (`NOT CALLED`) ; outil autorisé par son nom (`mcp__plugin_skraft_skraft__skraft_repl`) : aucun refus, le moteur répond `repl-unavailable` (appel hors tentative) |
+| `skraft-repl-listed` (headless, sans appel de modèle) | SDK Copilot **1.0.112** | pass | `rpc.mcp.listTools` liste `skraft_repl` |
+| `agent-repl-reach` (headless, sans appel de modèle) | SDK Copilot **1.0.112** | pass | l'agent dont `tools:` nomme `skraft/skraft_repl` reçoit `skraft-skraft_repl` ; l'agent qui nomme `view` ne le reçoit pas |
+
+Un appel `-p` non autorisé est refusé : sous `-p`, l'invite de permission se lit comme un refus.
+Les conséquences pour les descripteurs : un agent ne peut pas compter sur l'outil tant que la
+session ne l'autorise pas par son nom ; les descripteurs le nomment dans `tools:` et la
+documentation dit de l'autoriser.
+
+Non mesuré, faute de pouvoir le faire ici sans session interactive ni autre hôte :
+
+- Que « toujours autoriser » persiste, et si les appels suivants d'une session interactive demandent encore (Claude Code interactif, Copilot CLI, VS Code).
+- Le comportement en autopilote et en `-p` de Copilot CLI ; les demandes de permission d'un agent Copilot ou VS Code pour cet outil.
+- Que les règles d'autorisation et de refus de `Bash` ne contraignent pas le REPL : lu dans la documentation de Claude Code (un outil MCP n'est pas une commande `Bash`), non mesuré, car l'outil refuse hors d'une tentative ouverte et un run complet coûterait un pipeline entier.
+- Le délai d'appel MCP de chaque hôte (le budget d'une cellule est 90 s par défaut, non borné par une mesure).
+- Si un hôte envoie `notifications/cancelled` pour une requête en cours ; le serveur l'écoute (testé sur hôte simulé), aucun hôte réel n'a été observé en train de l'envoyer.
+- Windows : choix du shell (Git Bash, puis `pwsh`, puis `powershell`), arrêt de l'arbre par `taskkill`, heure de création d'un processus par PowerShell. Écrits, jamais lancés.
+- Les notifications de progression d'une cellule longue (`progressToken`) : non branchées.
+
 ### #566 — périmètre des preuves existantes
 
 Les mesures du 2026-11-12 ci-dessous sont historiques : le jugement `unforeseen` est désormais
