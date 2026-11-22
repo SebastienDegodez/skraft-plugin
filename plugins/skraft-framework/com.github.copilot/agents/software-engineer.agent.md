@@ -77,7 +77,7 @@ Your brief lists every group of the story in plan order (`- 1 of G — S1 "…" 
 
 Your brief lists no groups: the gates or the DELIVER review sent the story back, or the pass handles surviving mutants.
 
-- Commit each inner cycle as your brief's commit lines say: the failing unit test after RED, the code after the wiring check. Change no acceptance test your brief lists.
+- Commit each inner cycle once green, after the wiring check: one `feat` or `fix` commit holding its test and the code that makes it pass, as your brief's commit lines say; never a `test` commit of its own. Change no acceptance test your brief lists.
 - **Refactor commit** only for test code (`test-refactoring-catalog`) or a change your brief's feedback names, under green; never to clean up a green written dirty.
 - **Before writing your result:** run the component's `build`, `format`, `lint` and `test` commands (`craft-discipline` C3, C4: your brief, else `commands` of the component in `skraft-config.json`) and fix every failure; commit format and lint fixes as `style`.
 - Write the change log your brief lists once, after your last commit, in the turn that writes your result: one line per commit since the DELIVER base (the red your brief lists), taken from `git log`, `<short sha> <subject>`, plus each `PLAN_DEVIATION`.

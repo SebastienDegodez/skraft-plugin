@@ -1,13 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, green, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, green, scripted, SLUG, reworkCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment, withoutReportSummary } from '../support/decisions.mjs'
 
 const upToDeliver = (it) => [agent()(it), agent()(it), agent()(it)]
 const deliver = (it) => agent({ work: green() })(it)
 /** The engineer's work on pass n: the green of the scenario on the first, a TDD cycle on a pass the gates sent back. */
-const passOf = (n) => (n === 1 ? green(SLUG, `Pass${n}`) : tddCycle(SLUG, `Pass${n}`))
+const passOf = (n) => (n === 1 ? green(SLUG, `Pass${n}`) : reworkCycle(SLUG, `Pass${n}`))
 const recorded = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
 const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
@@ -16,7 +16,7 @@ const twoRepositories = () => new InMemoryGit({ repositories: { '.': { mergeBase
 test('DELIVER does not close while a gate fails: the engineer gets a new pass with the failures', async () => {
   const clock = new FixedClock('2026-10-11T09:00:00.000Z')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 }, clock, takesMs: 1_000 })
-  const host = scripted({ machine, clock }, (it) => [...upToDeliver(it), deliver(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; tddCycle('checkout', 'Refund')(h) } })(it)])
+  const host = scripted({ machine, clock }, (it) => [...upToDeliver(it), deliver(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; reworkCycle('checkout', 'Refund')(h) } })(it)])
 
   const outcome = await host.start()
 

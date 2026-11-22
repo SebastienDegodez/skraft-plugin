@@ -63,8 +63,9 @@ Trois règles gardent ce commit unique honnête :
 
 Une fois le vert commité et toute la suite verte, les gates passent. Un run dont le journal
 contient les dispatches DELIVER par groupe d'une alpha V2 antérieure n'est pas repris : relancez-le. Un passage que renvoient les gates ou la
-revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
-passage que les gates ont renvoyé, leur échec tient lieu du rouge.
+revue travaille sur toute la story, comme en v1 : chaque cycle est un commit `feat` ou `fix` qui
+porte son test et son code, une fois vert, sans commit `test` à part ; sur un passage que les gates
+ont renvoyé, leur échec tient lieu du test du premier.
 
 ## L'ordre : gates, puis revue
 

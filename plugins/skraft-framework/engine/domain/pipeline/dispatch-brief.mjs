@@ -92,7 +92,7 @@ const workLines = ({ inputs, outputs, result, scratch, allowed, components, tdd,
   `- Send what the commands you run print to files under ${scratch.logs}, and keep your temporary files under ${scratch.tmp}; write no file outside the working copy, the system's temporary folder included.`,
   ...section('- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:', writablePaths(allowed, components)),
   ...section('- Components:', components.map(componentLine)),
-  ...(scenario === null || scenario.kind === 'rework' ? commitLines(tdd, sentBy) : []),
+  ...(scenario === null || scenario.kind === 'rework' ? commitLines(tdd, sentBy, scenario !== null) : []),
   ...(proposal ? [PROPOSAL_RULES] : []),
   ...(commits ? [COMMIT_EVERY_CHANGE, issueLine(story)] : []),
 ]
@@ -187,13 +187,16 @@ const issueLine = (story) => {
 }
 
 /**
- * The commits the agent makes; on a TDD pass the review opened, the commit each kind of finding
- * takes, since no failing gate stands for the red of a fix.
- * @param {Brief['tdd']} tdd @param {Brief['sentBy']} sentBy
+ * The commits the agent makes; once the story is delivered, each cycle in one green holding its
+ * test; on a TDD pass the review opened, the commit each kind of finding takes, since no failing
+ * gate stands for the test of a fix.
+ * @param {Brief['tdd']} tdd @param {Brief['sentBy']} sentBy @param {boolean} delivered
  */
-const commitLines = (tdd, sentBy) => {
+const commitLines = (tdd, sentBy, delivered) => {
   if (tdd === null) return []
-  return tdd === 'cycle' && sentBy === 'review' ? [TDD_RULES.cycle, REVIEW_COMMITS] : [TDD_RULES[tdd]]
+  if (tdd !== 'cycle') return [TDD_RULES[tdd]]
+  const rules = delivered ? DELIVERED_COMMITS : CYCLE_COMMITS
+  return sentBy === 'review' ? [rules.cycle, rules.review] : [rules.cycle]
 }
 
 /** @param {string[]} allowed @param {BriefComponent[]} components */
@@ -303,6 +306,23 @@ const REVIEW_COMMITS = [
   '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',
   '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',
 ].join('\n')
+
+/** The commits of a TDD pass on no scenario: a red, then its green. */
+const CYCLE_COMMITS = Object.freeze({ cycle: TDD_RULES.cycle, review: REVIEW_COMMITS })
+
+/** The commits of a pass after the story is delivered: each cycle one green holding its test. */
+const DELIVERED_COMMITS = Object.freeze({
+  cycle: [
+    '- Commit each TDD cycle once green, in one `feat(<story>): …` or `fix(<story>): …` commit holding its test and the code that makes it pass; never a `test` commit of its own.',
+    '  A change under green takes `refactor(<story>): …`, lint and format fixes `style(<story>): …`. The engine refuses a `test` commit, a feat or fix commit',
+    '  that holds no test (on a pass the gates sent back, their failure stands for the test of the first one), a change to an acceptance test,',
+    '  and any commit that is not `type(scope): subject`. A refused commit stays refused until you rewrite it.',
+  ].join('\n'),
+  review: [
+    '- This pass answers the review: a missing or wrong behaviour takes one `fix(<story>): …` commit holding its failing test and the code that makes it pass, once green;',
+    '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',
+  ].join('\n'),
+})
 
 /** @param {string} title @param {string[]} lines */
 const section = (title, lines) => (lines.length > 0 ? [title, ...lines.map((line) => `- ${line}`)] : [])

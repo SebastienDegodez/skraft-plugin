@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { InMemoryGit, InMemoryTracking, MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { API, SLUG, TRACKING, agent, green, scripted, tddCycle } from '../support/pipeline-host.mjs'
+import { API, SLUG, TRACKING, agent, green, scripted, reworkCycle } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 import { ownerOfCause } from '../../../../plugins/skraft-framework/engine/domain/pipeline/incidents.mjs'
 
@@ -73,7 +73,7 @@ test('a permission denied by a gate is escalated to the environment with its log
 test('a gate stopped by a signal or a crash, on POSIX or on Windows, stops as unknown with its evidence and no engineer retry', async () => {
   for (const exit of [137, 139, 3221225477]) {
     const machine = new ScriptedMachine({ exits: { '. $ dotnet test': exit } })
-    const host = scripted({ machine }, (it) => [...upToDeliver(it), agent({ work: green() })(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; tddCycle(SLUG, 'Again')(h) } })(it)])
+    const host = scripted({ machine }, (it) => [...upToDeliver(it), agent({ work: green() })(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; reworkCycle(SLUG, 'Again')(h) } })(it)])
 
     const outcome = await host.start()
 
@@ -89,7 +89,7 @@ test('a gate exiting 128, as Git does on a fatal error, failed a check: the engi
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 128 } })
   const host = scripted({ machine }, (it) => [...upToDeliver(it), agent({ work: green() })(it), agent({ work: (h) => {
     machine.exits['. $ dotnet test'] = 0
-    tddCycle(SLUG, 'Again')(h)
+    reworkCycle(SLUG, 'Again')(h)
   } })(it)])
 
   const outcome = await host.start()

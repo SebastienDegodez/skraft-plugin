@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
-import { API, REFS_42, SLUG, TRACKING, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
+import { API, REFS_42, SLUG, TRACKING, agent, scripted } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
@@ -294,19 +294,25 @@ test('a run stopped in the middle of the delivery resumes the same dispatch', as
   assert.deepEqual(labels(host).filter((label) => /distill|deliver/.test(label)), [`skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`])
 })
 
-test('a pass the gates send back after the story is delivered fixes the whole story: a red, then a fix, the gate failure standing for the red, no group told and no acceptance test changed', async () => {
+test('a pass the gates send back after the story is delivered fixes the whole story: each cycle one feat or fix holding its test and its code, the gate failure standing for the test of the first, no group told and no acceptance test changed', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine }, (it) => [...research(it), agent()(it), agent()(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; tddCycle(SLUG, 'Fix')(h) } })(it)])
+  const fixing = ({ git }) => {
+    machine.exits['. $ dotnet test'] = 0
+    git.commit(`fix(${SLUG}): pay the rounded amount`, ['src/Checkout.cs'])
+    git.commit(`feat(${SLUG}): refund by card`, ['src/Refund.cs', 'tests/RefundTests.cs'])
+    git.commit(`refactor(${SLUG}): name the refund`, ['src/Refund.cs'])
+  }
+  const host = scripted({ machine }, (it) => [...research(it), agent()(it), agent()(it), agent({ work: fixing })(it)])
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /deliver/.test(label)), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`])
-  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ kind, verdict }) => [kind, verdict]), [['red', 'ok'], ['green', 'ok'], ['refactor', 'ok']])
+  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ kind, verdict }) => [kind, verdict]), [['green', 'ok'], ['green', 'ok'], ['refactor', 'ok']])
   const reworked = promptOf(host, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
   assert.doesNotMatch(reworked, /- Groups, in the order/)
   assert.match(reworked, /- Acceptance tests DISTILL committed, which you never change \(a wrong one, or one failing on a build or setup error: stop blocked, naming it\):\n- root-1 "test\(checkout\): walking skeleton": tests\/Integration\/WalkingSkeletonTests.cs\n/)
-  assert.match(reworked, /Commit each TDD cycle/)
+  assert.match(reworked, /- Commit each TDD cycle once green, in one `feat\(<story>\): …` or `fix\(<story>\): …` commit holding its test and the code that makes it pass; never a `test` commit of its own\./)
 
   const touching = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
   const refused = scripted({ machine: touching }, (it) => [...research(it), agent({ work: reds(1, ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs']) })(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): weaken the acceptance test', ['tests/Acceptance/S1AcceptanceTests.cs']) })(it), unavailable])

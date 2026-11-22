@@ -60,8 +60,9 @@ Three rules keep that single commit honest:
 
 Once the green is committed and the whole suite passes, the gates run. A run whose journal
 holds the earlier per-group DELIVER dispatches of a V2 alpha is not resumed: start it again. A pass the gates or the review send back works on
-the whole story with the classic cycle: a red, then the fix; on a pass the gates sent back, their
-failure stands for the red.
+the whole story, as in v1: each cycle is one `feat` or `fix` commit holding its test and its code,
+once green, and no `test` commit of its own; on a pass the gates sent back, their failure stands for
+the test of the first one.
 
 ## The order: gates, then review
 

@@ -7,10 +7,11 @@ import { isCode, ownersOf } from './component-files.mjs'
  * `ci` and `revert` stay outside TDD and change no component's source or tests. A story built
  * from its acceptance tests first takes one red commit holding the acceptance test of every
  * scenario, then, in one pass, one green commit for every group of scenarios: the inner TDD loop
- * is not committed.
+ * is not committed. Once the story is delivered, each cycle of a pass the gates or the review sent
+ * back is one green holding its test and its code.
  *
  * @typedef {'red' | 'green' | 'refactor' | 'other' | 'invalid'} CommitKind
- * @typedef {'ok' | 'not-conventional' | 'issue-reference-missing' | 'issue-closed' | 'issue-not-in-story' | 'outside-tdd' | 'green-without-red' | 'no-component'
+ * @typedef {'ok' | 'not-conventional' | 'issue-reference-missing' | 'issue-closed' | 'issue-not-in-story' | 'outside-tdd' | 'green-without-red' | 'green-without-test' | 'test-apart' | 'no-component'
  *   | 'oracle-split' | 'oracle-component' | 'oracle-without-test' | 'code-in-oracle' | 'test-in-scenario' | 'refactor-in-scenario' | 'green-split' | 'oracle-touched'} CommitVerdict
  * @typedef {import('./component-files.mjs').CodeComponent} CodeComponent
  * @typedef {{ kind: 'oracle', components: string[] | null }
@@ -19,7 +20,7 @@ import { isCode, ownersOf } from './component-files.mjs'
  *   oracle: the pass that writes every scenario's failing acceptance test, in the `components`
  *   its plan names (null when it names none yet); delivery: the one pass that makes every group
  *   pass, in one green commit, never changing the `immutable` files of the acceptance tests; rework: a pass after the story is
- *   delivered, whose commits follow the TDD cycle and never change the `immutable` files either.
+ *   delivered, each green holding its test and its code, no test committed apart, never changing the `immutable` files either.
  *   The engine opens DELIVER only once that red is committed.
  * @typedef {{ repository: string, sha: string, parent: string, subject: string, body: string, files: string[] }} StepCommit
  *   parent: its first parent's sha; body: the message after the subject; files relative to the working copy.
@@ -74,9 +75,9 @@ export const engineMessage = (subject, issue) => (issue === null ? subject : `${
  * @typedef {{ redByGateFailure: boolean, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Pass
  *   scenario: the scenario the pass works on, null for a pass that works on none (the gates or
  *   the review sent the story back, or the workflow builds no scenario).
- * @typedef {{ kind: CommitKind, red: Set<string>, seen: CommitKind[], greens: { count: number }, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Judging
- *   red: the repositories with a red since their last green; seen: the kinds judged before;
- *   greens.count: the greens judged.
+ * @typedef {{ kind: CommitKind, red: Set<string>, byGates: Set<string>, seen: CommitKind[], greens: { count: number }, issue: number | null, scenario: ScenarioJudging | null, components: readonly CodeComponent[] }} Judging
+ *   red: the repositories with a red since their last green; byGates: the repositories whose first
+ *   green the gate failure stands in for; seen: the kinds judged before; greens.count: the greens judged.
  */
 
 /**
@@ -92,7 +93,8 @@ export const engineMessage = (subject, issue) => (issue === null ? subject : `${
  */
 export const judgeCommits = (commits, { redByGateFailure, issue, scenario, components }) => {
   // Stryker disable next-line ArrayDeclaration: no commit is in a repository named like the placeholder
-  const judging = { red: new Set(redByGateFailure ? commits.map((commit) => commit.repository) : []), seen: /** @type {CommitKind[]} */ ([]), greens: { count: 0 }, issue, scenario, components }
+  const failed = redByGateFailure ? commits.map((commit) => commit.repository) : []
+  const judging = { red: new Set(failed), byGates: new Set(failed), seen: /** @type {CommitKind[]} */ ([]), greens: { count: 0 }, issue, scenario, components }
   return commits.map((commit) => judgeOne(commit, judging))
 }
 
@@ -158,7 +160,19 @@ const touching = (commit, { immutable }) => (commit.files.some((file) => immutab
 /** @param {StepCommit} commit @param {Judging} judging @param {Extract<ScenarioJudging, { kind: 'rework' }>} scenario @returns {CommitVerdict} */
 const reworkVerdict = (commit, judging, scenario) => {
   const touched = touching(commit, scenario)
-  return touched === 'ok' ? cycleVerdict(commit, judging) : touched
+  if (touched !== 'ok') return touched
+  if (judging.kind === 'red') return 'test-apart'
+  return judging.kind === 'green' ? reworkGreen(commit, judging) : 'ok'
+}
+
+/**
+ * A green after the story is delivered holds its test, but the first of a repository the gate
+ * failure stands in for.
+ * @param {StepCommit} commit @param {Judging} judging @returns {CommitVerdict}
+ */
+const reworkGreen = (commit, { byGates, components }) => {
+  const forGates = byGates.delete(commit.repository)
+  return forGates || commit.files.some((file) => isCode(file, components, ['tests'])) ? 'ok' : 'green-without-test'
 }
 
 /** The rules of a pass on the story's scenarios, by kind of pass. */
@@ -204,6 +218,8 @@ const FAILURES = Object.freeze({
     : `${named} cites an issue other than #${issue}; cite only #${issue}, as "Refs: #${issue}" on the last line of the body`),
   'outside-tdd': (named) => `${named} changes a component's source or tests outside TDD; a docs, chore, build, ci or revert commit changes neither: put that change in the test, feat or fix commit it belongs to`,
   'green-without-red': (named) => `${named} makes code pass with no test commit since the last feat or fix; rewrite it after a failing test commit`,
+  'green-without-test': (named) => `${named} holds no test: after the story is delivered, each cycle is one feat or fix commit holding its test and the code that makes it pass, once green`,
+  'test-apart': (named) => `${named} commits a test on its own: after the story is delivered, each cycle is one feat or fix commit holding its test and the code that makes it pass, once green; squash it into that commit`,
   'no-component': (named) => `${named} changes no component: a test commit adds a failing test to a component`,
   'oracle-split': (named) => `${named} is a second test commit; commit the acceptance tests of every scenario, the walking skeleton and the skeleton they call in one test commit`,
   'oracle-component': (named) => `${named} changes a component no scenario names: each acceptance test lives in the component the test plan names for its scenario`,
