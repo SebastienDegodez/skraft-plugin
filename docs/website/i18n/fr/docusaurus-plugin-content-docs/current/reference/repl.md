@@ -42,6 +42,8 @@ La cellule est du JavaScript. Les variables restent d'un appel au suivant et une
 | `absent(gate, component, reason)` | déclare que l'`AGENTS.md` du projet ne nomme aucune gate de ce nom pour le composant |
 | `console.log` | écrit dans le résultat de l'appel |
 
+Un appel prend `code` (vide pour attendre la cellule en cours), `reset` et `workspace` ; tout autre argument est refusé. `reset: true` arrête le noyau et ses runs, même pendant une cellule, démarre un noyau neuf et y exécute `code` ; son résultat commence par `repl-reset`.
+
 Une cellule qui dépasse 90 secondes répond avec ce qu'elle a affiché, ses runs continuent. Un appel au code vide attend alors la cellule et en rend la fin. Un run fini pendant qu'une autre cellule continue est annoncé en tête du résultat suivant (`[run-done r3 exit 0 …]`).
 
 ## Ce que l'agent relit <!-- #result -->
@@ -69,6 +71,7 @@ Un arbre est propre quand Git ne liste aucun fichier non commité hors du dossie
 | `repl-held-elsewhere` | un autre serveur tient le REPL de la tentative |
 | `repl-restarted` | une cellule ne s'arrêtait pas et le noyau a été arrêté : ses variables sont perdues |
 | `repl-crashed` | le noyau s'est arrêté seul : ses variables sont perdues |
+| `repl-reset` | en tête du résultat d'un appel avec `reset: true` : le noyau a été arrêté et un neuf démarré, ses variables sont perdues |
 | `repl-failed` | le noyau n'a pas pu démarrer ; le refus nomme le `logs/unexpected.log` du run, qui dit pourquoi |
 | `repl-unexpected` | skraft lui-même a échoué pendant l'appel ; le refus nomme le `logs/unexpected.log` du run, qui contient l'exception |
 

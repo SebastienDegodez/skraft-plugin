@@ -279,6 +279,27 @@ test('a kernel whose attempt is over, or that no one has used for 15 minutes wit
   assert.equal(kernels.kernels[0].stopped, true, 'once the attempt is closed, the sweep ends the kernel')
 })
 
+test('a reset during a cell that never ends ends its kernel and its runs, starts a fresh kernel and says the variables are gone', async () => {
+  const kernels = new ScriptedKernelHost()
+  const launcher = new ScriptedLauncher()
+  kernels.script.set('forever', async ({ run }) => { void run('npm run e2e'); await new Promise(() => undefined) })
+  kernels.script.set('fresh', async () => 'fresh')
+  const answers = []
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (one) => {
+    const stuck = one.call({ code: 'forever', id: 1 })
+    await sleep(10)
+    answers.push(await one.call({ code: 'fresh', id: 2, reset: true }), await stuck)
+  } } })
+
+  await host.start()
+
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
+  assert.equal(kernels.kernels.length, 2)
+  assert.equal(kernels.kernels[0].stopped, true)
+  assert.equal(answers[0].text, 'repl-reset: the kernel was ended on request and a fresh one started: its variables are gone, and the runs it had started were ended\n=> fresh')
+  assert.deepEqual(trace.filter(({ type }) => type === 'run').map(({ killed }) => killed), [true])
+})
+
 test('a run asked for while its kernel ends never starts, and is traced as not started', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0, text: 'passed' } } })

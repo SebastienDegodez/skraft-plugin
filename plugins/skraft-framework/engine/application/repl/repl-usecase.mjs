@@ -33,7 +33,7 @@ const RETIRE_WAIT_MS = 10_000
  * @param {any} deps @param {ReplState} state
  */
 export const createRepl = (deps, state) => Object.freeze({
-  /** @param {{ code: string, id?: unknown }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
+  /** @param {{ code: string, id?: unknown, reset?: boolean }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
   call: (request) => call(deps, state, request),
   /** Ends the kernel of an attempt that is over or unused; the server calls it every half minute. */
   sweep: () => sweep(deps, state),
@@ -60,17 +60,17 @@ export const openFlight = (state, id) => {
   return flight
 }
 
-/** @param {any} deps @param {ReplState} state @param {{ code: string, id?: unknown }} request @returns {Promise<ReplOutcome>} */
-const call = async (deps, state, { code, id }) => {
+/** @param {any} deps @param {ReplState} state @param {{ code: string, id?: unknown, reset?: boolean }} request @returns {Promise<ReplOutcome>} */
+const call = async (deps, state, { code, id, reset = false }) => {
   const flight = openFlight(state, id)
   try {
-    return await inAttempt(deps, state, { code, flight })
+    return await inAttempt(deps, state, { code, flight, reset })
   } finally {
     state.flights?.delete(id)
   }
 }
 
-/** @param {any} deps @param {ReplState} state @param {{ code: string, flight: Flight }} request @returns {Promise<ReplOutcome>} */
+/** @param {any} deps @param {ReplState} state @param {{ code: string, flight: Flight, reset: boolean }} request @returns {Promise<ReplOutcome>} */
 const inAttempt = async (deps, state, request) => {
   const bound = await bindAttempt(deps)
   if (!bound.ok) return refused(bound.code)
@@ -81,9 +81,9 @@ const inAttempt = async (deps, state, request) => {
   }
 }
 
-/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {{ code: string, flight: Flight }} request @returns {Promise<ReplOutcome>} */
+/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {{ code: string, flight: Flight, reset: boolean }} request @returns {Promise<ReplOutcome>} */
 const inEntry = async (deps, state, bound, request) => {
-  const held = await entryFor(deps, state, bound)
+  const held = await entryFor(deps, state, bound, request.reset)
   if (!held.ok) return refused(held.code, held.evidence ?? null)
   return evaluate(deps, held.entry, request, held.notice)
 }
@@ -92,25 +92,33 @@ const inEntry = async (deps, state, bound, request) => {
  * The entry of the attempt, one call after the other: a call that arrives while another starts
  * the kernel waits for it and shares it.
  * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
+ * @param {boolean} reset a fresh kernel, even when one serves the attempt
  * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
-const entryFor = (deps, state, bound) => {
-  const found = (state.starting ?? Promise.resolve()).then(() => entryNow(deps, state, bound))
+const entryFor = (deps, state, bound, reset) => {
+  const found = (state.starting ?? Promise.resolve()).then(() => entryNow(deps, state, bound, reset))
   state.starting = found.catch(() => undefined)
   return found
+}
+
+/** What the next result says first of the kernel it runs in. @param {Entry | null} current @param {string} key @param {boolean} reset */
+const noticeOf = (current, key, reset) => {
+  if (reset) return 'repl-reset'
+  return current !== null && current.key === key ? current.gone : null
 }
 
 /**
  * The entry of the attempt: the one in place, or a kernel started now, once the lease on the
  * attempt is held. A call of another attempt ends the kernel of the earlier one.
  * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
+ * @param {boolean} reset a fresh kernel, even when one serves the attempt
  * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
-const entryNow = async (deps, state, bound) => {
+const entryNow = async (deps, state, bound, reset) => {
   const key = keyOf(deps, bound)
   const current = state.entry
-  if (current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
-  const notice = current !== null && current.key === key ? current.gone : null
+  if (!reset && current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
+  const notice = noticeOf(current, key, reset)
   await retire(deps, state)
   const started = await startEntry(deps, state, { ...bound, key })
   return started.ok ? { ok: true, entry: started.entry, notice } : started
@@ -200,7 +208,7 @@ const settledWithin = (deps, pending, ms) => new Promise((resolve) => {
   void Promise.allSettled([...pending]).then(() => { stop(); resolve(undefined) })
 })
 
-/** @param {any} deps @param {Entry} entry @param {{ code: string, flight: Flight }} request @param {string | null} notice @returns {Promise<ReplOutcome>} */
+/** @param {any} deps @param {Entry} entry @param {{ code: string, flight: Flight, reset: boolean }} request @param {string | null} notice @returns {Promise<ReplOutcome>} */
 const evaluate = async (deps, entry, { code, flight }, notice) => {
   if (flight.cancelled) return refused('repl-interrupted')
   flight.launched = true

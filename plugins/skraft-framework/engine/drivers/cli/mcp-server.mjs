@@ -239,10 +239,10 @@ const replOf = async (session, args, id) => {
   const place = await workspaceOf(session, args.workspace)
   if (place.directory === null) return refusedResult(place.reason)
   if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
-  return replAnswer(session, place.directory, { code: args.code, id })
+  return replAnswer(session, place.directory, { code: args.code, id, reset: args.reset === true })
 }
 
-/** @param {Session} session @param {string} directory @param {{ code: string, id: unknown }} request */
+/** @param {Session} session @param {string} directory @param {{ code: string, id: unknown, reset: boolean }} request */
 const replAnswer = async (session, directory, request) => {
   try {
     const outcome = await replUseAt(session, directory).call(request)

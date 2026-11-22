@@ -41,6 +41,8 @@ The cell is JavaScript. Variables stay from one call to the next and a cell may 
 | `absent(gate, component, reason)` | declares that the project's `AGENTS.md` names no such gate for the component |
 | `console.log` | prints into the call's result |
 
+A call takes `code` (empty to wait for the cell in flight), `reset` and `workspace`; any other argument is refused. `reset: true` ends the kernel and its runs, even while a cell runs, starts a fresh kernel and runs `code` there; its result starts with `repl-reset`.
+
 A cell that runs past 90 seconds answers with what it printed so far while its runs go on. A call with empty code then waits for the cell and gets its end. A run that finishes while another cell goes on is told at the start of the next result (`[run-done r3 exit 0 …]`).
 
 ## What the agent reads back <!-- #result -->
@@ -68,6 +70,7 @@ A tree is clean when Git lists no uncommitted file but the tracking folder's. Ea
 | `repl-held-elsewhere` | another server holds the attempt's REPL |
 | `repl-restarted` | a cell would not stop and the kernel was ended: its variables are gone |
 | `repl-crashed` | the kernel exited by itself: its variables are gone |
+| `repl-reset` | heads the result of a call with `reset: true`: the kernel was ended and a fresh one started, its variables are gone |
 | `repl-failed` | the kernel could not start; the refusal names the run's `logs/unexpected.log`, which holds why |
 | `repl-unexpected` | skraft itself failed during the call; the refusal names the run's `logs/unexpected.log`, which holds the exception |
 
