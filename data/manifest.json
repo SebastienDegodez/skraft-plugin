@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-22T01:31:41.074Z",
+  "generated": "2026-11-22T09:28:16.251Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -8943,7 +8943,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-645"
       ],
-      "mtime": 1795311098038.0144
+      "mtime": 1795339692025.0205
     },
     {
       "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run1",
@@ -8956,7 +8956,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-645"
       ],
-      "mtime": 1795311098044.0144
+      "mtime": 1795339692075.0217
     },
     {
       "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run2",
@@ -8969,7 +8969,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-645"
       ],
-      "mtime": 1795311098111.0144
+      "mtime": 1795339692125.023
     },
     {
       "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run3",
@@ -8982,7 +8982,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-645"
       ],
-      "mtime": 1795311098121.0144
+      "mtime": 1795339692126.023
     },
     {
       "id": "pr/645/acceptance-designer/a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew--main--run4",
@@ -8995,7 +8995,7 @@
         "a-criterion-an-existing-test-already-covers-is-relied-on-only-once-that-test-is-run-else-tested-anew",
         "pr-645"
       ],
-      "mtime": 1795311098118.0144
+      "mtime": 1795339692175.2224
     },
     {
       "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -9008,7 +9008,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-645"
       ],
-      "mtime": 1795311098109.0144
+      "mtime": 1795339692175.2224
     },
     {
       "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
@@ -9021,7 +9021,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-645"
       ],
-      "mtime": 1795311098110.0144
+      "mtime": 1795339692175.2224
     },
     {
       "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
@@ -9034,7 +9034,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-645"
       ],
-      "mtime": 1795311098110.0144
+      "mtime": 1795339692175.2224
     },
     {
       "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run3",
@@ -9047,7 +9047,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-645"
       ],
-      "mtime": 1795311098111.0144
+      "mtime": 1795339692224.1404
     },
     {
       "id": "pr/645/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run4",
@@ -9060,7 +9060,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-645"
       ],
-      "mtime": 1795311098111.0144
+      "mtime": 1795339692224.1404
     },
     {
       "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
@@ -9073,7 +9073,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-645"
       ],
-      "mtime": 1795311098122.0144
+      "mtime": 1795339692226.0251
     },
     {
       "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
@@ -9086,7 +9086,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-645"
       ],
-      "mtime": 1795311098118.0144
+      "mtime": 1795339692226.0251
     },
     {
       "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
@@ -9099,7 +9099,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-645"
       ],
-      "mtime": 1795311098123.0144
+      "mtime": 1795339692272.593
     },
     {
       "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run3",
@@ -9112,7 +9112,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-645"
       ],
-      "mtime": 1795311098122.0144
+      "mtime": 1795339692273.0264
     },
     {
       "id": "pr/645/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run4",
@@ -9125,7 +9125,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-645"
       ],
-      "mtime": 1795311098122.0144
+      "mtime": 1795339692273.0264
     },
     {
       "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
@@ -9138,7 +9138,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-645"
       ],
-      "mtime": 1795311098122.0144
+      "mtime": 1795339692273.0264
     },
     {
       "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
@@ -9151,7 +9151,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-645"
       ],
-      "mtime": 1795311098119.0144
+      "mtime": 1795339692322.0276
     },
     {
       "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
@@ -9164,7 +9164,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-645"
       ],
-      "mtime": 1795311098119.0144
+      "mtime": 1795339692322.0276
     },
     {
       "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run3",
@@ -9177,7 +9177,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-645"
       ],
-      "mtime": 1795311098119.0144
+      "mtime": 1795339692322.0276
     },
     {
       "id": "pr/645/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run4",
@@ -9190,7 +9190,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-645"
       ],
-      "mtime": 1795311098121.0144
+      "mtime": 1795339692322.0276
     },
     {
       "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run0",
@@ -9203,7 +9203,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-645"
       ],
-      "mtime": 1795311098123.0144
+      "mtime": 1795339692331.0496
     },
     {
       "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run1",
@@ -9216,7 +9216,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-645"
       ],
-      "mtime": 1795311098122.0144
+      "mtime": 1795339692331.0496
     },
     {
       "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run2",
@@ -9229,7 +9229,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-645"
       ],
-      "mtime": 1795311098122.0144
+      "mtime": 1795339692372.0286
     },
     {
       "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run3",
@@ -9242,7 +9242,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-645"
       ],
-      "mtime": 1795311098122.0144
+      "mtime": 1795339692373.0288
     },
     {
       "id": "pr/645/acceptance-designer/every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver--main--run4",
@@ -9255,1151 +9255,7 @@
         "every-scenario-s-acceptance-test-is-written-first-in-one-red-commit-and-grouped-by-rule-for-deliver",
         "pr-645"
       ],
-      "mtime": 1795311098123.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run0",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098235.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run1",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098239.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run2",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098240.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run3",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098240.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run0",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098227.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run1",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098238.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run2",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098238.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run3",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098236.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run0",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098228.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run1",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098236.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run2",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098236.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run3",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098236.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run0",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098228.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run1",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098236.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run2",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098238.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run3",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098238.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run0",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098236.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run1",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098236.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run2",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098238.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run3",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098228.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run0",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098229.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run1",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098239.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run2",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098238.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run3",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098237.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run0",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098224.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run1",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098228.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run2",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098234.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run3",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098229.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run0",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098239.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run1",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098237.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run2",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098237.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run3",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098239.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run0",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098226.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run1",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098234.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run2",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098237.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run3",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098239.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run0",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098224.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run1",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098233.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run2",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098233.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run3",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098233.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run0",
-      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098224.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run1",
-      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098233.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run2",
-      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098233.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run3",
-      "name": "clean-architecture-testing / The failing test is already in the right place (baseline, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "baseline",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098233.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run0",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098301.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run1",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098305.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run2",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run3",
-      "name": "clean-architecture-testing / Cover the payment adapter that nothing tests yet (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/cover-the-payment-adapter-that-nothing-tests-yet--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "cover-the-payment-adapter-that-nothing-tests-yet",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run0",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098300.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run1",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run2",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run3",
-      "name": "clean-architecture-testing / Forty validation cases for a rule three use cases share (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/forty-validation-cases-for-a-rule-three-use-cases-share--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "forty-validation-cases-for-a-rule-three-use-cases-share",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run0",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run1",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run2",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run3",
-      "name": "clean-architecture-testing / Runner layout: Each Python feature root executes with its own bindings (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-each-python-feature-root-executes-with-its-own-bindings--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-each-python-feature-root-executes-with-its-own-bindings",
-        "pr-645"
-      ],
-      "mtime": 1795311098305.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run0",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098298.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run1",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run2",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run3",
-      "name": "clean-architecture-testing / Runner layout: Java executable scenarios stay in the fast suite (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-java-executable-scenarios-stay-in-the-fast-suite--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-java-executable-scenarios-stay-in-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098298.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run0",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098298.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run1",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run2",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run3",
-      "name": "clean-architecture-testing / Runner layout: Python scenario bindings are actually collected (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/runner-layout-python-scenario-bindings-are-actually-collected--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "runner-layout-python-scenario-bindings-are-actually-collected",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run0",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098298.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run1",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run2",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run3",
-      "name": "clean-architecture-testing / Spring Boot: first tests for the REST payment adapter (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-first-tests-for-the-rest-payment-adapter--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-first-tests-for-the-rest-payment-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run0",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098295.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run1",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098300.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run2",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098303.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run3",
-      "name": "clean-architecture-testing / Spring Boot: test the JPA order repository adapter (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-test-the-jpa-order-repository-adapter--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-test-the-jpa-order-repository-adapter",
-        "pr-645"
-      ],
-      "mtime": 1795311098300.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run0",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098298.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run1",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run2",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run3",
-      "name": "clean-architecture-testing / Spring Boot: the Maven build rejects a layer leak, the save loop stays fast (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "spring-boot-the-maven-build-rejects-a-layer-leak-the-save-loop-stays-fast",
-        "pr-645"
-      ],
-      "mtime": 1795311098304.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run0",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098299.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run1",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run2",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098305.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run3",
-      "name": "clean-architecture-testing / Stop layer violations at the build without slowing the fast suite (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/stop-layer-violations-at-the-build-without-slowing-the-fast-suite--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "stop-layer-violations-at-the-build-without-slowing-the-fast-suite",
-        "pr-645"
-      ],
-      "mtime": 1795311098302.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run0",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098299.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run1",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098303.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run2",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098299.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run3",
-      "name": "clean-architecture-testing / Swap the database engine out of the repository tests (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/swap-the-database-engine-out-of-the-repository-tests--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "swap-the-database-engine-out-of-the-repository-tests",
-        "pr-645"
-      ],
-      "mtime": 1795311098303.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run0",
-      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 0)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098295.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run1",
-      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 1)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098299.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run2",
-      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 2)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098299.0144
-    },
-    {
-      "id": "pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run3",
-      "name": "clean-architecture-testing / The failing test is already in the right place (skilled, run 3)",
-      "url": "sessions/pr/645/clean-architecture-testing/the-failing-test-is-already-in-the-right-place--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "clean-architecture-testing",
-        "skilled",
-        "the-failing-test-is-already-in-the-right-place",
-        "pr-645"
-      ],
-      "mtime": 1795311098299.0144
+      "mtime": 1795339692373.0288
     },
     {
       "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
@@ -10412,7 +9268,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-645"
       ],
-      "mtime": 1795311098337.0144
+      "mtime": 1795339692445.0305
     },
     {
       "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
@@ -10425,7 +9281,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-645"
       ],
-      "mtime": 1795311098337.0144
+      "mtime": 1795339692445.0305
     },
     {
       "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
@@ -10438,7 +9294,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-645"
       ],
-      "mtime": 1795311098339.0144
+      "mtime": 1795339692445.0305
     },
     {
       "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
@@ -10451,7 +9307,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-645"
       ],
-      "mtime": 1795311098339.0144
+      "mtime": 1795339692445.0305
     },
     {
       "id": "pr/645/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
@@ -10464,7 +9320,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-645"
       ],
-      "mtime": 1795311098338.0144
+      "mtime": 1795339692444.0303
     },
     {
       "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -10477,7 +9333,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-645"
       ],
-      "mtime": 1795311098338.0144
+      "mtime": 1795339692444.0303
     },
     {
       "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
@@ -10490,7 +9346,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-645"
       ],
-      "mtime": 1795311098338.0144
+      "mtime": 1795339692445.0305
     },
     {
       "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
@@ -10503,7 +9359,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-645"
       ],
-      "mtime": 1795311098339.0144
+      "mtime": 1795339692445.0305
     },
     {
       "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
@@ -10516,7 +9372,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-645"
       ],
-      "mtime": 1795311098339.0144
+      "mtime": 1795339692444.0303
     },
     {
       "id": "pr/645/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
@@ -10529,7 +9385,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-645"
       ],
-      "mtime": 1795311098339.0144
+      "mtime": 1795339692484.843
     },
     {
       "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -10542,7 +9398,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-645"
       ],
-      "mtime": 1795311098334.2673
+      "mtime": 1795339692485.0312
     },
     {
       "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
@@ -10555,7 +9411,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-645"
       ],
-      "mtime": 1795311098337.0144
+      "mtime": 1795339692485.0312
     },
     {
       "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
@@ -10568,7 +9424,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-645"
       ],
-      "mtime": 1795311098337.0144
+      "mtime": 1795339692485.0312
     },
     {
       "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
@@ -10581,7 +9437,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-645"
       ],
-      "mtime": 1795311098337.0144
+      "mtime": 1795339692485.0312
     },
     {
       "id": "pr/645/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
@@ -10594,7 +9450,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-645"
       ],
-      "mtime": 1795311098337.0144
+      "mtime": 1795339692485.0312
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
@@ -10607,7 +9463,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098388.0144
+      "mtime": 1795339692526.0322
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
@@ -10620,7 +9476,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
@@ -10633,7 +9489,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098393.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
@@ -10646,7 +9502,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098393.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
@@ -10659,7 +9515,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098388.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
@@ -10672,7 +9528,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098392.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
@@ -10685,7 +9541,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098393.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
@@ -10698,7 +9554,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098392.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
@@ -10711,7 +9567,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098388.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
@@ -10724,7 +9580,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098392.0144
+      "mtime": 1795339692525.0322
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
@@ -10737,7 +9593,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098392.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
@@ -10750,7 +9606,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098393.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
@@ -10763,7 +9619,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098393.0144
+      "mtime": 1795339692525.0322
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
@@ -10776,7 +9632,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098387.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
@@ -10789,7 +9645,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098394.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
@@ -10802,7 +9658,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098392.0144
+      "mtime": 1795339692525.0322
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
@@ -10815,7 +9671,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098385.0144
+      "mtime": 1795339692519.0322
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
@@ -10828,7 +9684,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098389.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
@@ -10841,7 +9697,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098389.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
@@ -10854,7 +9710,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098389.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
@@ -10867,7 +9723,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098385.0144
+      "mtime": 1795339692519.0322
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
@@ -10880,7 +9736,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
@@ -10893,7 +9749,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098389.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
@@ -10906,7 +9762,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692523.0322
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
@@ -10919,7 +9775,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098389.0144
+      "mtime": 1795339692519.0322
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
@@ -10932,7 +9788,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692523.0322
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
@@ -10945,7 +9801,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692523.0322
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
@@ -10958,7 +9814,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692523.0322
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
@@ -10971,7 +9827,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098385.0144
+      "mtime": 1795339692520.0322
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
@@ -10984,7 +9840,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098389.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
@@ -10997,7 +9853,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692521.0322
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
@@ -11010,7 +9866,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098391.0144
+      "mtime": 1795339692522.0322
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
@@ -11023,7 +9879,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098389.0144
+      "mtime": 1795339692523.0322
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
@@ -11036,7 +9892,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098392.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
@@ -11049,7 +9905,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098393.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
@@ -11062,7 +9918,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098393.0144
+      "mtime": 1795339692524.0322
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
@@ -11075,7 +9931,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098434.0144
+      "mtime": 1795339692544.2173
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
@@ -11088,7 +9944,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
@@ -11101,7 +9957,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098441.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
@@ -11114,7 +9970,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098441.0144
+      "mtime": 1795339692546.9653
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
@@ -11127,7 +9983,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098441.0144
+      "mtime": 1795339692546.9653
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
@@ -11140,7 +9996,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098444.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
@@ -11153,7 +10009,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098444.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
@@ -11166,7 +10022,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-645"
       ],
-      "mtime": 1795311098444.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
@@ -11179,7 +10035,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098437.0144
+      "mtime": 1795339692546.9653
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
@@ -11192,7 +10048,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
@@ -11205,7 +10061,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098444.0144
+      "mtime": 1795339692546.9653
     },
     {
       "id": "pr/645/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
@@ -11218,7 +10074,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692546.9653
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
@@ -11231,7 +10087,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098445.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
@@ -11244,7 +10100,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098446.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
@@ -11257,7 +10113,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098445.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
@@ -11270,7 +10126,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-645"
       ],
-      "mtime": 1795311098445.0144
+      "mtime": 1795339692549.033
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
@@ -11283,7 +10139,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098438.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
@@ -11296,7 +10152,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098438.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
@@ -11309,7 +10165,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098438.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
@@ -11322,7 +10178,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-645"
       ],
-      "mtime": 1795311098438.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
@@ -11335,7 +10191,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
@@ -11348,7 +10204,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
@@ -11361,7 +10217,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
@@ -11374,7 +10230,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-645"
       ],
-      "mtime": 1795311098444.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
@@ -11387,7 +10243,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098440.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
@@ -11400,7 +10256,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098441.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
@@ -11413,7 +10269,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098444.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
@@ -11426,7 +10282,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
@@ -11439,7 +10295,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098433.0144
+      "mtime": 1795339692546.0327
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
@@ -11452,7 +10308,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098438.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
@@ -11465,7 +10321,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098443.0144
+      "mtime": 1795339692547.0327
     },
     {
       "id": "pr/645/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
@@ -11478,7 +10334,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-645"
       ],
-      "mtime": 1795311098442.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
@@ -11491,7 +10347,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098445.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
@@ -11504,7 +10360,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098445.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
@@ -11517,7 +10373,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098444.0144
+      "mtime": 1795339692548.0327
     },
     {
       "id": "pr/645/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
@@ -11530,397 +10386,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-645"
       ],
-      "mtime": 1795311098445.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 0)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098471.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 1)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098472.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 2)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098472.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 3)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098470.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 4)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098471.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 0)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098468.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 1)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098470.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 2)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098470.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 3)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098472.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 4)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098470.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run0",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 0)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098473.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run1",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 1)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098473.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run2",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 2)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098472.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run3",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 3)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098472.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run4",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 4)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--baseline--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098472.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 0)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098505.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 1)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 2)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 3)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098505.0144
-    },
-    {
-      "id": "pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 4)",
-      "url": "sessions/pr/645/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-645"
-      ],
-      "mtime": 1795311098507.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 0)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 1)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 2)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098505.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 3)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 4)",
-      "url": "sessions/pr/645/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run0",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 0)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run1",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 1)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098505.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run2",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 2)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098506.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run3",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 3)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098505.0144
-    },
-    {
-      "id": "pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run4",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 4)",
-      "url": "sessions/pr/645/skraft-init/record-a-practice-only-where-it-applies--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-645"
-      ],
-      "mtime": 1795311098505.0144
+      "mtime": 1795339692548.0327
     }
   ]
 }
