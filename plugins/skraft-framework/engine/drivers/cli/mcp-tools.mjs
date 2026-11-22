@@ -121,6 +121,13 @@ export const TOOLS = Object.freeze([
     argv: () => [],
   }),
   tool({
+    name: 'skraft_repl_reset', title: 'End the kernel of the attempt REPL',
+    description: "Ends the kernel of skraft_repl in your open attempt and the runs it started, even while a cell runs: the cell in flight answers repl-reset, its variables are gone, and the next skraft_repl starts a fresh kernel whose runs take the next ids. It waits for no other call and is never refused as busy. With no kernel running, it ends nothing and says so. The tool works only inside an open attempt.",
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    // Stryker disable next-line ArrayDeclaration: skraft_repl_reset calls the REPL use case directly; no caller reads this argv
+    argv: () => [],
+  }),
+  tool({
     name: 'skraft_review', title: 'Review a pull request',
     description: 'Reviews one pull request with the review workflow. On dispatch, start each listed agent as skraft_next asks, then do what then says. Publishing the verdict takes a person: skraft review --publish in a terminal.',
     parameters: { pr: { kind: 'count', description: 'the pull request number' }, record: { kind: 'boolean', description: 'hand the saved agent replies to the review' } },

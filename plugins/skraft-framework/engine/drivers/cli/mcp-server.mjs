@@ -31,8 +31,8 @@ import { createRepl, interrupt as interruptRepl, openFlight } from '../../applic
  *   sweeper: ReturnType<typeof setInterval> | null,
  * }} Session
  *   roots: whether the host lists its roots; loop: whether it conducts the agent loop; pending: the requests sent to the host, by id;
- *   queue: tool calls run one after the other, as they share the working copy; skraft_repl alone does not wait in it, as
- *   a cell runs for minutes while skraft_status and skraft_precheck must answer; repl: the kernel of the attempt it serves;
+ *   queue: tool calls run one after the other, as they share the working copy; skraft_repl and skraft_repl_reset alone do
+ *   not wait in it, as a cell runs for minutes while skraft_status and skraft_precheck must answer, and a reset ends that cell; repl: the kernel of the attempt it serves;
  *   sweeper: ends a kernel whose attempt is over. The skraft_repl requests in flight are `repl.flights`, by request id, which a cancellation names.
  * @typedef {import('./mcp-tools.mjs').SkraftTool} SkraftTool
  */
@@ -216,6 +216,7 @@ const callTool = async (session, { name, arguments: args = {}, _meta: meta }, id
   const refusal = refusalOf(tool, args)
   if (refusal !== null) return refusedResult(refusal)
   if (tool.name === 'skraft_repl') return replTool(session, args, id)
+  if (tool.name === 'skraft_repl_reset') return replAnswer(session, args.workspace, (repl) => repl.reset())
   return serially(session, () => runTool(session, tool, args, meta?.progressToken))
 }
 
@@ -234,20 +235,27 @@ const replTool = async (session, args, id) => {
 }
 
 /** @param {Session} session @param {Record<string, any>} args @param {unknown} id */
-const replOf = async (session, args, id) => {
-  const place = await workspaceOf(session, args.workspace)
+const replOf = (session, args, id) => replAnswer(session, args.workspace, (repl) => repl.call({ code: args.code, id, reset: args.reset === true }))
+
+/**
+ * The REPL tools in the folder of the call; skraft_repl_reset waits for no other call either: it
+ * ends the kernel a cell holds.
+ * @param {Session} session @param {string | undefined} workspace @param {(repl: ReturnType<typeof createRepl>) => Promise<import('../../application/repl/repl-usecase.mjs').ReplOutcome>} act
+ */
+const replAnswer = async (session, workspace, act) => {
+  const place = await workspaceOf(session, workspace)
   if (place.directory === null) return refusedResult(place.reason)
   if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
-  return replAnswer(session, place.directory, { code: args.code, id, reset: args.reset === true })
+  return replOutcome(session, place.directory, act)
 }
 
-/** @param {Session} session @param {string} directory @param {{ code: string, id: unknown, reset: boolean }} request */
-const replAnswer = async (session, directory, request) => {
+/** @param {Session} session @param {string} directory @param {(repl: ReturnType<typeof createRepl>) => Promise<import('../../application/repl/repl-usecase.mjs').ReplOutcome>} act */
+const replOutcome = async (session, directory, act) => {
   try {
-    const outcome = await replUseAt(session, directory).call(request)
+    const outcome = await act(replUseAt(session, directory))
     return { content: [{ type: 'text', text: outcome.text }], isError: !outcome.ok }
   } catch (error) {
-    session.log(`skraft mcp: skraft_repl failed: ${errorText(error)}`)
+    session.log(`skraft mcp: the REPL failed: ${errorText(error)}`)
     return refusedResult('skraft could not finish this call; the log of the skraft MCP server says why')
   }
 }

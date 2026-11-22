@@ -3,7 +3,7 @@ import { refusalText } from '../../domain/repl/refusals.mjs'
 import { signingKeyOf } from '../evidence/run-trace-store.mjs'
 import { closeLostRuns, nextRunId, traceAbsent } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
-import { bindAttempt, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
+import { bindAttempt, heldElsewhere, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
 import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 
 /**
@@ -39,6 +39,8 @@ const CELL_MS = 7_260_000
 export const createRepl = (deps, state) => Object.freeze({
   /** @param {{ code: string, id?: unknown, reset?: boolean }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
   call: (request) => call(deps, state, request),
+  /** `skraft_repl_reset`: ends the kernel of the open attempt and its runs, even mid-cell; the next call starts a fresh one. @returns {Promise<ReplOutcome>} */
+  reset: () => resetAttempt(deps, state),
   /** Ends the kernel of an attempt that is over or unused; the server calls it every half minute. */
   sweep: () => serially(state, () => sweepKept(deps, state)),
   /** The request is cancelled: its awaits stop and the runs it started end. @param {unknown} [id] */
@@ -52,6 +54,9 @@ const keyOf = (deps, { slug, folder }) => `${deps.repl.root}|${slug}/${folder}`
 
 /** @param {string} code @param {string | null} [evidence] the file that holds the exception @returns {ReplOutcome} */
 const refused = (code, evidence = null) => ({ ok: false, code, text: refusalText(code, evidence) })
+
+/** @param {string} code @returns {ReplOutcome} what a call did, said by a fixed text */
+const said = (code) => ({ ok: true, code, text: refusalText(code) })
 
 /**
  * The flight of a request: the one the server opened when the request arrived, else a new one.
@@ -90,6 +95,36 @@ const inEntry = async (deps, state, bound, request) => {
   const held = await entryFor(deps, state, bound, request.reset)
   if (!held.ok) return refused(held.code, held.evidence ?? null)
   return evaluate(deps, held.entry, request, held.notice)
+}
+
+/**
+ * A reset is bound to the open attempt and waits for no cell: it waits only for a kernel being
+ * started or ended, and the cell in flight answers repl-reset.
+ * @param {any} deps @param {ReplState} state @returns {Promise<ReplOutcome>}
+ */
+const resetAttempt = async (deps, state) => {
+  const bound = await bindAttempt(deps)
+  if (!bound.ok) return refused(bound.code)
+  try {
+    return await serially(state, () => resetNow(deps, state, bound))
+  } catch (error) {
+    return refused('repl-unexpected', await keepUnexpected(deps, bound.slug, error))
+  }
+}
+
+/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @returns {Promise<ReplOutcome>} */
+const resetNow = async (deps, state, bound) => {
+  const entry = state.entry
+  if (entry !== null && entry.key === keyOf(deps, bound)) return endOnRequest(deps, state, entry)
+  if (await heldElsewhere(deps, bound)) return refused('repl-held-elsewhere')
+  return said('repl-no-kernel')
+}
+
+/** @param {any} deps @param {ReplState} state @param {Entry} entry @returns {Promise<ReplOutcome>} */
+const endOnRequest = async (deps, state, entry) => {
+  entry.endedBy = 'repl-reset'
+  await retire(deps, state)
+  return said('repl-reset')
 }
 
 /**
@@ -264,10 +299,20 @@ const present = async (deps, entry, outcome, notice) => {
   const cellLog = `${entry.folder}/cell-${entry.cells}.log`
   const { text, cut } = composeCell(partsOf(entry, outcome, cellLog))
   if (cut) await deps.files.write(entry.slug, cellLog, outcome.printed)
-  const lost = ['restarted', 'crashed'].includes(outcome.status) ? `repl-${outcome.status}` : null
+  const lost = lostOf(entry, outcome)
   const heading = [lost ?? notice].filter((code) => code !== null).map((code) => refusalText(code))
   const lines = [...(await traceNotice(deps, entry)), ...heading, ...toldOnce(entry), text]
   return { ok: lost === null, code: lost, text: lines.join('\n') }
+}
+
+/**
+ * Why the kernel the cell ran in is gone: it would not stop, it crashed, or a reset ended it;
+ * null while it serves.
+ * @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @returns {string | null}
+ */
+const lostOf = (entry, outcome) => {
+  if (outcome.status === 'restarted' || outcome.status === 'crashed') return `repl-${outcome.status}`
+  return outcome.status === 'stopped' ? entry.endedBy ?? null : null
 }
 
 /**

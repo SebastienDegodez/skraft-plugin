@@ -297,15 +297,15 @@ test('a lease on the attempt held by a running server refuses the call, and one 
   assert.deepEqual(JSON.parse(answers[3]), { pid: 100, created: 'server-start', renewedAt: taken.host.deps.clock.now().toISOString() })
 })
 
-test('a lease whose running holder has not renewed it for five minutes is taken over, one renewed within them is respected, and the sweep renews the lease it holds', async () => {
+test('a lease whose running holder has not renewed it for five minutes is taken over, one renewed within them is respected, by a reset too, and the sweep renews the lease it holds', async () => {
   const answers = []
   const lockOf = `${SLUG}/logs/runs/distill-1-1`
   const { host, kernels } = replRun({ orphans: new InMemoryOrphans({ holderGone: false }), calls: { 2: async (repl, one) => {
     const ago = (minutes) => new Date(one.deps.clock.now().getTime() - minutes * 60_000).toISOString()
     await one.deps.repl.locks.create(lockOf, JSON.stringify({ pid: 777, created: 'elsewhere', renewedAt: ago(4) }))
-    answers.push(await repl.call({ code: '1' }))
+    answers.push(await repl.call({ code: '1' }), await repl.reset())
     await one.deps.repl.locks.replace(lockOf, one.deps.repl.locks.held(lockOf), JSON.stringify({ pid: 777, created: 'elsewhere', renewedAt: ago(6) }))
-    answers.push(await repl.call({ code: '1' }))
+    answers.push(await repl.reset(), await repl.call({ code: '1' }))
     one.clock.sleep(60_000)
     await repl.sweep()
     answers.push(JSON.parse(one.deps.repl.locks.held(lockOf)).renewedAt, one.deps.clock.now().toISOString())
@@ -313,9 +313,9 @@ test('a lease whose running holder has not renewed it for five minutes is taken 
 
   await host.start()
 
-  assert.deepEqual(answers.slice(0, 2).map(({ code }) => code), ['repl-held-elsewhere', null])
+  assert.deepEqual(answers.slice(0, 4).map(({ code }) => code), ['repl-held-elsewhere', 'repl-held-elsewhere', 'repl-no-kernel', null])
   assert.equal(kernels.kernels.length, 1)
-  assert.equal(answers[2], answers[3])
+  assert.equal(answers[4], answers[5])
 })
 
 test('the sweep renews its lease in place only well before its end, takes it back past that, and ends the kernel when the lease is not its own once written', async () => {
@@ -516,7 +516,7 @@ test('a reset during a cell that never ends ends its kernel and its runs, starts
   const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
   assert.equal(kernels.kernels.length, 2)
   assert.equal(kernels.kernels[0].stopped, true)
-  assert.equal(answers[0].text, 'repl-reset: the kernel was ended on request and a fresh one started: its variables are gone, and the runs it had started were ended\n=> fresh')
+  assert.equal(answers[0].text, 'repl-reset: the kernel of this attempt was ended on request, with the runs it had started: its variables are gone, and the next skraft_repl starts a fresh kernel\n=> fresh')
   assert.deepEqual(trace.filter(({ type }) => type === 'run').map(({ killed }) => killed), [true])
 })
 

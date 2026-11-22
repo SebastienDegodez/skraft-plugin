@@ -67,6 +67,18 @@ const takeOver = async (deps, bound, { seen, text }) => {
   return (await deps.repl.locks.replace(lockName(bound), seen, text)) ? text : null
 }
 
+/**
+ * Whether another server holds the lease on the attempt's REPL, and renews it: the lease is read,
+ * never taken.
+ * @param {any} deps @param {{ slug: string, folder: string }} bound @returns {Promise<boolean>}
+ */
+export const heldElsewhere = async (deps, bound) => {
+  const seen = await deps.repl.locks.read(lockName(bound))
+  const holder = seen === null ? null : holderOf(seen)
+  if (holder === null || holder.pid === deps.repl.server.pid || lapsed(deps, holder)) return false
+  return !(await deps.repl.orphans.gone(holder))
+}
+
 /** @param {any} deps @param {{ renewedAt: string | null }} holder whether its holder has not renewed it for five minutes */
 const lapsed = (deps, { renewedAt }) => {
   const at = renewedAt === null ? Number.NaN : Date.parse(renewedAt)
