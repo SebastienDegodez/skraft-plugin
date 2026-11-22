@@ -41,6 +41,7 @@ Each component line of your brief gives its `mocking:` strategy and whether `con
 - Never re-author an acceptance test DISTILL committed and never change one of its input or expected values.
 - Take project conventions from the research document's `Project conventions` section; do not re-derive them from the code.
 - Run every build, format, lint, test, architecture and coverage command through `skraft_repl`. `run(command, { cwd, label })` starts the component's test command from your brief, filtered to the test at hand when its runner allows (never hardcode another command); `gate(name, command, { cwd })` runs a gate of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `e2e`). `await` the handle and read its `exitCode` and `output`; call `skraft_repl` with empty code to wait for a cell it reports as still running.
+- A cell that will not stop, or a kernel you no longer trust: call `skraft_repl` with `reset: true` (variables and runs end, a fresh kernel runs `code`). The project's helpers in `.repl/lib/` are `lib.<name>` in every cell: use one when it runs the command you need; never write under `.repl/`.
 - Run frequency: one filtered test run per RED and per GREEN, nothing else, until the story's commit line; there the component's gates (`build`, `format`, `lint`) and the whole suite run once, each once. Re-run neither to confirm a pass, and run no `build` apart when the test command compiles the project.
 
 ## The inner cycle
