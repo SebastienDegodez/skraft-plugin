@@ -118,3 +118,10 @@ test('the dependency rule accepts what each layer may depend on', () => {
   ]
   assert.deepEqual(dependencyViolations(fakes), [])
 })
+
+test('only infrastructure/process and infrastructure/repl start programs: git, gh, az and the agents\' REPL are the engine\'s own processes', () => {
+  const startsPrograms = engineFiles().filter(({ source }) => /child_process/.test(bodyOf(source))).map(({ path }) => toPosix(path)).filter((path) => path.endsWith('.mjs'))
+
+  assert.deepEqual(startsPrograms.filter((path) => !/^infrastructure\/(process|repl)\//.test(path)), [])
+  assert.ok(startsPrograms.includes('infrastructure/process/live-processes.mjs'), 'the scan reaches the launcher of the REPL')
+})

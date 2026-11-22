@@ -3,6 +3,7 @@ import { offeredPrompts, promptListing, promptMessages, promptRefusalOf } from '
 import { chosenWorkspace, givenWorkingCopy, rootFolders } from './mcp-roots.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { mutationAdapters } from './mutation-loop.mjs'
+import { createRepl } from '../../application/repl/repl-usecase.mjs'
 
 /**
  * `skraft mcp`: the commands of this driver served to an agent host as MCP tools, JSON-RPC over
@@ -27,9 +28,13 @@ import { mutationAdapters } from './mutation-loop.mjs'
  *   services: CliServices & McpServices, run: Run, send: (message: object) => void, log: (line: string) => void,
  *   roots: boolean, loop: boolean, closed: boolean, sent: number, patienceMs: number,
  *   pending: Map<unknown, (answer: unknown) => void>, queue: Promise<unknown>,
+ *   repl: import('../../application/repl/repl-usecase.mjs').ReplState, replUse: ReturnType<typeof createRepl> | null,
+ *   replRequest: unknown, sweeper: ReturnType<typeof setInterval> | null,
  * }} Session
  *   roots: whether the host lists its roots; loop: whether it conducts the agent loop; pending: the requests sent to the host, by id;
- *   queue: tool calls run one after the other, as they share the working copy.
+ *   queue: tool calls run one after the other, as they share the working copy; skraft_repl alone does not wait in it, as
+ *   a cell runs for minutes while skraft_status and skraft_precheck must answer; repl: the kernel of the attempt it serves;
+ *   replRequest: the id of the skraft_repl request in flight, which a cancellation names; sweeper: ends a kernel whose attempt is over.
  * @typedef {import('./mcp-tools.mjs').SkraftTool} SkraftTool
  */
 
@@ -44,6 +49,9 @@ const INTERNAL_ERROR = -32603
 
 // Stryker disable next-line ArithmeticOperator: any patience long enough for a host to answer behaves alike
 const ROOTS_PATIENCE_MS = 10 * 1000
+
+/** How often a kernel whose attempt is over is looked for. */
+const SWEEP_MS = 30 * 1000
 
 /**
  * The hosts that conduct the agent loop: VS Code, by the name it gives at the handshake (its
@@ -79,6 +87,7 @@ export const serveMcp = async (services, console, run) => {
   const running = new Set()
   for await (const line of services.lines()) track(running, receive(session, line))
   closeSession(session)
+  await closeRepl(session)
   await Promise.all(running)
   return 0
 }
@@ -88,6 +97,7 @@ const openSession = (services, console, run) => ({
   services, run, log: console.err, send: (message) => console.out(JSON.stringify(message)),
   roots: false, loop: false, closed: false, sent: 0, patienceMs: services.patienceMs ?? ROOTS_PATIENCE_MS,
   pending: new Map(), queue: Promise.resolve(),
+  repl: { entry: null, reaped: false }, replUse: null, replRequest: null, sweeper: null,
 })
 
 /** @param {Set<Promise<void>>} running @param {Promise<void>} work */
@@ -118,7 +128,13 @@ const handle = async (session, line) => {
   if (message === undefined) return session.send(failure(null, PARSE_ERROR, 'Parse error'))
   if (!isMessage(message)) return session.send(failure(null, INVALID_REQUEST, 'Invalid Request'))
   if (message.method === undefined) return settle(session, message)
-  if (message.id !== undefined) session.send(await answered(session, message))
+  if (message.id !== undefined) return session.send(await answered(session, message))
+  cancelled(session, message)
+}
+
+/** The host cancelled the skraft_repl request in flight: its cell stops. @param {Session} session @param {Record<string, any>} message */
+const cancelled = (session, { method, params }) => {
+  if (method === 'notifications/cancelled' && params?.requestId === session.replRequest) session.replUse?.interrupt()
 }
 
 /** @param {string} line @returns {unknown} undefined when the line is no JSON */
@@ -163,7 +179,7 @@ const answered = async (session, { id, method, params }) => {
   const handler = METHODS.get(method)
   if (handler === undefined) return failure(id, METHOD_NOT_FOUND, 'Method not found')
   try {
-    return { jsonrpc: '2.0', id, result: await handler(session, params ?? {}) }
+    return { jsonrpc: '2.0', id, result: await handler(session, params ?? {}, id) }
   } catch (error) {
     return failed(session, id, error)
   }
@@ -195,12 +211,52 @@ const initialize = (session, { protocolVersion, capabilities, clientInfo }) => {
 }
 
 /** @param {Session} session @param {Record<string, any>} params */
-const callTool = async (session, { name, arguments: args = {}, _meta: meta }) => {
+const callTool = async (session, { name, arguments: args = {}, _meta: meta }, id) => {
   const tool = offeredTools(session.loop).find((each) => each.name === name)
   if (tool === undefined) throw new Refused('Unknown tool')
   const refusal = refusalOf(tool, args)
   if (refusal !== null) return refusedResult(refusal)
+  if (tool.name === 'skraft_repl') return replTool(session, args, id)
   return serially(session, () => runTool(session, tool, args, meta?.progressToken))
+}
+
+/**
+ * skraft_repl, which waits for no other call: a cell runs for minutes. The REPL use case holds
+ * the kernel in the session; a cancellation of the request in flight interrupts its cell.
+ * @param {Session} session @param {Record<string, any>} args @param {unknown} id
+ */
+const replTool = async (session, args, id) => {
+  const place = await workspaceOf(session, args.workspace)
+  if (place.directory === null) return refusedResult(place.reason)
+  if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
+  session.replRequest = id
+  const result = await replAnswer(session, place.directory, args.code)
+  session.replRequest = null
+  return result
+}
+
+/** @param {Session} session @param {string} directory @param {string} code */
+const replAnswer = async (session, directory, code) => {
+  try {
+    const outcome = await replUseAt(session, directory).call({ code })
+    return { content: [{ type: 'text', text: outcome.text }], isError: !outcome.ok }
+  } catch (error) {
+    session.log(`skraft mcp: skraft_repl failed: ${errorText(error)}`)
+    return refusedResult('skraft could not finish this call; the log of the skraft MCP server says why')
+  }
+}
+
+/** The REPL use case over the folder of the call; a kernel whose attempt is over is ended every 30 s. @param {Session} session @param {string} directory */
+const replUseAt = (session, directory) => {
+  session.replUse = createRepl(session.services.at(directory).adapters(), session.repl)
+  session.sweeper ??= setInterval(() => { void session.replUse?.sweep().catch(() => undefined) }, SWEEP_MS).unref()
+  return session.replUse
+}
+
+/** Nothing is left running when the host closes: the sweeper stops and the kernel ends. @param {Session} session */
+const closeRepl = async (session) => {
+  if (session.sweeper !== null) clearInterval(session.sweeper)
+  await session.replUse?.close().catch((/** @type {unknown} */ error) => session.log(`skraft mcp: the REPL did not close: ${errorText(error)}`))
 }
 
 /** @template T @param {Session} session @param {() => Promise<T>} work @returns {Promise<T>} */

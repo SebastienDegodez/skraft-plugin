@@ -51,18 +51,24 @@ const sigkill = (target) => {
  * @param {{ folder: string } & OrphanHost} options folder: the absolute folder the entries are written in
  */
 export const createOrphanJournal = ({ folder, platform = process.platform, creationOf = (pid) => processCreation(pid, platform), kill = (pid) => killTree(pid, platform) }) => {
-  const pathOf = (/** @type {number} */ pid) => join(folder, `${pid}.json`)
   return Object.freeze({
     /** @param {Entry} entry */
-    keep: async (entry) => {
-      await mkdir(folder, { recursive: true })
-      await writeFile(pathOf(entry.server.pid), JSON.stringify(entry), 'utf8')
-    },
+    keep: (entry) => keepEntry(folder, entry),
     /** @param {number} serverPid */
-    forget: (serverPid) => rm(pathOf(serverPid), { force: true }),
+    forget: (serverPid) => rm(join(folder, `${serverPid}.json`), { force: true }),
+    /** The process under a pid, with its start time, as `keep` records it. @param {number} pid @returns {Tracked} */
+    track: (pid) => ({ pid, created: creationOf(pid) }),
+    /** Whether the process recorded is certainly gone. @param {Tracked} tracked */
+    gone: (tracked) => isGone(tracked, { creationOf }),
     /** Ends what the servers that are gone left running; returns how many processes it ended. */
     reap: () => reap(folder, { creationOf, kill }),
   })
+}
+
+/** @param {string} folder @param {Entry} entry */
+const keepEntry = async (folder, entry) => {
+  await mkdir(folder, { recursive: true })
+  await writeFile(join(folder, `${entry.server.pid}.json`), JSON.stringify(entry), 'utf8')
 }
 
 /** @param {string} folder @param {Required<Pick<OrphanHost, 'creationOf' | 'kill'>>} host @returns {Promise<number>} */

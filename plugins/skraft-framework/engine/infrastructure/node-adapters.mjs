@@ -1,4 +1,5 @@
 import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
 import { createReviewStore, createTrackingStore, MUTATION_FOLDER, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
 import { createReviewFolder } from './tracking/review-folder.mjs'
@@ -17,6 +18,9 @@ import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
 import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
+import { createProgramLauncher } from './process/program-launcher.mjs'
+import { createNodeKernelHost } from './repl/node-kernel.mjs'
+import { createOrphanJournal, processCreation } from './repl/orphans.mjs'
 
 /**
  * Every adapter a Node host needs, except the host's own AgentRunner and progress.
@@ -108,5 +112,30 @@ const programs = (cwd, env, signal) => {
     sourceControl: createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
     forges: createForges({ commandRunner: forge }),
     executables: createNodeExecutables({ root: cwd, env }),
+    repl: replAdapters(cwd, env),
   }
 }
+
+/** This server's own start time, read once: the system is asked once per process, not at each call. @type {{ created: string | null } | null} */
+let serverStart = null
+
+/** @returns {{ pid: number, created: string | null }} */
+const thisServer = () => {
+  serverStart ??= { created: processCreation(process.pid) }
+  return { pid: process.pid, ...serverStart }
+}
+
+/**
+ * What the agents' REPL needs: the kernel host, the launcher of its programs, the journal of the
+ * processes it started (for a later server to end what a killed one left), the lease on each
+ * attempt, and this server as the leases and the journal name it.
+ * @param {string} cwd @param {NodeJS.ProcessEnv} env
+ */
+const replAdapters = (cwd, env) => Object.freeze({
+  root: cwd,
+  kernels: createNodeKernelHost(),
+  launcher: createProgramLauncher({ root: cwd, env }),
+  orphans: createOrphanJournal({ folder: join(cwd, '.copilot-tracking', 'skraft-repl') }),
+  locks: createNodeRunLock({ root: cwd }),
+  get server() { return thisServer() },
+})

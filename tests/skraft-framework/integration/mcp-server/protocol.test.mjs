@@ -5,7 +5,7 @@ import { mcpHost } from './mcp-host.mjs'
 
 const TOOL_NAMES = [
   'skraft_answer', 'skraft_doctor', 'skraft_init', 'skraft_start', 'skraft_next', 'skraft_record', 'skraft_status', 'skraft_report',
-  'skraft_journal', 'skraft_gate', 'skraft_precheck', 'skraft_review', 'skraft_mutation', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject', 'skraft_migrate',
+  'skraft_journal', 'skraft_gate', 'skraft_precheck', 'skraft_repl', 'skraft_review', 'skraft_mutation', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject', 'skraft_migrate',
 ]
 
 /** The tools and prompts that conduct the agent loop, which only VS Code has to. */

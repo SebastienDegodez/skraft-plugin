@@ -8,8 +8,8 @@ import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
  * adopt`, `review --publish`, `migrate` that writes) are not tools: a person runs them in a
  * terminal.
  *
- * @typedef {'string' | 'text' | 'boolean' | 'count' | 'strings' | 'number'} Kind
- *   string: a word that does not start with `-`; count: a positive whole number; strings: a list
+ * @typedef {'string' | 'text' | 'code' | 'boolean' | 'count' | 'strings' | 'number'} Kind
+ *   string: a word that does not start with `-`; code: any text, an empty one too; count: a positive whole number; strings: a list
  *   of such words.
  * @typedef {{ kind: Kind, description: string }} Parameter
  * @typedef {{
@@ -117,6 +117,14 @@ export const TOOLS = Object.freeze([
     annotations: LOCAL, argv: () => ['precheck', '--json'],
   }),
   tool({
+    name: 'skraft_repl', title: 'Run the project commands in the attempt REPL',
+    description: "A JavaScript REPL (node) bound to your open attempt. Every command whose result counts as proof (build, format, lint, test, architecture, coverage, e2e) runs here, never in Bash: the engine reads the runs this tool records under logs/runs/ and nothing else. Variables persist between calls and a cell may await at its top level. In a cell: run(command, { cwd = '.', timeout = 600, gate, label }) starts a program and returns a handle at once: command is an argv array (no shell) or a string (run by sh -c; Git Bash or PowerShell under Windows); cwd is relative to the working copy; timeout is in seconds, 7200 at most. The handle has id, command, running, tail(n = 50), output(), poll() (the result, or null while it runs), kill(signal = 'SIGTERM', grace = 5) and is awaited: await handle gives { exitCode, output, durationMs, log }. gate(name, command, options) is run with the gate named (build, format, lint, test, architecture, coverage, e2e); absent(gate, component, reason) declares that the project's AGENTS.md names no such gate. console.log prints into the result. A cell that runs past 90 seconds answers with what it printed while its runs go on: call again with empty code to wait for it. One call at a time: a second call while a cell runs is refused. The tool works only inside an open attempt, and the runs outlive neither the attempt nor the session. Commits are not recorded: chain the add and the commit in one cell all the same.",
+    parameters: { code: { kind: 'code', description: 'the JavaScript of the cell; empty to wait for the cell still running' } },
+    required: ['code'], annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+    // Stryker disable next-line ArrayDeclaration: skraft_repl calls the REPL use case directly; no caller reads this argv
+    argv: () => [],
+  }),
+  tool({
     name: 'skraft_review', title: 'Review a pull request',
     description: 'Reviews one pull request with the review workflow. On dispatch, start each listed agent as skraft_next asks, then do what then says. Publishing the verdict takes a person: skraft review --publish in a terminal.',
     parameters: { pr: { kind: 'count', description: 'the pull request number' }, record: { kind: 'boolean', description: 'hand the saved agent replies to the review' } },
@@ -168,6 +176,7 @@ export const offeredTools = (loop) => TOOLS.filter((each) => loop || each.loop !
 const SCHEMAS = Object.freeze({
   string: { type: 'string', minLength: 1 },
   text: { type: 'string', minLength: 1 },
+  code: { type: 'string', maxLength: 200_000 },
   boolean: { type: 'boolean' },
   count: { type: 'integer', minimum: 1 },
   number: { type: 'number' },
@@ -187,6 +196,7 @@ export const toolListing = ({ name, title, description, parameters, required, an
 const KIND_TEXT = Object.freeze({
   string: 'a non-empty text that does not start with -', boolean: 'true or false',
   text: 'a non-empty text',
+  code: 'a text of at most 200000 characters',
   number: 'a finite number',
   count: 'a positive whole number', strings: 'a list of non-empty texts that do not start with -',
 })
@@ -198,6 +208,7 @@ const isWord = (given) => typeof given === 'string' && given.length > 0 && !give
 const CHECKS = Object.freeze({
   string: isWord,
   text: (given) => typeof given === 'string' && given.trim().length > 0,
+  code: (given) => typeof given === 'string' && given.length <= 200_000,
   boolean: (given) => typeof given === 'boolean',
   count: (given) => Number.isSafeInteger(given) && /** @type {number} */ (given) >= 1,
   number: (given) => typeof given === 'number' && Number.isFinite(given),
