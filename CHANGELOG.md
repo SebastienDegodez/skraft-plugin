@@ -3,6 +3,748 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.108](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.107...v2.0.0-alpha.108) (2026-11-22)
+
+### ⚠ BREAKING CHANGES
+
+* **engine:** skraft init --mutation and the mutation argument of skraft_init are removed.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine)!: init detects stack, root and paths and writes no command
+
+The engine holds no command line of any stack: they break when a tool or
+a version changes. init writes each component with its stack and paths
+and an empty commands object; the developer's commands come from
+/skraft-init.
+* **engine:** skraft init no longer proposes build, test, lint, format or mutation commands.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* refactor(engine): remove the commit-replay port and its Git adapter
+
+Nothing starts a commit replay any more: the port, its Git worktree adapter, their wiring in the Node adapters and the Claude Code mod driver, their tests and the hand-written replay double go.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): the pull request and the QA report list the reds without a replay exit code
+
+The RED evidence table of the pull request and the TDD red commits of the QA report show the commit and its subject: no replay ran, so no exit code is shown. A red commit the rules refused stays out of both.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(config): tdd.replay is gone
+
+No command replays a commit, so the configuration has nothing to choose: ReplayMode, its reader and both schemas go, and a leftover tdd key in a file is ignored without a word. The V1 migration no longer counts tdd among the keys V2 holds.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(agents): remove the replay judge
+
+The engine replays no commit, so no agent judges a replay: both descriptors, the manifest entry, the baseline pair, the model-assignment default, the Vally real-agent suite and the executor's allowlist entry go.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): the scenario review tells the groups DELIVER makes pass in one pass
+
+The question says DELIVER makes the groups pass in one pass, one commit per group, in the plan's order; names the commit of the acceptance tests, tells the human that skraft does not run them, and gives the designer's run log to read: the review is where a red that fails on its own assertion is checked.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine)!: the story's passes follow the agents' roles; each="scenario" is gone
+* **engine:** each="scenario" is refused in a workflow. The engine dispatches the acceptance designer once and the software engineer once per story, whatever the node is named: the scenario review needs the node that writes the scenarios and the node that delivers them. The plugin's workflow drops both attributes; remove them from an ejected workflow (skraft workflow diff shows the plugin's).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): DELIVER makes every group of the story pass in one dispatch
+
+The software engineer is dispatched once per story and makes the groups of the implementation plan pass itself, in the plan's order: the brief lists every group with its test command and the exact commit of each, the walking skeleton and the reds DISTILL committed (every plan's, a REVISE included) are files no green changes, and the verdicts are at least one green, at most one per remaining group, each subject naming its group (green-out-of-order, green-beyond-groups). A pass after the story is delivered (the gates or the review sent it back) keeps the TDD cycle rules and the immutable acceptance tests. A visit a human reopened after a block counts the greens committed since the node's first visit.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine)!: doctor checks each command parses and no longer looks its program up on the PATH
+
+Without --run a command is parsed and shown as written; with --run it
+runs as parsed, and a program that does not start fails with a fixed
+reason naming the component and the command.
+* **engine:** doctor no longer reports where a command's program is found.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs: the scenario review text in the tutorial is the engine's, word for word
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine)!: start a command's program as written
+
+The engine no longer replaces python by a virtual environment's
+interpreter or python3: a program starts as the developer wrote it, in
+the gates, the replays and doctor --run. A program that does not start
+is named in a fixed reason.
+* **engine:** python is no longer resolved from .venv or python3; write the interpreter the machine needs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(skills): skraft-init proposes the commands, init writes none
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs: the engine holds no stack command line
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): a person's commit never counts as the engineer's on a reopened delivery
+
+A delivery pass reopened after a block counts the commits the earlier visits' attempts made (a blocked attempt records its commits now), plus its own: a commit made while the run waited is judged by no rule. The reopened brief tells the groups that already have a green and lists no commit line for them. A journal written by the engine that delivered one group per pass, stopped between two groups, is refused at its resume with a fixed reason. Scenarios: the person's commits, the S1 against S12 group names, the review reading the designer's run log.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* refactor(engine): the journal types, comments and test data say what the engine does now
+
+Group typedef, delivered, firstHeads and the plan reader are described as they are; the Codex description no longer says the engine replays; a leftover key in two configuration tests is a neutral one; a test that asserted an event no engine writes is gone.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* docs: a journal of the per-group DELIVER is refused at its resume; no precheck in DISTILL and DELIVER
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(agents): DISTILL and DELIVER follow v1, without the precheck tool
+
+The software engineer and the acceptance designer lose skraft_precheck in both trees. The engineer's inner loop is v1's: acceptance test as first red, one test or one parametrized test per rule it does not pin down, a stated rule written whole, the new test filtered then its project, git diff --name-only after each inner green, deletion test, placement check and Object Calisthenics once per group, the change log written once from git log. The designer takes v1's reconciliation quote, markdown header, self-check list, e2e plan line and formatting before the red commit. The eval brief is the engine's.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): route a doctor without gate command to /skraft-init and name a refused program
+
+doctor --run tells a program the system refuses to start (EACCES, EPERM)
+from one it does not find; a component without gate command names
+/skraft-init; the MCP instructions send that case to the skraft-init
+skill; the mutation refusal names /skraft-init mutation again.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(skills): skraft-init names the mutation reports and the Java gate lines
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs: forward-slash interpreter forms, doctor wording and screenshot
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(agents): the acceptance-designer writes one scenario per acceptance criterion and never merges two
+
+Each criterion gets its own scenario tagged @AC-n; a Scenario Outline holds the examples of one criterion; the self-check lists criterion and scenario pairs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): a live process launcher with group kill, caps and an orphan journal
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine): DELIVER expects exactly one green commit from the engineer, whatever its subject names
+
+Before: one feat or fix commit per group of the implementation plan, each subject starting with its group's scenarios, in the plan's order (green-out-of-order, green-beyond-groups); the brief marked the groups an earlier pass had committed and gave one test line per group, filtered to leave later groups out. After: the first feat or fix commit of the pass is judged by its place (it touches no acceptance test); a second one is refused as green-split; the brief gives one commit line, the whole test command of each component of the story, subject S1-Sn. The implementation plan's group table is still read and checked, as the order of work.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(agents): the software-engineer makes one green commit and runs tests once per commit, as v1 1.17
+
+Filtered run per RED and GREEN only; gates and the whole suite once before the story's commit; no confirmation re-run, no build apart from a compiling test run.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): the designer's brief calls a group what DELIVER works, not a green it commits
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): a JavaScript kernel per agent attempt
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): a REPL cell that ends after its budget still reports its end
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine): skraft_repl binds a kernel to the open attempt
+
+A JavaScript REPL per attempt of an agent that commits code: the MCP server
+holds the kernel, starts the programs a cell asks for through run(), and
+answers outside the tool queue, so skraft_status and skraft_precheck stay
+available while a cell runs. The tool is refused outside an open attempt.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine): every run is traced and signed under logs/runs
+
+The server, not the cell, writes a signed line when a run starts and when it
+ends: command, argv, folder, exit, signal, HEAD before and after, whether the
+tree was clean, and the hash of the log file beside it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* test(probe): measure skraft_repl permission prompts and reach per host
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs(handbook): the REPL of an attempt, skraft_repl (EN and FR)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs: AGENTS.md rules for skraft_repl
+
+The REPL is the one tool whose argument may start any program: the argument,
+message, bound and portability rules name it, and which layers start programs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(agents): software-engineer and acceptance-designer run their commands through skraft_repl
+
+Both descriptors name the tool and send every build, format, lint and test
+run through it; the acceptance designer's red run is a gate('test') run
+labelled red, whose output it writes to the log the review reads.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs(agents): no sentence says that only the runs of skraft_repl count as proof, nothing requires it yet
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs(handbook): DELIVER takes one green commit per pass, the group table is the order of work, a second green is refused
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): a cancellation that arrives before the call has launched its cell is no longer lost
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine): the awaited handle of skraft_repl gives the HEAD its line holds
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs: head of the handle, the early cancellation, the orphan journal under .copilot-tracking/skraft-repl
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine): every acceptance criterion of a story has exactly one scenario in the test plan's table
+
+Before: the engine counted the story's criteria against the scenarios of the .feature files, never looked at which criterion a scenario holds. After: when the story's ac-draft documents head criteria `## AC-<n>`, each row of the `## Scenarios` table cites its criterion by the `@AC-<n>` tag in its Tags column; a criterion cited by no scenario or by two, or a scenario citing two, sends the designer back (`scenarios`), the criteria named. A story with no readable identifier, or numbering one twice across its documents, is not checked.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(agents): the designer cites each row's criterion by its @AC tag, and the coverage lens leaves to the engine what it refuses
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* docs(handbook): the Scenarios table cites one criterion per scenario, and the engine refuses a criterion with none or two
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine)!: a DELIVER attempt must hold the traced runs of its gates
+
+The engine reads the signed trace of skraft_repl for the attempt: for each
+component the story changed, the last run of build, format, lint, test,
+architecture and coverage under its folder must exit 0 on the final commit,
+or be declared absent (test never). The run of the commit line, labelled
+green, is the test run. Refusal code: evidence. evidence.checked journals the
+runs by id and hash.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(agents): the software engineer runs its gates on its last commit through skraft_repl, and only those runs count as proof
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs(engine): the workflow comment says DELIVER makes every group pass in one green commit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs(handbook): DISTILL commits every acceptance test red at once, and mutation runs apart from the pipeline
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs!: the handbook describes quality evidence, not the gates node, skraft_gate nor the engine's mutation (EN and FR)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine)!: the engine runs no gate and no mutation
+
+Removes the gates node and goal_gate/locked/unlock, the skip step, skraft_gate,
+skraft mutation and skraft_mutation (workflow, use case, reports, mutation-plan
+question), doctor --run and its docker check. An ejected workflow that still
+holds a gate node or one of those attributes is refused with a migration message
+per attribute; a run in progress on a retired node blocks as node-retired.
+Visuals commit the screenshots of the last traced e2e run. Reports, canvas and
+pane show Quality evidence read from evidence.checked. skraft-mutation becomes a
+recipe of the session; quality-gates, craft-discipline and the engineer's
+descriptors run the gates through skraft_repl.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(engine)!: the DISTILL review reads the designer's traced red run, not a red.log
+
+The acceptance designer runs its acceptance tests through skraft_repl with the label red;
+the engine journals that run (evidence.checked with red), the scenario review names its log,
+the review inputs of DISTILL list it, and logs/<node>-<visit>-red.log is no document any more.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(skills): outside-in-tdd drops the ordered TPP test list
+
+The ordered test list made GREEN apply one declared transformation at a time and forbade two failing tests besides the outer one. It contradicted writing a stated rule whole, DISTILL committing every acceptance test red at once, and the single filtered run per RED and GREEN. The filtered run per RED and GREEN stays as V2 has it.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(agents): an acceptance test green on the stubs is noted and keeps its scenario, as v1 1.17
+
+V2 told the acceptance designer to fold such a test into another scenario's Examples, which merges two criteria and breaks one scenario per criterion. v1 notes it and keeps the scenario. The software engineer confirms an already-green scenario with the deletion test before writing no code for it.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): an exception of skraft_repl goes to the run's logs/unexpected.log, which the refusal names
+
+A kernel that cannot start, or any exception of skraft once the call is
+bound to an attempt, is appended to <slug>/logs/unexpected.log; the
+refusal (repl-failed, the new repl-unexpected) names that file and never
+quotes the exception. A kernel started but not recorded is ended. An
+exception before the call is bound stays on the server's stderr with a
+fixed text.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): after the story is delivered each cycle is one feat or fix holding its test, as v1 1.17
+
+On a pass the gates or the review send back, the engine now refuses a test commit made apart (test-apart) and a feat or fix that holds no file of a component's test paths (green-without-test); on a pass the gates sent back their failure stands for the test of the first green. The brief, the software engineer, outside-in-tdd and the handbook (EN, FR) say the same. A pass on no scenario (mutant kills, a workflow without scenarios) keeps the red then green cycle.
+
+Red seen: the review-rerun and acceptance-tests-first rework scenarios, sharpened, failed on their verdict and step assertions before the engine change.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): two calls at once share one kernel
+
+Two skraft_repl calls that arrived together both found no entry and each
+started a kernel; the first one leaked, with its lease and its journal
+line overwritten. The lookup of the entry is now chained (state.starting),
+so the second call waits for the kernel the first starts and is told the
+cell runs. The flight of a call is kept per request id (state.flights),
+so a cancellation reaches only the request it names.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* docs(handbook): the phases reference says a DELIVER rework cycle is one feat or fix holding its test
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): a lease whose holder cannot be read is never taken over
+
+A holder whose start time ps or PowerShell could not read counted as
+gone, so a second server took over the REPL of a running one. Whether a
+process runs is now read with a signal 0 (ESRCH alone says none does);
+a start time that cannot be read never proves the holder gone. The lease
+carries renewedAt, renewed by the sweep every 30 seconds; a lease not
+renewed for five minutes is taken over, and a server whose lease was
+taken ends its kernel.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): the green line comes for sh or PowerShell 7 and for Windows PowerShell 5.1, as v1 1.17
+
+The brief told the engineer to run the green in bash, never PowerShell, which a Windows machine without bash cannot follow. Like v1, it now gives the && line for sh and PowerShell 7 and the $? line for Windows PowerShell 5.1, which has no &&; the software engineer, outside-in-tdd and the handbook (EN, FR) follow.
+
+Red seen: the brief scenarios of acceptance-tests-first and four-phases, sharpened with both lines, failed on the prompt text before the change.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(agents): the software engineer loads playwright-evidence for a react @visual scenario, as v1 1.17
+
+v1 loaded playwright-evidence for a front-end story and captured the screenshots during the real e2e run. V2's engineer no longer listed it. The on-demand row is back in both trees: capture during the real Playwright run, publish nothing, the engine's visuals step publishes in the pull request, as the skill already says.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(agents): the acceptance designer stops blocked as soon as a case the story needs is undecided, as v1 1.17
+
+V2 only named the undecided case as an open question and went on, blocking only when a decided criterion depended on it. v1 stops and escalates as soon as a needed case is a business decision absent from the acceptance criteria.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(agents): the software engineer changes no CI/CD or deployment file without instruction, as v1 1.17
+
+v1's constraint was lost in V2's rules. A group that needs such a change stops blocked instead.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(agents): DISTILL and DELIVER wording agrees with one green commit and one scenario per criterion
+
+The acceptance designer's plan orders every group into one green commit, and a rework pass edits only what its feedback names. G1 of acceptance-review-criteria keeps orphan scenarios and values, the engine checking one scenario per criterion; G2 takes an edge case as an Examples row of its criterion's scenario or a criterion of its own. bdd-methodology says exactly one scenario per criterion; the walking-skeleton strategy writes the acceptance tests in the same pass; craft-discipline C4 puts format and lint fixes in the story's one commit, style only on a rework pass. The software engineer keeps one run rule: one filtered run per RED and per GREEN, a group's acceptance tests once before its green, the whole suite once in the commit line.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): tracking the REPL's processes never blocks the server
+
+Each journal write ran ps (PowerShell under Windows) synchronously for
+every live process, holding every other call of the server, skraft_status
+included, for as long as the system took. The start time is now read by
+an asynchronous child (10 s at most), once per pid and cached in the
+entry; the journal writes are chained so the last one wins, and retiring
+waits for them before forgetting. This server's own start time is asked
+once, in the background.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* docs(engine): the tool says what await handle gives, head included
+
+The handle's result carries head since 02ba900f3; the description the
+agent reads still listed { exitCode, output, durationMs, log }.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): the kernel starts within ten seconds, with a fixed command line of its own
+
+A kernel child that never sent ready held the call forever, and fork
+handed it the server's own execArgv (a test runner's or an inspector's
+flags). The kernel now gets a fixed --max-old-space-size=2048 and is
+ended when it has not said it is ready within ten seconds, which the
+call answers as repl-failed.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(agents): the coverage lens takes an edge case as an Examples row of its criterion's scenario, as acceptance-review-criteria G2 says
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): the kernel ends with every process its cells started
+
+A cell can start a program itself, through child_process, outside run();
+ending the kernel with SIGKILL left that program running. Under POSIX
+the kernel now leads a process group of its own, watched like a command's
+group (ended when the server exits or is signalled), and ending it ends
+the group; under Windows taskkill /T /F ends its tree. The orphan sweep
+already ends the group of a recorded pid.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): the one-scenario-per-criterion check reads the criteria the backlog writes, **AC-01:** and ### AC-<n>
+
+The criteria parser recognised only ## AC-<n>, while the backlog's story template opens each criterion **AC-01:**; criteriaOf returned nothing and the check silently skipped every story refined by the backlog. It now also reads ### AC-<n> and **AC-<n>:**. A criterion and a tag match by their number, so AC-01 is cited by @AC-1, @AC-01 or @ac-01; the handbook (EN, FR) and the acceptance designer say so.
+
+Red seen: the uncited-criterion case of one-scenario-per-criterion, given a backlog-formatted ac-draft, went on done instead of failing on scenarios before the fix.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* fix(engine): a run asked for while its kernel ends never starts, and ending the kernel waits ten seconds at most
+
+A run whose git facts were still being read when the kernel was ended
+started its program afterwards, which nothing would end, and retire then
+waited for it without bound. The entry is now marked retired before its
+runs are ended; a run re-reads the mark after the git facts and just
+before the launcher, and ends as not started ("the attempt's REPL was
+ended"); a program launched in the race is killed as soon as the
+launcher returns. Retire waits ten seconds at most for its runs.
+
+The concurrent-calls scenario of the MCP server no longer depends on
+which of the two requests the server reads first.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): skraft_repl takes reset
+
+reset: true ends the attempt's kernel and its runs, even while a cell
+runs (a synchronous loop included), starts a fresh kernel and runs code
+there; the result starts with the fixed notice repl-reset. An agent no
+longer has to wait for a cancellation the host may never send.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): a cell lives two hours at most: it is interrupted, then its kernel restarted
+
+A cell that never ends (an await on nothing) held its kernel forever. The
+entry now keeps when the cell in flight started; the sweep interrupts a
+cell past 7260 s (the longest run and a minute), the kernel ends it three
+seconds later if it still runs, and the next call answers repl-restarted.
+A cell in flight also keeps the kernel from counting as idle.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): run() refuses an option it does not know, and a request id the server did not expect
+
+run('npm test', { timout: 5 }) silently ran with the default timeout of
+600 s. The kernel now forwards the names of the options a cell gave, and
+the server refuses any but cwd, timeout, gate and label with a fixed text;
+the run is traced as not started. A request id that is no positive
+integer, was already seen, or is far ahead of the highest one seen is
+ignored before any trace line, and unexpected.log keeps the fact; the
+writes of unexpected.log are serialised so that none is lost.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): a kill a cell asks for is bounded and never disarms the run's timeout
+
+kill('SIGTERM', 2e6) let a program that ignores SIGTERM outlive its
+timeout by weeks: the kill marked the program ended, and the timeout
+then did nothing. A kill now takes SIGTERM, SIGINT or SIGKILL and a grace
+of 0 to 30 whole seconds; any other is refused with a fixed text, by the
+kernel (the handle returns it) and by the server. When the timeout passes
+while a kill's grace runs, the program is timed out and its group gets
+SIGKILL at once.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): at most eight runs of an attempt live at once
+
+A cell in a loop could start programs without bound. A run asked for
+while eight of the attempt's still run does not start, the cell reads a
+fixed reason, and the trace notes it as not started.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): a run's log is written as it runs, trace lines are appended, and a trace line that cannot be written is told
+
+The log of a run was written whole at its end, from up to 64 MiB of
+output kept in memory, and each trace line rewrote runs.jsonl whole; a
+write that failed was swallowed. TrackingFiles gains appendText. The log
+is now appended as the output arrives, up to its first 64 MiB, and its
+SHA-256 is fed as it is written (RunDigests, node:crypto); the launcher
+keeps only a 1 MiB tail in memory, and a finished run lets go of its
+program. Trace lines are appended. The first failed write of the trace or
+a log goes to unexpected.log, and every next result starts with
+repl-trace-failed naming that file. unexpected.log is appended too.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): a run's folder is traced relative to the working copy
+
+The trace held cwd as the cell wrote it: an absolute path on the
+developer's machine, api/./src/ or, under Windows, backslashes. The
+launcher now returns the folder it started in, relative to the working
+copy with / between its parts (. for the working copy itself), and the
+trace holds that.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): the kernel's memory is bounded
+
+Every handle kept up to 1 MiB of output for the kernel's whole life, and
+what a cell printed was held whole by the kernel's channel, the server
+and cell-<n>.log. The kernel now lets go of the output of all but its
+last 50 runs (an older handle's output() names the run's log), and prints
+per window (a cell, or the time between two) its first 512 KiB as they
+come and its last 512 KiB, after a fixed marker, when the window closes.
+The server bounds what it holds of a window again, a cell being able to
+write to the channel itself.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): what a cell writes to process.stdout and process.stderr comes back with it
+
+The kernel's standard streams go nowhere, so a cell's process.stdout.write
+(or a library that writes there) was lost. The kernel's own process now
+prints them as it prints console.log, through the same bounded window.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): a run's log starts empty, even when a fresh kernel reuses its id
+
+A kernel started again in the same attempt numbers its runs from 1, and
+since logs are appended (previous commit) the new r1 added its output to
+the old 1.log, whose hash then matched neither run. Each run's log is
+emptied when the run opens.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* fix(engine): a run a gone server left open is closed as lost when the next server takes the attempt
+
+A server killed while a run went on left a start line with no end line,
+which stayed open in the trace for good. When a kernel starts for an
+attempt, the runs its trace holds open are each closed by a signed
+{ type: 'lost', run, at } line; openRuns counts them ended, and the first
+result tells rN lost with the server that started it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): the kernel loads the project's REPL library from .repl/lib as lib.<name>
+
+A project can now keep the helpers its agents run in every cell: each
+.repl/lib/<name>.mjs of the working copy is imported when the kernel
+starts, in name order, 10 s at most each, and given to every cell as
+lib.<name> (its named exports); a module may call run() and gate(). A
+module that throws or times out is left out and the kernel goes on. The
+kernel now says alive at once (the 10 s start limit) and ready once the
+library is loaded, with what it loaded; the first result names it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): require in a cell resolves from .repl first, and a missing install is told
+
+A cell's require resolved from the kernel's own folder. It now looks in
+the packages of .repl/ (.repl/package.json, installed under
+.repl/node_modules/ by the developer), then in the working copy's. When
+.repl/package.json names packages and .repl/node_modules/ is absent, the
+first result says so, with npm ci --prefix .repl.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): skraft init lists /.repl/node_modules/ in .gitignore
+
+The packages the developer installs for the project's REPL library live
+under .repl/node_modules/, which is never committed (its package.json and
+lockfile are). skraft init adds /.repl/node_modules/ to the working copy's
+.gitignore once, and keeps a line that already lists it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine): a cell that declares a top-level const or let twice reads why and what to do
+
+Node 22 refuses a second top-level const or let of the same name in the
+kernel (measured, pinned by the kernel test), and an agent that re-runs a
+cell hits it. The result now adds a fixed hint after that error: assign
+it again, use another name, or call with reset: true.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(agents): the software engineer and the acceptance designer use reset and lib
+
+One line each, in both trees: a cell that will not stop is ended with
+skraft_repl reset: true, the project's helpers in .repl/lib/ are
+lib.<name> in every cell, and .repl/ is never written.
+
+Non évalué: Vally is paused on V2 work.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* docs: .repl, the REPL's bounds and lifecycle (EN and FR)
+
+The REPL reference gains a table of every bound and what happens past
+it, and the lifecycle of a kernel; the architecture page says why the
+bounds are fixed by code; the MCP server reference lists reset. AGENTS.md:
+.repl/ belongs to the project and skraft init ignores .repl/node_modules/;
+the REPL's bounds under Commands are bounded. host-verification: reset
+without a cancellation and .repl/lib under Windows are not measured.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: SebastienDegodez <sebastien.degodez@gmail.com>
+
+* feat(engine)!: the engine no longer checks acceptance criteria against scenarios
+
+v1 never checked AC coverage by script: its coverage lens did. The engine
+stops reading ac-draft criteria (## AC-<n>, ### AC-<n>, **AC-01:**): no
+scenario-criteria rule, no story-criteria reader, no criteriaFailures
+* **engine:** skraft_repl refuses the reset argument; call skraft_repl_reset,
+then skraft_repl.
+
+Red seen: the listing scenario (keys code, reset, workspace), the redeclaration hint
+and the repl-busy text failed on their assertions before the change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* feat(agents): the delivering agents name skraft_repl_reset
+
+The software engineer and the acceptance designer get skraft_repl_reset in tools:
+of both trees (Claude mcp__plugin_skraft_skraft__skraft_repl_reset, Copilot
+skraft/skraft_repl_reset) and end a stuck kernel with skraft_repl_reset, then
+skraft_repl. The tools contract (scripts/lib/agent-tools.mjs, run by the shipped
+descriptor tests) now refuses an agent that names skraft_repl without
+skraft_repl_reset.
+
+Red seen: the three new contract cases failed (no exception), then the shipped
+descriptor tests of the three clients failed on the rule before the descriptors
+were changed.
+
+Vally non évalué.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* test(host-probe): the permission and reach probes cover skraft_repl_reset
+
+claude-repl-permission runs four arms: skraft_repl unlisted and allowed, then
+skraft_repl_reset with only skraft_repl allowed (the host must refuse it) and with
+both allowed (the engine answers repl-unavailable). A denial is now matched to the
+arm's own tool. skraft-repl-listed requires both tools; agent-repl-reach declares
+both and fails when the host hands over only one, or one to another agent.
+
+The simulated host lists the real server's tools, so the shared tool list of the
+probe test gains skraft_repl_reset (red since the engine commit).
+
+Not run: the Claude Code probe spends about 0.6 USD and the Copilot probe needs the
+local CLI; docs/v2/host-verification.md marks the three rows not measured.
+
+Red seen: the new copilot-probe scenario failed on observed.listed; the permission
+tests failed when the reset arm was dropped from the verdict and when a denial was
+matched by substring.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+* docs(repl): the REPL is two tools
+
+EN and FR: the REPL reference names skraft_repl and skraft_repl_reset (intro, who,
+
+### ✨ Features
+
+* **engine:** DISTILL and DELIVER as v1 1.17, the engine checks only the workflow and the commits, and skraft_repl runs the agents' programs ([#647](https://github.com/SebastienDegodez/skraft-plugin/issues/647)) ([bc47880](https://github.com/SebastienDegodez/skraft-plugin/commit/bc478805a53eda615ad3ff176b117bac97691f0b)), closes [#524](https://github.com/SebastienDegodez/skraft-plugin/issues/524) [#cell](https://github.com/SebastienDegodez/skraft-plugin/issues/cell) [#bounds](https://github.com/SebastienDegodez/skraft-plugin/issues/bounds) [#limits](https://github.com/SebastienDegodez/skraft-plugin/issues/limits) [#skill-scripts](https://github.com/SebastienDegodez/skraft-plugin/issues/skill-scripts)
+
 ## [2.0.0-alpha.107](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.106...v2.0.0-alpha.107) (2026-11-17)
 
 ### 🐛 Bug Fixes
