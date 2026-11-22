@@ -39,7 +39,7 @@ export const createRepl = (deps, state) => Object.freeze({
   /** @param {{ code: string, id?: unknown, reset?: boolean }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
   call: (request) => call(deps, state, request),
   /** Ends the kernel of an attempt that is over or unused; the server calls it every half minute. */
-  sweep: () => serially(state, () => sweep(deps, state)),
+  sweep: () => serially(state, () => sweepKept(deps, state)),
   /** The request is cancelled: its awaits stop and the runs it started end. @param {unknown} [id] */
   interrupt: (id) => interrupt(state, id),
   /** The session closes: nothing is left running. */
@@ -319,6 +319,20 @@ const interruptCell = (state) => {
   if (entry === null) return
   entry.kernel.interrupt()
   for (const run of liveRuns(entry)) if (run.cell === entry.cells + 1 || run.cell === entry.cells) run.program?.kill('SIGTERM', 1000)
+}
+
+/**
+ * The sweep never rejects: an exception of its own goes to the run's unexpected.log, and the next
+ * sweep tries again.
+ * @param {any} deps @param {ReplState} state
+ */
+const sweepKept = async (deps, state) => {
+  const slug = state.entry?.slug
+  try {
+    await sweep(deps, state)
+  } catch (error) {
+    if (slug !== undefined) await keepUnexpected(deps, slug, error).catch(() => undefined)
+  }
 }
 
 /** @param {any} deps @param {ReplState} state */

@@ -341,6 +341,22 @@ test('the sweep renews its lease in place only well before its end, takes it bac
   assert.equal(kernels.kernels[0].stopped, true, 'a lease another server wrote over is no longer this kernel\'s')
 })
 
+test('an exception of the sweep goes to the run\'s unexpected.log, and the sweep goes on next time', async () => {
+  const seen = []
+  const { host } = replRun({ calls: { 2: async (repl, one) => {
+    await repl.call({ code: '1' })
+    const locks = one.deps.repl.locks
+    one.deps.repl.locks = { ...locks, read: (slug) => locks.read(slug), renew: async () => { throw new Error('disk gone while renewing') } }
+    seen.push(await repl.sweep().then(() => 'swept', () => 'rejected'))
+    one.deps.repl.locks = locks
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(seen, ['swept'])
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /^Error: disk gone while renewing\n/)
+})
+
 test('a kernel that cannot start is a refusal with a fixed text naming the run\'s unexpected.log, which holds the error, and the lease is given back', async () => {
   const answers = []
   const { host } = replRun({ kernels: new ScriptedKernelHost({ fails: true }), calls: { 2: async (repl, one) => {
