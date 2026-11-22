@@ -42,8 +42,7 @@ the `software-engineer` runs in DELIVER without committing it.
 
 The story itself opens on a wider outer loop, its [walking skeleton](walking-skeleton.md): a
 plain test that enters through the real entry point and checks only the wiring. DISTILL commits
-it failing with the acceptance tests; the green of the group holding S1 makes both pass, and every
-later green keeps the walking skeleton green. Each scenario's acceptance test, S1's included, enters through the use case.
+it failing with the acceptance tests; the story's one green makes both pass. Each scenario's acceptance test, S1's included, enters through the use case.
 
 ```text
 ┌─ Outer loop (acceptance, every group in plan order) ─────────┐
@@ -54,17 +53,17 @@ later green keeps the walking skeleton green. Each scenario's acceptance test, S
 │   │  GREEN → minimal implementation that makes it pass      │  │
 │   │  REFACTOR → clean up without changing behaviour         │  │
 │   └─────────────────────────────────────────────────────────┘ │
-│  GREEN : the group's acceptance scenarios pass                │
-│         → feat(<story>): <rule>   (later groups still fail)   │
+│  GREEN : every group's acceptance scenarios pass              │
+│         → one feat(<story>): <rules>, after the last group    │
 └──────────────────────────────────────────────────────────────┘
-then the next group, in the same dispatch
+the groups are worked in plan order, in one dispatch, one commit
 ```
 
 Concretely, the `software-engineer` creates an interface only when a unit test needs it to
 isolate a boundary — never "just in case". The acceptance test stays red until the scenario is
 complete, which keeps the focus on business behaviour, and it never changes: written by another
-agent, it is the oracle the code must meet. Each scenario ends in one green commit, chained to
-the test command so that it happens only once the tests pass.
+agent, it is the oracle the code must meet. The story ends in one green commit, chained to
+the test command so that it happens only once every test passes; a second green is refused (`green-split`).
 
 Only one acceptance test is red at a time, beside the walking skeleton until S1 is green. DISTILL writes the next scenario's test once the one
 before passes, so a red in the history always names the scenario in progress. The inner loop's

@@ -59,7 +59,7 @@ La machine peut aussi être en cause. Quand aucun runtime de conteneurs ne répo
 ont besoin de Docker ou de Podman ne peuvent pas tourner : le designer s'arrête, bloqué, et demande
 qu'on en démarre un. L'étape n'est ni sautée ni jouée contre une doublure à la place.
 
-## Tous les scénarios d'un coup, livrés par groupe
+## Tous les scénarios d'un coup, travaillés par groupe
 
 Le plan de test liste les scénarios dans un tableau `## Scenarios`, de S1 à SN, dans l'ordre où
 DELIVER les construit, chacun dans le seul composant où vit son test. S1, tagué
@@ -72,13 +72,12 @@ le walking skeleton, jamais un test d'acceptation.
 
 Le plan d'implémentation regroupe les scénarios par la règle qu'ils fixent, dans un tableau
 `| Group | Scenarios | … |` : des scénarios consécutifs qui entrent par le même cas d'usage et
-énoncent une règle ou ses cas limites forment un groupe, S1 dans le premier. DELIVER fait passer
-tous les groupes en un passage, un commit vert par groupe. Un plan sans ce tableau livre un scénario par groupe.
+énoncent une règle ou ses cas limites forment un groupe, S1 dans le premier. Le tableau donne à DELIVER son ordre de travail : il fait passer
+tous les groupes en un passage et commite un seul vert pour l'histoire. Un plan sans ce tableau travaille un scénario par groupe.
 
 Écrire tous les tests d'abord coûte un seul lancement de la suite au lieu d'un par scénario, et la
 revue comme l'humain lisent le contrat entier d'un coup. Le test d'un groupe pas encore livré
-reste rouge jusqu'à son vert : son nom, qui commence par le numéro de son scénario, permet à la
-commande de test de l'ingénieur de l'écarter. La revue de DISTILL et l'humain lisent ce rouge une
+reste rouge jusqu'au vert : l'ingénieur ne commite rien avant que tous les tests d'acceptation passent. La revue de DISTILL et l'humain lisent ce rouge une
 fois ; la revue de DELIVER lit les verts.
 
 Le brief dit aussi à DISTILL sur quoi les tests de chaque composant font tourner leurs
@@ -94,8 +93,8 @@ vient des défauts du plugin par stack, qu'une équipe surcharge par composant d
 Avant que DELIVER ne construise quoi que ce soit, le run pose à un humain la question
 `scenario-review` : voici les scénarios dans l'ordre, S1 marqué comme celui que parcourt le
 walking skeleton, les groupes dans lesquels DELIVER les construit, l'exemption que déclare la
-story s'il y en a une, et le commit des tests en échec. `APPROVED` laisse DELIVER les construire
-groupe par groupe ; `REVISE` renvoie DISTILL
+story s'il y en a une, et le commit des tests en échec. `APPROVED` laisse DELIVER les construire,
+en travaillant les groupes dans cet ordre ; `REVISE` renvoie DISTILL
 avec les corrections, que l'humain peut aussi faire d'abord dans le `.feature` ou les tests. Sous
 Copilot, comme pour la ratification d'un ADR, seule la boîte de dialogue de l'hôte enregistre la
 réponse.

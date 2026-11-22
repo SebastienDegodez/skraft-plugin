@@ -22,7 +22,7 @@ détail de chaque gate citée : [Gates](./gates.md).
 | RESEARCH | `skraft` | le moteur | `solution-researcher` | sortie remplie, traces RESEARCH | — |
 | DESIGN | `skraft` | le moteur | `solution-architect` | traces DESIGN, scan structurel, revue à 3 lentilles | `adr-ratification` |
 | DISTILL | `skraft` | le moteur | `acceptance-designer` | tableau `## Scenarios`, groupes de livraison, un commit rouge, revue à 4 lentilles | `scenario-review` |
-| DELIVER | `skraft` | le moteur | `software-engineer` | un commit vert par groupe de scénarios, en un passage ; gates, revue `review` | — |
+| DELIVER | `skraft` | le moteur | `software-engineer` | un seul commit vert pour l'histoire, les groupes travaillés dans l'ordre du plan, en un passage ; gates, revue `review` | — |
 | PUBLISH | `skraft` | le moteur | `pr-writer` | prose de la pull request | — |
 
 DISCOVER et DISCUSS ne passent pas par le moteur : aucun journal, aucune gate de commandes.
@@ -169,9 +169,8 @@ ligne `**Status:**`, ligne de `docs/adr/decisions-index.md`) et les commite seul
 | `scenario_review -> deliver` | `APPROVED` | — |
 | `scenario_review -> distill` | `REVISE` (corrections exigées, renvoyées à l'acceptance designer) | 2 |
 
-Après `APPROVED`, aucune arête ne mène les groupes : le moteur lance `deliver` sur le groupe 1,
-puis sur le groupe 2, et ainsi de suite, chaque passage étant une visite à part ; après le dernier
-groupe, `deliver` sort par son arête vers `gates`. Un run interrompu reprend au groupe en cours.
+Après `APPROVED`, aucune arête ne mène les groupes : le moteur lance `deliver` une seule fois
+pour l'histoire, le software engineer travaillant les groupes dans l'ordre du plan ; `deliver` sort ensuite par son arête vers `gates`.
 
 ### Le tableau `## Scenarios` <!-- #scenarios -->
 
@@ -201,7 +200,7 @@ Walking skeleton exemption: none
 | `docs-only` : aucun commit de l'histoire ne change les chemins `src` d'un composant | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <fichier>, source of <composant>; remove the exemption and tag S1 @walking-skeleton` |
 
 Le plan d'implémentation à côté (`impl-plan-…` pour `test-plan-…`) regroupe les scénarios que
-DELIVER fait passer, un commit vert chacun, dans son ordre, sous n'importe quel titre :
+DELIVER fait passer, dans son ordre, sous n'importe quel titre ; le tableau donne l'ordre de travail, et l'histoire prend un seul commit vert :
 
 ```text
 | Group | Scenarios | Rule |
@@ -217,7 +216,7 @@ DELIVER fait passer, un commit vert chacun, dans son ordre, sous n'importe quel 
 | seulement des scénarios du plan de test | `<plan>: S<n> is no scenario of the test plan` |
 | S1 dans le premier groupe | `<plan>: S1 is in the first group, the one the walking skeleton walks` |
 
-Un plan sans tableau aux colonnes `Group` et `Scenarios` livre un scénario par groupe.
+Un plan sans tableau aux colonnes `Group` et `Scenarios` travaille un scénario par groupe.
 
 Chaque échec renvoie l'agent du passage avec la ligne ; après sa dernière tentative, ou deux
 tentatives de suite refusées de la même façon, le run pose la question `blocked`, et `STOP` le
@@ -228,18 +227,18 @@ termine avec `scenarios`. Pourquoi le walking skeleton parcourt S1 :
 
 | Nœud | Type | Rôle |
 | --- | --- | --- |
-| `deliver` | agent `software-engineer` | un seul passage par histoire : fait passer chaque groupe du plan d'implémentation dans l'ordre du plan, un commit vert chacun, seuls les tests des groupes suivants échouant encore ; le vert du groupe qui tient S1 fait passer aussi le walking skeleton et chaque vert suivant le garde au vert ; après le dernier, les passages que renvoient les gates ou la revue, sur toute l'histoire |
+| `deliver` | agent `software-engineer` | un seul passage par histoire : travaille chaque groupe du plan d'implémentation dans l'ordre du plan et commite un seul vert pour toute l'histoire (un deuxième est refusé, `green-split`) ; ce vert fait passer aussi le walking skeleton ; après le dernier, les passages que renvoient les gates ou la revue, sur toute l'histoire |
 | `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commandes des composants modifiés, puis de tous |
 | `deliver_review` | appel `workflow="review"` | lentilles `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | commande `e2e` de chaque front end, captures commitées |
 
 | | |
 | --- | --- |
-| Brief | les groupes, dans l'ordre où l'ingénieur les livre, un vert chacun (`- <g> of <G> — S1 "<titre>" (component <c>, tags …) ; …` ; un groupe dont les tests d'acceptation passent déjà n'en prend aucun) ; le commit des tests d'acceptation que DISTILL a commités, walking skeleton compris (`<sha> "<sujet>": <fichiers>`), que l'agent ne change jamais (s'il en trouve un faux, ou en échec sur une erreur de build ou de setup, il s'arrête `blocked` en le nommant) ; une ligne de commit par groupe, exactement : `group <g>: <commande de test> [<le filtre qui écarte les scénarios des groupes suivants>] && git add <chaque fichier changé> && git commit -s -m "feat(<story>): <scénarios et règle du groupe>" -m "Refs: #<issue>"` ; celle du dernier groupe tourne sans filtre. Un passage que les gates ou la revue ont renvoyé ne liste aucun groupe : seulement les tests d'acceptation qu'il ne change jamais, et les règles de commit du cycle |
+| Brief | les groupes, dans l'ordre où l'ingénieur les travaille (`- <g> of <G> — S1 "<titre>" (component <c>, tags …) ; …`) ; le commit des tests d'acceptation que DISTILL a commités, walking skeleton compris (`<sha> "<sujet>": <fichiers>`), que l'agent ne change jamais (s'il en trouve un faux, ou en échec sur une erreur de build ou de setup, il s'arrête `blocked` en le nommant) ; une seule ligne de commit, exactement : `<la commande de test de chaque composant> && git add <chaque fichier changé> && git commit -s -m "feat(<story>): S1–S<n> <les règles de l'histoire>" -m "Refs: #<issue>"`. Un passage que les gates ou la revue ont renvoyé ne liste aucun groupe : seulement les tests d'acceptation qu'il ne change jamais, et les règles de commit du cycle |
 | Sortie déclarée | `changes/{date}/change-log.md` |
 | Preuves | `gates/<composant>/<gate>-<n>.log` ; `visuals/<composant>/e2e-<n>.log` |
 | Écriture permise | le dossier de suivi, les chemins `src` et `tests` de chaque composant, et les fichiers à leur racine ; un changement hors de lui est refusé |
-| Commits | `deliver`, passage de l'histoire : au moins un `feat(<story>): …` (ou `fix`) et au plus un par groupe, dans l'ordre du plan, chacun nommant les scénarios de son groupe dans son sujet et enchaîné en bash à la commande de test comme l'écrit le brief ; aucun commit `test`, `refactor`, `style` ni `perf`, la boucle TDD interne restant non commitée ; aucun changement aux tests d'acceptation ni au walking skeleton hors des chemins `src` du composant ; le moteur ne lance aucun test ([Commits](./gates.md#commits)). `deliver` renvoyé par les gates ou la revue : chaque `feat` ou `fix` après un `test(<story>): …` depuis le dernier vert, l'échec des gates tenant lieu de ce rouge sur un passage qu'elles ont renvoyé, `refactor` permis. Un journal DELIVER d'une alpha V2 antérieure, un passage par groupe, n'est pas repris. Chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
+| Commits | `deliver`, passage de l'histoire : un seul `feat(<story>): …` (ou `fix`) pour toute l'histoire, quoi que nomme son sujet, enchaîné en bash à la commande de test comme l'écrit le brief ; aucun commit `test`, `refactor`, `style` ni `perf`, la boucle TDD interne restant non commitée ; aucun changement aux tests d'acceptation ni au walking skeleton hors des chemins `src` du composant ; le moteur ne lance aucun test ([Commits](./gates.md#commits)). `deliver` renvoyé par les gates ou la revue : chaque `feat` ou `fix` après un `test(<story>): …` depuis le dernier vert, l'échec des gates tenant lieu de ce rouge sur un passage qu'elles ont renvoyé, `refactor` permis. Un journal DELIVER d'une alpha V2 antérieure, un passage par groupe, n'est pas repris. Chaque message conventionnel finit par `Refs: #<issue>` et ne ferme aucune issue ; un changement laissé non commité est refusé (`uncommitted`) |
 | Mutation | aucune : le pipeline du plugin ne lance pas de mutation, le développeur la lance à part ; le workflow propre à une équipe peut encore porter un nœud `gate="mutation"` ([Le workflow DOT](./workflow-dot.mdx)) |
 
 | Lentille (`review`) | Gates |

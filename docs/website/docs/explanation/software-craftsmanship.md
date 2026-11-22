@@ -44,7 +44,7 @@ saying so. skraft starts from there: **a craft rule exists only if a check runs 
 ```mermaid
 flowchart LR
     V1["Well-crafted<br/>software"] --> M1["Locked gates<br/>fixed quality bar"]
-    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>every acceptance test red,<br/>one green per rule"]
+    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>every acceptance test red,<br/>one green per story"]
     V3["Community of<br/>professionals"] --> M3["Review before review<br/>lenses + refutation"]
     V4["Productive<br/>partnerships"] --> M4["Human decisions<br/>ADR ratification, consents"]
 ```
@@ -75,12 +75,12 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
   does not tag S1 `@walking-skeleton` or declare why the story needs none, and the
   `boundary-enforcement` lens checks that the walking skeleton runs that real path (its G8). See
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **Every scenario's red, then one green per group.** In DISTILL, the `acceptance-designer` commits
+- **Every scenario's red, then one green for the story.** In DISTILL, the `acceptance-designer` commits
   the failing acceptance test of every scenario, the walking skeleton and the skeleton they call
   in one commit, after one run that shows each failing on an assertion. In DELIVER, one dispatch of
-  the `software-engineer` runs the red → green → refactor loop of its unit tests, then commits once
-  per group of scenarios, in plan order: a `feat(…)` that makes the group pass without touching
-  its acceptance tests, and keeps the walking skeleton and the groups before passing. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
+  the `software-engineer` runs the red → green → refactor loop of its unit tests, then commits once,
+  after working the groups of scenarios in plan order: a single `feat(…)` that makes every group and the walking skeleton
+  pass without touching the acceptance tests; the engine refuses a second one (`green-split`). Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
   checked in the git history, not a promise. See
   [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 
@@ -125,7 +125,7 @@ waiting. See
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>one group at a time"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
+    D["deliver<br/>software-engineer<br/>the groups in plan order"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
     G -- "FAIL" --> D
     G -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
     DR -- "NEEDS_REWORK" --> D
