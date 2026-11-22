@@ -105,6 +105,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
 
      - one row per scenario DELIVER builds, numbered S1, S2, … in build order: the scenario the walking skeleton walks, then outside-in order, each in the component where its test lives, Tags copied from the `.feature`;
      - one row per scenario, hence per criterion: an example of the same criterion that adds no behaviour to an earlier scenario of that criterion is an `Examples` row of its outline; an example of another criterion is a scenario of its own, tagged with its `@AC-<n>`;
+     - when the story's `ac-draft` opens its criteria `## AC-<n>`, `### AC-<n>` or `**AC-<n>:**` (the backlog's story template), the Tags cell of every row holds its criterion's `@AC-<n>`, copied from the `.feature`: each criterion is cited by exactly one row and no row cites two;
      - no row for a scenario an `existing` row covers.
    - `## Coverage matrix`:
 

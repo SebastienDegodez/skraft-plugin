@@ -70,6 +70,11 @@ le cas d'usage comme tout scénario. Une story sans nouveau point d'entrée — 
 refactoring, des documents seulement — déclare plutôt cette exemption sous le tableau ; elle perd
 le walking skeleton, jamais un test d'acceptation.
 
+Quand les critères d'acceptation de l'histoire s'ouvrent par `## AC-<n>`, `### AC-<n>` ou `**AC-<n>:**` (le modèle d'histoire du backlog), la ligne de chaque scénario cite son
+critère par le tag `@AC-<n>` de sa colonne Tags, et le moteur refuse un tableau où un critère n'a aucun
+scénario ou en a deux, ou où un scénario en porte deux : un scénario par critère, un Scenario Outline
+ne regroupant que les exemples d'un seul critère.
+
 Le plan d'implémentation regroupe les scénarios par la règle qu'ils fixent, dans un tableau
 `| Group | Scenarios | … |` : des scénarios consécutifs qui entrent par le même cas d'usage et
 énoncent une règle ou ses cas limites forment un groupe, S1 dans le premier. Le tableau donne à DELIVER son ordre de travail : il fait passer

@@ -1,7 +1,9 @@
 import { commitName } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { delivers, writesScenarios } from '../../domain/pipeline/roles.mjs'
+import { criteriaFailures } from '../../domain/pipeline/scenario-criteria.mjs'
 import { readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
+import { storyCriteria } from './story-criteria.mjs'
 
 /**
  * What the engine checks on a pass of a story built from its acceptance tests first: the
@@ -81,11 +83,16 @@ const deliveryPass = ({ list, exemption, groups, oracles, skeleton, reds, delive
 export const planOf = async ({ files }, { slug, components }, { scenario, outputs }, missing) => {
   if (scenario?.kind !== 'plan' || missing.includes(outputs[0])) return NO_PLAN
   const read = readScenarioPlan({ path: outputs[0], text: /** @type {string} */ (await files.read(slug, outputs[0])) }, components)
-  if (!read.ok) return { plan: null, failures: read.failures.map((line) => ({ code: 'scenarios', line })) }
+  if (!read.ok) return refused(read.failures)
   const path = implementationPlanOf(outputs[0])
   const grouped = readDeliveryGroups({ path, text: (await files.read(slug, path)) ?? null }, read.plan.scenarios)
-  return grouped.ok ? { plan: { ...read.plan, groups: grouped.groups }, failures: [] } : { plan: null, failures: grouped.failures.map((line) => ({ code: 'scenarios', line })) }
+  if (!grouped.ok) return refused(grouped.failures)
+  const cited = criteriaFailures(outputs[0], read.plan.scenarios, await storyCriteria(files, slug))
+  return cited.length > 0 ? refused(cited) : { plan: { ...read.plan, groups: grouped.groups }, failures: [] }
 }
+
+/** @param {string[]} lines @returns {{ plan: null, failures: ScenarioFailure[] }} */
+const refused = (lines) => ({ plan: null, failures: lines.map((line) => ({ code: 'scenarios', line })) })
 
 /** @type {{ plan: null, failures: ScenarioFailure[] }} */
 const NO_PLAN = Object.freeze({ plan: null, failures: [] })

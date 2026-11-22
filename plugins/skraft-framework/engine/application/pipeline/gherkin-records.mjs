@@ -1,5 +1,6 @@
 import { featuresFolders } from '../../domain/config/bdd-folders.mjs'
 import { citedBy, gherkinFailures, namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
+import { CRITERIA } from './story-criteria.mjs'
 
 /**
  * The Gherkin the acceptance designer's attempt leaves: every `.feature` its test plan names is a
@@ -14,8 +15,6 @@ import { citedBy, gherkinFailures, namedFeatures } from '../../domain/pipeline/g
 const TEST_PLAN = /(^|\/)details\/[^/]+\/test-plan-[^/]+\.md$/
 /** A file of Gherkin scenarios. */
 const FEATURE = /\.feature$/
-/** The acceptance criteria of a story, as DISCUSS leaves them in the tracking folder. */
-const CRITERIA = /(^|\/)plans\/[^/]+\/ac-draft-[^/]+\.md$/
 
 /**
  * Why the Gherkin of the story sends the designer back; empty when it holds.
