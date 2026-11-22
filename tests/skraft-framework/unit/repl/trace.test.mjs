@@ -129,6 +129,24 @@ test('the awaited handle gives the HEAD the run ended on, the very value its lin
   assert.equal(awaited.head, ended.headAfter)
 })
 
+test('a run of a fresh kernel that takes the id of an earlier kernel\'s run starts its log empty, and its hash is the one of its own output', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('test', async ({ run }) => { await run('npm test') })
+  kernels.script.set('lint', async ({ run }) => { await run('npm run lint') })
+  const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0, text: 'first\n' }, 'npm run lint': { exitCode: 0, text: 'second\n' } } })
+  const { host } = delivery({ kernels, launcher, work: async (repl) => {
+    await repl.call({ code: 'test' })
+    kernels.kernels[0].die('crashed')
+    await repl.call({ code: 'lint' })
+  } })
+
+  await host.start()
+
+  const ended = traced(host).filter(({ type }) => type === 'run')
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`), 'second\n')
+  assert.equal(ended.at(-1).sha256, await host.deps.hasher.sha256('second\n'))
+})
+
 test('a run refused before it started, and a program that could not start, are lines too, with started false', async () => {
   const kernels = new ScriptedKernelHost()
   kernels.script.set('bad', async ({ run }) => { await run('npm test', { timeout: 0, gate: 'test' }) })
