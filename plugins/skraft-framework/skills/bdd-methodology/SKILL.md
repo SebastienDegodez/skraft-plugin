@@ -20,6 +20,9 @@ sentences stay in the domain's own language; only the keywords are fixed.
 
 Each acceptance criterion produces one or more scenarios. The mapping is explicit and traceable.
 
+- Each criterion has its own scenario(s), tagged `@AC-<n>` with the criterion's number as the story writes it. A scenario carries one `@AC` tag; two criteria never share a scenario, even when their outcomes look alike.
+- A `Scenario Outline` holds the examples of one criterion only. An example of another criterion is a scenario of its own.
+
 | AC type | Gherkin pattern |
 |---|---|
 | Happy path | `Scenario: {persona} {action} successfully` |
