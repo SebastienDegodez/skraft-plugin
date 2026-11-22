@@ -12,7 +12,9 @@ import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
  * attempt closes, when another attempt calls, after 15 minutes idle, or when the server closes.
  *
  * @typedef {import('./repl-runs.mjs').Entry} Entry
- * @typedef {{ entry: Entry | null, reaped: boolean }} ReplState
+ * @typedef {{ launched: boolean, cancelled: boolean }} Flight
+ *   a call between its start and the start of its cell: a cancellation in that window is kept, so that the cell never runs.
+ * @typedef {{ entry: Entry | null, reaped: boolean, flight?: Flight | null }} ReplState
  * @typedef {{ ok: boolean, code: string | null, text: string }} ReplOutcome
  *   text: what the agent reads: the cell's result, or the refusal's code and fixed reason.
  */
@@ -44,11 +46,21 @@ const refused = (code) => ({ ok: false, code, text: refusalText(code) })
 
 /** @param {any} deps @param {ReplState} state @param {{ code: string }} request @returns {Promise<ReplOutcome>} */
 const call = async (deps, state, { code }) => {
+  state.flight ??= { launched: false, cancelled: false }
+  try {
+    return await inAttempt(deps, state, code)
+  } finally {
+    state.flight = null
+  }
+}
+
+/** @param {any} deps @param {ReplState} state @param {string} code @returns {Promise<ReplOutcome>} */
+const inAttempt = async (deps, state, code) => {
   const bound = await bindAttempt(deps)
   if (!bound.ok) return refused(bound.code)
   const held = await entryFor(deps, state, bound)
   if (!held.ok) return refused(held.code)
-  return evaluate(deps, held.entry, code, held.notice)
+  return evaluate(deps, state, held.entry, code, held.notice)
 }
 
 /**
@@ -128,8 +140,10 @@ const retire = async (deps, state) => {
   await releaseLease(deps, entry, entry.lease)
 }
 
-/** @param {any} deps @param {Entry} entry @param {string} code @param {string | null} notice @returns {Promise<ReplOutcome>} */
-const evaluate = async (deps, entry, code, notice) => {
+/** @param {any} deps @param {ReplState} state @param {Entry} entry @param {string} code @param {string | null} notice @returns {Promise<ReplOutcome>} */
+const evaluate = async (deps, state, entry, code, notice) => {
+  if (state.flight?.cancelled === true) return refused('repl-interrupted')
+  if (state.flight != null) state.flight.launched = true
   entry.lastUsed = deps.clock.now().getTime()
   const budget = deps.repl.budgetMs ?? DEFAULT_BUDGET_MS
   const waiting = code.trim() === ''
@@ -160,7 +174,14 @@ const partsOf = (entry, outcome, cellLog) => {
 }
 
 /** @param {ReplState} state */
-const interrupt = (state) => {
+export const interrupt = (state) => {
+  const flight = state.flight
+  if (flight != null && !flight.launched) flight.cancelled = true
+  else interruptCell(state)
+}
+
+/** @param {ReplState} state */
+const interruptCell = (state) => {
   const entry = state.entry
   if (entry === null) return
   entry.kernel.interrupt()

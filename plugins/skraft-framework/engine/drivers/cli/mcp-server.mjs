@@ -3,7 +3,7 @@ import { offeredPrompts, promptListing, promptMessages, promptRefusalOf } from '
 import { chosenWorkspace, givenWorkingCopy, rootFolders } from './mcp-roots.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { mutationAdapters } from './mutation-loop.mjs'
-import { createRepl } from '../../application/repl/repl-usecase.mjs'
+import { createRepl, interrupt as interruptRepl } from '../../application/repl/repl-usecase.mjs'
 
 /**
  * `skraft mcp`: the commands of this driver served to an agent host as MCP tools, JSON-RPC over
@@ -134,7 +134,7 @@ const handle = async (session, line) => {
 
 /** The host cancelled the skraft_repl request in flight: its cell stops. @param {Session} session @param {Record<string, any>} message */
 const cancelled = (session, { method, params }) => {
-  if (method === 'notifications/cancelled' && params?.requestId === session.replRequest) session.replUse?.interrupt()
+  if (method === 'notifications/cancelled' && params?.requestId === session.replRequest) interruptRepl(session.repl)
 }
 
 /** @param {string} line @returns {unknown} undefined when the line is no JSON */
@@ -226,13 +226,22 @@ const callTool = async (session, { name, arguments: args = {}, _meta: meta }, id
  * @param {Session} session @param {Record<string, any>} args @param {unknown} id
  */
 const replTool = async (session, args, id) => {
+  session.replRequest = id
+  session.repl.flight = { launched: false, cancelled: false }
+  try {
+    return await replOf(session, args)
+  } finally {
+    session.replRequest = null
+    session.repl.flight = null
+  }
+}
+
+/** @param {Session} session @param {Record<string, any>} args */
+const replOf = async (session, args) => {
   const place = await workspaceOf(session, args.workspace)
   if (place.directory === null) return refusedResult(place.reason)
   if (session.closed) return refusedResult('closed: the host closed the connection; nothing ran')
-  session.replRequest = id
-  const result = await replAnswer(session, place.directory, args.code)
-  session.replRequest = null
-  return result
+  return replAnswer(session, place.directory, args.code)
 }
 
 /** @param {Session} session @param {string} directory @param {string} code */

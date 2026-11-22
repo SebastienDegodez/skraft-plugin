@@ -85,3 +85,26 @@ test('skraft_status answers while a cell runs, and a cancellation of the request
   assert.match(textOf(answer.result), /\ninterrupted: Error: interrupted$/)
   await host.close()
 })
+
+test('a cancellation that reaches the server right behind its request is not lost: no cell starts and no program runs', BOUNDED, async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  await toDeliveryAttempt(cwd)
+  const host = mcpHost({ roots: [cwd] })
+  await host.initialize()
+  const requestId = 'repl-cancelled-early'
+  const marker = join(cwd, 'ran.txt')
+  const code = `await run([${NODE}, '-e', 'require("node:fs").writeFileSync(${JSON.stringify(marker.replaceAll('\\', '/'))}, "x")'])`
+  host.write(JSON.stringify({ jsonrpc: '2.0', id: requestId, method: 'tools/call', params: { name: 'skraft_repl', arguments: { code } } }))
+  host.notify('notifications/cancelled', { requestId })
+  const answer = await new Promise((resolve) => {
+    const poll = setInterval(() => {
+      const found = host.received.find(({ id }) => id === requestId)
+      if (found !== undefined) { clearInterval(poll); resolve(found) }
+    }, 50)
+  })
+
+  assert.match(textOf(answer.result), /^repl-interrupted: /)
+  assert.equal(existsSync(marker), false)
+  await host.close()
+})

@@ -241,6 +241,26 @@ test('a cancellation interrupts the cell in flight and ends the runs it started;
   assert.equal(kernels.kernels[0].stopped, true)
 })
 
+test('a cancellation that arrives before the call has launched its cell is not lost: the cell never runs', async () => {
+  const kernels = new ScriptedKernelHost()
+  const launcher = new ScriptedLauncher()
+  kernels.script.set('tests', async ({ run }) => { await run('dotnet test'); return null })
+  const answers = []
+  const { host, repl } = replRun({ kernels, launcher, calls: { 2: async (one) => {
+    const pending = one.call({ code: 'tests' })
+    one.interrupt()
+    answers.push(await pending)
+    answers.push(await one.call({ code: '1 + 1' }))
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(answers.map(({ ok, code }) => [ok, code]), [[false, 'repl-interrupted'], [true, null]])
+  assert.equal(answers[0].text, 'repl-interrupted: the call was cancelled before its cell started; nothing ran')
+  assert.equal(launcher.started.length, 0)
+  assert.ok(repl)
+})
+
 test('what a cell prints past 24 KiB is cut in the result, which names the file that holds all of it', async () => {
   const kernels = new ScriptedKernelHost()
   kernels.script.set('noisy', async ({ print }) => { print(`${'a'.repeat(20_000)}${'z'.repeat(20_000)}`); return null })
