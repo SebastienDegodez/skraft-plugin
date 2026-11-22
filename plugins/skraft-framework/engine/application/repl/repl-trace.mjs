@@ -67,10 +67,11 @@ const endedRecord = (run, result, { headAfter, sha256, cut }) => runRecord({
 /**
  * The runs a server that is gone left open in the attempt's trace are closed as lost, each by a
  * line of this server. The trace is read as it stands, signed or not: closing a run proves nothing.
- * @param {any} deps @param {Entry} entry @returns {Promise<number[]>} the runs closed
+ * Runs this server still ends are its own, never lost.
+ * @param {any} deps @param {Entry} entry @param {Set<number>} [still] @returns {Promise<number[]>} the runs closed
  */
-export const closeLostRuns = async (deps, entry) => {
-  const lost = openRuns(await recordsAsWritten(deps, entry))
+export const closeLostRuns = async (deps, entry, still = new Set()) => {
+  const lost = openRuns(await recordsAsWritten(deps, entry)).filter((run) => !still.has(run))
   const at = iso(deps.clock.now().getTime())
   for (const run of lost) await appendRecord(deps, entry, lostRecord({ run, at }))
   return lost

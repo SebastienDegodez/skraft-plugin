@@ -15,10 +15,11 @@ import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-ru
  * @typedef {import('./repl-runs.mjs').Entry} Entry
  * @typedef {{ launched: boolean, cancelled: boolean }} Flight
  *   a call between its start and the start of its cell: a cancellation in that window is kept, so that the cell never runs.
- * @typedef {{ entry: Entry | null, reaped: boolean, flights?: Map<unknown, Flight>, starting?: Promise<unknown>, ended?: string }} ReplState
+ * @typedef {{ entry: Entry | null, reaped: boolean, flights?: Map<unknown, Flight>, starting?: Promise<unknown>, ended?: string, ending?: Entry[] }} ReplState
  *   flights: the calls in flight, by the id of their request; starting: the entry being looked
  *   up, started or ended, which the next change waits for, so that two calls at once share one kernel;
- *   ended: the key of the last kernel ended, whose next call is told its variables are gone.
+ *   ended: the key of the last kernel ended, whose next call is told its variables are gone;
+ *   ending: the kernels ended whose runs still run past the end's wait.
  * @typedef {{ ok: boolean, code: string | null, text: string }} ReplOutcome
  *   text: what the agent reads: the cell's result, or the refusal's code and fixed reason.
  */
@@ -147,7 +148,7 @@ const startEntry = async (deps, state, bound) => {
   const entry = await newEntry(deps, bound, lease)
   const failure = await startKernel(deps, entry)
   if (failure !== null) return kernelFailed(deps, bound, { lease, error: failure.error })
-  entry.told = await firstLines(deps, entry)
+  entry.told = await firstLines(deps, entry, stillEnding(state))
   state.entry = entry
   return { ok: /** @type {const} */ (true), entry }
 }
@@ -218,6 +219,7 @@ const retire = async (deps, state) => {
   endRuns(entry, 'SIGKILL', 0)
   entry.kernel.stop()
   await settledWithin(deps, entry.pending, RETIRE_WAIT_MS)
+  if (liveRuns(entry).length > 0) state.ending = [...(state.ending ?? []), entry]
   await entry.recording
   await deps.repl.orphans.forget(deps.repl.server.pid)
   await releaseLease(deps, entry, entry.lease)
@@ -271,11 +273,21 @@ const present = async (deps, entry, outcome, notice) => {
 /**
  * What a kernel just started tells first: what it loaded of the project's REPL library, and the
  * runs a gone server left open in the attempt, closed now as lost.
- * @param {any} deps @param {Entry} entry @returns {Promise<string[]>}
+ * @param {any} deps @param {Entry} entry @param {Set<number>} still the runs this server still ends @returns {Promise<string[]>}
  */
-const firstLines = async (deps, entry) => {
-  const lost = await closeLostRuns(deps, entry)
+const firstLines = async (deps, entry, still) => {
+  const lost = await closeLostRuns(deps, entry, still)
   return [...libraryLines(entry.kernel.lib ?? { loaded: [], failed: [] }), ...lost.map((run) => `r${run} lost with the server that started it`)]
+}
+
+/**
+ * The runs of the kernels this server ended that still run past the end's wait: they are this
+ * server's, and their lines will come.
+ * @param {ReplState} state @returns {Set<number>}
+ */
+const stillEnding = (state) => {
+  state.ending = (state.ending ?? []).filter((ended) => liveRuns(ended).length > 0)
+  return new Set(state.ending.flatMap((ended) => liveRuns(ended).map((run) => run.id)))
 }
 
 /** What the first result of a kernel tells, once. @param {Entry} entry */

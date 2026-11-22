@@ -461,6 +461,25 @@ test('ending a kernel whose run does not close after its SIGKILL waits for it un
   assert.deepEqual(launcher.started[0].program.killed, [['SIGKILL', 0]])
 })
 
+test('a run this server still ends after a reset is never closed as lost by the kernel the reset starts', async () => {
+  const launcher = new ScriptedLauncher({ stubborn: true })
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('start', async ({ run }) => { void run('npm run e2e'); return null })
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl, run) => {
+    await repl.call({ code: 'start' })
+    await sleep(10)
+    const resetting = repl.call({ code: '1', reset: true })
+    await sleep(10)
+    run.clock.advance(10_000)
+    await resetting
+  } } })
+
+  await host.start()
+
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
+  assert.deepEqual(trace.map(({ type }) => type), ['start'])
+})
+
 test('a program the launcher starts while the kernel ends is killed as soon as the launcher hands it over', async () => {
   const launcher = new ScriptedLauncher()
   const kernels = new ScriptedKernelHost()
