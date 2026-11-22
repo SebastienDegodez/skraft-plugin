@@ -57,13 +57,14 @@ export const groupDone = (pid) => {
 }
 
 /**
- * Ends a group: SIGTERM now, SIGKILL a second later to whatever is left; it stays watched until then.
- * @param {number} pid
+ * Ends a group: the signal now (SIGTERM by default), SIGKILL a grace later (a second by default)
+ * to whatever is left; it stays watched until then.
+ * @param {number} pid @param {{ signal?: NodeJS.Signals, graceMs?: number }} [how]
  */
-export const stopGroup = (pid) => {
-  signalGroup(pid, 'SIGTERM')
+export const stopGroup = (pid, { signal = 'SIGTERM', graceMs = KILL_AFTER_MS } = {}) => {
+  signalGroup(pid, signal)
   setTimeout(() => {
     signalGroup(pid, 'SIGKILL')
     groupDone(pid)
-  }, KILL_AFTER_MS).unref()
+  }, graceMs).unref()
 }
