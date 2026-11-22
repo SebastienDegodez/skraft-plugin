@@ -418,7 +418,7 @@ const checkCommits = async (deps, run, step) => {
   const { components } = run.config
   const judged = judgedPass(history, { issue, components }, step)
   const checked = judged.map(({ repository, sha, subject, kind, verdict }) => ({ repository, sha, subject, kind, verdict }))
-  const found = [...commitFailures(judged, issue), ...scenarioFailures(judged, step.scenario, { plan: step.plan, components })]
+  const found = [...commitFailures(judged, issue), ...scenarioFailures(judged, step.scenario)]
   return { environment: null, checked, found, scenario: scenarioRecord(judged, step.scenario, { plan: step.plan, components }) }
 }
 

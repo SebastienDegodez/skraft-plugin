@@ -51,19 +51,6 @@ test('an implementation plan with no group table delivers every scenario in the 
   assert.deepEqual(checked(host, 'deliver')[0].commits.map(({ subject, verdict }) => [subject, verdict]), [['feat(checkout): S1, S2 delivered', 'ok']])
 })
 
-test('a group table that misses a scenario, names one twice, one the test plan does not list, or leaves S1 out of the first group sends the designer back', async () => {
-  const host = scripted({}, (it) => [...research(it), agent({ plan: THREE, work: designing(3, 'S2', 'S2–S4') })(it), unavailable])
-
-  await host.start()
-
-  assert.deepEqual(recorded(host, 'distill').map(({ code, failures }) => [code, failures]), [['scenarios', [
-    `${IMPL_PLAN}: S1 is in no group`,
-    `${IMPL_PLAN}: S2 is in more than one group`,
-    `${IMPL_PLAN}: S4 is no scenario of the test plan`,
-    `${IMPL_PLAN}: S1 is in the first group, the one the walking skeleton walks`,
-  ]]])
-})
-
 test('the engineer is told every group, the acceptance tests it never changes, the walking skeleton and the one exact green of the story; the designer the exact red and where to send its run', async () => {
   const host = scripted({}, (it) => [...research(it), agent({ plan: THREE, work: async (h) => { reds(3, undefined, REFS_42)(h); await grouped('S1, S2', 'S3')(h) } })(it), agent({ work: greenOf('S1, S2, S3', undefined, REFS_42) })(it)])
 
@@ -194,24 +181,17 @@ test('the scenarios of every component are Gherkin, not code: they go with the r
   assert.deepEqual(recorded(apart, 'distill').map(({ outcome, failures }) => [outcome, failures]), [['done', []]])
 })
 
-test('the test plan lists the scenarios, S1 the walking skeleton in a back-end component, or declares why the story has none', async () => {
+test('a test plan the engine cannot read sends the designer back: rows out of order, untitled, in no component of the configuration, or no table at all', async () => {
   const COMPONENTS = [API, WEB]
-  const cases = [
-    [{ plan: [['Customer pays by card', 'api', '@happy-path']] }, [`${PLAN}: tag S1, and S1 only, @walking-skeleton, or declare "Walking skeleton exemption: library | refactoring | docs-only"`]],
-    [{ plan: [['Customer sees the price', 'web', '@walking-skeleton']] }, [`${PLAN}: the walking skeleton S1 runs in a back-end component; web is a react front end`]],
-    [{ plan: [['Customer pays by card', 'billing']] }, [`${PLAN}: S1 names component "billing", which is none of api, web`]],
-    [{ plan: [['Customer pays by card', 'api', '@walking-skeleton'], ['Customer sees the receipt', 'web', '@walking-skeleton']] }, [`${PLAN}: tag S1, and S1 only, @walking-skeleton, or declare "Walking skeleton exemption: library | refactoring | docs-only"`]],
-  ]
   const plan = (rows, after = '') => ({ work: (h) => { reds()(h); h.tracking.write(SLUG, PLAN, `## Scenarios\n\n| # | Scenario | Component | Tags |\n|---|---|---|---|\n${rows.join('\n')}\n${after}`) }, fill: false })
-  cases.push(
-    [plan(['| S2 | Customer pays by card | api | @walking-skeleton |', '| S1 | Customer gets a receipt | api | |']), [`${PLAN}: row 1 is not S1; number the scenarios S1, S2, … in the order DELIVER builds them`, `${PLAN}: row 2 is not S2; number the scenarios S1, S2, … in the order DELIVER builds them`, `${PLAN}: tag S1, and S1 only, @walking-skeleton, or declare "Walking skeleton exemption: library | refactoring | docs-only"`]],
-    [plan(['| S1 | Customer pays by card | api | @walking-skeleton |', '| S2 |  | api |', '| S3 | Customer pays by card | api |']), [`${PLAN}: S2 has no title`, `${PLAN}: two scenarios are titled "Customer pays by card"`]],
+  const cases = [
+    [{ plan: [['Customer pays by card', 'billing']] }, [`${PLAN}: S1 names component "billing", which is none of api, web`]],
+    [plan(['| S2 | Customer pays by card | api | @walking-skeleton |', '| S1 | Customer gets a receipt | api | |']), [`${PLAN}: row 1 is not S1; number the scenarios S1, S2, … in the order DELIVER builds them`, `${PLAN}: row 2 is not S2; number the scenarios S1, S2, … in the order DELIVER builds them`]],
+    [plan(['| S1 | Customer pays by card | api | @walking-skeleton |', '| S2 |  | api |']), [`${PLAN}: S2 has no title`]],
     [plan(['| S1 | Customer pays by card | api | @walking-skeleton |', '| S2 | Customer gets a receipt |']), [`${PLAN}: S2 names component "", which is none of api, web`]],
-    [plan(['| S1 | Customer pays by card | api | @walking-skeleton |'], 'Walking skeleton exemption: someday\n'), [`${PLAN}: walking skeleton exemption "someday" must be none, library, refactoring, docs-only`]],
-    [plan(['| S1 | Reader finds the API documented | api | @walking-skeleton |'], 'Walking skeleton exemption: library\n'), [`${PLAN}: the story declares its walking skeleton exempt (library), and S1 carries @walking-skeleton`]],
     [{ work: (h) => { reds()(h); h.tracking.write(SLUG, PLAN, '## Scenarios\n\nNone yet.\n') }, fill: false }, [`${PLAN} lists no scenario: write a "## Scenarios" heading followed by the table | # | Scenario | Component | Tags |, one row per scenario`]],
     [{ work: (h) => { reds()(h); h.tracking.write(SLUG, PLAN, '# Test plan\n') }, fill: false }, [`${PLAN} lists no scenario: write a "## Scenarios" heading followed by the table | # | Scenario | Component | Tags |, one row per scenario`]],
-  )
+  ]
   for (const [behaviour, failures] of cases) {
     const host = scripted({ components: COMPONENTS }, (it) => [...research(it), agent(behaviour)(it), unavailable])
     await host.start()
@@ -225,18 +205,6 @@ test('a repository whose only component is a front end has its walking skeleton 
   await host.start()
 
   assert.deepEqual(recorded(host, 'distill').map(({ outcome, failures, skeleton }) => [outcome, failures, skeleton.component]), [['done', [], 'web']])
-})
-
-test('a story declared exempt of a walking skeleton as docs only, whose commits change source, is refused', async () => {
-  const host = scripted({}, (it) => [...research(it), agent({
-    plan: [['Reader finds the API documented', 'api', '@happy-path']],
-    exemption: 'docs-only',
-    work: reds(1, ['tests/Acceptance/S1AcceptanceTests.cs', 'src/Skeleton.cs']),
-  })(it), unavailable])
-
-  await host.start()
-
-  assert.deepEqual(recorded(host, 'distill').map(({ code, failures }) => [code, failures]), [['scenarios', ['the story declares its walking skeleton exempt as docs only, and commit root-1 "test(checkout): acceptance tests S1–S1" changes src/Skeleton.cs, source of api; remove the exemption and tag S1 @walking-skeleton']]])
 })
 
 test('a story exempt of a walking skeleton still commits the red of its acceptance tests, and its green names no walking skeleton', async () => {

@@ -11,13 +11,14 @@
  *
  *   Walking skeleton exemption: none
  *
- * S1 is the scenario the story's walking skeleton walks, tagged `@walking-skeleton`, in a back-end
- * component when the configuration has one; its acceptance test is a scenario's like any other,
- * the walking skeleton a plain test beside it. A story with no new entry point declares why it has
- * none instead.
+ * The engine reads the table and refuses only a plan it cannot read: no table, rows not numbered
+ * S1, S2, … in order, a row with no title or naming no component of the configuration. What the
+ * rows say (the walking skeleton, its exemption, the groups) is the designer's prose and the
+ * review's to judge.
  *
  * @typedef {{ index: number, title: string, component: string, tags: string[] }} StoryScenario
- * @typedef {'none' | 'library' | 'refactoring' | 'docs-only'} Exemption
+ * @typedef {string} Exemption
+ *   as the plan declares it: none, library, refactoring or docs-only; `none` when it declares none.
  * @typedef {{ scenarios: StoryScenario[], exemption: Exemption }} ScenarioPlan
  * @typedef {{ name: string, stack: string }} PlanComponent
  * @typedef {{ index: number, scenarios: number[] }} DeliveryGroup
@@ -25,11 +26,9 @@
  *   plan groups them.
  */
 
-export const WALKING_SKELETON = '@walking-skeleton'
 
 /** A group as the subjects of its green name it: `S1, S2`. @param {number[]} numbers */
 export const groupLabel = (numbers) => numbers.map((index) => `S${index}`).join(', ')
-const EXEMPTIONS = Object.freeze(/** @type {Exemption[]} */ (['none', 'library', 'refactoring', 'docs-only']))
 const HEADING = /^#{2,3}\s+Scenarios\s*$/i
 const ROW = /^\s*\|(.*)\|\s*$/
 const SEPARATOR = /^[\s|:-]+$/
@@ -45,20 +44,10 @@ const SHAPE = 'a "## Scenarios" heading followed by the table | # | Scenario | C
 export const readScenarioPlan = ({ path, text }, components) => {
   const rows = tableRows(text.split(/\r?\n/))
   if (rows === null) return { ok: false, failures: [`${path} lists no scenario: write ${SHAPE}`] }
-  const exemption = exemptionOf(text)
   const scenarios = rows.map(scenarioOf)
-  const failures = [...rowFailures(path, scenarios, components), ...walkingSkeletonFailures(path, { scenarios, exemption }, components)]
-  return failures.length > 0 ? { ok: false, failures } : { ok: true, plan: { scenarios, exemption: /** @type {Exemption} */ (exemption) } }
+  const failures = rowFailures(path, scenarios, components)
+  return failures.length > 0 ? { ok: false, failures } : { ok: true, plan: { scenarios, exemption: exemptionOf(text) } }
 }
-
-/**
- * An exemption the engine does not know is the only failure of the walking skeleton; a known one
- * or none decides which scenario must be it.
- * @param {string} path @param {{ scenarios: StoryScenario[], exemption: string }} plan @param {readonly PlanComponent[]} components
- */
-const walkingSkeletonFailures = (path, { scenarios, exemption }, components) => (EXEMPTIONS.some((known) => known === exemption)
-  ? skeletonFailures(path, { scenarios, exemption: /** @type {Exemption} */ (exemption) }, components)
-  : [`${path}: walking skeleton exemption "${exemption}" must be ${EXEMPTIONS.join(', ')}`])
 
 /**
  * The cells of each row of the table under the Scenarios heading, columns in plan order; null
@@ -97,34 +86,15 @@ const scenarioOf = ([id, title, component, tags]) => ({
 const exemptionOf = (text) => EXEMPTION.exec(text)?.[1].toLowerCase() ?? 'none'
 
 /**
- * The rows the engine cannot follow: numbered out of order, untitled, titled twice, or in a
- * component the configuration does not list.
+ * The rows the engine cannot follow: numbered out of order, untitled, or in a component the
+ * configuration does not list.
  * @param {string} path @param {StoryScenario[]} scenarios @param {readonly PlanComponent[]} components
  */
 const rowFailures = (path, scenarios, components) => scenarios.flatMap((scenario, position) => [
   ...(scenario.index === position + 1 ? [] : [`${path}: row ${position + 1} is not S${position + 1}; number the scenarios S1, S2, … in the order DELIVER builds them`]),
   ...(scenario.title === '' ? [`${path}: S${position + 1} has no title`] : []),
-  ...(scenarios.findIndex(({ title }) => title === scenario.title) < position ? [`${path}: two scenarios are titled "${scenario.title}"`] : []),
   ...(components.some(({ name }) => name === scenario.component) ? [] : [`${path}: S${position + 1} names component "${scenario.component}", which is none of ${components.map(({ name }) => name).join(', ')}`]),
 ])
-
-/**
- * Exactly one walking skeleton, S1, in a back-end component when the configuration has one; none
- * when the story declares itself exempt.
- * @param {string} path @param {ScenarioPlan} plan @param {readonly PlanComponent[]} components
- */
-const skeletonFailures = (path, { scenarios, exemption }, components) => {
-  const tagged = scenarios.filter(({ tags }) => tags.includes(WALKING_SKELETON))
-  if (exemption !== 'none') return tagged.map(({ index }) => `${path}: the story declares its walking skeleton exempt (${exemption}), and S${index} carries ${WALKING_SKELETON}`)
-  if (tagged.length !== 1 || tagged[0].index !== 1) return [`${path}: tag S1, and S1 only, ${WALKING_SKELETON}, or declare "Walking skeleton exemption: library | refactoring | docs-only"`]
-  return frontEnd(components, tagged[0].component) ? [`${path}: the walking skeleton S1 runs in a back-end component; ${tagged[0].component} is a react front end`] : []
-}
-
-/**
- * Whether the component is a front end while the configuration has a back end.
- * @param {readonly PlanComponent[]} components @param {string} name
- */
-const frontEnd = (components, name) => components.some(({ stack }) => stack !== 'react') && components.find((component) => component.name === name)?.stack === 'react'
 
 /**
  * The groups DELIVER works through, in one green commit, as the acceptance designer's
@@ -135,8 +105,8 @@ const frontEnd = (components, name) => components.some(({ stack }) => stack !== 
  *   | 1 | S1, S2 | Card payment | … |
  *   | 2 | S3–S5 | Expired card | … |
  *
- * A plan with no such table, or none at all, delivers one scenario per group. A table must name
- * every scenario once, S1 in the first group.
+ * A plan with no such table, or none at all, delivers one scenario per group. A row whose
+ * Scenarios cell names no scenario cannot be read.
  * @param {{ path: string, text: string | null }} plan @param {readonly StoryScenario[]} scenarios
  * @returns {{ ok: true, groups: DeliveryGroup[] } | { ok: false, failures: string[] }}
  */
@@ -144,7 +114,7 @@ export const readDeliveryGroups = ({ path, text }, scenarios) => {
   const rows = text === null ? null : groupRows(text.split(/\r?\n/))
   if (rows === null) return { ok: true, groups: scenarios.map(({ index }) => ({ index, scenarios: [index] })) }
   const groups = rows.map((cell, at) => ({ index: at + 1, scenarios: scenarioNumbers(cell) }))
-  const failures = groupFailures(path, groups, scenarios.length)
+  const failures = groups.filter(({ scenarios: named }) => named.length === 0).map(({ index }) => `${path}: group ${index} names no scenario`)
   return failures.length > 0 ? { ok: false, failures } : { ok: true, groups }
 }
 
@@ -169,18 +139,3 @@ const scenarioNumbers = (cell) => [...cell.matchAll(/S(\d+)(?:\s*[–—-]\s*S?(
   const last = to === undefined ? first : Number(to)
   return last < first ? [first] : Array.from({ length: last - first + 1 }, (_, offset) => first + offset)
 })
-
-/**
- * A table the engine cannot follow: a group naming no scenario, a scenario in none or in two
- * groups, one the test plan does not list, S1 out of the first group.
- * @param {string} path @param {DeliveryGroup[]} groups @param {number} count
- */
-const groupFailures = (path, groups, count) => {
-  const named = groups.flatMap(({ scenarios }) => scenarios)
-  return [
-    ...groups.filter(({ scenarios }) => scenarios.length === 0).map(({ index }) => `${path}: group ${index} names no scenario`),
-    ...Array.from({ length: count }, (_, at) => at + 1).filter((index) => named.filter((number) => number === index).length !== 1).map((index) => `${path}: S${index} is in ${named.includes(index) ? 'more than one group' : 'no group'}`),
-    ...[...new Set(named.filter((index) => index < 1 || index > count))].map((index) => `${path}: S${index} is no scenario of the test plan`),
-    ...(count > 0 && !groups[0]?.scenarios.includes(1) ? [`${path}: S1 is in the first group, the one the walking skeleton walks`] : []),
-  ]
-}

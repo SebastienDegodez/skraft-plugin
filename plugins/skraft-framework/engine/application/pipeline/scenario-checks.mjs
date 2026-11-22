@@ -1,4 +1,3 @@
-import { commitName } from '../../domain/pipeline/commits.mjs'
 import { isCode, ownersOf } from '../../domain/pipeline/component-files.mjs'
 import { delivers, writesScenarios } from '../../domain/pipeline/roles.mjs'
 import { readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scenarios.mjs'
@@ -8,8 +7,7 @@ import { readDeliveryGroups, readScenarioPlan } from '../../domain/pipeline/scen
  * scenarios the acceptance designer's test plan lists and the groups its implementation plan
  * delivers them in, one red holding the walking skeleton and the acceptance test of every
  * scenario; then, in one pass, the software engineer's one green for every group, not touching
- * those tests; a walking skeleton declared exempt as docs only that no
- * commit contradicts; and what the pass leaves for the next ones.
+ * those tests; and what the pass leaves for the next ones.
  *
  * @typedef {import('../../domain/pipeline/scenarios.mjs').ScenarioPlan} ScenarioPlan
  * @typedef {import('../../domain/pipeline/scenarios.mjs').StoryScenario} StoryScenario
@@ -124,16 +122,11 @@ export const acceptanceFiles = ({ files }, components) => files.filter((file) =>
 
 /**
  * The pass's own failures: no red of the acceptance tests after the plan's pass, no green after a
- * delivery pass, a commit changing code of a story declared docs only.
+ * delivery pass.
  * @param {JudgedCommit[]} judged @param {ScenarioPass | null} scenario
- * @param {{ plan: ScenarioPlan | null, components: Component[] }} context
  * @returns {ScenarioFailure[]}
  */
-export const scenarioFailures = (judged, scenario, { plan, components }) => {
-  if (scenario === null) return []
-  const exemption = (plan ?? scenario).exemption
-  return [...MISSING[scenario.kind](judged, scenario), ...exemptionBreaches(judged, exemption, components)]
-}
+export const scenarioFailures = (judged, scenario) => (scenario === null ? [] : MISSING[scenario.kind](judged, scenario))
 
 /** @param {JudgedCommit[]} judged */
 const redCommitted = (judged) => judged.some((commit) => commit.kind === 'red')
@@ -149,16 +142,6 @@ const MISSING = Object.freeze({
   delivery: (judged) => (judged.some((commit) => commit.kind === 'green') ? [] : [{ code: 'tdd', line: 'the story has no feat or fix commit: make every group pass, in one commit' }]),
   rework: () => [],
 })
-
-/**
- * A story whose walking skeleton is exempt because it changes only documents or configuration
- * changes no source.
- * @param {JudgedCommit[]} judged @param {string} exemption @param {Component[]} components
- * @returns {ScenarioFailure[]}
- */
-const exemptionBreaches = (judged, exemption, components) => (exemption !== 'docs-only' ? [] : judged.flatMap((commit) => commit.files
-  .filter((file) => isCode(file, components, ['src']))
-  .map((file) => ({ code: /** @type {const} */ ('scenarios'), line: `the story declares its walking skeleton exempt as docs only, and ${commitName(commit)} changes ${file}, source of ${ownersOf(components, [file])[0].name}; remove the exemption and tag S1 @walking-skeleton` }))))
 
 /**
  * What a done pass leaves for the next: the plan it wrote, its groups and the red of every
