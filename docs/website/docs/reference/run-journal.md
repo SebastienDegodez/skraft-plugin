@@ -68,7 +68,7 @@ One JSON object per line. Every event carries `type`, `at` (ISO-8601 UTC) and `p
 | `commits.checked` | after an attempt that made commits | `commits`, each `{ repository, sha, subject, kind, verdict }` |
 | `evidence.checked` | after a DELIVER attempt | `runs`, each `{ run, gate, cwd, log, sha256 }`; for a trace that does not read through its signatures, `runs: []` and `invalid` (`unsigned-line`, `no-key`, `wrong-signature`); `red: true` for the designer's red run ([Quality evidence](#gate-evidence)) |
 | `visuals.recorded` | `playwright-visuals` | each front end's screenshots |
-| `publish.requested`, `pull-request.opened`, `pull-request.updated`, `pull-request.details-kept`, `pull-request.details-skipped`, `pull-request.screenshots-skipped` | `skraft publish`, the `publish` node | `number`, `url`, `bodyHash`, `part`; `reason`, `screenshots` (the paths left out) |
+| `publish.requested`, `pull-request.opened`, `pull-request.updated`, `pull-request.details-kept`, `pull-request.details-skipped`, `pull-request.screenshots-skipped` | `skraft publish`, the `publish` node | `number`, `url`, `bodyHash`, `part`, `screenshots` (the paths sent with the body, or left out of it), `reason` |
 | `issue.commented`, `issue.comment-skipped` | the run | `issue`, `kind`, `url` or `reason` |
 | `lease.reclaimed`, `journal.adopted` | the pipeline, `skraft journal adopt` | `renewed`, `gapMs`; `keyId`, `unverified` |
 

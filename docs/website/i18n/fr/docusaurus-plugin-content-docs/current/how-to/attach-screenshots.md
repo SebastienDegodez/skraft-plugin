@@ -114,7 +114,8 @@ thème, les sombres repliées. Le chemin dépend de la forge :
   section Screenshots part dans un commentaire des détails du run : `gh pr comment --attach` publie
   ce commentaire avec ses captures, et celui qu'il remplace est vidé, jamais supprimé ; skraft relit
   le commentaire et dit quelles captures ne sont pas jointes, et le `skraft publish` suivant le
-  publie à nouveau. skraft relit le corps et dit quelles captures ne sont pas jointes.
+  publie à nouveau. skraft relit le corps et dit quelles captures ne sont pas jointes ; le
+  `skraft publish` suivant renvoie le corps avec elles, comme quand les captures ont changé.
   `skraft doctor` prévient quand votre gh n'a pas `--attach` (gh 2.103.3 l'a) ; avec un tel gh,
   skraft ouvre ou met à jour la pull request sans ses captures, dit pourquoi dans sa section
   Screenshots et dans la raison de la publication, et journalise `pull-request.screenshots-skipped`.

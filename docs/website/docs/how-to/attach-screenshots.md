@@ -111,7 +111,8 @@ the dark ones folded. How they get there depends on the forge:
   (60,000 characters), the Screenshots section goes to a comment of the run details:
   `gh pr comment --attach` posts that comment with its screenshots, and the comment it replaces is
   emptied, never deleted; skraft reads the comment back and says which did not attach, and the
-  next `skraft publish` posts it again. skraft reads the body back and says which screenshots did not attach. `skraft doctor`
+  next `skraft publish` posts it again. skraft reads the body back and says which screenshots did not attach;
+  the next `skraft publish` sends the body again with them, as it does when the screenshots changed. `skraft doctor`
   warns when your gh has no `--attach` (gh 2.103.3 has it); with such a gh, skraft opens or updates
   the pull request without its screenshots, says why in its Screenshots section and in the
   publication's reason, and journals `pull-request.screenshots-skipped`.

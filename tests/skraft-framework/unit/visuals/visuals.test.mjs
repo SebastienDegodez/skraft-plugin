@@ -97,9 +97,11 @@ test('a screenshot gh did not attach is told by reading the body back, and the p
 
   assert.equal(eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish').reason, `pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; 2 screenshots did not attach: ${SHOTS}/accepted-light.png, ${SHOTS}/accepted-dark.png`)
   assert.ok(host.codeHost.pullRequests[0].body.includes(`![Payment accepted](${FROM_BODY}/${SHOTS}/accepted-light.png)`))
+  // The publication of the completed run, gh still unable to attach them: its body changed, it is updated, and says so again.
+  assert.equal((await host.publish()).reason, `pull request #42 updated: https://github.example.com/acme/shop/pull/42; 2 screenshots did not attach: ${SHOTS}/accepted-light.png, ${SHOTS}/accepted-dark.png`)
 
   host.codeHost.unattached.clear()
-  assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42')
+  assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42', 'a body that still refers to a local screenshot is not up to date, whatever else it holds')
   assert.equal(host.codeHost.attached.at(-1).length, 4)
   assert.ok(!host.codeHost.pullRequests[0].body.includes(`](${FROM_BODY}/`), host.codeHost.pullRequests[0].body)
   assert.match((await host.publish()).reason, /pull request #42 is up to date/)

@@ -426,7 +426,7 @@ const opened = async (deps, { journal, config }, { target, title, bodyFile, body
   const made = await deps.codeHost.create({ base, head, title, bodyFile, body, draft: config.publish.draft, issue: deriveRun(journal.events).story?.issue ?? null, attachments })
   if (!made.ok) return unwritten(journal, write, made)
   if (!(await listed(deps.codeHost, head, made.number))) return unwritten(journal, write, { reason: `the forge said it opened pull request #${made.number} of ${head}, but listing the pull requests of ${head} does not show it`, outcome: 'verification-failed' })
-  await journal.append('pull-request.opened', { number: made.number, url: made.url, base, head, draft: config.publish.draft, bodyHash })
+  await journal.append('pull-request.opened', { number: made.number, url: made.url, base, head, draft: config.publish.draft, bodyHash, screenshots: pathsOf(attachments) })
   await journalWrite(journal, write, { outcome: 'applied' })
   const note = attachments.length === 0 ? '' : attachNote(await liveBody(deps, made.number), attachments)
   return { published: true, number: made.number, reason: `pull request #${made.number} opened${config.publish.draft ? ' as a draft' : ''}: ${made.url}${made.note === undefined ? '' : `; ${made.note}`}${note}` }
@@ -456,20 +456,40 @@ const unwritten = async (journal, write, failed) => {
  * @returns {Promise<Publication>}
  */
 const updated = async (deps, { journal }, { found, bodyFile, body, bodyHash, liveHash, attachments }) => {
-  if (liveHash === bodyHash) return { published: true, number: found.number, reason: `pull request #${found.number} is up to date: ${found.url}` }
+  if (liveHash === bodyHash && shownAsSent(journal.events, found, attachments)) return { published: true, number: found.number, reason: `pull request #${found.number} is up to date: ${found.url}` }
   if (lastHash(journal.events, found.number) !== liveHash) return notOpened(`pull request #${found.number} was edited since skraft last wrote its body, which stays as it is`)
   const write = { write: 'pull-request-edit', subject: String(found.number) }
   const edited = await deps.codeHost.edit({ number: found.number, bodyFile, body, attachments })
   if (!edited.ok) return unwritten(journal, write, edited)
   const live = await liveBody(deps, found.number)
   if (live === null || (await hashOf(deps, live)) !== bodyHash) return unwritten(journal, write, { reason: `the forge said it updated pull request #${found.number}, but reading it back does not show the new body`, outcome: 'verification-failed' })
-  await journal.append('pull-request.updated', { number: found.number, url: found.url, bodyHash })
+  await journal.append('pull-request.updated', { number: found.number, url: found.url, bodyHash, screenshots: pathsOf(attachments) })
   await journalWrite(journal, write, { outcome: 'applied' })
   return { published: true, number: found.number, reason: `pull request #${found.number} updated: ${found.url}${attachNote(live, attachments)}` }
 }
 
 /** @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {number} number */
-const lastHash = (events, number) => events.findLast((event) => event.number === number && BODY_EVENTS.includes(event.type))?.bodyHash
+const lastHash = (events, number) => lastWrite(events, number)?.bodyHash
+
+/** The event of skraft's last write of the pull request's body. @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {number} number */
+const lastWrite = (events, number) => events.findLast((event) => event.number === number && BODY_EVENTS.includes(event.type))
+
+/** @param {Attachment[]} attachments */
+const pathsOf = (attachments) => attachments.map(({ path }) => path)
+
+/**
+ * Whether the body read back shows the screenshots as this publication sends them: none still at
+ * the local reference the forge's client rewrites once it attached the file, and the same
+ * screenshots as skraft's last write sent; a body whose images were left unattached, or whose
+ * screenshots changed, is sent again with them.
+ * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {{ number: number, body?: string }} found @param {Attachment[]} attachments
+ */
+const shownAsSent = (events, found, attachments) => {
+  const live = found.body ?? ''
+  if (attachments.some(({ reference }) => live.includes(`](${reference})`))) return false
+  const sent = lastWrite(events, found.number)?.screenshots ?? []
+  return sent.length === attachments.length && pathsOf(attachments).every((path) => sent.includes(path))
+}
 
 /** The events that tell the body skraft last wrote. */
 const BODY_EVENTS = ['pull-request.opened', 'pull-request.updated']
