@@ -38,6 +38,8 @@ const FAKE_GH = [
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
   "if (args[1] === 'edit' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(state.created, 1)",
   "if (args[1] === 'edit') said(state.created)",
+  "if (args[1] === 'comment' && state.attachFails) said(state.commented, 1)",
+  "if (args[1] === 'comment') said(state.commented)",
   "if (args[0] === 'issue' && state.issue === undefined) { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
   "if (args[0] === 'issue' && state.issueFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[0] === 'issue') said(typeof state.issue === 'string' ? state.issue : JSON.stringify(state.issue))",
@@ -235,12 +237,25 @@ test('the screenshots of a pull request go with its body: gh uploads each one --
 
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
   assert.deepEqual(forge.uploads(), [join(cwd, 'web', 'skraft-visuals', 'checkout light.png'), join(cwd, 'web', 'skraft-visuals', 'paid.png')])
+  const commented = 'https://github.example.com/acme/payment/pull/7#issuecomment-1001'
+  forge.set({ commented })
+  const details = join(tracking, 'pull-request-details-2.md')
+  writeFileSync(details, '<!-- skraft:run-details slug=checkout part=2 -->\n\n![Payment accepted](../../../web/skraft-visuals/paid.png)\n')
+  const comment = { number: 7, marker: '<!-- skraft:run-details slug=checkout part=2 -->', url: 'https://github.example.com/acme/payment/pull/7#issuecomment-900', bodyFile: details, body: '', threadFile: '', commentFile: '', attachments: [attachments[1]] }
+  assert.deepEqual(await host.keepPullRequestComment(comment), { ok: true, url: commented })
+  forge.set({ commented, attachFails: true })
+  assert.deepEqual(await host.keepPullRequestComment(comment), { ok: true, url: commented })
+  forge.set({ commented: 'Done' })
+  assert.deepEqual(await host.keepPullRequestComment(comment), { ok: false, reason: 'gh could not comment pull request #7 on github.example.com/acme/payment' })
+  assert.deepEqual(forge.calls().filter(([command, sub]) => command === 'pr' && sub === 'comment'), [0, 1, 2].map(() => ['pr', 'comment', '7', '--repo=github.example.com/acme/payment', `--body-file=${details}`, '--attach=../../../web/skraft-visuals/paid.png#Payment accepted']))
+  assert.deepEqual(forge.uploads().slice(2), [0, 1, 2].map(() => join(cwd, 'web', 'skraft-visuals', 'paid.png')))
+  forge.set({})
   assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
   forge.set({ attachFails: true })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
   assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments: [] }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
-  assert.deepEqual(forge.calls().filter(([command, sub]) => command === 'pr' && sub !== 'list').map((args) => args.filter((arg) => arg.startsWith('--attach='))), [attached, attached, attached, attached, []])
+  assert.deepEqual(forge.calls().filter(([command, sub]) => command === 'pr' && sub !== 'list' && sub !== 'comment').map((args) => args.filter((arg) => arg.startsWith('--attach='))), [attached, attached, attached, attached, []])
   forge.set({ fails: true })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment' })
 

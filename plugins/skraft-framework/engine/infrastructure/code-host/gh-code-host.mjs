@@ -57,7 +57,7 @@ const screenshotsOf = (commandRunner) => ({
  */
 const comments = (commandRunner) => ({
   keepIssueComment: (/** @type {import('../../application/ports/code-host.mjs').IssueCommentRequest} */ request) => keepIssueComment(commandRunner, request, remoteOf, OPENS),
-  keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS),
+  keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepPullRequestComment(commandRunner, request),
   readComment: (/** @type {string} */ url) => readComment(commandRunner, url, remoteOf),
 })
 
@@ -402,6 +402,32 @@ const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
   if (kept === LOST) return { ...refused(`${reason}: gh got no answer`), outcome: /** @type {const} */ ('unknown') }
   return kept ?? refused(reason)
 }
+
+/**
+ * A comment of a pull request: one that attaches screenshots is posted by `gh pr comment --attach`,
+ * which writes no comment already there; any other is kept as an issue's.
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} request
+ */
+const keepPullRequestComment = (commandRunner, request) => ((request.attachments ?? []).length > 0
+  ? postAttached(commandRunner, request)
+  : keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS))
+
+/**
+ * Posts the comment, gh uploading each attachment and rewriting the body's reference to it; gh
+ * prints the comment's URL, also when some attachments failed and it exits non-zero, as
+ * `gh pr create` does (`gh pr comment --help`, gh 2.103.3; the exit is not measured).
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} request
+ */
+const postAttached = async (commandRunner, { number, bodyFile, attachments }) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'comment', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(attachments)], bodyFile)
+  const url = answered(result, attachments) ? PRINTED_COMMENT.exec(result.stdout)?.[0] : undefined
+  return url === undefined ? failedWrite(result, `gh could not comment pull request #${number} on ${remote.repository}`) : { ok: /** @type {const} */ (true), url }
+}
+
+/** The URL of a pull request's comment, the line gh pr comment prints. */
+const PRINTED_COMMENT = /^https:\/\/\S+\/pull\/\d+#issuecomment-\d+$/m
 
 /** A comment written that gh got no answer for: it may be on the forge. */
 const LOST = Symbol('lost')

@@ -40,13 +40,16 @@
  *   Azure Boards; GitHub ignores it); body: that body. On Azure Boards the comment's url is the
  *   REST address skraft builds, `<organization>/<project>/_apis/wit/workItems/<id>/comments/<comment>`:
  *   a web anchor for a comment is not documented, so none is invented.
- * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string, threadFile: string, commentFile: string }} PullRequestCommentRequest
+ * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string, threadFile: string, commentFile: string, attachments: Attachment[] }} PullRequestCommentRequest
  *   number: the pull request; marker: the first line of the comment's body, that finds it again;
  *   url: the comment as last kept, null when none was; bodyFile, body: the Markdown to keep;
  *   threadFile: the absolute path of a file holding the thread to post as JSON
  *   (`{"comments":[{"parentCommentId":0,"content":<body>,"commentType":1}],"status":4}`) and
  *   commentFile: that of a file holding `{"content":<body>}`, for a forge whose client sends JSON
- *   (az on Azure Repos); both empty for another forge.
+ *   (az on Azure Repos); both empty for another forge; attachments: the files the forge's client
+ *   uploads with the comment, each reference to one rewritten (gh pr comment --attach); a request
+ *   with any is always posted as a new comment, whatever url says, and the caller empties the one
+ *   it kept before.
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
  *   remotes: () => Promise<string[]>,

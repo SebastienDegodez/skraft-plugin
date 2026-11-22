@@ -108,7 +108,11 @@ thème, les sombres repliées. Le chemin dépend de la forge :
   (`../../../web/skraft-visuals/checkout.png`), et `gh pr create` ou `gh pr edit`, lancé depuis ce
   dossier, la téléverse avec `--attach`, en réécrivant la référence. Une capture dont le chemin
   contient un `#` est refusée à la lecture du manifeste : gh prend ce qui suit `#` pour le texte
-  alternatif. skraft relit le corps et dit quelles captures ne sont pas jointes.
+  alternatif. Quand la description dépasse ce qu'une pull request accepte (60 000 caractères), la
+  section Screenshots part dans un commentaire des détails du run : `gh pr comment --attach` publie
+  ce commentaire avec ses captures, et celui qu'il remplace est vidé, jamais supprimé ; skraft relit
+  le commentaire et dit quelles captures ne sont pas jointes, et le `skraft publish` suivant le
+  publie à nouveau. skraft relit le corps et dit quelles captures ne sont pas jointes.
   `skraft doctor` prévient quand votre gh n'a pas `--attach` (gh 2.103.3 l'a).
 - **Azure DevOps** : `az` n'envoie aucun fichier en corps binaire, les pièces jointes de la pull
   request sont donc hors d'atteinte. skraft commite les captures seules sur la branche

@@ -817,10 +817,18 @@ export class InMemoryCodeHost {
     this.comments.push(comment)
     return this.answered('comment', { url: comment.url })
   }
-  async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile }) {
-    this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
+  /** A comment with attachments is always posted anew, as gh pr comment --attach does, each reference to a file it uploaded rewritten. */
+  async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile, attachments = [] }) {
+    this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}${attachments.length === 0 ? '' : ` --attach ${attachments.length}`}`)
     if (this.fails.pullRequestComment) return { ok: false, reason: this.fails.pullRequestComment }
-    const body = this.read(bodyFile)
+    const read = this.read(bodyFile)
+    const body = attachments.filter(({ path }) => !this.unattached.has(path))
+      .reduce((text, { reference }, index) => text.replaceAll(`](${reference})`, `](https://github.com/user-attachments/assets/comment-${this.pullRequestComments.length + 1}-${index + 1})`), read)
+    if (attachments.length > 0) {
+      const comment = { number, body, bodies: [body], edits: 0, url: `${this.pages}/pull/${number}#details-${this.pullRequestComments.length + 1}`, threadFile, commentFile, attached: attachments, hidden: this.unseen.has('pullRequestComment') }
+      this.pullRequestComments.push(comment)
+      return this.answered('pullRequestComment', { url: comment.url })
+    }
     const kept = this.pullRequestComments.find((comment) => comment.url === url) ?? this.pullRequestComments.findLast((comment) => comment.number === number && comment.body.startsWith(marker))
     if (kept) {
       Object.assign(kept, { body, bodies: [...kept.bodies, body], edits: kept.edits + 1, hidden: this.unseen.has('pullRequestComment') })

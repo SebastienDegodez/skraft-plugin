@@ -192,6 +192,13 @@ export const shownScreenshots = ({ components }) => components.flatMap(({ screen
 const encodedPath = (path) => path.split('/').map(encodeURIComponent).join('/')
 
 /**
+ * The attachments a body itself refers to, the only ones it is sent with: one a comment of the run
+ * details shows goes with that comment, it would be appended to the body.
+ * @template {{ reference: string }} T @param {T[]} attachments @param {string} body @returns {T[]}
+ */
+export const referredIn = (attachments, body) => attachments.filter(({ reference }) => body.includes(`](${reference})`))
+
+/**
  * How a body refers to a screenshot the forge's client attaches, which it rewrites to the uploaded
  * file: from the folder of the body's file, where gh resolves it and is run (`../../../web/a.png`).
  * @param {string} path relative to the working copy @param {string} folder the body file's, relative to the working copy

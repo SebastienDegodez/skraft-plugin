@@ -105,7 +105,11 @@ the dark ones folded. How they get there depends on the forge:
   by its path from the folder of the body's file (`../../../web/skraft-visuals/checkout.png`), and
   `gh pr create` or `gh pr edit`, started from that folder, uploads it with `--attach`, rewriting the
   reference. A screenshot whose path holds a `#` is refused when the manifest is read: gh takes
-  what follows `#` for the alt text. skraft reads the body back and says which screenshots did not attach. `skraft doctor`
+  what follows `#` for the alt text. When the description is longer than a pull request takes
+  (60,000 characters), the Screenshots section goes to a comment of the run details:
+  `gh pr comment --attach` posts that comment with its screenshots, and the comment it replaces is
+  emptied, never deleted; skraft reads the comment back and says which did not attach, and the
+  next `skraft publish` posts it again. skraft reads the body back and says which screenshots did not attach. `skraft doctor`
   warns when your gh has no `--attach` (gh 2.103.3 has it).
 - **Azure DevOps**: `az` sends no file as a binary body, so the pull request's attachments cannot
   be reached. skraft commits the screenshots alone on the branch

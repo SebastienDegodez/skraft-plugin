@@ -281,6 +281,30 @@ test('screenshots cut to fit a comment of the run details drop their dark theme 
   assert.ok(section(intoTag, 'Screenshots').endsWith(`/web/light-1.png)\n\n${CUT}`), section(intoTag, 'Screenshots').slice(-300))
 })
 
+test('on GitHub, screenshots a comment of the run details shows are attached to that comment by gh, those missing when read back are told, and the next publication posts it again and empties the one before', async () => {
+  const host = visualsRun({ codeHost: new InMemoryCodeHost({ bodyLimit: 1_000, commentLimit: 140_000, unattached: [`${SHOTS}/accepted-dark.png`] }) })
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  const reason = eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish').reason
+  assert.match(reason, new RegExp(`; 1 screenshot did not attach: ${SHOTS}/accepted-dark\\.png$`))
+  assert.deepEqual(host.codeHost.attached, [[]], 'the body shows no screenshot, so it attaches none')
+  const shown = host.codeHost.pullRequestComments.find(({ body }) => body.includes('<summary>Screenshots'))
+  assert.deepEqual(shown.attached.map(({ path, reference }) => [path, reference]), ['checkout-light', 'accepted-light', 'checkout-dark', 'accepted-dark'].map((name) => [`${SHOTS}/${name}.png`, `${FROM_BODY}/${SHOTS}/${name}.png`]))
+  assert.ok(shown.body.includes(`![Payment accepted](${FROM_BODY}/${SHOTS}/accepted-dark.png)`), shown.body)
+  assert.ok(!shown.body.includes(`](${FROM_BODY}/${SHOTS}/checkout-light.png)`), shown.body)
+
+  host.codeHost.unattached.clear()
+  const again = await host.publish()
+
+  assert.doesNotMatch(again.reason, /did not attach/)
+  const after = host.codeHost.pullRequestComments.findLast(({ body }) => body.includes('<summary>Screenshots'))
+  assert.notEqual(after.url, shown.url)
+  assert.ok(shown.body.includes('This part of the run details is no longer used.'), shown.body)
+  assert.ok(!after.body.includes(`](${FROM_BODY}/`), after.body)
+  assert.match((await host.publish()).reason, /up to date/)
+})
+
 const CUT = '[cut: the description holds more than a pull request takes; read it whole in the tracking folder, pull-request.md]'
 
 test('screenshots Git cannot commit are not recorded, and the run goes on', async () => {

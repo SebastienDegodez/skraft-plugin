@@ -8,7 +8,7 @@ import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
-import { attachedReference, shownScreenshots } from '../../domain/reporting/visuals.mjs'
+import { attachedReference, referredIn, shownScreenshots } from '../../domain/reporting/visuals.mjs'
 import { scenarioOutcomesOf } from './scenario-outcomes.mjs'
 import { storyLanguage } from './story-language.mjs'
 import { keepRunDetails } from './run-details.mjs'
@@ -56,7 +56,8 @@ const publishOn = async (deps, request) => {
   await deps.files.write(request.slug, PULL_REQUEST_FILE, rendered.description)
   await deps.files.write(request.slug, PULL_REQUEST_BODY_FILE, rendered.body)
   if (!target.ok) return notOpened(target.reason)
-  return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body, details: rendered.details, language: facts.language, attachments: attachmentsOf(facts.visuals, rendered.body, bodyFolder(deps, request.slug)) })
+  const shown = attachmentsOf(facts.visuals, bodyFolder(deps, request.slug))
+  return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body, details: rendered.details, language: facts.language, attachments: referredIn(shown, rendered.body), shown })
 }
 
 /**
@@ -178,13 +179,13 @@ const urlOf = async (codeHost, { attached, commit, folder }, path) => {
 }
 
 /**
- * The files the forge's client uploads with the body: the attached screenshots the body itself
- * refers to (one a comment of the run details shows is not uploaded, it would be appended to the body).
- * @param {Visuals | null} visuals @param {string} body @param {string} folder the body file's @returns {Attachment[]}
+ * The screenshots the forge's client uploads with what shows them, each with how a body refers to it.
+ * @param {Visuals | null} visuals @param {string} folder the body file's @returns {Attachment[]}
  */
-const attachmentsOf = (visuals, body, folder) => (visuals?.attached
-  ? shownScreenshots(visuals).map(({ path, title }) => ({ path, alt: title, reference: attachedReference(path, folder) })).filter(({ reference }) => body.includes(`](${reference})`))
+const attachmentsOf = (visuals, folder) => (visuals?.attached
+  ? shownScreenshots(visuals).map(({ path, title }) => ({ path, alt: title, reference: attachedReference(path, folder) }))
   : [])
+
 
 /** The folder of the files a body is read from, relative to the working copy: the run's tracking folder. @param {OnForge} deps @param {string} slug */
 const bodyFolder = ({ files }, slug) => trackingFolder(slug, files.folder)
@@ -221,7 +222,8 @@ const ratifiedAdrs = async ({ workspace }, events) => {
  * once it is up to date, its run details are kept in comments when the body sends to them. A
  * branch the remote does not show at the local commit gets no pull request.
  * @param {OnForge} deps @param {PublishRequest} request
- * @param {{ target: Extract<Target, { ok: true }>, title: string, body: string, details: string[], language: import('../../domain/reporting/language.mjs').Language, attachments: Attachment[] }} pull
+ * @param {{ target: Extract<Target, { ok: true }>, title: string, body: string, details: string[], language: import('../../domain/reporting/language.mjs').Language, attachments: Attachment[], shown: Attachment[] }} pull
+ *   attachments: those the body refers to; shown: every screenshot the forge's client attaches
  * @returns {Promise<Publication>}
  */
 const pushAndOpen = async (deps, request, pull) => {
@@ -230,7 +232,7 @@ const pushAndOpen = async (deps, request, pull) => {
   const open = await deps.codeHost.findPullRequest(pull.target.head)
   if (!open.ok) return notOpened(open.reason)
   const done = await settled(deps, request, { pull, open })
-  return done.published ? withDetails(deps, request, { done, details: pull.details, language: pull.language }) : done
+  return done.published ? withDetails(deps, request, { done, details: pull.details, language: pull.language, shown: pull.shown }) : done
 }
 
 /**
@@ -319,19 +321,22 @@ const adopted = async (deps, request, pull) => {
 const detailsNote = (outcome) => {
   if (!outcome.ok) return `; its run details were not kept: ${outcome.reason}; ${DETAILS_FILE} holds them, and skraft publish keeps them once that is fixed`
   if (outcome.parts === 0) return ''
-  return `; its run details were kept in ${outcome.parts} comment${outcome.parts === 1 ? '' : 's'}, the first at ${outcome.first}`
+  return `; its run details were kept in ${outcome.parts} comment${outcome.parts === 1 ? '' : 's'}, the first at ${outcome.first}${unattachedNote(outcome.unattached)}`
 }
+
+/** The screenshots the forge's client did not attach, by path; nothing when none. @param {string[]} paths */
+const unattachedNote = (paths) => (paths.length === 0 ? '' : `; ${paths.length} screenshot${paths.length === 1 ? '' : 's'} did not attach: ${paths.join(', ')}`)
 
 /** The file that holds the whole description, the run details included, as the tracking folder keeps it. */
 const DETAILS_FILE = PULL_REQUEST_FILE
 
 /**
  * The publication, its reason followed by where the run details are, or why they were not kept.
- * @param {OnForge} deps @param {PublishRequest} request @param {{ done: Publication & { number?: number }, details: string[], language: import('../../domain/reporting/language.mjs').Language }} kept
+ * @param {OnForge} deps @param {PublishRequest} request @param {{ done: Publication & { number?: number }, details: string[], language: import('../../domain/reporting/language.mjs').Language, shown: Attachment[] }} kept
  * @returns {Promise<Publication>}
  */
-const withDetails = async (deps, request, { done, details, language }) => {
-  const outcome = await keepRunDetails(deps, request, { number: /** @type {number} */ (done.number), details, language })
+const withDetails = async (deps, request, { done, details, language, shown }) => {
+  const outcome = await keepRunDetails(deps, request, { number: /** @type {number} */ (done.number), details, language, attachments: shown })
   return { published: true, reason: `${done.reason}${detailsNote(outcome)}` }
 }
 
@@ -351,9 +356,7 @@ const IMAGE = /!\[([^\]\n]*)\]\([^)\n]*\)/g
  * @param {string | null} live the body read back, null when the forge gave none @param {Attachment[]} attachments
  */
 const attachNote = (live, attachments) => {
-  const missing = attachments.filter(({ reference }) => live === null || live.includes(`](${reference})`))
-  if (missing.length === 0) return ''
-  return `; ${missing.length} screenshot${missing.length === 1 ? '' : 's'} did not attach: ${missing.map(({ path }) => path).join(', ')}`
+  return unattachedNote(attachments.filter(({ reference }) => live === null || live.includes(`](${reference})`)).map(({ path }) => path))
 }
 
 /** The body of the pull request read back by its number; null when the forge does not give it. @param {OnForge} deps @param {number} number */
