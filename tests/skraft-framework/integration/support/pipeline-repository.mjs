@@ -573,9 +573,10 @@ export const deliverWith = (code) => (brief, { cwd, slug }) => {
   fillOutputs(brief, fixing ? 'Fixed the amount.\n' : 'Paid by card.\n')
   const test = { [`tests/pay-${fixing ? 'fix' : 'amount'}.md`]: 'pay(10) answers paid 10\n' }
   if (onScenario(brief)) commit(cwd, `feat(${slug}): S1 pay by card`, { ...test, 'src/pay.mjs': code }, brief)
+  else if (fixing) commit(cwd, `fix(${slug}): pay answers the amount paid`, { ...test, 'src/pay.mjs': code }, brief)
   else {
-    commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, test, brief)
-    commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
+    commit(cwd, `test(${slug}): pay a card amount`, test, brief)
+    commit(cwd, `feat(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
   }
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }

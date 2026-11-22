@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, finding, green, lenses, PASSING_MATRIX, pipelineHost, refutes, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, finding, green, lenses, PASSING_MATRIX, pipelineHost, refutes, says, scripted, SLUG, reworkCycle } from '../support/pipeline-host.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, FixedClock, InMemoryAgentCatalog, ScriptedMachine } from '../support/in-memory-host.mjs'
 
@@ -262,7 +262,7 @@ test('the view shows the last pass of each review: what each lens said and how m
 test('the view shows the last result of each gate of each component, a test that failed then passed among them', async () => {
   const clock = new FixedClock('2026-10-11T09:00:00.000Z')
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 }, clock, takesMs: 1_000 })
-  const host = scripted({ machine, clock }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: green() })(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; tddCycle('checkout', 'Refund')(h) } })(it)])
+  const host = scripted({ machine, clock }, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: green() })(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; reworkCycle('checkout', 'Refund')(h) } })(it)])
   const seen = []
   host.machine.meanwhile['. $ dotnet build'] = async () => { seen.push((await host.view()).gates.map(({ gate, status, evidence }) => [gate, status, evidence])) }
 
@@ -282,7 +282,7 @@ test('the last pass of a review shows only the lenses that pass ran, and no verd
   }
   const noMoreMocks = ({ git }) => {
     git.patches = {}
-    tddCycle(SLUG, 'Refund')({ git })
+    reworkCycle(SLUG, 'Refund')({ git })
   }
   const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: mocks })(it), agent({ work: noMoreMocks })(it)])
   const answer = lenses({

@@ -143,7 +143,7 @@ test('gates that fail send DELIVER back as pass 2 with the failing gate in its b
   assert.deepEqual(recorded(events, 'deliver_review').map(({ visit, outcome: result, next }) => [visit, result, next]), [[1, 'approved', 'visuals']])
   assert.deepEqual(events.filter((event) => event.type === 'commits.checked' && event.step === 'deliver').map(({ visit, commits }) => [visit, commits.map(({ kind, verdict }) => `${kind} ${verdict}`)]), [
     [1, ['green ok']],
-    [2, ['red ok', 'green ok']],
+    [2, ['green ok']],
   ])
   assert.equal(git(cwd, 'show', 'HEAD:src/pay.mjs'), 'export const pay = (amount) => `paid ${amount}`')
 })

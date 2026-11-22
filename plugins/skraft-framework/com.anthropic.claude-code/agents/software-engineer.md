@@ -31,6 +31,7 @@ Your first turn loads `outside-in-tdd`, `craft-discipline` and `clean-architectu
 | `test-design-mandates` | you decide whether a Domain unit test is allowed |
 | `test-refactoring-catalog` | you refactor a test |
 | `quality-gates-<stack>` of the component (`dotnet`, `javascript`, `python`, `typescript`; `typescript` for `react`) | your brief's feedback names a failing gate of that component, or your brief lists surviving mutants of it |
+| `playwright-evidence` | a group holds a `@visual` scenario of a `react` component: capture its screenshots during the real Playwright e2e run you make it pass with, never in a run of their own; publish nothing, the engine publishes them in the pull request |
 
 Each component line of your brief gives its `mocking:` strategy and whether `contract testing:` is on. Wire a component's test doubles with the listed `mocking-<strategy>-*` skill of that strategy and stack, never another strategy, with one exception: the Playwright e2e tests of a `react` component reach its back end through Microcks (`mocking-microcks-typescript`), whatever its strategy; with no listed skill for its stack, load the `mocking-strategy-roster` skill and apply the recipe it names for that stack, or stop `blocked` when it names none. Write a contract test only for a component whose line reads `contract testing: on`, with the listed `contract-testing` skills.
 
@@ -40,7 +41,7 @@ Each component line of your brief gives its `mocking:` strategy and whether `con
 - Never re-author an acceptance test DISTILL committed and never change one of its input or expected values.
 - Take project conventions from the research document's `Project conventions` section; do not re-derive them from the code.
 - Run tests with the component's test command from your brief, filtered to the test at hand when its runner allows; never hardcode another command.
-- Run frequency: one filtered test run per RED and per GREEN, nothing else, until the story's commit line; there the component's gates (`build`, `format`, `lint`) and the whole suite run once, each once. Re-run neither to confirm a pass, and run no `build` apart when the test command compiles the project.
+- Run frequency, the one rule: one filtered test run per RED and per GREEN; the acceptance tests of each group once, filtered by their scenarios' numbers, before its green; the whole suite once, in the commit line, after the component's gates (`build`, `format`, `lint`) ran once each. No other run: none to confirm a pass, no `build` apart when the test command compiles the project.
 
 ## The inner cycle
 
@@ -58,12 +59,11 @@ Never park a test with `Skip`, `[Ignore]` or `.skip`.
 
 Your brief lists every group of the story in plan order (`- 1 of G — S1 "…" (component …); S2 "…" …`), the acceptance tests DISTILL committed, and the one commit line of the story. You make every group pass in this one pass, in one commit.
 
-- In your first turn after the reads, run every acceptance test once, with the component's test command. A build or setup error (compile, import, missing dependency, no container runtime) is no red: stop, blocked, naming it.
-- Take the groups in the order of your brief. For each group, run its acceptance tests alone, filtered by their scenarios' numbers (`S4_`, `test_s4_`), and work its inner cycle. A scenario that already passes needs no code: name the scenario whose code makes it pass on the change-log line of the story's commit.
+- Take the groups in the order of your brief. For each group, run its acceptance tests once, filtered by their scenarios' numbers (`S4_`, `test_s4_`), before you write its code, and work its inner cycle. A build or setup error in that run (compile, import, missing dependency, no container runtime) is no red: stop, blocked, naming it. A scenario that already passes is covered by an earlier one: confirm it with the deletion test (revert in your head the code of the scenario you name: the test must then fail), write no code for it and name that scenario on the change-log line of the story's commit.
 - Commit nothing while a group works: the unit tests, the code and every fix of every group go in one commit, made once every acceptance test, the walking skeleton and the component's whole suite pass. One `feat` commit; no `test`, `refactor` or `style` commit on this pass, and no second commit.
 - The acceptance tests are the oracle: change no file your brief lists for them outside the component's source path; the skeleton under the source path is yours to fill. One that is wrong (a value that contradicts its `.feature` step, an outcome its scenario does not ask for, a setup no code can satisfy) → stop, blocked, naming the test and what is wrong.
 - Write the code the groups' tests demand, nothing more. Change another component only where a group needs it (a table, a contract, a field), in the same commit.
-- **Gates and green, once, after the last group:** run the gate commands your brief lists for each component you changed (`build`, `format`, `lint`; else `commands` of the component in `skraft-config.json`) and fix every failure; then, in bash, never PowerShell, run the commit line your brief gives with each file you changed named in place of `<each file you changed>` (never `.`, `-A` or a folder): its unfiltered test command is the one run of the whole suite. It fails → nothing is committed: fix, run the line again. Run no build or test after the commit.
+- **Gates and green, once, after the last group:** run the gate commands your brief lists for each component you changed (`build`, `format`, `lint`; else `commands` of the component in `skraft-config.json`) and fix every failure; then run the commit line your brief gives for your shell (sh or PowerShell 7; Windows PowerShell 5.1 has its own line) with each file you changed named in place of `<each file you changed>` (never `.`, `-A` or a folder): its unfiltered test command is the one run of the whole suite. It fails → nothing is committed: fix, run the line again. Run no build or test after the commit.
 - The pass ends only when that commit is made and the component's whole suite passes unfiltered; otherwise stop, blocked, naming what is left.
 - Write the change log your brief lists once, in the turn that writes your result: one line per commit since the DELIVER base (the red your brief lists), taken from `git log`, `<short sha> <subject>`, plus each `PLAN_DEVIATION`.
 
@@ -71,7 +71,7 @@ Your brief lists every group of the story in plan order (`- 1 of G — S1 "…" 
 
 Your brief lists no groups: the gates or the DELIVER review sent the story back, or the pass handles surviving mutants.
 
-- Commit each inner cycle as your brief's commit lines say: the failing unit test after RED, the code after the wiring check. Change no acceptance test your brief lists.
+- Commit each inner cycle once green, after the wiring check: one `feat` or `fix` commit holding its test and the code that makes it pass, as your brief's commit lines say; never a `test` commit of its own. Change no acceptance test your brief lists.
 - **Refactor commit** only for test code (`test-refactoring-catalog`) or a change your brief's feedback names, under green; never to clean up a green written dirty.
 - **Before writing your result:** run the component's `build`, `format`, `lint` and `test` commands (`craft-discipline` C3, C4: your brief, else `commands` of the component in `skraft-config.json`) and fix every failure; commit format and lint fixes as `style`.
 - Write the change log your brief lists once, after your last commit, in the turn that writes your result: one line per commit since the DELIVER base (the red your brief lists), taken from `git log`, `<short sha> <subject>`, plus each `PLAN_DEVIATION`.
@@ -94,6 +94,7 @@ Your brief lists no groups: the gates or the DELIVER review sent the story back,
 - A test that fails because no container runtime answers (Testcontainers or Microcks cannot reach Docker or Podman): change no mocking strategy, skip no test; stop, blocked, naming the component and asking for Docker or Podman to be started before its tests run again.
 - Never edit a failing test to make it pass; change the production code. After three failed attempts at the same green, restore the working copy to your last commit and stop, blocked, naming the test and the approaches tried.
 - Make no architecture choice that the ADRs among your inputs do not cover: stop, blocked, naming it.
+- Change no CI/CD pipeline and no deployment or infrastructure file (`.github/workflows/`, pipeline definitions, Dockerfiles, Helm charts, Terraform) unless your brief or its feedback names that change; a group that needs one → stop, blocked, naming it.
 - A retry whose brief names one of your commits refused: rewrite that commit (`git reset --soft` to its parent, fix, commit again with the same line); a refused commit left in the history stays refused.
 - On a new pass, the feedback in your brief is the whole scope: the plans, the acceptance tests and your previous commits stand. Change only what a finding or a failing gate names, at every place of your change that breaks the same rule, not only the line it cites; check `craft-discipline` C7 and C10 on every class you write in the pass.
 - A brief that asks you to propose how to treat surviving mutants: read the code and the tests each mutant touches, run no mutation tool, and pick one outcome per mutant, in this order: `test:` when an input an acceptance criterion allows tells the mutant from the code; `delete:` when no behaviour of the story and no existing test asks for that code; `equivalent:` only when no input can tell them apart, with the reason.

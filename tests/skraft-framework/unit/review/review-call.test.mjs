@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, finding, lenses, nominal, REFS_42, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, finding, lenses, nominal, REFS_42, reviews, says, scripted, SLUG, reworkCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { BUILT_IN_REVIEW } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
 
@@ -11,7 +11,7 @@ const prompt = (host, id, step) => host.agentRunner.reviewed().find((dispatch) =
 const written = async (host, folder) => (await host.tracking.list(SLUG, folder)).map((path) => path.slice(folder.length + 1))
 
 test('NEEDS_REWORK returned by the call to .skraft/review.skraft.dot sends the DELIVER agent back with the findings, as a review does', async () => {
-  const host = scripted({}, (it) => [...nominal(it), agent({ work: tddCycle(SLUG, 'Refund') })(it)])
+  const host = scripted({}, (it) => [...nominal(it), agent({ work: reworkCycle(SLUG, 'Refund') })(it)])
   host.agentRunner.review = lenses({
     'test-integrity': [says('test-integrity', 'fail', [finding('F1', 'blocker', 'the refund test asserts nothing', { gate: 'G7', location: 'tests/CheckoutTests.cs:9' })])],
   })

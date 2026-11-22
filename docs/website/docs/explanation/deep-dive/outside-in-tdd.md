@@ -65,10 +65,11 @@ complete, which keeps the focus on business behaviour, and it never changes: wri
 agent, it is the oracle the code must meet. The story ends in one green commit, chained to
 the test command so that it happens only once every test passes; a second green is refused (`green-split`).
 
-Only one acceptance test is red at a time, beside the walking skeleton until S1 is green. DISTILL writes the next scenario's test once the one
-before passes, so a red in the history always names the scenario in progress. The inner loop's
-unit tests are never seen failing by the engine; mutation, run last on the whole story, is what
-shows they would catch a mistake.
+DISTILL commits every acceptance test red at once, beside the failing walking skeleton, in one test
+commit: the history holds one red for the whole story, and the review reads the run that shows each
+test failing on its business assertion. The engine never sees the inner loop's unit tests fail;
+mutation testing, which the developer runs on the branch apart from the pipeline, is what shows
+they would catch a mistake.
 
 ## Pitfalls & anti-patterns
 

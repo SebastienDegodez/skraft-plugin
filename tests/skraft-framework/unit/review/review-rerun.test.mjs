@@ -463,9 +463,10 @@ test('every attempt of a pass the review opened is told the review sent the work
   ])
 })
 
-test('a DELIVER pass the review opened is told which commit each finding takes: a fix with no red commit is refused, a strengthened test goes in a refactor', async () => {
+test('a DELIVER pass the review opened is told which commit each finding takes: a fix holds its test and its code, a test committed apart or a fix with no test is refused, a strengthened test goes in a refactor', async () => {
   const integrity = says('test-integrity', 'fail', [finding('F1', 'blocker', 'the test asserts nothing', { gate: 'G7' })])
-  const host = scripted({}, (it) => [...nominal(it).slice(0, 3), agent({ work: green() })(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it)])
+  const apart = ({ git }) => { git.commit('test(checkout): assert the card amount', ['tests/CheckoutTests.cs']); git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) }
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 3), agent({ work: green() })(it), agent({ work: apart })(it)])
   host.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
 
@@ -474,13 +475,17 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   const deliver = host.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver')
   assert.deepEqual(deliver.map(({ visit, attempt, outcome, code }) => [visit, attempt, outcome, code]), [[1, 1, 'done', null], [2, 1, 'failed', 'tdd']])
   const judged = host.events().find((event) => event.type === 'commits.checked' && event.step === 'deliver' && event.visit === 2)
-  assert.deepEqual(judged.commits.map(({ subject, verdict }) => [subject, verdict]), [['fix(checkout): assert the card amount', 'green-without-red']])
+  assert.deepEqual(judged.commits.map(({ subject, verdict }) => [subject, verdict]), [['test(checkout): assert the card amount', 'test-apart'], ['fix(checkout): assert the card amount', 'green-without-test']])
+  assert.deepEqual(deliver[1].failures, [
+    'commit root-4 "test(checkout): assert the card amount" commits a test on its own: after the story is delivered, each cycle is one feat or fix commit holding its test and the code that makes it pass, once green; squash it into that commit',
+    'commit root-5 "fix(checkout): assert the card amount" holds no test: after the story is delivered, each cycle is one feat or fix commit holding its test and the code that makes it pass, once green',
+  ])
   const reworked = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 2 · attempt 1`).prompt
   const acceptance = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0]
   assert.ok(reworked.includes(`- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):\n- ${acceptance.sha.slice(0, 7)} "${acceptance.subject}": `), reworked)
   assert.ok(!reworked.includes('- Groups, in the order you deliver them'), reworked)
   assert.ok(reworked.includes([
-    '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',
+    '- This pass answers the review: a missing or wrong behaviour takes one `fix(<story>): …` commit holding its failing test and the code that makes it pass, once green;',
     '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',
   ].join('\n')), reworked)
   const first = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · attempt 1`).prompt
@@ -490,6 +495,11 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   strengthened.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   assert.equal((await strengthened.start()).status, 'done')
   assert.deepEqual(strengthened.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, outcome }) => [visit, outcome]), [[1, 'done'], [2, 'done']])
+
+  const together = scripted({}, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs', 'tests/CheckoutTests.cs']) })(it)])
+  together.agentRunner.review = lenses({ 'test-integrity': [integrity] })
+  assert.equal((await together.start()).status, 'done')
+  assert.deepEqual(together.events().filter((event) => event.type === 'commits.checked' && event.step === 'deliver').at(-1).commits.map(({ kind, verdict }) => [kind, verdict]), [['green', 'ok']])
 
   const again = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
   again.agentRunner.review = lenses({ 'test-integrity': [integrity] })

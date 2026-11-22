@@ -48,7 +48,8 @@ project is the build: run no `build` apart when the test command has just compil
 Run the component's `format` and `lint` commands the same way (brief, else `commands.format` and
 `commands.lint` in `skraft-config.json`); a missing command is skipped. When the formatter has a
 fix mode, run it first, then the check. Both report no finding, including one on a line the change
-did not write; commit those fixes as `style`.
+did not write. On a story's pass those fixes go in its one commit; commit them as `style` only on a
+pass after the story is delivered.
 
 ### C5 — No skipped tests or placeholder assertions
 

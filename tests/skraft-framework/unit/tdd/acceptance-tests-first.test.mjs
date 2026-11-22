@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { openJournal } from '../../../../plugins/skraft-framework/engine/application/journal/run-journal.mjs'
-import { API, REFS_42, SLUG, TRACKING, agent, scripted, tddCycle } from '../support/pipeline-host.mjs'
+import { API, REFS_42, SLUG, TRACKING, agent, scripted } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 const unavailable = () => ({ ok: false, unavailable: true, text: '' })
@@ -78,9 +78,12 @@ test('the engineer is told every group, the acceptance tests it never changes, t
     '- root-1 "test(checkout): acceptance tests S1–S3": tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S2AcceptanceTests.cs, tests/Acceptance/S3AcceptanceTests.cs',
     '- The walking skeleton passes in that commit, with every acceptance test and the whole suite.',
     "- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit nothing until every acceptance test and the whole suite pass; change another component than the groups' own only where a group needs it, in the same commit. The pass ends when that one commit is made, or on a blocker.",
-    '- Commit once, in bash (never PowerShell), naming each file you changed:',
+    '- Commit once, naming each file you changed; in sh or PowerShell 7:',
     '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1–S3 <the rules of the story, as your implementation plan names them>" -m "Refs: #42"',
+    '  in Windows PowerShell 5.1:',
+    '  dotnet test; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(checkout): S1–S3 <the rules of the story, as your implementation plan names them>" -m "Refs: #42" } }',
   ].join('\n')), deliver)
+  assert.doesNotMatch(deliver, /never PowerShell/)
   assert.doesNotMatch(deliver, /Commit each TDD cycle|walking skeleton root-/)
   const plan = promptOf(host, `skraft ${SLUG} · distill · attempt 1`)
   assert.ok(plan.includes(`- Run the acceptance tests once, sending the whole output to ${TRACKING}/logs/distill-1-red.log, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`), plan)
@@ -294,19 +297,25 @@ test('a run stopped in the middle of the delivery resumes the same dispatch', as
   assert.deepEqual(labels(host).filter((label) => /distill|deliver/.test(label)), [`skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · attempt 1`])
 })
 
-test('a pass the gates send back after the story is delivered fixes the whole story: a red, then a fix, the gate failure standing for the red, no group told and no acceptance test changed', async () => {
+test('a pass the gates send back after the story is delivered fixes the whole story: each cycle one feat or fix holding its test and its code, the gate failure standing for the test of the first, no group told and no acceptance test changed', async () => {
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
-  const host = scripted({ machine }, (it) => [...research(it), agent()(it), agent()(it), agent({ work: (h) => { machine.exits['. $ dotnet test'] = 0; tddCycle(SLUG, 'Fix')(h) } })(it)])
+  const fixing = ({ git }) => {
+    machine.exits['. $ dotnet test'] = 0
+    git.commit(`fix(${SLUG}): pay the rounded amount`, ['src/Checkout.cs'])
+    git.commit(`feat(${SLUG}): refund by card`, ['src/Refund.cs', 'tests/RefundTests.cs'])
+    git.commit(`refactor(${SLUG}): name the refund`, ['src/Refund.cs'])
+  }
+  const host = scripted({ machine }, (it) => [...research(it), agent()(it), agent()(it), agent({ work: fixing })(it)])
 
   const outcome = await host.start()
 
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.deepEqual(labels(host).filter((label) => /deliver/.test(label)), [`skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · deliver · pass 2 · attempt 1`])
-  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ kind, verdict }) => [kind, verdict]), [['red', 'ok'], ['green', 'ok'], ['refactor', 'ok']])
+  assert.deepEqual(checked(host, 'deliver').at(-1).commits.map(({ kind, verdict }) => [kind, verdict]), [['green', 'ok'], ['green', 'ok'], ['refactor', 'ok']])
   const reworked = promptOf(host, `skraft ${SLUG} · deliver · pass 2 · attempt 1`)
   assert.doesNotMatch(reworked, /- Groups, in the order/)
   assert.match(reworked, /- Acceptance tests DISTILL committed, which you never change \(a wrong one, or one failing on a build or setup error: stop blocked, naming it\):\n- root-1 "test\(checkout\): walking skeleton": tests\/Integration\/WalkingSkeletonTests.cs\n/)
-  assert.match(reworked, /Commit each TDD cycle/)
+  assert.match(reworked, /- Commit each TDD cycle once green, in one `feat\(<story>\): …` or `fix\(<story>\): …` commit holding its test and the code that makes it pass; never a `test` commit of its own\./)
 
   const touching = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
   const refused = scripted({ machine: touching }, (it) => [...research(it), agent({ work: reds(1, ['tests/Integration/WalkingSkeletonTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs']) })(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): weaken the acceptance test', ['tests/Acceptance/S1AcceptanceTests.cs']) })(it), unavailable])
@@ -322,7 +331,8 @@ test('the exact green of the story names its scenarios and runs the whole test c
 
   const deliver = promptOf(host, `skraft ${SLUG} · deliver · attempt 1`)
   assert.ok(deliver.includes(`\n- 1 of 2 — S1 "${LONG}" (component api, tags @walking-skeleton @happy-path)\n- 2 of 2 — S2 "Customer gets a receipt" (component api)\n`), deliver)
-  assert.ok(deliver.includes('\n  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1–S2 <the rules of the story, as your implementation plan names them>"\n'), deliver)
+  const commit = 'git commit -s -m "feat(checkout): S1–S2 <the rules of the story, as your implementation plan names them>"'
+  assert.ok(deliver.includes(`\n  dotnet test && git add <each file you changed> && ${commit}\n  in Windows PowerShell 5.1:\n  dotnet test; if ($?) { git add <each file you changed>; if ($?) { ${commit} } }\n`), deliver)
   assert.ok(!deliver.includes('filter'), deliver)
 })
 

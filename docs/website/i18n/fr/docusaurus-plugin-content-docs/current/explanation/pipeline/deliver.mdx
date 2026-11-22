@@ -57,14 +57,16 @@ Trois règles gardent ce commit unique honnête :
   un test faux retourne à DISTILL : l'ingénieur s'arrête en le nommant.
 - **Le vert ne construit que les scénarios de l'histoire.** Il n'écrit aucun comportement qu'aucun scénario ne demande,
   et ne change un autre composant que là où un groupe en a besoin.
-- **Le commit suit le test, en bash.** Le brief donne la commande exacte, si bien que le commit
+- **Le commit suit le test.** Le brief donne la commande exacte, pour sh ou PowerShell 7 et pour
+  Windows PowerShell 5.1, si bien que le commit
   n'a lieu que si les tests passent. Le rouge de DISTILL n'est jamais enchaîné ainsi : seule la
   lecture de la sortie distingue une erreur de build de l'échec attendu.
 
 Une fois le vert commité et toute la suite verte, les gates passent. Un run dont le journal
 contient les dispatches DELIVER par groupe d'une alpha V2 antérieure n'est pas repris : relancez-le. Un passage que renvoient les gates ou la
-revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
-passage que les gates ont renvoyé, leur échec tient lieu du rouge.
+revue travaille sur toute la story, comme en v1 : chaque cycle est un commit `feat` ou `fix` qui
+porte son test et son code, une fois vert, sans commit `test` à part ; sur un passage que les gates
+ont renvoyé, leur échec tient lieu du test du premier.
 
 ## L'ordre : gates, puis revue
 

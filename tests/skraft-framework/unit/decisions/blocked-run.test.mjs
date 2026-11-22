@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, InMemoryGit, ScriptedMachine } from '../support/in-memory-host.mjs'
-import { agent, API, finding, green, lenses, nominal, reviews, says, scenarioReview, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, reviews, says, scenarioReview, scripted, SLUG, reworkCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { dispatched, eventsOf, withoutReportSummary } from '../support/decisions.mjs'
 import { edit, WITH_SECURITY } from '../workflow/support.mjs'
 
@@ -74,7 +74,7 @@ test('a loop that reached its max_visits asks a human; an instruction runs the n
   const passes = [1, 2, 3, 4, 5, 6].map((n) => (it) => agent({ work: (h) => {
     if (n === 6) Object.assign(machine.exits, { '. $ dotnet test': 0, '../web $ npx eslint .': 0 })
     if (n === 1) return green(SLUG, 'Pass1')(h)
-    tddCycle(SLUG, `Pass${n}`)(h)
+    reworkCycle(SLUG, `Pass${n}`)(h)
     h.git.commit(`refactor(checkout): pass ${n} of the cart`, ['../web/src/Cart.tsx'])
   } })(it))
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
@@ -133,7 +133,7 @@ test('a loop stopped at its max_visits by a journal written before the ceiling w
   const machine = new ScriptedMachine({ exits: { '. $ dotnet test': 1 } })
   let testRuns = 0
   machine.meanwhile['. $ dotnet test'] = () => { machine.exits['. $ dotnet test'] = ++testRuns }
-  const passes = [1, 2, 3, 4].map((n) => (it) => agent({ work: n === 1 ? green(SLUG, 'Pass1') : tddCycle(SLUG, `Pass${n}`) })(it))
+  const passes = [1, 2, 3, 4].map((n) => (it) => agent({ work: n === 1 ? green(SLUG, 'Pass1') : reworkCycle(SLUG, `Pass${n}`) })(it))
   const host = scripted({ machine }, (it) => [agent()(it), agent()(it), agent()(it), ...passes.map((pass) => pass(it))])
   const append = host.tracking.append.bind(host.tracking)
   host.tracking.append = async (slug, line) => {

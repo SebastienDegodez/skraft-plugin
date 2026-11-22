@@ -28,12 +28,12 @@ Formal checklist for the DISTILL review lenses the engine runs. One section per 
 
 ### G2 — Edge Case Representation
 
-**Definition:** Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, tactical design) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary.
+**Definition:** Boundary conditions and negative cases from the domain examples in the story are represented, each as an `Examples` row of the scenario of the criterion it belongs to, or as the scenario of a criterion of its own. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, tactical design) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary.
 
 **How to check:**
 1. Read the domain examples section of the story
 2. Identify boundary values (min age, max accidents, threshold dates, etc.)
-3. Verify a scenario exists for each boundary condition
+3. Verify each boundary condition is an `Examples` row of its criterion's scenario, or a criterion's own scenario
 4. Verify at least one rejection/error scenario per business rule
 
 **Severity:** HIGH
