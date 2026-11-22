@@ -34,6 +34,8 @@ const FAKE_GH = [
   "  if (existsSync(file) && body.includes(`](${attach})`) && referred === file) appendFileSync(join(here, 'gh-uploads.jsonl'), `${JSON.stringify(file)}\\n`)",
   "}",
   "if (args[1] === 'create' && args.includes('--help')) said(state.help ?? 'FLAGS\\n      --attach file          Attach an image or video file')",
+  // A gh older than --attach: its help names none, and it refuses the flag as an unknown one.
+  "if (state.help !== undefined && args.some((arg) => arg.startsWith('--attach='))) { process.stderr.write('unknown flag: --attach\\n'); process.exit(1) }",
   "if (args[1] === 'create' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(`Creating pull request\\n${state.created}`, 1)",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
   "if (args[1] === 'edit' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(state.created, 1)",
@@ -255,9 +257,19 @@ test('the screenshots of a pull request go with its body: gh uploads each one --
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
   assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments: [] }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
-  assert.deepEqual(forge.calls().filter(([command, sub]) => command === 'pr' && sub !== 'list' && sub !== 'comment').map((args) => args.filter((arg) => arg.startsWith('--attach='))), [attached, attached, attached, attached, []])
+  assert.deepEqual(forge.calls().filter(([command, sub, option]) => command === 'pr' && sub !== 'list' && sub !== 'comment' && option !== '--help').map((args) => args.filter((arg) => arg.startsWith('--attach='))), [attached, attached, attached, attached, []])
   forge.set({ fails: true })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment' })
+
+  const older = 'FLAGS\n  -B, --base branch'
+  const noAttach = 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots'
+  forge.set({ help: older })
+  const before = forge.calls().length
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7', note: noAttach })
+  assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
+  forge.set({ help: older, login: 'sebastien', comments: [] })
+  assert.deepEqual(await host.keepPullRequestComment({ ...comment, url: null }), { ok: true, url: 'https://github.example.com/acme/payment/issues/7#issuecomment-901' })
+  assert.deepEqual(forge.calls().slice(before).filter((args) => args.some((arg) => arg.startsWith('--attach='))), [], 'a gh without --attach is never handed one')
 
   forge.set({})
   assert.equal(host.attachesFiles, true)

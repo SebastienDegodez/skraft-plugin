@@ -112,7 +112,9 @@ the dark ones folded. How they get there depends on the forge:
   `gh pr comment --attach` posts that comment with its screenshots, and the comment it replaces is
   emptied, never deleted; skraft reads the comment back and says which did not attach, and the
   next `skraft publish` posts it again. skraft reads the body back and says which screenshots did not attach. `skraft doctor`
-  warns when your gh has no `--attach` (gh 2.103.3 has it).
+  warns when your gh has no `--attach` (gh 2.103.3 has it); with such a gh, skraft opens or updates
+  the pull request without its screenshots, says why in its Screenshots section and in the
+  publication's reason, and journals `pull-request.screenshots-skipped`.
 - **Azure DevOps**: `az` sends no file as a binary body, so the pull request's attachments cannot
   be reached. skraft commits the screenshots alone on the branch
   (`docs(evidence): screenshots of <components>`), under the story's `evidence/` folder, and links

@@ -68,7 +68,7 @@ Un objet JSON par ligne. Chaque événement porte `type`, `at` (ISO-8601 UTC) et
 | `commits.checked` | après une tentative qui a fait des commits | `commits`, chacun `{ repository, sha, subject, kind, verdict }` |
 | `evidence.checked` | après une tentative DELIVER | `runs`, chacun `{ run, gate, cwd, log, sha256 }` ; pour une trace qui ne se lit pas jusqu'à ses signatures, `runs: []` et `invalid` (`unsigned-line`, `no-key`, `wrong-signature`) ; `red: true` pour le run rouge du concepteur ([Preuves qualité](#gate-evidence)) |
 | `visuals.recorded` | `playwright-visuals` | les captures de chaque front |
-| `publish.requested`, `pull-request.opened`, `pull-request.updated`, `pull-request.details-kept`, `pull-request.details-skipped` | `skraft publish`, le nœud `publish` | `number`, `url`, `bodyHash`, `part` |
+| `publish.requested`, `pull-request.opened`, `pull-request.updated`, `pull-request.details-kept`, `pull-request.details-skipped`, `pull-request.screenshots-skipped` | `skraft publish`, le nœud `publish` | `number`, `url`, `bodyHash`, `part` ; `reason`, `screenshots` (les chemins laissés de côté) |
 | `issue.commented`, `issue.comment-skipped` | le run | `issue`, `kind`, `url` ou `reason` |
 | `lease.reclaimed`, `journal.adopted` | le pipeline, `skraft journal adopt` | `renewed`, `gapMs` ; `keyId`, `unverified` |
 

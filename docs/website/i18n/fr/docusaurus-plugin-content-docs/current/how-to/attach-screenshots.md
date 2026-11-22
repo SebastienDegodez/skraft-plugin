@@ -115,7 +115,9 @@ thème, les sombres repliées. Le chemin dépend de la forge :
   ce commentaire avec ses captures, et celui qu'il remplace est vidé, jamais supprimé ; skraft relit
   le commentaire et dit quelles captures ne sont pas jointes, et le `skraft publish` suivant le
   publie à nouveau. skraft relit le corps et dit quelles captures ne sont pas jointes.
-  `skraft doctor` prévient quand votre gh n'a pas `--attach` (gh 2.103.3 l'a).
+  `skraft doctor` prévient quand votre gh n'a pas `--attach` (gh 2.103.3 l'a) ; avec un tel gh,
+  skraft ouvre ou met à jour la pull request sans ses captures, dit pourquoi dans sa section
+  Screenshots et dans la raison de la publication, et journalise `pull-request.screenshots-skipped`.
 - **Azure DevOps** : `az` n'envoie aucun fichier en corps binaire, les pièces jointes de la pull
   request sont donc hors d'atteinte. skraft commite les captures seules sur la branche
   (`docs(evidence): screenshots of <composants>`), sous le dossier `evidence/` de la story, et lie

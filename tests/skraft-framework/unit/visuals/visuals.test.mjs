@@ -107,6 +107,24 @@ test('a screenshot gh did not attach is told by reading the body back, and the p
   assert.match((await host.publish()).reason, /was edited since skraft last wrote its body/)
 })
 
+const NO_ATTACH = 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots'
+
+test('a gh that takes no --attach still opens and updates the pull request, without its screenshots: the pull request, the reason and the journal say why', async () => {
+  const host = visualsRun({ codeHost: new InMemoryCodeHost({ screenshotsBlocked: NO_ATTACH }) })
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  const publish = eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish')
+  assert.equal(publish.reason, `pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; 4 screenshots not attached: ${NO_ATTACH}`)
+  assert.equal(await screenshots(host), `- web: e2e run passed (\`npx playwright test\`, evidence \`logs/runs/deliver-1-1/1.log\`); 4 screenshots not attached: ${NO_ATTACH}`)
+  assert.ok(!host.codeHost.pullRequests[0].body.includes('!['), host.codeHost.pullRequests[0].body)
+  assert.deepEqual(eventsOf(host, 'pull-request.screenshots-skipped').map(({ reason, screenshots: paths }) => ({ reason, paths })), [{ reason: NO_ATTACH, paths: ['checkout-light', 'accepted-light', 'checkout-dark', 'accepted-dark'].map((name) => `${SHOTS}/${name}.png`) }])
+  const again = await host.publish()
+  assert.match(again.reason, /^pull request #42 (updated|is up to date): \S+; 4 screenshots not attached: /)
+  assert.deepEqual(host.codeHost.attached.filter((sent) => sent.length > 0), [])
+  assert.deepEqual(eventsOf(host, 'forge.write').filter(({ outcome }) => outcome !== 'applied'), [])
+})
+
 test('on a forge whose client attaches no file, the screenshots are committed on the working branch and the pull request shows each at its commit, from the address the forge gives', async () => {
   const host = visualsRun({ codeHost: azure() })
 

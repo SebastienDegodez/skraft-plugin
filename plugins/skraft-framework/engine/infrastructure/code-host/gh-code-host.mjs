@@ -344,9 +344,22 @@ const readIssue = (text) => {
 const create = async (commandRunner, { base, head, title, bodyFile, draft, attachments = [] }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await runBeside(commandRunner, ['gh', 'pr', 'create', `--repo=${remote.repository}`, `--base=${base}`, `--head=${head}`, `--title=${title}`, `--body-file=${bodyFile}`, ...(draft ? ['--draft'] : []), ...attachArgs(attachments)], bodyFile)
-  const url = answered(result, attachments) ? /https?:\/\/\S+\/pull\/(\d+)/.exec(result.stdout) : null
-  return url === null ? failedWrite(result, `gh could not open the pull request of ${head} on ${remote.repository}`) : { ok: /** @type {const} */ (true), number: Number(url[1]), url: url[0] }
+  const sent = await sendable(commandRunner, attachments)
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'create', `--repo=${remote.repository}`, `--base=${base}`, `--head=${head}`, `--title=${title}`, `--body-file=${bodyFile}`, ...(draft ? ['--draft'] : []), ...attachArgs(sent.attachments)], bodyFile)
+  const url = answered(result, sent.attachments) ? /https?:\/\/\S+\/pull\/(\d+)/.exec(result.stdout) : null
+  if (url === null) return failedWrite(result, `gh could not open the pull request of ${head} on ${remote.repository}`)
+  return { ok: /** @type {const} */ (true), number: Number(url[1]), url: url[0], ...(sent.note === null ? {} : { note: sent.note }) }
+}
+
+/**
+ * The attachments gh is handed: none when its `gh pr create` takes no --attach, which it would
+ * refuse as an unknown flag, and the write done without them says why.
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').Attachment[]} attachments
+ * @returns {Promise<{ attachments: import('../../application/ports/code-host.mjs').Attachment[], note: string | null }>}
+ */
+const sendable = async (commandRunner, attachments) => {
+  if (attachments.length === 0) return { attachments, note: null }
+  return (await attachMissing(commandRunner)) === null ? { attachments, note: null } : { attachments: [], note: NO_ATTACH }
 }
 
 /**
@@ -357,8 +370,9 @@ const create = async (commandRunner, { base, head, title, bodyFile, draft, attac
 const edit = async (commandRunner, { number, bodyFile, attachments = [] }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await runBeside(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(attachments)], bodyFile)
-  return answered(result, attachments) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not update pull request #${number} on ${remote.repository}`)
+  const sent = (await sendable(commandRunner, attachments)).attachments
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(sent)], bodyFile)
+  return answered(result, sent) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not update pull request #${number} on ${remote.repository}`)
 }
 
 /** gh's `--attach <file>#<alt>`, the file named as the body refers to it, from the body file's folder. @param {import('../../application/ports/code-host.mjs').Attachment[]} attachments */
@@ -405,10 +419,10 @@ const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
 
 /**
  * A comment of a pull request: one that attaches screenshots is posted by `gh pr comment --attach`,
- * which writes no comment already there; any other is kept as an issue's.
+ * which writes no comment already there; any other, or any when gh takes no --attach, is kept as an issue's.
  * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} request
  */
-const keepPullRequestComment = (commandRunner, request) => ((request.attachments ?? []).length > 0
+const keepPullRequestComment = async (commandRunner, request) => ((await sendable(commandRunner, request.attachments ?? [])).attachments.length > 0
   ? postAttached(commandRunner, request)
   : keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS))
 

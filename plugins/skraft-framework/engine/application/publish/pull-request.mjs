@@ -51,13 +51,58 @@ export const publishPullRequest = async (deps, request) => {
 const publishOn = async (deps, request) => {
   const run = deriveRun(request.journal.events)
   const target = await targetOf(deps, request, run)
-  const facts = { ...(await factsOf(deps, request, run)), link: linkOf(deps.codeHost, run.story, target), bodyLimit: deps.codeHost.bodyLimit, commentLimit: deps.codeHost.commentLimit }
+  const { facts, unattached } = await attachable(deps.codeHost, target, { ...(await factsOf(deps, request, run)), link: linkOf(deps.codeHost, run.story, target), bodyLimit: deps.codeHost.bodyLimit, commentLimit: deps.codeHost.commentLimit })
   const rendered = renderPullRequest(facts)
   await deps.files.write(request.slug, PULL_REQUEST_FILE, rendered.description)
   await deps.files.write(request.slug, PULL_REQUEST_BODY_FILE, rendered.body)
   if (!target.ok) return notOpened(target.reason)
-  const shown = attachmentsOf(facts.visuals, bodyFolder(deps, request.slug))
-  return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body, details: rendered.details, language: facts.language, attachments: referredIn(shown, rendered.body), shown })
+  const skipped = await skippedNote(request.journal, unattached)
+  const published = await pushAndOpen(deps, request, { target, ...pulled(deps, request.slug, { rendered, visuals: facts.visuals }), language: facts.language })
+  return { ...published, reason: `${published.reason}${skipped}` }
+}
+
+/**
+ * What the pull request is sent with: its title, body and run details, the screenshots the body
+ * refers to, and every one the forge's client attaches.
+ * @param {OnForge} deps @param {string} slug
+ * @param {{ rendered: ReturnType<typeof renderPullRequest>, visuals: Visuals | null }} pull
+ */
+const pulled = (deps, slug, { rendered, visuals }) => {
+  const shown = attachmentsOf(visuals, bodyFolder(deps, slug))
+  return { title: rendered.title, body: rendered.body, details: rendered.details, attachments: referredIn(shown, rendered.body), shown }
+}
+
+/**
+ * The facts with the screenshots the forge's client attaches left out when this machine's client
+ * cannot attach them (a gh without --attach): each component then says why, and the pull request
+ * is opened without them. unattached: why, and the screenshots left out; null when none is.
+ * @template {{ visuals: Visuals | null }} F @param {OnForge['codeHost']} codeHost @param {Target} target @param {F} facts
+ * @returns {Promise<{ facts: F, unattached: { reason: string, screenshots: string[] } | null }>}
+ */
+const attachable = async (codeHost, target, facts) => {
+  const screenshots = target.ok && facts.visuals?.attached ? facts.visuals.components.flatMap((component) => component.screenshots) : []
+  const blocked = screenshots.length === 0 ? null : await codeHost.screenshotsBlocked()
+  if (blocked === null) return { facts, unattached: null }
+  return { facts: { ...facts, visuals: withoutScreenshots(/** @type {Visuals} */ (facts.visuals), blocked) }, unattached: { reason: blocked, screenshots: screenshots.map(({ path }) => path) } }
+}
+
+/** The visuals without their screenshots, each component that had some saying why. @param {Visuals} visuals @param {string} reason */
+const withoutScreenshots = (visuals, reason) => ({
+  ...visuals,
+  components: visuals.components.map((component) => (component.screenshots.length === 0 ? component : { ...component, detail: `${screenshotCount(component.screenshots.length)} not attached: ${reason}`, screenshots: [] })),
+})
+
+/** @param {number} count */
+const screenshotCount = (count) => `${count} screenshot${count === 1 ? '' : 's'}`
+
+/**
+ * The screenshots left out of the pull request, journaled, and what the publication's reason says
+ * of them; nothing when none was. @param {PublishRequest['journal']} journal @param {{ reason: string, screenshots: string[] } | null} unattached
+ */
+const skippedNote = async (journal, unattached) => {
+  if (unattached === null) return ''
+  await journal.append('pull-request.screenshots-skipped', unattached)
+  return `; ${screenshotCount(unattached.screenshots.length)} not attached: ${unattached.reason}`
 }
 
 /**

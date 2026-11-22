@@ -741,6 +741,8 @@ export class InMemoryCodeHost {
   storyLink(issue, closes) { return this.link(issue, closes) }
   async fileUrl(commit, path) { return this.fileUrlOf(commit, path) }
   async screenshotsBlocked() { return this.blocked }
+  /** A client that cannot attach (screenshotsBlocked) refuses a call that names an attachment, as a gh without --attach refuses the flag. */
+  refusesAttach(attachments = []) { return this.blocked !== null && attachments.length > 0 }
   /** The body as the forge keeps it: each reference to a file it uploaded rewritten to the uploaded asset, as gh does. */
   uploaded(body, attachments = []) {
     this.attached.push(attachments)
@@ -791,6 +793,7 @@ export class InMemoryCodeHost {
   async create({ base, head, title, bodyFile, draft, issue, attachments }) {
     this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
     if (this.fails.create) return { ok: false, reason: this.fails.create }
+    if (this.refusesAttach(attachments)) return { ok: false, reason: 'gh could not open the pull request' }
     const number = 41 + this.pullRequests.length + 1
     const url = `${this.pages}/pull/${number}`
     this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.uploaded(this.read(bodyFile), attachments), hidden: this.unseen.has('create') })
@@ -799,6 +802,7 @@ export class InMemoryCodeHost {
   async edit({ number, bodyFile, attachments }) {
     this.calls.push(`edit #${number} ${bodyFile}`)
     if (this.fails.edit) return { ok: false, reason: this.fails.edit }
+    if (this.refusesAttach(attachments)) return { ok: false, reason: 'gh could not update the pull request' }
     if (!this.unseen.has('edit')) this.pullRequests.find((pull) => pull.number === number).body = this.uploaded(this.read(bodyFile), attachments)
     return this.answered('edit')
   }
@@ -823,6 +827,7 @@ export class InMemoryCodeHost {
   async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile, attachments = [] }) {
     this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}${attachments.length === 0 ? '' : ` --attach ${attachments.length}`}`)
     if (this.fails.pullRequestComment) return { ok: false, reason: this.fails.pullRequestComment }
+    if (this.refusesAttach(attachments)) return { ok: false, reason: 'gh could not comment the pull request' }
     const read = this.read(bodyFile)
     const body = attachments.filter(({ path }) => !this.unattached.has(path))
       .reduce((text, { reference }, index) => text.replaceAll(`](${reference})`, `](https://github.com/user-attachments/assets/comment-${this.pullRequestComments.length + 1}-${index + 1})`), read)
