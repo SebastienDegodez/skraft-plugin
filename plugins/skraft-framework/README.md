@@ -56,8 +56,8 @@ skraft doctor --run     run each command once and say which one fails, and which
 
 `skraft-config.json` lists your **components**: root, stack, source and test paths, and the
 commands skraft runs (build, format, lint, test, architecture, coverage, e2e). A
-component can live in another repository (`"root": "../payment-web"`). A command you write
-always wins over a default; quality thresholds are not configurable. How-to:
+component can live in another repository (`"root": "../payment-web"`). The engine holds no
+command line of any stack: every command is yours; quality thresholds are not configurable. How-to:
 [Configure components](https://sebastiendegodez.github.io/skraft-plugin/how-to/configure-components); every field:
 [skraft-config.json](https://sebastiendegodez.github.io/skraft-plugin/reference/skraft-config).
 

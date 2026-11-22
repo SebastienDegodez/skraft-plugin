@@ -159,6 +159,6 @@ test('a mutation run needs a component that declares a mutation command: with no
   const started = await host.init()
 
   assert.deepEqual([started.ok, started.code, started.slug], [false, 'no-mutation-command', SLUG])
-  assert.equal(started.reason, 'no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation, or skraft init --mutation')
+  assert.equal(started.reason, 'no component of skraft-config.json declares a mutation command; declare them with /skraft-init mutation')
   assert.deepEqual([...host.tracking.files.keys()], [])
 })

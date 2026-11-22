@@ -791,7 +791,8 @@ Mesures annexes, même machine :
   0 au commit vert et en 1 au rouge (`AssertionError`) ; `python -m pytest` tel qu'écrit ne
   démarre pas (`command not found: python`, et le `python3` du PATH n'a pas pytest). Le rejeu
   prend donc l'interpréteur comme les gates : `.venv/bin/python`, `.venv/Scripts/python.exe`,
-  `python`, `python3`.
+  `python`, `python3`. **Retiré** : le moteur ne choisit plus l'interpréteur ; le développeur écrit
+  `.venv/bin/python …` ou `.venv\Scripts\python.exe …` dans sa commande, qui démarre telle qu'écrite.
 - Une jonction n'a pas été mesurée sous Windows : le rejeu retire ses liens avant `git worktree
   remove`, et seulement des liens, pour que Git n'en suive jamais un.
 
@@ -808,7 +809,7 @@ Python 3.14.7, un paquet `src/shop/` installé en éditable (`pip install pytest
 | hatchling | exit 0, 1 passé | exit 1, 1 échec | exit 0 |
 
 Le rejeu d'un composant `python` met donc ses dossiers `paths.src`, pris dans le commit, en tête de
-`PYTHONPATH`, avant la valeur déjà là ; il lance chaque choix d'interpréteur par un lanceur
+`PYTHONPATH`, avant la valeur déjà là ; il lance l'interpréteur écrit par un lanceur
 `node -e`, le mod ne passant pas d'environnement.
 
 ### Espaces de travail npm/pnpm — 2026-10-28 (branche v2/dotnet-and-misc-fixes, #330)

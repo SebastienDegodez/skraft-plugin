@@ -26,7 +26,7 @@ test('the handshake answers the protocol version the host asks for when the serv
         serverInfo: { name: 'skraft', title: 'skraft', version: 'in-process' },
       },
     })
-    assert.match(instructions, /Before the first prompt in a repository, call skraft_doctor\. When its config check fails, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init\./)
+    assert.match(instructions, /Before the first prompt in a repository, call skraft_doctor\. When its config check fails, a component has no gate command, or a run is refused with configuration-incomplete, set skraft up with the skraft-init skill, which calls skraft_init\./)
     assert.equal(await host.close(), 0)
   }
   assert.equal(PROTOCOL_VERSIONS[0], '2025-11-25')
@@ -122,7 +122,7 @@ test('tools/list offers every command an agent may run, each with a closed input
     },
   })
   assert.deepEqual(byName.skraft_init.inputSchema.properties.add, { type: 'array', items: { type: 'string', minLength: 1 }, description: 'folders to detect beyond the ones found' })
-  assert.deepEqual(byName.skraft_init.inputSchema.properties.mutation, { type: 'boolean', description: 'write each component\'s mutation command too' })
+  assert.equal(byName.skraft_init.inputSchema.properties.mutation, undefined)
   assert.deepEqual(byName.skraft_review.inputSchema.required, ['pr'])
   assert.deepEqual(Object.keys(byName.skraft_review.inputSchema.properties), ['pr', 'record', 'workspace'])
   assert.deepEqual(byName.skraft_mutation.inputSchema.required, [])

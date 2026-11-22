@@ -201,7 +201,7 @@ reason }` et `diff` affiche `{ ok, name, changes, reason }`. `eject` ne prend au
 
 ## `skraft doctor [--run] [--base <ref>] [--json]`
 
-**Effet.** Vérifie que chaque commande de chaque composant peut tourner sur cette machine.
+**Effet.** Vérifie la configuration et que chaque commande de chaque composant se découpe ; avec `--run`, lance chacune. Il ne cherche jamais un programme sur le PATH.
 N'écrit rien dans le journal. La première ligne nomme la version du plugin qui répond
 (`ok    plugin: skraft <version>` ; `plugin` dans le JSON) ; elle ne compte pas comme un contrôle.
 
@@ -220,9 +220,9 @@ Contrôles, dans l'ordre :
 | `forge` | la forge du run est joignable d'ici (sur `github` : un remote, `gh` installé et connecté à son hôte ; sur `azure-devops` : un remote qui nomme organisation, projet et dépôt, `az` avec son extension `azure-devops` installé et connecté à cette organisation) ; sinon un avertissement, jamais un échec | avertissement : `<forge>, named in the configuration: <reason>` ou `<forge>, deduced from the Git remote: <reason>` ; raisons : `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository`, `az, the Azure CLI, is not installed`, `skraft runs az under Windows only from the Azure CLI installer (MSI or winget), …`, `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops`, `az is not signed in to the Azure DevOps organization <URL de l'organisation>, …` |
 | `base` (avec `--run`) | la base se calcule | message de `invalid-base`, `base-unresolved` ou `source-control-unavailable` |
 | `<composant>` | la racine est un dossier | `root <racine> is not a folder` (ses commandes ne sont pas contrôlées) |
-| `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
-| `<composant>/<commande>` | la ligne se découpe et son programme est trouvé (PATH, et PATHEXT sous Windows) | `"<ligne>" <raison>` ; `command not found: <programme> (from <racine>); install it or change commands.<nom> in skraft-config.json` (pour `python`, `(from <racine>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
-| `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<commande lancée> exited <code>; its output is in .copilot-tracking/skraft-doctor/<composant>/<commande>.log` (base remplacée, interpréteur choisi) |
+| `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json; run /skraft-init` |
+| `<composant>/<commande>` | la ligne se découpe | `"<ligne>" <raison>` ; quand elle passe, `ok <composant>/<commande>: <ligne> (parsed; doctor --run starts it)` (`skraft mutation starts it` pour `mutation`, que `--run` ne lance jamais) |
+| `<composant>/<commande>` avec `--run` | la commande sort avec 0 | `<programme> did not start for <composant>/<commande>; install it or change commands.<nom> in skraft-config.json` ; `<programme> could not be started for <composant>/<commande>: not executable` quand le système le refuse ; `<commande lancée> exited <code>; its output is in .copilot-tracking/skraft-doctor/<composant>/<commande>.log` (base remplacée) |
 | `<composant>` (après ses commandes) | chaque skill de mocking et de contract testing que demande le composant existe dans le plugin ou la copie de travail (`.claude/skills/`, `.github/skills/`) ; sinon un avertissement | avertissement : `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
 | `infrastructure` (après les composants) | `ok` : une ligne par rangée de la [politique d'infrastructure](./skraft-config.md#infrastructure) de chaque composant | `<composant> (<stack>) <rangée>: <mécanisme> (targeted), <mécanisme> (walking skeleton) — <outil>; source plugin` (`source skraft-config.json` pour une surcharge, `source skraft-config.json (mocking.strategy)` pour une stratégie de mocking autre que celle par défaut de la stack ; `(e2e)` pour une rangée `react`) |
 | `container-runtime` | seulement quand une rangée fait tourner `testcontainers` ou `microcks` : `docker`, sinon `podman`, trouvé sur le PATH, répond à `<runtime> info` (code 0 en 15 s au plus) ; sinon un avertissement, jamais un échec | ok : `<runtime> answers <runtime> info` ; avertissement : `neither docker nor podman is on the PATH; …` ou `docker does not answer docker info[, podman does not answer podman info]; the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs` |
@@ -240,7 +240,7 @@ seul découpage.
 ```
 ok    node: Node v22.…
 ok    forge: github, deduced from the Git remote
-FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
+FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
 models on claude-code:
   step      agent                type   family      tier      model   effort  source (family/model/effort)
   research  solution-researcher  phase  researcher  economy   haiku   -       agent/tier/host

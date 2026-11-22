@@ -15,20 +15,6 @@ const SHELL_SYNTAX = /[|&;<>]/
 const PYTHON = Object.freeze(['.venv/bin/python', '.venv/Scripts/python.exe', 'python', 'python3'])
 
 /**
- * The argvs to try for a command, in order. Only `python` has more than one; any other program
- * starts as written.
- * @param {string[]} argv @returns {string[][]}
- */
-export const programChoices = (argv) => (argv[0] === 'python' ? PYTHON.map((program) => [program, ...argv.slice(1)]) : [argv])
-
-/**
- * Where a program with several choices was looked for, as a suffix of the message that it was
- * not found; empty for a program that starts as written.
- * @param {string[][]} choices from programChoices
- */
-export const lookedFor = (choices) => (choices.length === 1 ? '' : `; looked for ${choices.map(([program]) => program).join(', ')}`)
-
-/**
  * An argv written back as one line that parseCommand reads into the same argv: what the
  * evidence and doctor show of a command that ran.
  * @param {string[]} argv

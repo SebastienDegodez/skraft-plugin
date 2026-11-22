@@ -11,7 +11,7 @@ asks nothing. Ask every question in this file; never guess an answer you could a
 Called with the argument `mutation`, do the section *Mutation* alone, then stop.
 
 When the host lists the skraft MCP tools, use them instead of `<cli>`: `skraft_init` for
-`<cli> init` (`{ add: [<folder>, …] }` for `--add`, `{ mutation: true }` for `--mutation`), `skraft_doctor` for `<cli> doctor`
+`<cli> init` (`{ add: [<folder>, …] }` for `--add`), `skraft_doctor` for `<cli> doctor`
 (`{ run: true }` for `--run`). Pass `workspace`, the absolute path of the root of the working
 copy, to every skraft tool call. When a skraft tool refuses, tell the developer its refusal and
 stop: never run `<cli>` or any `node` command in its place. Only when the host lists no skraft
@@ -22,8 +22,8 @@ not, and never search the disk for the plugin folder.
 
 ## 1. The components
 
-Run `<cli> init`. It detects each project folder and writes `skraft-config.json`; it never
-overwrites a value the file already holds.
+Run `<cli> init`. It writes each project's name, root, stack and paths to `skraft-config.json`,
+with no command; it never overwrites a value the file already holds.
 
 A folder it missed is added with `<cli> init --add <folder>`, one `--add` per folder. Ask the
 developer only when the result lists no component, or lists one whose root surprises you.
@@ -39,7 +39,28 @@ For each component, `commands` must hold at least one of `build`, `format`, `lin
 `architecture`, `coverage`, `e2e`; a component with none can prove nothing and the gates refuse
 the run. `mutation` counts for none of them: ask nothing about it here, *Mutation* declares it.
 
-`<cli> init` fills the commands of the stack it detected. Two it cannot detect:
+`<cli> init` writes no command: every command is the developer's. For each component, load the
+skill of its stack and propose the lines of its *Gate command lines* table that this working copy
+can run (a script its manifest declares before a tool it implies; the project's `./mvnw` or
+`./gradlew` before the global tool):
+
+- `dotnet`: `quality-gates-dotnet`; `python`: `quality-gates-python`;
+- `typescript` and `react` with Vitest: `quality-gates-typescript`; `javascript` run by
+  `node --test`: `quality-gates-javascript`;
+- `java`, which has no such skill:
+
+  | Gate | Maven | Gradle |
+  |---|---|---|
+  | build | `mvn -B -q -DskipTests package` | `gradle build -x test` |
+  | test | `mvn -B -q verify` | `gradle test` |
+
+  with `./mvnw` or `./gradlew` in place of `mvn` or `gradle` when the project ships it.
+
+Write the interpreter a Python line needs as this machine needs it, with forward slashes
+(`.venv/bin/python …` on macOS and Linux, `.venv/Scripts/python.exe …` on Windows; never a
+backslash, which JSON refuses): the engine starts a program as written. A team on several systems
+chooses one form per component, since `skraft-config.json` holds one line. Two commands no table
+gives:
 
 - `architecture` — the command that runs the architecture tests. Look for them in the working
   copy (a test project or folder whose name holds `architecture` or `arch`, a NetArchTest,
@@ -164,18 +185,32 @@ again. Then tell the developer, in one line each:
 Mutation testing is the developer's: no run of the pipeline mutates, and nothing is declared
 until they ask for it.
 
-1. Run `<cli> init --mutation`. It writes the mutation command of each component's stack to
-   every component that has none, and keeps a command already written. Its reason names the
-   components that now carry one, and those whose root holds no project.
+1. For each component that has no `mutation` command, propose one from its stack's
+   `quality-gates-<stack>` skill and the tool the working copy declares; keep a command already
+   written. The `quality-gates-<stack>` skills hold no mutation line: propose the one whose report
+   the engine reads, relative to the component root:
+
+   | Tool | Command | Report |
+   |---|---|---|
+   | Stryker.NET | `dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput` | `StrykerOutput/reports/mutation-report.json` |
+   | PIT, Maven | `mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory` | `target/pit-reports/mutations.xml` |
+   | PIT, Gradle | `gradle pitest` with its XML output | `build/reports/pitest/mutations.xml` |
+   | StrykerJS | `npx stryker run --incremental --reporters json,clear-text` | `reports/mutation/mutation.json` |
+
+   `./mvnw` or `./gradlew` replace `mvn` or `gradle` when the project ships them. For any other
+   tool, or one writing elsewhere, propose a command that writes its result to the file
+   `SKRAFT_MUTATION_RESULT` names; mutmut alone (`python -m mutmut run`) writes no report the
+   engine reads.
 2. Show each component's `mutation` command, one line each, and ask the developer to confirm it,
-   rewrite it, or leave the component out. A component left out loses its `mutation` key; write
-   nothing else for it.
+   rewrite it, or leave the component out. Write each confirmed line yourself into
+   `commands.mutation` of the component in `skraft-config.json`; a component left out gets no
+   `mutation` key and nothing else.
 3. Install nothing and write no configuration of the tool (Stryker, PIT, mutmut): no scaffold.
    Name what the command needs that the working copy lacks (the tool, its plugin, its
    configuration file) and leave it to the developer.
 4. A command the developer writes either writes its result, score already computed, to the file
-   the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves the report its tool writes
-   at the tool's default path. `skraft-quality-bar` gives the result's form and the bar.
+   the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves a report at one of the
+   paths of the table above. `skraft-quality-bar` gives the result's form and the bar.
 5. Run `<cli> doctor`. Its `mutation` line names the components that declare a command; fix every
    `<component>/mutation` failure. Then tell the developer that `skraft mutation` runs mutation on
    the branch HEAD is on, in its own run.

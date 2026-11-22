@@ -1,5 +1,5 @@
 import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
-import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
+import { commandText, parseCommand } from '../../domain/gates/command-line.mjs'
 import { gatesOf, STORY_GATES } from '../../domain/gates/gate-plan.mjs'
 import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
@@ -36,12 +36,13 @@ import { mutationCheck } from './mutation-check.mjs'
 const NODE_MAJOR = 22
 
 /**
- * Doctor — checks that every command of every component can run on this machine: Node, the
- * configuration, the forge, each component's root, each command's program, the skills the agents writing
+ * Doctor — checks the configuration and that every command of every component parses (with `run`,
+ * that it starts): Node, the configuration, the forge, each component's root, each command's line, the skills the agents writing
  * its tests are asked to read, the infrastructure policy of its tests,
  * Docker or Podman when a policy runs a container, then what each agent the workflow dispatches
  * runs on, per host, and last how VS Code runs the pipeline.
- * With `run`, starts each command once from its component's root.
+ * With `run`, starts each command once from its component's root; without it a command is only
+ * parsed, and its program is never looked up: the developer's command is theirs to keep working.
  * @param {DoctorDeps} deps
  */
 export const createDoctor = (deps) => Object.freeze({
@@ -162,7 +163,7 @@ const componentChecks = async (deps, component, { run, baseSha }) => {
     return [{ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` }]
   }
   /** @type {DoctorCheck[]} */
-  const checks = gatesOf(component).some((gate) => STORY_GATES.includes(gate)) ? [] : [{ subject: component.name, status: 'fail', detail: NO_GATE }]
+  const checks = gatesOf(component).some((gate) => STORY_GATES.includes(gate)) ? [] : [{ subject: component.name, status: 'fail', detail: `${NO_GATE}; run /skraft-init` }]
   for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
   return [...checks, ...await bddChecks(deps, component), ...await skillChecks(deps, component)]
 }
@@ -240,32 +241,25 @@ const commandCheck = async (deps, { component, name, run, baseSha }) => {
   const line = component.commands[name]
   const parsed = parseCommand(line, { baseSha })
   if (!parsed.ok) return { subject, status: 'fail', detail: `${JSON.stringify(line)} ${parsed.reason}` }
-  const [program] = parsed.argv
-  const choices = programChoices(parsed.argv)
-  const found = await locateFirst(deps, choices, component.root)
-  if (found === null) return { subject, status: 'fail', detail: notFound({ component, name, program, choices }) }
-  if (!run || name === 'mutation') return { subject, status: 'ok', detail: `${program} → ${found.located}` }
-  return runCheck(deps, subject, { argv: found.argv, cwd: component.root })
+  if (name === 'mutation') return { subject, status: 'ok', detail: `${line} (parsed; skraft mutation starts it)` }
+  if (!run) return { subject, status: 'ok', detail: `${line} (parsed; doctor --run starts it)` }
+  return runCheck(deps, { subject, name }, { argv: parsed.argv, cwd: component.root })
 }
-
-/**
- * @param {{ component: Component, name: string, program: string, choices: string[][] }} missing
- */
-const notFound = ({ component, name, program, choices }) =>
-  `command not found: ${program} (from ${component.root}${lookedFor(choices)}); install it or change commands.${name} in ${CONFIG_FILE}`
 
 /** Where `doctor --run` keeps what each command it starts writes, relative to the working copy. */
 const DOCTOR_LOGS = '.copilot-tracking/skraft-doctor'
 
 /**
- * Starts the located command once and keeps what it wrote in its log; it passes only on exit 0,
- * and a failure names the log.
- * @param {DoctorDeps} deps @param {string} subject @param {{ argv: string[], cwd: string }} command
+ * Starts the parsed command once and keeps what it wrote in its log; it passes only on exit 0,
+ * and a failure names the log. A program that does not start fails with a fixed reason naming the
+ * component and the command, never the host's error.
+ * @param {DoctorDeps} deps @param {{ subject: string, name: string }} command
+ * @param {{ argv: string[], cwd: string }} start
  * @returns {Promise<DoctorCheck>}
  */
-const runCheck = async (deps, subject, { argv, cwd }) => {
+const runCheck = async (deps, { subject, name }, { argv, cwd }) => {
   const result = await deps.commandRunner.run({ argv, cwd })
-  if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
+  if (!result.started) return { subject, status: 'fail', detail: notStarted({ argv, subject, name }, result) }
   const ran = commandText(argv)
   const log = `${DOCTOR_LOGS}/${subject}.log`
   await deps.workspace.write(log, commandLog(ran, cwd, result))
@@ -274,25 +268,24 @@ const runCheck = async (deps, subject, { argv, cwd }) => {
     : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}; its output is in ${log}` }
 }
 
+/** The system's refusals to start a program that is there: no right to run it. */
+const REFUSED = /\((EACCES|EPERM)\)$/
+
+/**
+ * Why a program did not start, in fixed words: not executable when the system refused it, else not
+ * found or not startable, with what to change.
+ * @param {{ argv: string[], subject: string, name: string }} command @param {import('../ports/command-runner.mjs').CommandResult} result
+ */
+const notStarted = ({ argv, subject, name }, { error }) => (REFUSED.test(error ?? '')
+  ? `${argv[0]} could not be started for ${subject}: not executable`
+  : `${argv[0]} did not start for ${subject}; install it or change commands.${name} in ${CONFIG_FILE}`)
+
 /**
  * The log of a command the doctor ran: the command, where, how it ended, then what it wrote.
  * @param {string} ran @param {string} cwd @param {import('../ports/command-runner.mjs').CommandResult} result
  */
 const commandLog = (ran, cwd, { exitCode, stdout, stderr }) =>
   [`$ ${ran}`, `cwd: ${cwd}`, `result: exited ${exitCode}`, '--- stdout', stdout, '--- stderr', stderr, ''].join('\n')
-
-/**
- * The first program choice found on this machine, and where.
- * @param {DoctorDeps} deps @param {string[][]} choices @param {string} cwd
- * @returns {Promise<{ argv: string[], located: string } | null>}
- */
-const locateFirst = async (deps, choices, cwd) => {
-  for (const argv of choices) {
-    const located = await deps.executables.locate(argv[0], cwd)
-    if (located !== null) return { argv, located }
-  }
-  return null
-}
 
 /**
  * What the agents of the workflow run on, and the checks of it; nothing when the workflow cannot

@@ -116,7 +116,8 @@ on, `skraft …` means that full command, or the `skraft` command that
 [`npm i -g @skraft/cli`](../how-to/install-on-a-host.mdx#skraft-command) sets up.
 
 `skraft init` looks for the projects of the repository and writes one **component** per project: a
-part of the repository with its root, its stack, its paths and its commands. You see:
+part of the repository with its root, its stack and its paths. It writes no command: the commands
+are yours. You see:
 
 ![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"](/img/screenshots/shared/terminal-init.svg)
 
@@ -135,22 +136,25 @@ Open `skraft-config.json` at the root of `shop`:
         "src": ["src/"],
         "tests": ["test/"]
       },
-      "commands": {
-        "test": "npm test",
-        "mutation": "npx stryker run --incremental --reporters json,clear-text"
-      }
+      "commands": {}
     }
   ]
 }
 ```
 
-`test` comes from the script of `web/package.json`; `mutation` is the StrykerJS default, a command
-of yours: the pipeline never runs it, mutation testing is yours to run when you choose. `paths` is
-also the **write scope** of DELIVER: the software engineer may write only in `web/src` and
+`commands` is empty: skraft holds no command line of any stack, which would break when a tool or a
+version changes. `paths` is also the **write scope** of DELIVER: the software engineer may write only in `web/src` and
 `web/test`. `skraft init` also added `skraft-config.local.json`, your personal layer, to
 `.gitignore`.
 
-Two answers are yours to give, and `skraft init` writes neither. The first is Gherkin: it detects
+Three answers are yours to give, and `skraft init` writes none. The first is the commands: the
+gates run the ones you write, so give `web` its test command, the script of `web/package.json`:
+
+```json title="skraft-config.json"
+      "commands": { "test": "npm test" }
+```
+
+A command is started without a shell, from the component's root. The second is Gherkin: it detects
 the folders a runner reads when a project has them, and this one has none, so say that the tests
 are written without it:
 
@@ -163,7 +167,7 @@ DISTILL then asks `web` for no `.feature`. A component that does write Gherkin n
 instead — `"bdd": [{ "features": "features", "steps": "features/step_definitions" }]` — and no key
 at all answers nothing, so the run is refused until one of the two is written.
 
-The second is the publication consents, beside `components`. A run that publishes starts only once
+The third is the publication consents, beside `components`. A run that publishes starts only once
 they are settled; this repository has no remote, so decline both:
 
 ```json title="skraft-config.json"
@@ -187,7 +191,7 @@ $ git commit -m "chore: describe the shop for skraft"
 
 ## 4. Check with `skraft doctor` <!-- #4-check-with-skraft-doctor -->
 
-`skraft doctor` checks that every command can run on your machine and shows which model each agent
+`skraft doctor` checks the file and that every command parses, and shows which model each agent
 will run on:
 
 ```console

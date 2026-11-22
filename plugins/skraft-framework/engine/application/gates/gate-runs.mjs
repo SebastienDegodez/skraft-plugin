@@ -8,7 +8,6 @@ import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { workingCopyOf } from '../../domain/review/locations.mjs'
 import { baseOf } from '../config/bases.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
-import { startFirst } from './program-start.mjs'
 import { endedByMachine, interruptedBy } from '../../domain/pipeline/incidents.mjs'
 
 /**
@@ -403,8 +402,8 @@ export const evidenceLog = (component, failure, { shown, result, reason }) => [
 ].join('\n')
 
 /**
- * A command line of the component started from its root, `{baseSha}` filled in, the first
- * program choice that starts taken; a line that does not parse is not started.
+ * A command line of the component started from its root, `{baseSha}` filled in, its program as
+ * written; a line that does not parse is not started.
  * shown: the command as the evidence writes it.
  * @param {Pick<GateRunDeps, 'commandRunner' | 'clock'>} deps @param {Component} component
  * @param {{ line: string, baseSha: string | null, timeoutMs?: number, env?: Record<string, string>, javaTmpDir?: string }} request timeoutMs: how long it may run
@@ -422,7 +421,7 @@ export const startCommand = async (deps, component, { line, baseSha, timeoutMs, 
  */
 const startTimed = async (deps, argv, where) => {
   const started = deps.clock.now()
-  const result = await startFirst((choice) => deps.commandRunner.run({ argv: choice, ...where }), argv)
+  const result = { ...await deps.commandRunner.run({ argv, ...where }), argv }
   const durationMs = deps.clock.now().getTime() - started.getTime()
   return { shown: commandText(result.argv), result, durationMs, reason: startReason(result) }
 }

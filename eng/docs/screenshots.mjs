@@ -238,7 +238,10 @@ const answerAsThePageDoes = (cwd) => {
   const path = join(cwd, 'skraft-config.json')
   const config = JSON.parse(readFileSync(path, 'utf8'))
   config.publish = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } }
-  for (const component of config.components) component.bdd = false
+  for (const component of config.components) {
+    component.bdd = false
+    component.commands = { test: 'npm test' }
+  }
   writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
 }
 

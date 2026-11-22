@@ -56,15 +56,15 @@ export const TOOLS = Object.freeze([
   }),
   tool({
     name: 'skraft_doctor', title: 'Check skraft is ready',
-    description: 'Checks the repository is ready for skraft: skraft-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails, set skraft up with skraft_init.',
+    description: 'Checks the repository is ready for skraft: skraft-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails or a component has no gate command, set skraft up with skraft_init and the skraft-init skill.',
     parameters: { run: { kind: 'boolean', description: 'run each command once' }, base: { kind: 'string', description: 'the ref the changes are measured from' } },
     annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['doctor', ...flag('--run', args.run), ...value('--base', args.base), '--json'],
   }),
   tool({
     name: 'skraft_init', title: 'Detect the components',
     description: 'Detects the components of the repository into skraft-config.json; never overwrites a value the file holds. Then settle the rest of the configuration with the skraft-init skill.',
-    parameters: { add: { kind: 'strings', description: 'folders to detect beyond the ones found' }, mutation: { kind: 'boolean', description: 'write each component\'s mutation command too' } },
-    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['init', ...(args.add ?? []).flatMap((/** @type {string} */ folder) => ['--add', folder]), ...flag('--mutation', args.mutation)],
+    parameters: { add: { kind: 'strings', description: 'folders to detect beyond the ones found' } },
+    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['init', ...(args.add ?? []).flatMap((/** @type {string} */ folder) => ['--add', folder])],
   }),
   tool({
     name: 'skraft_start', title: 'Start or resume a pipeline',

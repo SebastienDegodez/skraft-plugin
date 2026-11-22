@@ -9,7 +9,8 @@ persona: software-engineer
 Obtenez un `skraft-config.json` dont chaque commande tourne sur votre machine, avant de lancer un
 run.
 
-`skraft init` propose ce qu'il voit ; le fichier est le vôtre, et le rendre juste vous revient. Le
+`skraft init` détecte les composants ; les commandes et le fichier sont les vôtres, et les rendre
+justes vous revient. Le
 moteur le prend pour la vérité et n'a aucun moyen de savoir qu'un chemin que vous avez accepté
 n'est pas celui que vos outils utilisent — et un chemin faux coûte du silence, pas un échec. Relisez
 le résultat de chaque étape avant le run suivant.
@@ -27,14 +28,15 @@ $ skraft init
 ```
 
 Le moteur cherche les projets jusqu'à trois niveaux sous la copie de travail, hors dossiers
-cachés et `node_modules`, et écrit un composant par projet, avec les commandes par défaut de sa
-stack :
+cachés et `node_modules`, et écrit un composant par projet, avec sa stack, sa racine et ses chemins, et aucune commande :
+skraft ne détient aucune ligne de commande d'aucune stack (`/skraft-init` les propose depuis le
+skill de la stack) :
 
 ```text
 skraft-config.json: payment-api (dotnet, services/payment-api), web (react, web)
 ```
 
-Ouvrez le fichier et relisez chaque commande. Renommez un composant si vous le voulez : la suite
+Ouvrez le fichier et écrivez les commandes de chaque composant (étape suivante). Renommez un composant si vous le voulez : la suite
 de cette page a renommé `payment-api` en `api`. Relancer `skraft init` n'ajoute que les projets
 nouveaux et laisse le reste du fichier tel quel.
 
@@ -47,9 +49,10 @@ $ skraft init --add ../payment-web
 `--add` prend un dossier relatif à la copie de travail et se répète. Le composant obtenu a pour
 racine `../payment-web` ; sa base se calcule dans son propre dépôt.
 
-## 3. Remplacer une commande qui ne marche pas chez vous
+## 3. Écrire ou remplacer une commande
 
-Une commande écrite dans `skraft-config.json` est toujours celle qui tourne. Modifiez la ligne :
+Une commande écrite dans `skraft-config.json` est toujours celle qui tourne, et la seule : le moteur
+n'en remplit aucune. Écrivez la ligne :
 
 ```json
 { "name": "web", "root": "../payment-web", "stack": "react",
@@ -61,7 +64,11 @@ Une commande écrite dans `skraft-config.json` est toujours celle qui tourne. Mo
 - découpée sur les blancs ; `"…"` ou `'…'` gardent les blancs dans un argument ;
 - sans `|`, `&`, `;`, `<`, `>` hors guillemets : pour enchaîner des étapes, appelez un script
   (`npm run test:ci`, `node scripts/ci-test.mjs`) ;
-- `npm`, `npx`, `gradlew.bat` s'écrivent pareil sous Windows.
+- `npm`, `npx`, `gradlew.bat` s'écrivent pareil sous Windows ;
+- un programme démarre tel qu'écrit : `python` reste `python`, écrivez donc `.venv/bin/python` (ou
+  `.venv/Scripts/python.exe` : barres obliques, une barre inverse est un échappement invalide en
+  JSON) quand l'interpréteur du projet n'est pas celui du PATH. Une équipe sur plusieurs systèmes choisit une forme par composant, car
+  `skraft-config.json` ne porte qu'une ligne par commande.
 
 ## 4. Ajouter une gate
 
@@ -194,14 +201,15 @@ $ skraft doctor
 ```
 
 Sans `--run`, aucune de vos commandes n'est lancée : le doctor vérifie Node, le fichier, la forge, la
-racine de chaque composant, au moins une gate par composant et le programme de chaque commande.
+racine de chaque composant, au moins une gate par composant et que chaque commande se découpe. Il
+ne cherche jamais un programme sur le PATH ; `--run` le lance.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    forge: github, deduced from the Git remote
-ok    api/build: dotnet → /usr/local/bin/dotnet
-FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
+ok    api/build: dotnet build --nologo (parsed; doctor --run starts it)
+FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
 skraft doctor: 1 checks failed
 ```
 
@@ -232,7 +240,6 @@ Toutes les clés et tous les messages : [skraft-config.json](../reference/skraft
 
 ## Étapes suivantes <!-- #next-steps -->
 
-- [skraft-config.json](../reference/skraft-config.md) — schéma, défauts
-  par stack, détection.
+- [skraft-config.json](../reference/skraft-config.md) — schéma, détection.
 - [Lancer les gates et lire leurs preuves](./run-gates.md)
 - [Choisir les modèles des agents](./choose-models.md)
