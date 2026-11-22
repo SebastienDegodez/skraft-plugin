@@ -9,13 +9,15 @@ import { code } from './markdown-safety.mjs'
  *
  * The manifest, at VISUALS_MANIFEST under the component's root, is written by the developer's
  * Playwright reporter once the run ends:
- * `{ "screenshots": [{ "title": "…", "theme": "light" | "dark", "path": "skraft-visuals/….png" }] }`,
- * theme being the name of the Playwright project that took it, path relative to the component's root.
+ * `{ "screenshots": [{ "title": "…", "theme": "light" | "dark", "path": "skraft-visuals/….png", "scenario": "S2" }] }`,
+ * theme being the name of the Playwright project that took it, path relative to the component's root,
+ * scenario (optional) the scenario of the test plan it shows.
  *
  * @typedef {import('../config/skraft-config.mjs').Component} Component
  * @typedef {'light' | 'dark'} Theme
- * @typedef {{ title: string, theme: Theme, path: string, url?: string | null }} Screenshot
- *   title: the alt text, made safe to publish; path: relative to the component's root, or to the
+ * @typedef {{ title: string, theme: Theme, path: string, scenario?: number, url?: string | null }} Screenshot
+ *   title: the alt text, made safe to publish; scenario: the number of the scenario it shows, when
+ *   the manifest gives one; path: relative to the component's root, or to the
  *   working copy once kept; url: where the pull request shows it, set once the forge is known:
  *   `./<path>` for a file the forge's client attaches, the file's address at the commit for a
  *   committed one, null when the forge gives none.
@@ -36,7 +38,7 @@ import { code } from './markdown-safety.mjs'
 /** The manifest of an e2e run's screenshots, relative to the component's root. */
 export const VISUALS_MANIFEST = 'skraft-visuals/manifest.json'
 
-const THEMES = Object.freeze(/** @type {Theme[]} */ (['light', 'dark']))
+export const THEMES = Object.freeze(/** @type {Theme[]} */ (['light', 'dark']))
 
 /** Why a configuration has no screenshot to take. */
 export const NO_FRONT_END = `no component of ${CONFIG_FILE} is a front end (stack react, or an e2e command)`
@@ -53,7 +55,7 @@ export const readManifest = (text) => {
   if (listed === null) return { ok: false, reason: `${VISUALS_MANIFEST} is missing or is not an object with a screenshots list` }
   const screenshots = listed.map(screenshotOf)
   const wrong = screenshots.findIndex((screenshot) => screenshot === null)
-  if (wrong >= 0) return { ok: false, reason: `screenshot ${wrong + 1} of ${VISUALS_MANIFEST} needs a title, a theme light or dark, and the path of a .png under the component` }
+  if (wrong >= 0) return { ok: false, reason: `screenshot ${wrong + 1} of ${VISUALS_MANIFEST} needs a title, a theme light or dark, the path of a .png under the component, and a scenario, when it names one, as S<n>` }
   return withoutHash(/** @type {Screenshot[]} */ (screenshots))
 }
 
@@ -81,7 +83,16 @@ const listedOf = (text) => {
 const screenshotOf = (entry) => {
   const title = typeof entry?.title === 'string' ? altText(entry.title) : ''
   if (title === '' || !THEMES.includes(entry.theme) || !isPngUnder(entry.path)) return null
-  return { title, theme: entry.theme, path: normalizeRelative(entry.path) }
+  const scenario = scenarioOf(entry.scenario)
+  if (scenario === null) return null
+  return { title, theme: entry.theme, path: normalizeRelative(entry.path), ...(scenario === undefined ? {} : { scenario }) }
+}
+
+/** The number of the scenario an entry names, `S<n>`; undefined when it names none, null when it is not one. @param {unknown} named */
+const scenarioOf = (named) => {
+  if (named === undefined) return undefined
+  const found = typeof named === 'string' ? /^S([1-9]\d*)$/i.exec(named) : null
+  return found === null ? null : Number(found[1])
 }
 
 /** `/x`, `\\server\x`, `C:\x`, `C:/x`. */

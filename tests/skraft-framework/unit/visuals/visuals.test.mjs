@@ -37,7 +37,7 @@ const WORKFLOW = `digraph visuals {
 /** What Playwright leaves in web/ once its light and dark projects ran: each screenshot, then the manifest. */
 const playwrightWrites = (workspace, screenshots) => {
   for (const { path, bytes } of screenshots) workspace.files.set(`web/${path}`, bytes)
-  workspace.files.set('web/skraft-visuals/manifest.json', JSON.stringify({ screenshots: screenshots.map(({ title, theme, path }) => ({ title, theme, path })) }))
+  workspace.files.set('web/skraft-visuals/manifest.json', JSON.stringify({ screenshots: screenshots.map(({ title, theme, path, scenario }) => ({ title, theme, path, scenario })) }))
 }
 
 const CHECKOUT = Object.freeze([
@@ -223,6 +223,15 @@ test('a screenshot whose path holds a # is refused when the manifest is read, gh
     assert.deepEqual([host.git.engineCommits, host.codeHost.attached], [[], [[]]])
     assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: web: screenshots not recorded: the path of screenshot 2 of skraft-visuals/manifest.json holds a #, which gh reads as the start of its alt text: name the file without one' })
   }
+})
+
+test('a manifest entry whose scenario is not S<n> is refused when the manifest is read', async () => {
+  const host = visualsRun({ screenshots: [CHECKOUT[0], { ...CHECKOUT[1], scenario: 'checkout' }] })
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  assert.deepEqual(host.codeHost.attached, [[]])
+  assert.equal(visualsStep(host).reason, 'no screenshot recorded: web: screenshots not recorded: screenshot 2 of skraft-visuals/manifest.json needs a title, a theme light or dark, the path of a .png under the component, and a scenario, when it names one, as S<n>')
 })
 
 test('a front end whose root is a symbolic link has none of its screenshots read: nothing is attached nor committed, and the pull request says why', async () => {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { InMemoryCodeHost } from '../support/in-memory-host.mjs'
 import { SLUG, agent, scripted } from '../support/pipeline-host.mjs'
 import { section } from '../support/description.mjs'
+import { writeE2eTrace } from '../support/delivery-trace.mjs'
 
 const research = (it) => [agent()(it), agent()(it), agent()(it)]
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
@@ -72,4 +73,37 @@ test('on Azure DevOps, whose description takes 4,000 characters, the QA line sta
   const thread = host.codeHost.pullRequestComments.find((comment) => comment.body.includes('<summary>Scenario outcomes'))
   assert.ok(thread !== undefined, host.codeHost.pullRequestComments.map((comment) => comment.body.slice(0, 200)).join('\n---\n'))
   assert.equal(section(thread.body, 'Scenario outcomes'), ROWS.join('\n'))
+})
+
+/** A React front end in web/, whose e2e command runs Playwright. */
+const WEB = Object.freeze({
+  name: 'web', root: 'web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' },
+  paths: { src: ['src'], tests: ['tests'] }, commands: { build: 'npm run build', e2e: 'npx playwright test' },
+})
+
+test('the Screenshot column names the themes of each scenario\'s screenshots, light first: those its manifest entry gives to S<n>, else those whose title is the scenario\'s', async () => {
+  const shots = [
+    { title: 'Card form filled in', theme: 'dark', scenario: 'S1', path: 'skraft-visuals/s1-dark.png' },
+    { title: 'Card form filled in', theme: 'light', scenario: 'S1', path: 'skraft-visuals/s1-light.png' },
+    { title: 'Customer is refused an expired card', theme: 'dark', path: 'skraft-visuals/s2-dark.png' },
+    { title: 'Customer pays by card', theme: 'light', scenario: 'S2', path: 'skraft-visuals/receipt.png' },
+  ]
+  const designingWeb = async ({ git, tracking }) => {
+    git.commit(`test(${SLUG}): acceptance tests S1–S2`, ['web/tests/Integration/WalkingSkeleton.spec.ts', 'web/tests/Acceptance/S1.spec.ts', 'web/tests/Acceptance/S2.spec.ts'], 'Refs: #42')
+    await tracking.write(SLUG, IMPL_PLAN, '# Implementation plan\n\n| Group | Scenarios | Rule |\n|---|---|---|\n| 1 | S1, S2 | rule 1 |\n')
+  }
+  const delivering = async (repos) => {
+    for (const { path } of shots) host.workspace.files.set(`web/${path}`, 'PNG')
+    host.workspace.files.set('web/skraft-visuals/manifest.json', JSON.stringify({ screenshots: shots }))
+    await writeE2eTrace(host, { cwd: 'web', command: WEB.commands.e2e, exitCode: 0, folder: 'logs/runs/deliver-1-9' })
+    repos.git.commit(`feat(${SLUG}): S1, S2 rule`, ['web/src/Checkout.tsx', 'web/tests/Checkout.test.tsx'], 'Refs: #42')
+  }
+  const host = scripted({ components: [WEB], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2, visuals: 2 }, visuals: true } } }, (it) => [
+    ...research(it).slice(0, 2), agent({ plan: TWO.map(([title, , tags]) => [title, 'web', tags]), work: designingWeb })(it),
+    agent({ work: delivering })(it),
+  ])
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  const rows = section(await host.tracking.read(SLUG, 'pull-request.md'), 'Scenario outcomes').split('\n').slice(2)
+  assert.deepEqual(rows.map((row) => row.split(' | ').at(-1)), ['light, dark |', 'light, dark |'])
 })

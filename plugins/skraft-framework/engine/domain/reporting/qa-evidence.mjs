@@ -1,5 +1,6 @@
 import { cell, code, oneLine } from './markdown-safety.mjs'
 import { PASSED } from './scenario-outcomes.mjs'
+import { THEMES } from './visuals.mjs'
 
 /**
  * The QA evidence of a run as a reviewer reads it: one line that says how many scenarios passed,
@@ -110,15 +111,22 @@ const namedCell = ({ named }, words) => {
 }
 
 /**
- * The themes of the screenshots of the scenario's component whose title names it: `S<n> …`, or
- * its title itself.
+ * The themes, light first, of the screenshots of the scenario's component that show it.
  * @param {ScenarioOutcome} outcome @param {Visuals | null} visuals @param {typeof EN} words
  */
 const screenshotCell = ({ index, title, component }, visuals, words) => {
   const own = visuals?.components.find((shown) => shown.component === component)?.screenshots ?? []
-  const named = own.filter((screenshot) => namesScenario(screenshot.title, { index, title })).map(({ theme }) => theme)
-  return named.length === 0 ? words.dash : [...new Set(named)].join(', ')
+  const named = own.filter((screenshot) => showsScenario(screenshot, { index, title })).map(({ theme }) => theme)
+  const themes = THEMES.filter((theme) => named.includes(theme))
+  return themes.length === 0 ? words.dash : themes.join(', ')
 }
 
-/** @param {string} shot @param {{ index: number, title: string }} scenario */
-const namesScenario = (shot, { index, title }) => new RegExp(`^S${index}\\b`, 'i').test(shot) || shot.toLowerCase() === title.toLowerCase()
+/**
+ * A screenshot shows a scenario its manifest entry names (`"scenario": "S<n>"`); one that names
+ * none shows the scenario its title names: `S<n> …`, or the scenario's title itself.
+ * @param {import('./visuals.mjs').Screenshot} shot @param {{ index: number, title: string }} scenario
+ */
+const showsScenario = (shot, { index, title }) => {
+  if (shot.scenario !== undefined) return shot.scenario === index
+  return new RegExp(`^S${index}\\b`, 'i').test(shot.title) || shot.title.toLowerCase() === title.toLowerCase()
+}

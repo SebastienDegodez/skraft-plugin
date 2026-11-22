@@ -29,6 +29,10 @@ Backend-only work loads no browser capture.
 - Write each screenshot as a `.png` under `skraft-visuals/` in the component, and list it in
   `skraft-visuals/manifest.json`: `{ "screenshots": [{ "title": "<alt text>", "theme": "light" | "dark", "path": "skraft-visuals/<name>.png" }] }`,
   `path` relative to the component's root, with no `..`, no `#` and no symbolic link on the way.
+- Give each screenshot of a scenario `"scenario": "S<n>"`, its number in the test plan (the reporter
+  takes it from a test title that starts with `S<n>`): the QA table's Screenshot column of S<n> names
+  its themes. An entry without `scenario` counts for the scenario its title names (`S<n> …`, or the
+  scenario's title itself); give no other value.
 - The pull request shows the first 6 screenshots of each theme of a component, light first, dark folded.
 - Keep `skraft-visuals/` in the component's `.gitignore`.
 - Never take or list a screenshot that shows credentials, tokens or personal data; traces stay local.

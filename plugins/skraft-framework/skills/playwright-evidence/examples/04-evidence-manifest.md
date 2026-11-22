@@ -29,13 +29,14 @@ import { relative } from 'node:path';
 import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 
 export default class SkraftVisuals implements Reporter {
-  private screenshots: Array<{ title: string; theme: string; path: string }> = [];
+  private screenshots: Array<{ title: string; theme: string; path: string; scenario?: string }> = [];
 
   onTestEnd(test: TestCase, result: TestResult) {
     const theme = test.parent.project()?.name ?? '';
+    const scenario = /^S\d+\b/.exec(test.title)?.[0];
     for (const { name, path, contentType } of result.attachments) {
       const shown = path ? relative(process.cwd(), path).split('\\').join('/') : '';
-      if (contentType === 'image/png' && shown.startsWith('skraft-visuals/')) this.screenshots.push({ title: name, theme, path: shown });
+      if (contentType === 'image/png' && shown.startsWith('skraft-visuals/')) this.screenshots.push({ title: name, theme, path: shown, ...(scenario ? { scenario } : {}) });
     }
   }
 
@@ -49,7 +50,7 @@ export default class SkraftVisuals implements Reporter {
 ## A test that leaves its screenshot
 
 ```typescript
-test('an underage driver is told they are not eligible', async ({ page }, testInfo) => {
+test('S2 an underage driver is told they are not eligible', async ({ page }, testInfo) => {
   await page.goto('/quote');
   await page.getByLabel('Birth date').fill('2010-04-01');
   await page.getByRole('button', { name: 'Check eligibility' }).click();
@@ -66,8 +67,8 @@ test('an underage driver is told they are not eligible', async ({ page }, testIn
 ```json
 {
   "screenshots": [
-    { "title": "Underage driver rejected", "theme": "light", "path": "skraft-visuals/underage-rejected-light.png" },
-    { "title": "Underage driver rejected", "theme": "dark", "path": "skraft-visuals/underage-rejected-dark.png" }
+    { "title": "Underage driver rejected", "theme": "light", "path": "skraft-visuals/underage-rejected-light.png", "scenario": "S2" },
+    { "title": "Underage driver rejected", "theme": "dark", "path": "skraft-visuals/underage-rejected-dark.png", "scenario": "S2" }
   ]
 }
 ```

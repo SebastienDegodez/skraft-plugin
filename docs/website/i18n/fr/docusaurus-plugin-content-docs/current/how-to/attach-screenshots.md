@@ -19,8 +19,9 @@ la trace signée des runs du software engineer ; aucun agent n'écrit de rapport
   red, qu'un commit green a livré son groupe, et que toute la suite de tests de son composant (le
   dernier run `test` tracé sous lui) est passée sur le commit final. Tout autre cas est
   `non prouvé`, avec la raison : ce qui manque n'est jamais réussi. *Nommé dans le log* dit si le
-  log de ce run nomme le test du scénario (`S3_…`, `test_S3_…`) ; *Capture* liste les thèmes des
-  captures titrées d'après lui (`S3 …`, ou son titre).
+  log de ce run nomme le test du scénario (`S3_…`, `test_S3_…`) ; *Capture* liste les thèmes, clair
+  d'abord, des captures dont l'entrée du manifeste le nomme (`"scenario": "S3"`), sinon de celles
+  titrées d'après lui (`S3 …`, ou son titre).
 - **Tests**, repliés : le plan de test, en entier.
 - **Captures d'écran**, repliées : voir la suite.
 
@@ -71,12 +72,13 @@ DELIVER, le nœud `visuals` lit ce run tracé et le seul manifeste qu'il laisse,
    import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 
    export default class SkraftVisuals implements Reporter {
-     private screenshots: Array<{ title: string, theme: string, path: string }> = []
+     private screenshots: Array<{ title: string, theme: string, path: string, scenario?: string }> = []
 
      onTestEnd(test: TestCase, result: TestResult) {
        const theme = test.parent.project()?.name ?? ''
+       const scenario = /^S\d+\b/.exec(test.title)?.[0]
        for (const { name, path, contentType } of result.attachments) {
-         if (contentType === 'image/png' && path) this.screenshots.push({ title: name, theme, path: relative(process.cwd(), path).split('\\').join('/') })
+         if (contentType === 'image/png' && path) this.screenshots.push({ title: name, theme, path: relative(process.cwd(), path).split('\\').join('/'), ...(scenario ? { scenario } : {}) })
        }
      }
 

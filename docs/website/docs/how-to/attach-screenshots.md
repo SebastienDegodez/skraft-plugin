@@ -19,7 +19,8 @@ the software engineer's runs; no agent writes a QA report.
   delivered its group, and the whole test suite of its component (the last traced `test` run under
   it) passed on the final commit. Anything else is `not proven`, with why: missing is never
   passed. *Named in log* says whether that run's log names the scenario's test (`S3_…`,
-  `test_S3_…`); *Screenshot* lists the themes of the screenshots titled after it (`S3 …`, or its title).
+  `test_S3_…`); *Screenshot* lists the themes, light first, of the screenshots whose manifest
+  entry names it (`"scenario": "S3"`), else of those titled after it (`S3 …`, or its title).
 - **Tests**, folded: the test plan, whole.
 - **Screenshots**, folded: what follows.
 
@@ -69,12 +70,13 @@ skraft never starts the e2e command. The software engineer runs it through `skra
    import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 
    export default class SkraftVisuals implements Reporter {
-     private screenshots: Array<{ title: string, theme: string, path: string }> = []
+     private screenshots: Array<{ title: string, theme: string, path: string, scenario?: string }> = []
 
      onTestEnd(test: TestCase, result: TestResult) {
        const theme = test.parent.project()?.name ?? ''
+       const scenario = /^S\d+\b/.exec(test.title)?.[0]
        for (const { name, path, contentType } of result.attachments) {
-         if (contentType === 'image/png' && path) this.screenshots.push({ title: name, theme, path: relative(process.cwd(), path).split('\\').join('/') })
+         if (contentType === 'image/png' && path) this.screenshots.push({ title: name, theme, path: relative(process.cwd(), path).split('\\').join('/'), ...(scenario ? { scenario } : {}) })
        }
      }
 
