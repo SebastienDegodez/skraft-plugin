@@ -7,6 +7,7 @@ import { qualityEvidence, matrixPaths, modelsOf, redCommits, reviewFacts, testPl
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
+import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { attachedReference, shownScreenshots } from '../../domain/reporting/visuals.mjs'
 import { scenarioOutcomesOf } from './scenario-outcomes.mjs'
 import { storyLanguage } from './story-language.mjs'
@@ -55,7 +56,7 @@ const publishOn = async (deps, request) => {
   await deps.files.write(request.slug, PULL_REQUEST_FILE, rendered.description)
   await deps.files.write(request.slug, PULL_REQUEST_BODY_FILE, rendered.body)
   if (!target.ok) return notOpened(target.reason)
-  return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body, details: rendered.details, language: facts.language, attachments: attachmentsOf(facts.visuals, rendered.body) })
+  return pushAndOpen(deps, request, { target, title: rendered.title, body: rendered.body, details: rendered.details, language: facts.language, attachments: attachmentsOf(facts.visuals, rendered.body, bodyFolder(deps, request.slug)) })
 }
 
 /**
@@ -113,7 +114,7 @@ const factsIn = async (deps, { slug, journal, config }, { run, language }) => ({
   language,
   prose: await proseOf(deps, slug, journal.events),
   adrs: await ratifiedAdrs(deps, journal.events),
-  visuals: await shownVisuals(deps.codeHost, journal.events),
+  visuals: await shownVisuals(deps.codeHost, journal.events, bodyFolder(deps, slug)),
   testPlans: await trackedDocuments(deps, slug, testPlanPaths(journal.events)),
   matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
   outcomes: await scenarioOutcomesOf(/** @type {any} */ (deps), { slug, events: journal.events, components: config.components }),
@@ -148,13 +149,13 @@ const journalFacts = (events, run, language) => ({
  * What the run's last visuals step recorded, each screenshot with where the pull request shows
  * it: the reference the forge's client rewrites once it attached the file, else the committed
  * file's address at its commit; null when no visuals step ran.
- * @param {OnForge['codeHost']} codeHost @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
+ * @param {OnForge['codeHost']} codeHost @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {string} folder the body file's
  * @returns {Promise<Visuals | null>}
  */
-const shownVisuals = async (codeHost, events) => {
+const shownVisuals = async (codeHost, events, folder) => {
   const last = events.findLast((event) => event.type === 'visuals.recorded')
   if (last === undefined) return null
-  const recorded = { commit: last.commit, attached: last.attached === true, components: last.components }
+  const recorded = { commit: last.commit, attached: last.attached === true, components: last.components, folder }
   const components = []
   for (const component of recorded.components) components.push({ ...component, screenshots: await locatedAll(codeHost, recorded, component.screenshots) })
   return { ...recorded, components }
@@ -163,27 +164,30 @@ const shownVisuals = async (codeHost, events) => {
 /** @typedef {import('../../domain/reporting/visuals.mjs').Visuals} Visuals */
 /** @typedef {import('../../domain/reporting/visuals.mjs').Screenshot} Screenshot */
 
-/** @param {OnForge['codeHost']} codeHost @param {Visuals} visuals @param {Screenshot[]} screenshots */
+/** @param {OnForge['codeHost']} codeHost @param {Visuals & { folder: string }} visuals @param {Screenshot[]} screenshots */
 const locatedAll = async (codeHost, visuals, screenshots) => {
   const located = []
   for (const screenshot of screenshots) located.push({ ...screenshot, url: await urlOf(codeHost, visuals, screenshot.path) })
   return located
 }
 
-/** @param {OnForge['codeHost']} codeHost @param {Visuals} visuals @param {string} path @returns {Promise<string | null>} */
-const urlOf = async (codeHost, { attached, commit }, path) => {
-  if (attached) return attachedReference(path)
+/** @param {OnForge['codeHost']} codeHost @param {Visuals & { folder: string }} visuals @param {string} path @returns {Promise<string | null>} */
+const urlOf = async (codeHost, { attached, commit, folder }, path) => {
+  if (attached) return attachedReference(path, folder)
   return commit === null ? null : codeHost.fileUrl(commit, path)
 }
 
 /**
  * The files the forge's client uploads with the body: the attached screenshots the body itself
  * refers to (one a comment of the run details shows is not uploaded, it would be appended to the body).
- * @param {Visuals | null} visuals @param {string} body @returns {Attachment[]}
+ * @param {Visuals | null} visuals @param {string} body @param {string} folder the body file's @returns {Attachment[]}
  */
-const attachmentsOf = (visuals, body) => (visuals?.attached
-  ? shownScreenshots(visuals).filter(({ path }) => body.includes(`](${attachedReference(path)})`)).map(({ path, title }) => ({ path, alt: title }))
+const attachmentsOf = (visuals, body, folder) => (visuals?.attached
+  ? shownScreenshots(visuals).map(({ path, title }) => ({ path, alt: title, reference: attachedReference(path, folder) })).filter(({ reference }) => body.includes(`](${reference})`))
   : [])
+
+/** The folder of the files a body is read from, relative to the working copy: the run's tracking folder. @param {OnForge} deps @param {string} slug */
+const bodyFolder = ({ files }, slug) => trackingFolder(slug, files.folder)
 
 /**
  * What the pr-writer wrote, read from the output its journaled step.started names (the only event
@@ -347,7 +351,7 @@ const IMAGE = /!\[([^\]\n]*)\]\([^)\n]*\)/g
  * @param {string | null} live the body read back, null when the forge gave none @param {Attachment[]} attachments
  */
 const attachNote = (live, attachments) => {
-  const missing = attachments.filter(({ path }) => live === null || live.includes(`](${attachedReference(path)})`))
+  const missing = attachments.filter(({ reference }) => live === null || live.includes(`](${reference})`))
   if (missing.length === 0) return ''
   return `; ${missing.length} screenshot${missing.length === 1 ? '' : 's'} did not attach: ${missing.map(({ path }) => path).join(', ')}`
 }

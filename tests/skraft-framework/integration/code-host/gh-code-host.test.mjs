@@ -10,8 +10,8 @@ import { commitAll, envWithPath, git, shortLimit, tempFolder, toolFolders } from
 // gh stands for the forge, which no test reaches: a script that keeps each argv it is given
 // and answers from gh-state.json. git is real, its remote a bare repository on disk.
 const FAKE_GH = [
-  "import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'",
-  "import { dirname, join } from 'node:path'",
+  "import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'",
+  "import { dirname, join, resolve } from 'node:path'",
   "import { fileURLToPath } from 'node:url'",
   'const here = dirname(fileURLToPath(import.meta.url))',
   'const args = process.argv.slice(2)',
@@ -25,6 +25,14 @@ const FAKE_GH = [
   "if (args[1] === 'set-default') { if (state.defaultRepo) said(state.defaultRepo); process.stderr.write('no default repository has been set\\n'); process.exit(1) }",
   "if (args[0] === 'repo') said(state.defaultBranch)",
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
+  // As gh 2.103.3 says it does: each --attach file is read from where gh runs, each reference of the body from the body file's folder, else from where gh runs; a file is uploaded when both name it.
+  "const bodyFile = args.find((arg) => arg.startsWith('--body-file='))?.slice('--body-file='.length)",
+  "for (const attach of args.filter((arg) => arg.startsWith('--attach=')).map((arg) => arg.slice('--attach='.length).split('#')[0])) {",
+  "  const file = resolve(process.cwd(), attach)",
+  "  const body = bodyFile === undefined ? '' : readFileSync(bodyFile, 'utf8')",
+  "  const referred = bodyFile !== undefined && existsSync(resolve(dirname(bodyFile), attach)) ? resolve(dirname(bodyFile), attach) : file",
+  "  if (existsSync(file) && body.includes(`](${attach})`) && referred === file) appendFileSync(join(here, 'gh-uploads.jsonl'), `${JSON.stringify(file)}\\n`)",
+  "}",
   "if (args[1] === 'create' && args.includes('--help')) said(state.help ?? 'FLAGS\\n      --attach file          Attach an image or video file')",
   "if (args[1] === 'create' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(`Creating pull request\\n${state.created}`, 1)",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
@@ -77,6 +85,7 @@ const ghFolder = (root, state) => {
   mkdirSync(bin, { recursive: true })
   writeFileSync(join(bin, 'gh.mjs'), FAKE_GH)
   writeFileSync(join(bin, 'gh-calls.jsonl'), '')
+  writeFileSync(join(bin, 'gh-uploads.jsonl'), '')
   writeFileSync(join(bin, 'gh-state.json'), JSON.stringify(state))
   writeFileSync(join(bin, 'gh.cmd'), `@"${process.execPath}" "%~dp0gh.mjs" %*\r\n`)
   writeFileSync(join(bin, 'gh'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'gh.mjs')}" "$@"\n`)
@@ -84,6 +93,7 @@ const ghFolder = (root, state) => {
   return {
     bin,
     calls: () => readFileSync(join(bin, 'gh-calls.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
+    uploads: () => readFileSync(join(bin, 'gh-uploads.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
     set: (more) => writeFileSync(join(bin, 'gh-state.json'), JSON.stringify({ ...state, ...more })),
   }
 }
@@ -210,13 +220,21 @@ test('the pull request is opened with its body from a file, then found by its he
 })
 
 test('the screenshots of a pull request go with its body: gh uploads each one --attach names, the pull request opened even when one fails; the doctor asks gh whether it takes --attach', async (t) => {
-  const { root, forge, codeHost } = repository(t)
+  const { cwd, forge, codeHost } = repository(t)
   const host = codeHost()
-  const bodyFile = join(root, 'body.md')
-  const attachments = [{ path: 'web/skraft-visuals/checkout light.png', alt: 'Checkout form, card filled in' }, { path: 'web/skraft-visuals/paid.png', alt: 'Payment accepted' }]
-  const attached = ['--attach=./web/skraft-visuals/checkout light.png#Checkout form, card filled in', '--attach=./web/skraft-visuals/paid.png#Payment accepted']
+  const tracking = join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout')
+  const bodyFile = join(tracking, 'pull-request-body.md')
+  mkdirSync(join(cwd, 'web', 'skraft-visuals'), { recursive: true })
+  for (const name of ['checkout light.png', 'paid.png']) writeFileSync(join(cwd, 'web', 'skraft-visuals', name), 'PNG')
+  // A file of the tracking folder under the same name as a screenshot, which gh would take for it were the body's reference relative to the working copy.
+  mkdirSync(join(tracking, 'web', 'skraft-visuals'), { recursive: true })
+  writeFileSync(join(tracking, 'web', 'skraft-visuals', 'paid.png'), 'not the screenshot')
+  writeFileSync(bodyFile, '![Checkout form, card filled in](../../../web/skraft-visuals/checkout light.png)\n\n![Payment accepted](../../../web/skraft-visuals/paid.png)\n')
+  const attachments = [{ path: 'web/skraft-visuals/checkout light.png', alt: 'Checkout form, card filled in', reference: '../../../web/skraft-visuals/checkout light.png' }, { path: 'web/skraft-visuals/paid.png', alt: 'Payment accepted', reference: '../../../web/skraft-visuals/paid.png' }]
+  const attached = ['--attach=../../../web/skraft-visuals/checkout light.png#Checkout form, card filled in', '--attach=../../../web/skraft-visuals/paid.png#Payment accepted']
 
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
+  assert.deepEqual(forge.uploads(), [join(cwd, 'web', 'skraft-visuals', 'checkout light.png'), join(cwd, 'web', 'skraft-visuals', 'paid.png')])
   assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
   forge.set({ attachFails: true })
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })

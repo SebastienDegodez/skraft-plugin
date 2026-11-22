@@ -743,7 +743,7 @@ export class InMemoryCodeHost {
   uploaded(body, attachments = []) {
     this.attached.push(attachments)
     return attachments.filter(({ path }) => !this.unattached.has(path))
-      .reduce((text, { path }, index) => text.replaceAll(`](./${path})`, `](https://github.com/user-attachments/assets/${this.attached.length}-${index + 1})`), body)
+      .reduce((text, { reference }, index) => text.replaceAll(`](${reference})`, `](https://github.com/user-attachments/assets/${this.attached.length}-${index + 1})`), body)
   }
   async issue(number) {
     this.issuesRead.push(number)

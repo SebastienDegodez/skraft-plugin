@@ -18,6 +18,8 @@ const TRACED = 'logs/runs/deliver-1-1/1.log'
 const EVIDENCE = `.copilot-tracking/skraft-plans/${SLUG}/evidence/${SLUG}`
 const RAW = 'https://github.com/acme/shop/raw/root-1'
 const SHOTS = 'web/skraft-visuals'
+/** How the body refers to a screenshot gh attaches: from the folder of the body file, the run's tracking folder. */
+const FROM_BODY = '../../..'
 /** Azure Repos' Items route of a file of the repository at a commit. */
 const ITEMS = (commit, path) => `https://dev.azure.com/acme/shop/_apis/git/repositories/shop/items?path=${encodeURIComponent(`/${path}`)}&versionDescriptor.version=${commit}&versionDescriptor.versionType=commit&api-version=7.1`
 /** A forge whose client attaches no file, Azure DevOps': the screenshots are committed and linked at their commit. */
@@ -66,23 +68,23 @@ test('on GitHub the screenshots stay where Playwright wrote them: gh attaches th
   assert.equal(section(await host.tracking.read(SLUG, 'pull-request-body.md'), 'Screenshots'), [
     '- web: e2e run passed (`npx playwright test`, evidence `logs/runs/deliver-1-1/1.log`); 4 screenshots attached to the pull request',
     '',
-    `![Checkout form, card filled in](./${SHOTS}/checkout-light.png)`,
+    `![Checkout form, card filled in](${FROM_BODY}/${SHOTS}/checkout-light.png)`,
     '',
-    `![Payment accepted](./${SHOTS}/accepted-light.png)`,
+    `![Payment accepted](${FROM_BODY}/${SHOTS}/accepted-light.png)`,
     '',
     '<details><summary>Dark theme</summary>',
     '',
-    `![Checkout form, card filled in](./${SHOTS}/checkout-dark.png)`,
+    `![Checkout form, card filled in](${FROM_BODY}/${SHOTS}/checkout-dark.png)`,
     '',
-    `![Payment accepted](./${SHOTS}/accepted-dark.png)`,
+    `![Payment accepted](${FROM_BODY}/${SHOTS}/accepted-dark.png)`,
     '',
     '</details>',
   ].join('\n'))
   assert.deepEqual(host.codeHost.attached, [[
-    { path: `${SHOTS}/checkout-light.png`, alt: 'Checkout form, card filled in' },
-    { path: `${SHOTS}/accepted-light.png`, alt: 'Payment accepted' },
-    { path: `${SHOTS}/checkout-dark.png`, alt: 'Checkout form, card filled in' },
-    { path: `${SHOTS}/accepted-dark.png`, alt: 'Payment accepted' },
+    { path: `${SHOTS}/checkout-light.png`, alt: 'Checkout form, card filled in', reference: `${FROM_BODY}/${SHOTS}/checkout-light.png` },
+    { path: `${SHOTS}/accepted-light.png`, alt: 'Payment accepted', reference: `${FROM_BODY}/${SHOTS}/accepted-light.png` },
+    { path: `${SHOTS}/checkout-dark.png`, alt: 'Checkout form, card filled in', reference: `${FROM_BODY}/${SHOTS}/checkout-dark.png` },
+    { path: `${SHOTS}/accepted-dark.png`, alt: 'Payment accepted', reference: `${FROM_BODY}/${SHOTS}/accepted-dark.png` },
   ]])
   assert.ok(host.codeHost.pullRequests[0].body.includes('![Payment accepted](https://github.com/user-attachments/assets/1-2)'), host.codeHost.pullRequests[0].body)
   assert.match(eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish').reason, /^pull request #42 opened as a draft: \S+$/)
@@ -94,12 +96,12 @@ test('a screenshot gh did not attach is told by reading the body back, and the p
   assert.equal((await host.start(STORY)).status, 'done')
 
   assert.equal(eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish').reason, `pull request #42 opened as a draft: https://github.example.com/acme/shop/pull/42; 2 screenshots did not attach: ${SHOTS}/accepted-light.png, ${SHOTS}/accepted-dark.png`)
-  assert.ok(host.codeHost.pullRequests[0].body.includes(`![Payment accepted](./${SHOTS}/accepted-light.png)`))
+  assert.ok(host.codeHost.pullRequests[0].body.includes(`![Payment accepted](${FROM_BODY}/${SHOTS}/accepted-light.png)`))
 
   host.codeHost.unattached.clear()
   assert.equal((await host.publish()).reason, 'pull request #42 updated: https://github.example.com/acme/shop/pull/42')
   assert.equal(host.codeHost.attached.at(-1).length, 4)
-  assert.ok(!host.codeHost.pullRequests[0].body.includes('](./'), host.codeHost.pullRequests[0].body)
+  assert.ok(!host.codeHost.pullRequests[0].body.includes(`](${FROM_BODY}/`), host.codeHost.pullRequests[0].body)
   assert.match((await host.publish()).reason, /pull request #42 is up to date/)
   host.codeHost.pullRequests[0].body += '\nA reviewer\'s note.'
   assert.match((await host.publish()).reason, /was edited since skraft last wrote its body/)
@@ -204,12 +206,23 @@ test('a title is kept as plain alt text: no markup, mention, issue reference or 
   await host.start(STORY)
 
   const alt = 'Paid img src x by octocat, fixes 12 x (y) link (z) code café 100'
-  assert.equal((await screenshots(host)).split('\n').at(-1), `![${alt}](./${SHOTS}/a b.png)`)
-  assert.deepEqual(host.codeHost.attached, [[{ path: `${SHOTS}/a b.png`, alt }]])
+  assert.equal((await screenshots(host)).split('\n').at(-1), `![${alt}](${FROM_BODY}/${SHOTS}/a b.png)`)
+  assert.deepEqual(host.codeHost.attached, [[{ path: `${SHOTS}/a b.png`, alt, reference: `${FROM_BODY}/${SHOTS}/a b.png` }]])
 
   const long = visualsRun({ codeHost: azure(), screenshots: [{ title: `${'Checkout '.repeat(15)}end`, theme: 'light', path: 'skraft-visuals/a.png', bytes: 'PNG' }] })
   await long.start(STORY)
   assert.equal((await screenshots(long)).split('\n').at(-1), `![${'Checkout '.repeat(15).slice(0, 120)}](${ITEMS('root-1', `${EVIDENCE}/web/light-1.png`)})`)
+})
+
+test('a screenshot whose path holds a # is refused when the manifest is read, gh reading what follows it as the alt text: nothing is attached nor committed', async () => {
+  for (const codeHost of [new InMemoryCodeHost(), azure()]) {
+    const host = visualsRun({ codeHost, screenshots: [CHECKOUT[0], { ...CHECKOUT[1], path: 'skraft-visuals/order #12.png' }] })
+
+    assert.equal((await host.start(STORY)).status, 'done')
+
+    assert.deepEqual([host.git.engineCommits, host.codeHost.attached], [[], [[]]])
+    assert.deepEqual(visualsStep(host), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: web: screenshots not recorded: the path of screenshot 2 of skraft-visuals/manifest.json holds a #, which gh reads as the start of its alt text: name the file without one' })
+  }
 })
 
 test('a screenshot that is a symbolic link, lies outside its component or is no PNG is refused: nothing is attached nor committed, and the pull request says which', async () => {
@@ -290,15 +303,15 @@ test('a French story\'s screenshots are told in French: each e2e run, the dark t
   assert.equal(await frenchShots(host), [
     '- web : run e2e passed (`npx playwright test`, preuve `logs/runs/deliver-1-1/1.log`) ; 4 screenshots attached to the pull request',
     '',
-    `![Checkout form, card filled in](./${SHOTS}/checkout-light.png)`,
+    `![Checkout form, card filled in](${FROM_BODY}/${SHOTS}/checkout-light.png)`,
     '',
-    `![Payment accepted](./${SHOTS}/accepted-light.png)`,
+    `![Payment accepted](${FROM_BODY}/${SHOTS}/accepted-light.png)`,
     '',
     '<details><summary>Thème sombre</summary>',
     '',
-    `![Checkout form, card filled in](./${SHOTS}/checkout-dark.png)`,
+    `![Checkout form, card filled in](${FROM_BODY}/${SHOTS}/checkout-dark.png)`,
     '',
-    `![Payment accepted](./${SHOTS}/accepted-dark.png)`,
+    `![Payment accepted](${FROM_BODY}/${SHOTS}/accepted-dark.png)`,
     '',
     '</details>',
   ].join('\n'))

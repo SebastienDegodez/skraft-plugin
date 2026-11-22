@@ -104,8 +104,11 @@ Résultat : la section Screenshots de la pull request montre les six premières 
 thème, les sombres repliées. Le chemin dépend de la forge :
 
 - **GitHub** : elles restent là où Playwright les a écrites, rien n'est commité. Le corps renvoie
-  à chacune par `./<chemin>`, et `gh pr create` ou `gh pr edit` la téléverse avec `--attach`, en
-  réécrivant la référence. skraft relit le corps et dit quelles captures ne sont pas jointes.
+  à chacune par son chemin depuis le dossier du fichier du corps
+  (`../../../web/skraft-visuals/checkout.png`), et `gh pr create` ou `gh pr edit`, lancé depuis ce
+  dossier, la téléverse avec `--attach`, en réécrivant la référence. Une capture dont le chemin
+  contient un `#` est refusée à la lecture du manifeste : gh prend ce qui suit `#` pour le texte
+  alternatif. skraft relit le corps et dit quelles captures ne sont pas jointes.
   `skraft doctor` prévient quand votre gh n'a pas `--attach` (gh 2.103.3 l'a).
 - **Azure DevOps** : `az` n'envoie aucun fichier en corps binaire, les pièces jointes de la pull
   request sont donc hors d'atteinte. skraft commite les captures seules sur la branche

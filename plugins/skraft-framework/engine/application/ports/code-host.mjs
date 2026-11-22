@@ -7,9 +7,10 @@
  * @typedef {FoundPullRequest & { head: string, fromFork: boolean }} ReadPullRequest
  *   body: the whole description; head: its source branch, as the forge names it; fromFork: it comes from a fork of the
  *   remote's repository, not from the repository itself.
- * @typedef {{ path: string, alt: string }} Attachment
- *   path: a file of the working copy, relative to it, that the body refers to as `./<path>`; alt:
- *   its alt text, made safe to publish.
+ * @typedef {{ path: string, alt: string, reference: string }} Attachment
+ *   path: a file of the working copy, relative to it; alt: its alt text, made safe to publish;
+ *   reference: how the body refers to it, relative to the folder of the body's file, where the
+ *   forge's client resolves it (gh is run from there).
  * @typedef {{ base: string, head: string, title: string, bodyFile: string, body: string, draft: boolean, issue: number | null, attachments: Attachment[] }} PullRequestRequest
  *   base: the branch it merges into; head: the branch it brings; bodyFile: the absolute path of
  *   the file that holds its body; body: that body, for a forge reached without files; issue: the

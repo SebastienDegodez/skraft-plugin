@@ -102,8 +102,10 @@ Result: the pull request's Screenshots section shows the first six screenshots o
 the dark ones folded. How they get there depends on the forge:
 
 - **GitHub**: they stay where Playwright wrote them, nothing is committed. The body refers to each
-  as `./<path>`, and `gh pr create` or `gh pr edit` uploads it with `--attach`, rewriting the
-  reference. skraft reads the body back and says which screenshots did not attach. `skraft doctor`
+  by its path from the folder of the body's file (`../../../web/skraft-visuals/checkout.png`), and
+  `gh pr create` or `gh pr edit`, started from that folder, uploads it with `--attach`, rewriting the
+  reference. A screenshot whose path holds a `#` is refused when the manifest is read: gh takes
+  what follows `#` for the alt text. skraft reads the body back and says which screenshots did not attach. `skraft doctor`
   warns when your gh has no `--attach` (gh 2.103.3 has it).
 - **Azure DevOps**: `az` sends no file as a binary body, so the pull request's attachments cannot
   be reached. skraft commits the screenshots alone on the branch

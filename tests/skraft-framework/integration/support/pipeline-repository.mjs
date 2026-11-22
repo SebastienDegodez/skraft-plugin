@@ -275,7 +275,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
 /**
  * What a run with a front end leaves on a GitHub remote, whichever driver ran it: the screenshots
  * where Playwright wrote them, nothing committed, and the pull request's body referring to each by
- * its path, which gh rewrites once it attached the file.
+ * its path from the body file's folder, which gh rewrites once it attached the file.
  * @param {string} cwd @param {Array<Record<string, any>>} events
  */
 export const visualsKept = (cwd, events) => {
@@ -290,11 +290,11 @@ export const visualsKept = (cwd, events) => {
     '',
     '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `logs/runs/deliver-1-1/13.log`); 2 screenshots attached to the pull request',
     '',
-    `![Checkout, card paid](./${shots}/checkout-light.png)`,
+    `![Checkout, card paid](../../../${shots}/checkout-light.png)`,
     '',
     '<details><summary>Dark theme</summary>',
     '',
-    `![Checkout, card paid](./${shots}/checkout-dark.png)`,
+    `![Checkout, card paid](../../../${shots}/checkout-dark.png)`,
     '',
     '</details>',
   ].join('\n')), body)

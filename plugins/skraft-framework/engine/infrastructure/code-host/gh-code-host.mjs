@@ -113,7 +113,18 @@ const NO_PROMPT = Object.freeze({ GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ss
 
 /** @param {CommandRunner} commandRunner @param {string[]} argv */
 // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
-const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.', env: NO_PROMPT, timeoutMs: CALL_TIMEOUT_MS })
+const run = (commandRunner, argv, cwd = '.') => commandRunner.run({ argv, cwd, env: NO_PROMPT, timeoutMs: CALL_TIMEOUT_MS })
+
+/**
+ * gh started from the folder of the body's file: gh resolves the body's references to its
+ * attachments from there (`gh pr create --help`, gh 2.103.3), and each `--attach` from its own
+ * folder, so that both name the same file.
+ * @param {CommandRunner} commandRunner @param {string[]} argv @param {string} bodyFile absolute
+ */
+const runBeside = (commandRunner, argv, bodyFile) => run(commandRunner, argv, folderOf(bodyFile))
+
+/** The folder of an absolute file, `/` or `\\` before its name; the mod loads no node:path. @param {string} file */
+const folderOf = (file) => file.slice(0, Math.max(file.lastIndexOf('/'), file.lastIndexOf('\\')))
 
 /** The longest a git or gh call may run, a push included: past it the run goes on and says why. */
 const CALL_TIMEOUT_MS = 120_000
@@ -333,7 +344,7 @@ const readIssue = (text) => {
 const create = async (commandRunner, { base, head, title, bodyFile, draft, attachments = [] }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await run(commandRunner, ['gh', 'pr', 'create', `--repo=${remote.repository}`, `--base=${base}`, `--head=${head}`, `--title=${title}`, `--body-file=${bodyFile}`, ...(draft ? ['--draft'] : []), ...attachArgs(attachments)])
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'create', `--repo=${remote.repository}`, `--base=${base}`, `--head=${head}`, `--title=${title}`, `--body-file=${bodyFile}`, ...(draft ? ['--draft'] : []), ...attachArgs(attachments)], bodyFile)
   const url = answered(result, attachments) ? /https?:\/\/\S+\/pull\/(\d+)/.exec(result.stdout) : null
   return url === null ? failedWrite(result, `gh could not open the pull request of ${head} on ${remote.repository}`) : { ok: /** @type {const} */ (true), number: Number(url[1]), url: url[0] }
 }
@@ -346,12 +357,12 @@ const create = async (commandRunner, { base, head, title, bodyFile, draft, attac
 const edit = async (commandRunner, { number, bodyFile, attachments = [] }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await run(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(attachments)])
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(attachments)], bodyFile)
   return answered(result, attachments) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not update pull request #${number} on ${remote.repository}`)
 }
 
-/** gh's `--attach <file>#<alt>`, the file relative to the working copy as the body refers to it. @param {import('../../application/ports/code-host.mjs').Attachment[]} attachments */
-const attachArgs = (attachments) => attachments.map(({ path, alt }) => `--attach=./${path}#${alt}`)
+/** gh's `--attach <file>#<alt>`, the file named as the body refers to it, from the body file's folder. @param {import('../../application/ports/code-host.mjs').Attachment[]} attachments */
+const attachArgs = (attachments) => attachments.map(({ reference, alt }) => `--attach=${reference}#${alt}`)
 
 /**
  * Whether gh answered the write: exit 0, or, with attachments, any exit once it ran to its end

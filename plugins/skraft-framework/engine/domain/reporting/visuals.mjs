@@ -54,7 +54,17 @@ export const readManifest = (text) => {
   const screenshots = listed.map(screenshotOf)
   const wrong = screenshots.findIndex((screenshot) => screenshot === null)
   if (wrong >= 0) return { ok: false, reason: `screenshot ${wrong + 1} of ${VISUALS_MANIFEST} needs a title, a theme light or dark, and the path of a .png under the component` }
-  return { ok: true, screenshots: /** @type {Screenshot[]} */ (screenshots) }
+  return withoutHash(/** @type {Screenshot[]} */ (screenshots))
+}
+
+/**
+ * The screenshots, unless a path holds a `#`: gh's `--attach <path>#<alt>` would cut the path there.
+ * @param {Screenshot[]} screenshots @returns {ManifestReading}
+ */
+const withoutHash = (screenshots) => {
+  const hashed = screenshots.findIndex(({ path }) => path.includes('#'))
+  if (hashed >= 0) return { ok: false, reason: `the path of screenshot ${hashed + 1} of ${VISUALS_MANIFEST} holds a #, which gh reads as the start of its alt text: name the file without one` }
+  return { ok: true, screenshots }
 }
 
 /** @param {string | null} text @returns {unknown[] | null} */
@@ -181,5 +191,21 @@ export const shownScreenshots = ({ components }) => components.flatMap(({ screen
 /** A path as a link: each segment encoded. @param {string} path */
 const encodedPath = (path) => path.split('/').map(encodeURIComponent).join('/')
 
-/** How the body refers to a screenshot the forge's client attaches, which it rewrites to the uploaded file. @param {string} path relative to the working copy */
-export const attachedReference = (path) => `./${path}`
+/**
+ * How a body refers to a screenshot the forge's client attaches, which it rewrites to the uploaded
+ * file: from the folder of the body's file, where gh resolves it and is run (`../../../web/a.png`).
+ * @param {string} path relative to the working copy @param {string} folder the body file's, relative to the working copy
+ */
+export const attachedReference = (path, folder) => {
+  const from = normalizeRelative(folder).split('/').filter((part) => part !== '.')
+  const to = normalizeRelative(path).split('/')
+  const shared = sharedLength(from, to)
+  return [...from.slice(shared).map(() => '..'), ...to.slice(shared)].join('/')
+}
+
+/** How many leading segments two paths share; the file's own name never counts. @param {string[]} folder @param {string[]} path */
+const sharedLength = (folder, path) => {
+  let shared = 0
+  while (shared < folder.length && shared < path.length - 1 && folder[shared] === path[shared]) shared += 1
+  return shared
+}
