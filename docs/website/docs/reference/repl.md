@@ -36,7 +36,7 @@ The cell is JavaScript. Variables stay from one call to the next and a cell may 
 | Name | Does |
 | --- | --- |
 | `run(command, { cwd = '.', timeout = 600, gate, label })` | starts a program and returns a handle at once. `command` is an argv array (no shell) or a string, run by `sh -c`; under Windows by Git Bash when it is installed, else by `pwsh` or `powershell`. `cwd` is relative to the working copy and never leaves it. `timeout` is in seconds, 1 to 7200 |
-| handle | `id`, `command`, `running`, `tail(n = 50)`, `output()`, `poll()` (the result, or `null` while it runs), `kill(signal = 'SIGTERM', grace = 5)`; `await handle` gives `{ exitCode, output, durationMs, log }` |
+| handle | `id`, `command`, `running`, `tail(n = 50)`, `output()`, `poll()` (the result, or `null` while it runs), `kill(signal = 'SIGTERM', grace = 5)`; `await handle` gives `{ exitCode, output, durationMs, head, log }` (`head`: the HEAD of the repository holding `cwd` when the program ended, the value of `headAfter` in the trace) |
 | `gate(name, command, options)` | `run` with the gate named: `build`, `format`, `lint`, `test`, `architecture`, `coverage` or `e2e` |
 | `absent(gate, component, reason)` | declares that the project's `AGENTS.md` names no such gate for the component |
 | `console.log` | prints into the call's result |
@@ -70,6 +70,6 @@ A tree is clean when Git lists no uncommitted file but the tracking folder's. Ea
 | `repl-crashed` | the kernel exited by itself: its variables are gone |
 | `repl-failed` | the kernel could not start |
 
-The texts are fixed by the engine. The result of a cell carries the cell's own output and errors, which is the one place the engine's fixed-message rule does not apply; an exception of the engine itself goes to the server's log. A cancellation of the request (`notifications/cancelled`) stops the awaits of the cell, ends the runs it started and answers `interrupted`; a cell that still does not stop after three seconds ends the kernel. An interrupt cannot break a synchronous loop: it ends the kernel.
+The texts are fixed by the engine. The result of a cell carries the cell's own output and errors, which is the one place the engine's fixed-message rule does not apply; an exception of the engine itself goes to the server's log. A cancellation of the request (`notifications/cancelled`) stops the awaits of the cell, ends the runs it started and answers `interrupted`; a cancellation that arrives before the call has launched its cell is kept: the cell never runs and the call answers `repl-interrupted`; a cell that still does not stop after three seconds ends the kernel. An interrupt cannot break a synchronous loop: it ends the kernel.
 
-Every program runs with the developer's rights, as in `Bash`: the REPL is no sandbox. A server killed without cleaning up leaves its programs in `.copilot-tracking/skraft-repl/<pid>.json`; the next server to start a kernel ends those whose recorded start time still matches, never a process the system reused.
+Every program runs with the developer's rights, as in `Bash`: the REPL is no sandbox. A server killed without cleaning up leaves its programs in `.copilot-tracking/skraft-repl/<pid>.json`; the next server to start a kernel ends those whose recorded start time still matches, never a process the system reused. That journal stays under `.copilot-tracking/skraft-repl/`, outside the tracking folder of any story: it belongs to the server, not to a run.

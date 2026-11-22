@@ -69,7 +69,8 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   (git diff per step), gates, review verdict, TDD commit order and kinds; no replay.
 - Besides the DELIVER gates, a project command runs only when an agent asks for it through
   `skraft_repl`, which records each run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Only `infrastructure/process/` and
-  `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`.
+  `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`. The journal of the programs a killed MCP server left behind
+  is `.copilot-tracking/skraft-repl/<pid>.json`, outside any story's tracking folder.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
   fallback between them; an issue it cannot read refuses the run.
