@@ -57,7 +57,7 @@ The server, not the cell, starts every program and writes `runs.jsonl` in the at
 
 | Line | When | Holds |
 | --- | --- | --- |
-| `start` | a program starts | run id, cell, command, folder, gate, label |
+| `start` | a program starts | run id, cell, command, folder (relative to the working copy, `/` between its parts, `.` for the working copy itself), gate, label |
 | `run` | it ends | the argv actually started and the shell, exit code, signal, whether it timed out or was killed, its output size and whether it was cut, the SHA-256 of its log, Git's `HEAD` of the repository holding its folder before and after, and whether the tree was clean when it started |
 | `absent` | a gate is declared absent | gate, component, reason |
 

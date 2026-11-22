@@ -41,7 +41,7 @@ export class ScriptedLauncher {
       onData(scripted.text ?? '')
       program.finish(scripted)
     }
-    return { ok: true, argv: Array.isArray(command) ? command : ['sh', '-c', command], shell: Array.isArray(command) ? null : 'sh', program }
+    return { ok: true, argv: Array.isArray(command) ? command : ['sh', '-c', command], shell: Array.isArray(command) ? null : 'sh', cwd, program }
   }
 }
 

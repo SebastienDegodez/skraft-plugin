@@ -1,5 +1,5 @@
 import { realpath, stat } from 'node:fs/promises'
-import { isAbsolute, join, relative, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { createLiveProcesses } from './live-processes.mjs'
 
 /**
@@ -40,19 +40,21 @@ const launch = async ({ command, cwd, timeoutMs, maxOutputBytes, onData }, { roo
   if (folder === null) return { ok: false, reason: 'the folder is outside the working copy or does not exist' }
   const how = typeof command === 'string' ? await shellFor(command, host) : { argv: command, shell: null }
   if (how === null) return { ok: false, reason: 'no shell was found on this machine' }
-  const program = await processes.start({ argv: how.argv, cwd: folder, timeoutMs, maxOutputBytes, onData })
-  return { ok: true, argv: how.argv, shell: how.shell, program }
+  const program = await processes.start({ argv: how.argv, cwd: folder.real, timeoutMs, maxOutputBytes, onData })
+  return { ok: true, argv: how.argv, shell: how.shell, cwd: folder.within, program }
 }
 
 /**
- * The absolute folder, when it exists and, links resolved, stays inside the working copy.
- * @param {string} root @param {string} cwd @returns {Promise<string | null>}
+ * The folder, when it exists and, links resolved, stays inside the working copy: absolute, and
+ * relative to the working copy with `/` between its parts (`.` for the working copy itself).
+ * @param {string} root @param {string} cwd @returns {Promise<{ real: string, within: string } | null>}
  */
 const folderIn = async (root, cwd) => {
   try {
     const real = await realpath(resolve(root, cwd))
-    const outside = relative(await realpath(root), real)
-    return outside.startsWith('..') || isAbsolute(outside) || !(await stat(real)).isDirectory() ? null : real
+    const within = relative(await realpath(root), real)
+    if (within.startsWith('..') || isAbsolute(within) || !(await stat(real)).isDirectory()) return null
+    return { real, within: within === '' ? '.' : within.split(sep).join('/') }
   } catch {
     return null
   }

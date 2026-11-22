@@ -111,7 +111,7 @@ const launch = async (deps, entry, run, request) => {
   const launched = await deps.repl.launcher.start({ command: request.command, cwd: request.cwd, timeoutMs: request.timeout * 1000, maxOutputBytes: MEMORY_TAIL_BYTES, onData: (text) => output(deps, entry, run, text) })
   if (!launched.ok) return end(deps, entry, run, { ...NOT_STARTED, error: launched.reason })
   if (entry.retired === true) launched.program.kill('SIGKILL', 0)
-  Object.assign(run, { program: launched.program, argv: launched.argv, shell: launched.shell })
+  Object.assign(run, { program: launched.program, argv: launched.argv, shell: launched.shell, cwd: launched.cwd })
   await recordProcesses(deps, entry)
   await traceStart(deps, entry, run)
   return end(deps, entry, run, await launched.program.done)

@@ -11,8 +11,9 @@
  * @typedef {{ command: string | string[], cwd: string, timeoutMs: number, maxOutputBytes: number, onData: (text: string) => void }} LaunchRequest
  *   command: an argv array starts with no shell; a string runs through the machine's shell (`sh -c`;
  *   Git Bash, else PowerShell, under Windows). cwd: relative to the working copy, never leaving it.
- * @typedef {{ ok: true, argv: string[], shell: string | null, program: Program } | { ok: false, reason: string }} Launched
- *   argv: what was actually started; shell: which shell ran a string, null for an argv array.
+ * @typedef {{ ok: true, argv: string[], shell: string | null, cwd: string, program: Program } | { ok: false, reason: string }} Launched
+ *   argv: what was actually started; shell: which shell ran a string, null for an argv array; cwd: the folder
+ *   it started in, relative to the working copy, with / between its parts (. for the working copy).
  * @typedef {{ start: (request: LaunchRequest) => Promise<Launched> }} ProgramLauncher
  */
 export {}

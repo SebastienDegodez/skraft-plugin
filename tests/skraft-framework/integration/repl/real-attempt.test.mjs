@@ -43,6 +43,18 @@ test('a software engineer runs real programs through the REPL: an argv array and
   assert.equal(lines[2], "=> [ 1, '3 passed', 0, 'linted' ]")
 })
 
+test('a run\'s folder is traced relative to the working copy, with / between its parts, however the cell named it', BOUNDED, async (t) => {
+  const { host } = realRun(t, async (repl, root) => {
+    mkdirSync(join(root, 'api', 'src'))
+    await repl.call({ code: `await run([process.execPath, '-e', '0'], { cwd: ${JSON.stringify(join(root, 'api'))} }); await run([process.execPath, '-e', '0'], { cwd: 'api/./src/' })` })
+  })
+
+  await host.start()
+
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
+  assert.deepEqual(trace.filter(({ type }) => type === 'run').map(({ cwd }) => cwd), ['api', 'api/src'])
+})
+
 test('a program started in a folder outside the working copy is not started, and the cell reads why', BOUNDED, async (t) => {
   const answers = []
   const { host } = realRun(t, async (repl) => {
