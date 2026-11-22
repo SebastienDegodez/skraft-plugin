@@ -1,8 +1,11 @@
-import { GATE_ORDER } from '../../domain/gates/gate-plan.mjs'
+import { DELIVERED_GATES } from '../../domain/evidence/gate-names.mjs'
+import { pathUnder } from '../../domain/config/relative-path.mjs'
+import { qualityEvidence } from '../../domain/reporting/run-facts.mjs'
+import { runsFolder } from '../../domain/evidence/run-trace.mjs'
 
 /**
  * What a run hands a review: the base of its changes, its story, the documents its agents filled
- * or wrote, and its components with the gates that passed on them.
+ * or wrote, and its components with the gates that hold a traced run on them.
  *
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
@@ -37,7 +40,8 @@ const runInputs = (facts) => ({
   base: facts.run.base,
   story: facts.run.story,
   documents: documentsOf(facts),
-  components: facts.components.map((component) => ({ ...component, gates: passedGates(facts.events, component.name) })),
+  components: facts.components.map((component) => ({ ...component, gates: gatesWithRuns(facts.events, component) })),
+  trace: traceFacts(facts.events, facts.workflow, facts.phase),
 })
 
 /**
@@ -46,18 +50,50 @@ const runInputs = (facts) => ({
  * the tracking folder. A node the workflow dropped since it ran counts for nothing.
  * @param {RunFacts} facts @returns {ReviewDocuments}
  */
-const documentsOf = ({ workflow, run, phase }) => {
+const documentsOf = ({ workflow, run, phase, events }) => {
   const nodes = Object.entries(run.nodes).filter(([id]) => id in workflow.nodes)
   const ofPhase = (/** @type {boolean} */ same) => nodes
     .filter(([id]) => (workflow.nodes[id].phase === phase) === same)
     .flatMap(([, state]) => writtenBy(state))
   return {
-    outputs: [...new Set(ofPhase(true))],
+    outputs: [...new Set([...ofPhase(true), ...redLogsOf(events, workflow, phase), ...tracesOf(events, workflow, phase)])],
     context: [...new Set([...run.artifacts, ...ofPhase(false)])],
     artifacts: run.artifacts,
     phases: workflow.phases.map((each) => ({ phase: each, steps: writersOf(workflow, run, each) })).filter(({ steps }) => steps.length > 0),
   }
 }
+
+/**
+ * The output of the designer's traced run of the acceptance tests, labelled `red`, of the nodes of the phase.
+ * @param {RunFacts['events']} events @param {Workflow} workflow @param {string} phase @returns {string[]}
+ */
+const redLogsOf = (events, workflow, phase) => events
+  .filter((event) => event.type === 'evidence.checked' && event.red === true && workflow.nodes[event.step]?.phase === phase)
+  .map((event) => event.runs[0].log)
+
+/**
+ * The trace of the runs of the last delivering attempt of each node of the phase whose trace the
+ * engine could read: what the review judges the quality evidence by.
+ * @param {RunFacts['events']} events @param {Workflow} workflow @param {string} phase @returns {string[]}
+ */
+const tracesOf = (events, workflow, phase) => traceFacts(events, workflow, phase).filter(({ status }) => status === 'verified').map(({ trace }) => trace)
+
+/**
+ * The trace of the last delivering attempt of each node of the phase, relative to the tracking
+ * folder: verified, or invalid with the code of what breaks it.
+ * @param {RunFacts['events']} events @param {Workflow} workflow @param {string} phase
+ * @returns {import('../review/review-runs.mjs').TraceFact[]}
+ */
+const traceFacts = (events, workflow, phase) => {
+  const kept = events.filter((event) => event.type === 'evidence.checked' && event.red !== true && workflow.nodes[event.step]?.phase === phase)
+  const last = new Map(kept.map((event) => [event.step, traceFact(event)]))
+  return [...last.values()]
+}
+
+/** @param {any} event an evidence.checked event @returns {import('../review/review-runs.mjs').TraceFact} */
+const traceFact = ({ step, visit, attempt, invalid }) => ({
+  step, trace: `${runsFolder(step, visit, attempt)}/runs.jsonl`, ...(invalid === undefined ? { status: 'verified' } : { status: 'invalid', code: invalid }),
+})
 
 /**
  * The agent nodes of a phase that ran, each with the documents it filled or wrote.
@@ -67,12 +103,12 @@ const writersOf = (workflow, run, phase) => workflow.order
   .filter((id) => workflow.nodes[id].kind === 'agent' && workflow.nodes[id].phase === phase && id in run.nodes)
   .map((id) => ({ step: id, agent: /** @type {string} */ (workflow.nodes[id].agent), documents: writtenBy(run.nodes[id]) }))
 
+/**
+ * The gates the delivery holds a traced run of under a component's folder, in gate order.
+ * @param {RunFacts['events']} events @param {{ root: string }} component
+ */
+const gatesWithRuns = (events, { root }) => DELIVERED_GATES.filter((gate) => qualityEvidence(events).some((fact) => fact.gate === gate && pathUnder(fact.folder, root) !== null))
+
 /** @param {RunState['nodes'][string]} node */
 const writtenBy = (node) => [...new Set([...node.outputs, ...node.documents])]
 
-/**
- * The gates whose last run on a component in this run passed, in gate order; only gate.ran
- * events name a component and a gate.
- * @param {RunFacts['events']} events @param {string} component
- */
-const passedGates = (events, component) => GATE_ORDER.filter((gate) => events.findLast((event) => event.component === component && event.gate === gate)?.status === 'pass')

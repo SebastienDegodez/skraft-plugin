@@ -18,11 +18,13 @@ The description is written in the story's language. What decides shows under a h
 |---|---|---|---|
 | What changes | heading | pr-writer | the text does not match the change |
 | Why | heading | pr-writer | the text does not match the story |
-| Decisions applied | heading | engine | a locked gate was skipped |
+| Decisions applied | heading | engine | a decision does not match the code |
+| QA | heading | engine | fewer scenarios passed than the story has |
+| Scenario outcomes | folded, counts the scenarios passed | engine | a scenario is not proven |
 | Consistency matrix | folded | engine | never: information only |
 | Tests | folded | engine | never: information only |
-| RED evidence | folded, counts the red commits | engine | a red commit was not replayed |
-| Quality gates | folded, opens itself when a gate failed | engine | a gate failed |
+| RED evidence | folded, counts the red commits | engine | a red commit is listed |
+| Quality evidence | folded | engine | a gate has no run listed |
 | Review | folded, opens itself on a finding to fix or to decide | engine | a finding is to fix or to decide |
 | Screenshots | folded | engine | never: information only |
 | More Domain tests than acceptance tests | heading, only when the Domain rows outnumber the acceptance rows | engine | you want to prune tests |
@@ -56,11 +58,11 @@ The description is written in the story's language. What decides shows under a h
 
 ### Decisions applied <!-- #decisions -->
 
-- **Holds**: `- ADR-00N <title> (<path>), ratified in this run`; `- Locked gate <node> skipped, unlocked: <reason>`; else `None recorded: no ADR was ratified and no locked gate was unlocked in this run.`
+- **Holds**: `- ADR-00N <title> (<path>), ratified in this run`; else `None recorded: no ADR was ratified in this run.`
 - **Shown**: under its heading.
 - **Written by**: the engine, from the run's journal.
-- **Read it to**: see the architecture decisions the code follows and the locked gates somebody skipped.
-- **Act when**: a locked gate was skipped and you do not accept the reason.
+- **Read it to**: see the architecture decisions the code follows.
+- **Act when**: a decision does not match the code.
 
 ### Consistency matrix <!-- #consistency-matrix -->
 
@@ -80,19 +82,19 @@ The description is written in the story's language. What decides shows under a h
 
 ### RED evidence <!-- #red-evidence -->
 
-- **Holds**: a table `Commit | Subject | Replay exit code` (`not replayed` without a replay), then `Output excerpts of the replays are not recorded yet.`; without a red commit, `None recorded: no red commit was accepted in this run.`
+- **Holds**: a table `Commit | Subject`, one row per red commit; without a red commit, `None recorded: no red commit was accepted in this run.`
 - **Shown**: folded; the summary reads `RED evidence: N red commits`, never open by itself.
 - **Written by**: the engine, from the red commits the journal accepted.
 - **Read it to**: see that each test failed before the code that makes it pass.
-- **Act when**: a red commit shows `not replayed` and you want proof.
+- **Act when**: you want the proof that a test failed: read the acceptance designer's run in the run's `logs/`.
 
-### Quality gates <!-- #quality-gates -->
+### Quality evidence <!-- #quality-evidence -->
 
-- **Holds**: a table `Component | Gate | Command | Result | Time | Evidence`; without a gate, `None recorded: no gate ran in this run.`
-- **Shown**: folded; the summary reads `Quality gates: [N failed, ]M passed` and the block opens itself when a gate failed.
-- **Written by**: the engine, from the gates the journal recorded.
-- **Read it to**: see which checks ran, with which command, and how long they took.
-- **Act when**: a gate failed.
+- **Holds**: a table `Gate | Folder | Run | Evidence`, one row per gate of each component the story changed, read from the `evidence.checked` event; without it, `None recorded: no gate evidence was checked in this run.`
+- **Shown**: folded; the summary reads `Quality evidence: N gate runs`.
+- **Written by**: the engine, from the traced runs of the software engineer's attempt ([Gates](./gates.md#command-gates)); it carries no command, no output and no duration.
+- **Read it to**: see which gate each traced run stands for, in which folder, and the hash of its log.
+- **Act when**: a gate you expected is missing, or its run is not the one you trust.
 
 ### Review <!-- #review -->
 
@@ -102,9 +104,25 @@ The description is written in the story's language. What decides shows under a h
 - **Read it to**: see what the reviewing lenses found and what the refuter decided.
 - **Act when**: a row is To fix or To decide; read an Accepted row before you merge.
 
+### QA <!-- #qa -->
+
+- **Holds**: `QA: <passed>/<total> scenarios passed on <sha> (run r<n>, <s> s).`, each component's run named when there are several; the test plan's path; *Delivered is not deployed*.
+- **Shown**: under its heading, also on Azure DevOps when the rest goes to the run details.
+- **Written by**: the engine, from the journal and the signed trace of the delivery.
+- **Read it to**: know at a glance whether every scenario is proven on the commit you merge.
+- **Act when**: the count is short of the story's scenarios.
+
+### Scenario outcomes <!-- #scenario-outcomes -->
+
+- **Holds**: one row per scenario: number, title, `@AC` tags, component, red, green, the final run or `not proven: <why>`, whether the log names its test, the themes of its screenshots.
+- **Shown**: folded; the summary counts the scenarios passed.
+- **Written by**: the engine: `passed` only when the acceptance test is still the red commit's, a green delivered its group and the whole suite of its component passed on the final commit.
+- **Read it to**: trace each acceptance criterion to the run that proves it.
+- **Act when**: a row is not proven.
+
 ### Screenshots <!-- #screenshots -->
 
-- **Holds**: the light and dark captures of a front end the run kept; see [Attach a front end's screenshots](../how-to/attach-screenshots.md).
+- **Holds**: the light and dark captures of a front end the run kept; see [Attach QA evidence](../how-to/attach-screenshots.md).
 - **Shown**: folded; the dark captures are folded again.
 - **Written by**: the engine, from what the last visuals step recorded.
 - **Read it to**: judge the screens without running the application.

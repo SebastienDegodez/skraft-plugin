@@ -13,8 +13,9 @@
  *   configuration gives none; effort: each host's reasoning effort (low, medium, high, xhigh,
  *   max), absent for a host it gives none. A driver starts the agent on its host's first name;
  *   without one, the agent's own file or the session decides.
- * @typedef {{ ok: boolean, text: string, error?: string, unavailable?: boolean, costUsd?: number, model?: string | null }} AgentAnswer
+ * @typedef {{ ok: boolean, text: string, error?: string, unavailable?: boolean, interrupted?: boolean, costUsd?: number, model?: string | null }} AgentAnswer
  *   unavailable: the host could not start this agent at all (not installed, not listed).
+ *   interrupted: a person stopped this agent; the run stops with it.
  *   costUsd: what this agent alone cost, when the host can tell. model: the model the agent ran
  *   on as the host names it, null when the host ran its session's own.
  * @typedef {{ answers: AgentAnswer[], costUsd?: number }} AgentAnswers

@@ -13,29 +13,39 @@ const machine = (t, programs = TOOLCHAINS) => envWithPath([stubPrograms(join(tem
 /** The lines of doctor's checks, without its tables. @param {string[]} lines */
 const checksOf = (lines) => lines.filter((line) => /^(ok  |WARN|FAIL)  /.test(line))
 
-const initThenDoctor = async (cwd, env, add = [], { gherkin = 'declined' } = {}) => {
-  const init = await skraft(cwd, ['init', ...add.flatMap((folder) => ['--add', folder])], { env })
-  assert.equal(init.status, 0, init.stderr)
-  if (gherkin === 'declined') declineGherkin(cwd)
-  return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
+/** The command lines `/skraft-init` writes for each stack: init detects the components and writes none. */
+const COMMANDS = {
+  dotnet: { build: 'dotnet build --nologo', test: 'dotnet test --nologo', format: 'dotnet format --verify-no-changes' },
+  java: { build: 'mvn -B -q -DskipTests package', test: 'mvn -B -q verify' },
+  python: { build: 'python -m compileall -q src', test: 'python -m pytest -q -p no:cacheprovider' },
+  react: { build: 'npm run build', lint: 'npm run lint', test: 'npm test' },
 }
 
 /**
- * The answer `/skraft-init` would write for a fixture that holds no Gherkin: init detects the pairs
- * and answers nothing when it finds none, and every scenario but the one about that question has it
- * answered.
- * @param {string} cwd
+ * Writes the command lines the developer confirms with `/skraft-init`, to each component of the
+ * file that has none, and the answer about Gherkin when `bdd` is given.
+ * @param {string} cwd @param {{ bdd?: boolean }} [answer]
  */
-const declineGherkin = (cwd) => {
+const answerAsTheSkillDoes = (cwd, { bdd } = {}) => {
   const file = join(cwd, 'skraft-config.json')
   const config = readJson(file)
-  for (const component of config.components) component.bdd = false
+  for (const component of config.components) {
+    component.commands = { ...COMMANDS[component.stack], ...component.commands }
+    if (bdd !== undefined) component.bdd = bdd
+  }
   writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`)
 }
 
+const initThenDoctor = async (cwd, env, add = [], { gherkin = 'declined' } = {}) => {
+  const init = await skraft(cwd, ['init', ...add.flatMap((folder) => ['--add', folder])], { env })
+  assert.equal(init.status, 0, init.stderr)
+  answerAsTheSkillDoes(cwd, gherkin === 'declined' ? { bdd: false } : {})
+  return { init, doctor: await skraft(cwd, ['doctor'], { env }) }
+}
+
 // The stub PATH holds no container runtime: doctor warns of it after the infrastructure of each
-// component's tests, one line per row, never failing. init writes no mutation command, so doctor's
-// mutation line says no component declares one.
+// component's tests, one line per row, never failing. The commands are written after init, as
+// `/skraft-init` would.
 for (const [fixture, stack, commands, paths] of [
   ['payment', 'dotnet', ['build', 'format', 'test'], { src: ['src/'], tests: ['tests/'] }],
   ['payment-spring', 'java', ['build', 'test'], {
@@ -57,8 +67,8 @@ for (const [fixture, stack, commands, paths] of [
     assert.equal(doctor.status, 1, doctor.stdout)
     const lines = doctor.stdout.trim().split(/\r?\n/)
     assert.deepEqual(checksOf(lines).map((line) => line.split(': ')[0]), [
-      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`, 'ok    mutation',
-      ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'), 'WARN  container-runtime',
+      'ok    plugin', 'ok    node', 'ok    config', 'WARN  forge', ...commands.map((name) => `ok    ${fixture}/${name}`), `FAIL  ${fixture}/bdd`,
+      ...Array.from({ length: stack === 'react' ? 3 : 4 }, () => 'ok    infrastructure'),
       'ok    models/claude-code', 'WARN  models/copilot', 'ok    vscode',
     ])
     assert.match(checksOf(lines).find((line) => line.startsWith('FAIL')), /bdd: the component does not say whether it describes its behaviour in Gherkin; run \/skraft-init, or write "bdd" in skraft-config\.json$/)
@@ -71,7 +81,7 @@ for (const [fixture, stack, commands, paths] of [
     writeFileSync(file, `${JSON.stringify(answered, null, 2)}\n`)
     const again = await skraft(cwd, ['doctor'], { env: machine(t) })
     assert.equal(again.status, 0, again.stdout)
-    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, 3 with a warning`)
+    assert.equal(again.stdout.trim().split(/\r?\n/).at(-1), `skraft doctor: no check failed, 2 with a warning`)
   })
 }
 
@@ -81,7 +91,7 @@ test('init lists skraft-config.local.json in .gitignore, and doctor reads it and
   const home = join(root, 'home')
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   assert.match(readFileSync(join(cwd, '.gitignore'), 'utf8'), /^skraft-config\.local\.json$/m)
   const configLine = async () => (await skraft(cwd, ['doctor'], { env, home })).stdout.split(/\r?\n/).find((line) => line.includes(' config: '))
 
@@ -113,14 +123,14 @@ test('doctor\'s tables align each column under its heading, a model list in its 
   const cwd = copyFixture(FIXTURES.payment, join(root, 'payment'))
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { implementer: { copilot: { model: ['gpt-6.0', 'gpt-5.5'] } } }, assign: { agents: { 'business-alignment-lens': 'inherit' } } }))
 
   const lines = (await skraft(cwd, ['doctor'], { env })).stdout.split(/\r?\n/)
 
   const table = lines.slice(lines.indexOf('models on copilot:') + 1, -2)
   const columns = ['step', 'agent', 'type', 'family', 'tier', 'model', 'effort', 'source'].map((heading) => table[0].indexOf(heading))
-  assert.equal(table.length, 21)
+  assert.equal(table.length, 22)
   for (const row of table) assert.deepEqual(columns.map((column) => row[column - 1] === ' ' && row[column] !== ' '), columns.map(() => true), row)
   const cells = (agent) => table.find((row) => row.includes(` ${agent} `)).trim().split(/ {2,}/)
   assert.deepEqual(cells('acceptance-designer'), ['distill', 'acceptance-designer', 'phase', 'implementer', 'standard', 'gpt-6.0 → gpt-5.5', '-', 'default/family/host'])
@@ -133,7 +143,7 @@ test('doctor warns of CLAUDE_CODE_EFFORT_LEVEL and of a ~/.copilot/settings.json
   const home = join(root, 'home')
   const env = machine(t)
   assert.equal((await skraft(cwd, ['init'], { env, home })).status, 0)
-  declineGherkin(cwd)
+  answerAsTheSkillDoes(cwd, { bdd: false })
   writeFileSync(join(cwd, 'skraft-config.local.json'), JSON.stringify({ models: { standard: { copilot: { model: 'gpt-5.5' } } } }))
   mkdirSync(join(home, '.copilot'), { recursive: true })
   const warnings = async (settings, more = {}) => {
@@ -158,94 +168,8 @@ test('skraft init then doctor pass on a .NET API with its React front in a neigh
 
   assert.equal(init.stdout, 'skraft-config.json: payment-api (dotnet, .), payment-web (react, ../payment-web)\n')
   assert.equal(doctor.status, 0, doctor.stdout)
-  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm → .*npm(\.cmd)?$/im)
+  assert.match(doctor.stdout, /^ok {4}payment-web\/test: npm test \(listed; skraft_repl starts it, never skraft\)$/m)
 })
-
-test('doctor names the missing command and exits 1; the developer\'s command then wins over the default', async (t) => {
-  const cwd = copyFixture(FIXTURES.payment, join(tempFolder(t), 'payment'))
-  const env = machine(t, ['dotnet'])
-  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
-  const config = readJson(join(cwd, 'skraft-config.json'))
-  config.components[0].commands.architecture = 'archunit-cli check'
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
-
-  const missing = await skraft(cwd, ['doctor'], { env })
-
-  assert.equal(missing.status, 1)
-  assert.match(missing.stdout, /^FAIL {2}payment\/architecture: command not found: archunit-cli \(from \.\); install it or change commands\.architecture in skraft-config\.json$/m)
-  assert.equal(missing.stdout.trim().split(/\r?\n/).at(-1), 'skraft doctor: 1 checks failed')
-
-  config.components[0].commands.architecture = 'dotnet test --filter Category=Architecture'
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
-  assert.equal((await skraft(cwd, ['doctor'], { env })).status, 0)
-})
-
-test('doctor passes on Microcks components without any container runtime on the machine, warning that their container scenarios will be indeterminate', async (t) => {
-  const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
-  const env = machine(t, ['python'])
-  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
-
-  const report = await skraft(cwd, ['doctor', '--json'], { env })
-
-  assert.equal(report.status, 0)
-  const { checks } = JSON.parse(report.stdout)
-  assert.deepEqual(checks.filter(({ status }) => status !== 'ok').map(({ subject }) => subject), ['forge', 'container-runtime', 'models/copilot'])
-  assert.equal(checks.find(({ subject }) => subject === 'container-runtime').detail, 'neither docker nor podman is on the PATH; the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs')
-  assert.equal(checks.find(({ detail }) => detail.includes('external gateway')).detail, 'payment-fastapi (python) external gateway: microcks (targeted), microcks (walking skeleton) — Microcks uber native image via Testcontainers, one container per test session; source plugin')
-})
-
-test('python runs from the virtual environment of the component, laid out the way this OS makes one', async (t) => {
-  const cwd = copyFixture(FIXTURES['payment-fastapi'], join(tempFolder(t), 'payment-fastapi'))
-  // Node stands for the interpreter: `python --version` answers with Node's version.
-  const venv = process.platform === 'win32' ? join(cwd, '.venv', 'Scripts', 'python.exe') : join(cwd, '.venv', 'bin', 'python')
-  mkdirSync(dirname(venv), { recursive: true })
-  try { linkSync(process.execPath, venv) } catch { copyFileSync(process.execPath, venv) }
-  const env = envWithPath(toolFolders())
-  assert.equal((await skraft(cwd, ['init'], { env })).status, 0)
-  declineGherkin(cwd)
-  const path = join(cwd, 'skraft-config.json')
-  const config = readJson(path)
-  config.components[0].commands = { test: 'python --version' }
-  config.components[0].mocking = { strategy: 'inprocess' }
-  writeFileSync(path, JSON.stringify(config, null, 2))
-  commitAll(cwd)
-  assert.equal((await skraft(cwd, ['init', 'checkout'], { env })).status, 0)
-
-  const doctor = await skraft(cwd, ['doctor'], { env })
-  const gate = await skraft(cwd, ['gate', '--all'], { env })
-
-  assert.equal(doctor.status, 0, doctor.stdout)
-  assert.equal(doctor.stdout.split(/\r?\n/)[4], `ok    payment-fastapi/test: python → ${venv}`)
-  assert.equal(gate.status, 0, gate.stdout)
-  const evidence = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout', 'gates', 'payment-fastapi', 'test-1.log'), 'utf8')
-  assert.match(evidence, new RegExp(`--- stdout\\n${process.version.replaceAll('.', '\\.')}\\r?\\n`))
-})
-
-test('doctor --run starts each command once against the base it is given, main by default', async (t) => {
-  const cwd = join(tempFolder(t), 'payment')
-  mkdirSync(cwd)
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify({ components: [
-    { name: 'payment', root: '.', stack: 'javascript', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'node --version {baseSha}' } },
-  ] }))
-  const mainSha = commitAll(cwd)
-  git(cwd, 'checkout', '-q', '-b', 'develop')
-  git(cwd, 'commit', '-q', '--allow-empty', '-m', 'develop')
-  const developSha = git(cwd, 'rev-parse', 'HEAD')
-  const env = envWithPath(toolFolders())
-
-  const onMain = await skraft(cwd, ['doctor', '--run', '--json'], { env })
-  const onDevelop = await skraft(cwd, ['doctor', '--base', 'develop', '--run'], { env })
-  const dry = await skraft(cwd, ['doctor', '--base', 'develop', '--json'], { env })
-
-  assert.equal(onMain.status, 0, onMain.stdout)
-  assert.deepEqual(JSON.parse(onMain.stdout).checks[3], { subject: 'payment/test', status: 'ok', detail: `node --version ${mainSha} passed` })
-  assert.equal(onDevelop.status, 0, onDevelop.stdout)
-  assert.equal(onDevelop.stdout.split(/\r?\n/)[4], `ok    payment/test: node --version ${developSha} passed`)
-  assert.match(JSON.parse(dry.stdout).checks[3].detail, /^node → /)
-})
-
 test('doctor names a component root that is missing or a file; a folder it may not read stops it with the system\'s error', async (t) => {
   const cwd = join(tempFolder(t), 'payment')
   mkdirSync(join(cwd, 'locked'), { recursive: true })

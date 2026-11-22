@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, actsAs, copilotHost, eventsPath, firstOptionPerson, simulatedContext, trackingDir, workingCopy } from './simulated-host.mjs'
+import { PLUGIN_ROOT, actsAs, copilotHost, eventsPath, firstOptionPerson, settled, simulatedContext, trackingDir, workingCopy } from './simulated-host.mjs'
 import { SENTINEL } from './simulated-sdk.mjs'
-import { CYCLE_WORKFLOW, SLUG, WRONG_PAY, deliverWith, designateWorkflow, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
+import { SLUG, WRONG_PAY, deliverWith, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 
 /** Every place a model or the person reads: the outcome, the workflow log, the journal, each prompt and each tool result or dialog. */
 const modelFacing = ({ outcome, logs, calls, cwd, slug, toolResults = [] }) => [
@@ -24,25 +24,8 @@ test('the text of an error a Copilot agent call throws reaches neither the outco
   const throws = async () => { throw new Error(`${SENTINEL} at /home/someone/.ssh/id_rsa`) }
   const { ctx, logs, calls } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [throws] })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  const outcome = await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd)))
 
-  assert.deepEqual([outcome.code, outcome.reason], ['agent-failed', 'solution-researcher stopped without finishing: skraft:solution-researcher failed: the Copilot agent call failed'])
+  assert.deepEqual(outcome, { paused: 'research-1' })
   assert.equal(modelFacing({ outcome, logs, calls, cwd, slug: 'checkout' }).includes(SENTINEL), false)
-})
-
-test('what a failing gate writes on stderr stays in its evidence log, out of the outcome, the log, the journal, the prompts and the questions put to the person', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  // A workflow that builds no scenario takes the wrong code to its gates: none replays the green.
-  designateWorkflow(cwd, CYCLE_WORKFLOW)
-  const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(WRONG_PAY)] } })
-  const { ctx, calls, logs } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(llm) })
-  const session = firstOptionPerson()
-
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session))
-
-  const stderr = 'pay(10) answered owed 10'
-  assert.equal(outcome.status, 'done')
-  assert.ok(evidenceLogs(cwd, SLUG).includes(stderr))
-  const dialogs = session.asked.map(({ message }) => message)
-  assert.equal(modelFacing({ outcome, logs, calls, cwd, slug: SLUG, toolResults: dialogs }).includes(stderr), false)
 })

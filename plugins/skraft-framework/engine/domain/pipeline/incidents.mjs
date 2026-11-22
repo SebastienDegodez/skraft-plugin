@@ -1,13 +1,12 @@
 /**
  * Who can fix a failure, and what the engine tells a human of one it cannot send back to an agent.
  *
- * @typedef {'agent' | 'environment' | 'config' | 'interrupted' | 'judge' | 'unknown'} Owner
+ * @typedef {'agent' | 'environment' | 'config' | 'interrupted' | 'unknown'} Owner
  *   agent: its work, which the run sends back to it; environment: the machine (a program, a
  *   service, a permission, a Git hook); config: skraft-config.json (a command, a path);
- *   interrupted: a person who stopped the command (Ctrl-C), whom the run never asks again;
- *   judge: what the replay judge found that no agent can fix
+ *   interrupted: a person who stopped the command (Ctrl-C), whom the run never asks again
  * @typedef {{ owner: Exclude<Owner, 'agent'>, log: string | null }} Incident
- *   log: the file that holds what the failing command printed, or the judge's answer, absolute;
+ *   log: the file that holds what the failing command printed, absolute;
  *   null when none ran
  * @typedef {{ category: string, owner: Owner, argv: string[], exitCode: number | null, attempts: number, signature: string, log: string | null }} FailureIncident
  *   the bounded, non-output metadata of one failure; the complete command output stays in its log
@@ -17,7 +16,6 @@
 const CAUSES = Object.freeze({
   environment: 'the machine: a program, a service, a permission or a Git hook it lacks or refuses',
   config: 'skraft-config.json: a command or a path it gives the engine',
-  judge: 'what the replay judge read in the replay of a commit: nothing an agent can change fixes it',
   unknown: 'the failure has not been classified; skraft stopped without sending it to an agent',
 })
 
@@ -28,9 +26,9 @@ export const causeLines = ({ owner, log }) => [`Cause: ${CAUSES[owner]}.`, ...(l
 /** @type {Readonly<Record<string, Owner>>} */
 const OWNERS = Object.freeze({
   'missing-outputs': 'agent', 'invalid-result': 'agent', 'design-records': 'agent', 'research-records': 'agent',
-  'gherkin-records': 'agent', scenarios: 'agent', 'pull-request-prose': 'agent', 'agent-blocked': 'agent',
+  scenarios: 'agent', 'pull-request-prose': 'agent', 'agent-blocked': 'agent',
   'write-scope': 'agent', uncommitted: 'agent', 'adr-lifecycle': 'agent', 'commit-convention': 'agent', tdd: 'agent', agent: 'agent',
-  deterministic: 'agent', environment: 'environment', config: 'config', interrupted: 'interrupted', judge: 'judge',
+  deterministic: 'agent', environment: 'environment', config: 'config', interrupted: 'interrupted',
 })
 
 /** @param {string} cause @returns {Owner} */

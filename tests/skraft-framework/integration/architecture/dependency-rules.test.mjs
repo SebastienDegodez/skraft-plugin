@@ -118,3 +118,19 @@ test('the dependency rule accepts what each layer may depend on', () => {
   ]
   assert.deepEqual(dependencyViolations(fakes), [])
 })
+
+test('only infrastructure/process and infrastructure/repl start programs: git, gh, az and the agents\' REPL are the engine\'s own processes', () => {
+  const startsPrograms = engineFiles().filter(({ source }) => /child_process/.test(bodyOf(source))).map(({ path }) => toPosix(path)).filter((path) => path.endsWith('.mjs'))
+
+  assert.deepEqual(startsPrograms.filter((path) => !/^infrastructure\/(process|repl)\//.test(path)), [])
+  assert.ok(startsPrograms.includes('infrastructure/process/live-processes.mjs'), 'the scan reaches the launcher of the REPL')
+})
+
+test('the engine\'s adapters start no child node: a command the engine runs itself is git, gh or az', () => {
+  const PROGRAM = /(?:\bargv:\s*|\brun\([\w.]+,\s*)\[\s*['"]([^'"]+)['"]/g
+  const programs = engineFiles().filter(({ path }) => !/^infrastructure[\\/](process|repl)[\\/]/.test(path))
+    .flatMap(({ path, source }) => [...bodyOf(source).matchAll(PROGRAM)].map(([, program]) => `${toPosix(path)}: ${program}`))
+
+  assert.deepEqual(programs.filter((line) => !/: (git|gh|az)$/.test(line)), [])
+  assert.ok(programs.some((line) => line.endsWith(': gh')), 'the scan reaches the commands of the code hosts')
+})

@@ -1,8 +1,6 @@
 import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
-import { REPLAY_JUDGE } from '../../domain/pipeline/replay-verdict.mjs'
-import { roleOf } from '../../domain/pipeline/roles.mjs'
 import { checkMandatory } from '../../domain/workflow/mandatory.mjs'
-import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
+import { readWorkflow } from '../../domain/workflow/workflow.mjs'
 import { ejectedPath, withCalls } from './called-workflows.mjs'
 
 /**
@@ -13,7 +11,7 @@ import { ejectedPath, withCalls } from './called-workflows.mjs'
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  * }} WorkflowFiles
  * @typedef {WorkflowFiles & { agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog }} WorkflowDeps
- * @typedef {{ ok: true, workflow: Workflow, name: string, unlocked: Array<{ node: string, reason: string }>, sources: Record<string, AgentSource> }
+ * @typedef {{ ok: true, workflow: Workflow, name: string, sources: Record<string, AgentSource> }
  *   | { ok: false, name: string, reason: string, errors: string[] }} WorkflowLoading
  */
 
@@ -60,8 +58,7 @@ export const readShippedCalls = async (deps) => {
 }
 
 /**
- * The workflow a run follows, refused with every error found: its own, the locked nodes of
- * the plugin's workflow it drops, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
+ * The workflow a run follows, refused with every error found: its own, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
  * @param {WorkflowDeps} deps
  * @param {{ agents?: boolean }} request
  * @returns {Promise<WorkflowLoading>}
@@ -70,11 +67,10 @@ export const loadWorkflow = async (deps, { agents = true }) => {
   const { name, builtIn, read } = await readWorkflows(deps)
   if (!read.ok) return refused(name, read.errors)
   const { workflow } = read
-  const locks = checkLocks(builtIn, workflow)
   const located = agents ? await locateAgents(deps.agentCatalog, workflow) : { sources: {}, errors: [] }
-  const errors = [...locks.errors, ...checkMandatory(builtIn, workflow), ...located.errors]
+  const errors = [...checkMandatory(builtIn, workflow), ...located.errors]
   if (errors.length > 0) return refused(name, errors)
-  return { ok: true, workflow, name, unlocked: locks.unlocked, sources: located.sources }
+  return { ok: true, workflow, name, sources: located.sources }
 }
 
 /**
@@ -128,23 +124,13 @@ const missingSkills = async (agentCatalog, { node, agent, what }) => {
  */
 const agentsOf = (node) => {
   const { id, kind, agent, lenses } = node
-  if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}`, reviews: false }, ...(replays(node) ? [judgeOf(id)] : [])]
+  if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}`, reviews: false }]
   if (kind !== 'review' && kind !== 'call') return []
   return [
     ...lenses.map(lensNameOf).map((lens) => ({ node: id, agent: lensAgent(lens), what: `lens ${lens} (agent ${lensAgent(lens)})`, reviews: true })),
     { node: id, agent: REFUTER, what: `agent ${REFUTER}`, reviews: true },
   ]
 }
-
-/**
- * Whether the engine replays the commits of an agent node: the reds of an agent whose commits
- * are acceptance tests, the reds and greens of a node marked each="scenario".
- * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node
- */
-const replays = (node) => node.each === 'scenario' || roleOf(node).tdd === 'red'
-
-/** The replay judge, which the engine asks about each red and green it replays. @param {string} node @returns {WantedAgent} */
-const judgeOf = (node) => ({ node, agent: REPLAY_JUDGE, what: `agent ${REPLAY_JUDGE}`, reviews: false })
 
 /** The lens a node's spec names. @param {string} spec a spec the workflow already checked */
 const lensNameOf = (spec) => /** @type {import('../../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec)).name

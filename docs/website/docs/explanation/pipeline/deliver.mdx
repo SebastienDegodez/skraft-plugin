@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Why DELIVER turns the contract green one scenario and one checked commit at a time, has the code reviewed, and leaves mutation testing to the developer."
+description: "Why one DELIVER dispatch turns the contract green in one commit, has the code reviewed, and leaves mutation testing to the developer."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,75 +10,86 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Turn the contract green one scenario at a time, each in one proven commit, then have the code
-reviewed. Testing the tests stays the developer's.
+Turn the contract green in one dispatch and one commit, then have
+the code reviewed. Testing the tests stays the developer's.
 
 ## Why this phase exists
 
 Code is the only artifact that goes to production. DELIVER grows it from the contract DISTILL
-left failing, one scenario at a time: the `software-engineer` works in **Outside-In TDD**, from
-the scenario's acceptance test to the unit tests, then to the code
-([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). It runs the inner red → green →
-refactor loop without committing it, then commits once, when the scenario passes: a `feat(…)`
-chained to the test command, `<test> && git add <files> && git commit …`.
+left failing, in one dispatch, working the groups in the order of the implementation plan: the
+`software-engineer` works in **Outside-In TDD**, from the group's acceptance tests to the unit
+tests, then to the code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). It runs the
+inner red → green → refactor loop without committing it, then commits once, when every group
+passes: a `feat(…)` chained to the test command, `<test> && git add <files> && git commit …`.
 
-The engine does not take the agent's word for it. DISTILL's red was replayed and proven; DELIVER's
-green is replayed too, and the [replay judge](pathname:///dashboard/#agent-replay-judge) reads
-the replay's log next to the red's: the scenario's acceptance tests must pass at it, the
-[walking skeleton](../deep-dive/walking-skeleton.md) too, and no test may fail or be skipped.
-Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact in the git history, not a
-promise: for each scenario, a red commit of its acceptance test, then a green commit.
+The engine runs no test. It checks the git history: one red commit of every acceptance
+test, then one green commit, whatever its subject names, none touching the acceptance tests; a second
+one is refused (`green-split`). The implementation plan's group table is the order of work, not a count of commits. The command that commits a green is chained to the test
+command, so the commit exists only when the tests pass; DISTILL's review and the DELIVER review
+read the rest. Test first ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003))
+becomes a fact in the git history, not a promise.
 
 :::info[☕ Running example — Starbucks *(illustrative)*]
 
-S1 enters, red, beside the red walking skeleton. DELIVER completes the chain from the ordering
-endpoint to the database, implements payment and loyalty crediting and turns both green in one
-commit; DISTILL then writes the failing test of S2, the unavailable drink, and DELIVER turns it
-green. The gates run, the review reads the code, and the code goes into a pull request. Whether
+S1 and S2 enter red, beside the red walking skeleton. DELIVER completes the chain from the
+ordering endpoint to the database, implements payment and loyalty crediting and turns S1 and the
+walking skeleton green, and S2, the unavailable drink, with them, in one commit. The engineer's traced gate runs are read by the review, which also reads the code, and the code goes into a pull request. Whether
 the tests genuinely protect the loyalty rule, the developer's own **mutation** run shows.
 :::
 
-## One scenario, one green commit
+## One dispatch, one green commit
 
 A committed TDD cycle costs two commits, and an agent pays each one in turns: running the tests,
-reading their output, writing the message. Per scenario, DELIVER commits once. The unit tests
+reading their output, writing the message. DELIVER commits once for the story, and the engineer delivers every group in one
+dispatch: it reads the plans and runs every acceptance test once, then works the groups in plan
+order, committing nothing until every acceptance test and the whole suite pass. The unit tests
 of the inner loop are still written first; they go into the green, and the review's test-integrity
 lens reads them. Whether they would catch a mistake, the developer's own mutation run proves.
 
 Three rules keep that single commit honest:
 
 - **The acceptance tests are an immutable oracle.** DISTILL wrote them, the walking skeleton
-  included; the green never changes them, outside the skeleton they call. S1's green makes S1's
-  acceptance test and the walking skeleton pass; every later green keeps the walking skeleton
-  green. A test fitted to the code proves nothing, so a wrong test
+  included; the green never changes them, outside the skeleton they call. The green makes
+  every acceptance test and the walking skeleton pass. A test fitted to the code proves nothing, so a wrong test
   goes back to DISTILL: the engineer stops, naming it.
-- **A scenario belongs to one component.** Its green changes no other component; a change needed
-  elsewhere is a missing scenario.
-- **The commit follows the test, in bash.** The brief gives the exact command, so the commit
+- **The green builds the story's scenarios only.** It writes no behaviour no scenario asks for,
+  and changes another component only where a group needs it.
+- **The commit follows the test.** The brief gives the exact command, for sh or PowerShell 7 and for
+  Windows PowerShell 5.1, so the commit
   happens only when the tests pass. DISTILL's red is never chained that way: only reading the
   output tells a build error from the expected failure.
 
-Once the last scenario is green, the gates run. A pass the gates or the review send back works on
-the whole story with the classic cycle: a red, then the fix; on a pass the gates sent back, their
-failure stands for the red.
+Once the green is committed, the engineer runs the remaining gates and submits the attempt. A run whose journal
+holds the earlier per-group DELIVER dispatches of a V2 alpha is not resumed: start it again. A pass the review sends back works on
+the whole story: each cycle is one `feat` or `fix` commit holding its test and its code,
+once green, and no `test` commit of its own.
 
-## The order: gates, then review
+## The order: traced gates, then review
 
 <FlowFigure flow="deliver" />
 
-The command gates run first: they are fast, deterministic, and a red build needs no reviewer.
-Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading,
-and, when the change touches them, mock and contract fidelity. A rework the review asks for goes
-back through `deliver` and the gates.
+The engine runs no gate. The software engineer runs every gate (`build`, `format`, `lint`, `test`,
+`architecture`, `coverage`) of each component the story changed through the MCP tool `skraft_repl`
+(`gate(name, command, { cwd })`, see [The REPL](../../reference/repl.md)); the run of the commit
+line is the `test` run, and a gate the project's documents name no command for is declared with
+`absent`. The engine refuses no attempt for these runs. It journals
+`evidence.checked` for the runs whose trace reads through its signatures, else the code of what broke it, and hands the trace or that code to the DELIVER
+review ([Gates](../../reference/gates.md#command-gates)).
 
-The engineer runs the same commands before it hands over. Its brief lists the gate commands of
-each component it may change, mutation left out (it is the developer's), with the run's base in place of `{baseSha}`, and
-tells it to fix every failure before it writes its result, on a rework pass too. The gates step
-stays the check; the brief saves the pass that a format or build failure found only there would
-cost. Before writing its result it also calls `skraft_precheck`, which runs the mechanical checks
-of its own submission on what it has written — a file changed out of its write scope, a change left
-uncommitted — and answers each anomaly with the check that found it. That pre-check reads none of
-its commits and approves nothing: the submission runs these checks again, with the commits on top.
+Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading,
+`quality-gates` and, when the change touches them, mock and contract fidelity. The `quality-gates` lens
+reads the trace and reports, per component and gate, a run missing, not passing, not on the final commit or started on a dirty tree
+(the commit line's run excepted); a gate declared `absent` with a reason is fine, never `test`. A rework the review asks for goes back
+through `deliver`. The software engineer runs a front end's e2e command as a gate, last, on its final commit. After
+the review, the visuals step reads that traced run and the screenshots its manifest lists instead
+of running it: on GitHub gh attaches them to the pull request, on Azure DevOps they are committed
+on the branch and linked at their commit. Then the `pr-writer` and the publication follow.
+
+The QA evidence of the run, its test plan, each scenario's outcome and its screenshots, belongs to
+the engine: it renders it from the journal and the trace into the pull request and
+`qa-report.md`. A scenario is passed only when its acceptance test is still its red commit's, a
+green delivered its group and the whole suite of its component passed on the final commit; what is
+missing is not proven, and delivered is not deployed ([Attach QA evidence](../../how-to/attach-screenshots.md)).
 
 ### Why mutation is the developer's
 
@@ -88,18 +99,16 @@ whether a green suite would detect a mistake, and it is also the most expensive 
 pay for.
 
 Up to version 2.0.0-alpha.18 it ran right after the gates, before the review, then several times
-again: after each pass fixing survivors, after each rework the review asked for. From 2.0.0-alpha.19
-it ran **once, last**, on the code the review approved, and a failed run led to a proposal per file
-of survivors and a `mutation-plan` question. Even then it stayed the slowest step of every run,
-it needed a mutation configuration skraft wrote for the developer, and its survivors stopped the
-run on a question at the very end.
+again. It was the slowest step of every run, it needed a mutation configuration skraft wrote for
+the developer, and its survivors stopped the run on a question at the very end.
 
-So the story's pipeline no longer runs it. The developer picks the tool, writes its
-configuration and runs it when they decide, apart from the story's pipeline: skraft gives that run
-a workflow of its own, `workflows/mutation.skraft.dot`, with its own journal. The command may hand
-its score over already computed ([The mutation result](../../reference/skraft-config.md#mutation-result)),
-and the survivors of a scope below the bar go to a proposal, a choice of the developer, then a kill. The bar does not
-move: 80 % on the core and 80 % on the boundary, judged apart, stated by `skraft-quality-bar`.
+So neither the story's pipeline nor the engine runs it. Mutation testing is a recipe of the
+developer's own session, the `skraft-mutation` skill: it runs the component's `commands.mutation` in
+Bash, reads the report, judges each scope against the bar on the files the branch changed, and
+kills the survivors with tests ([Run mutation](../../how-to/run-mutation.md)). The command may hand
+its score over already computed ([The mutation result](../../reference/skraft-config.md#mutation-result)).
+The bar does not move: 80 % on the core and 80 % on the boundary, judged apart, stated by
+`skraft-quality-bar`.
 
 A surviving mutant still has no single right answer. It ends one of three ways:
 
@@ -126,8 +135,8 @@ contract, the matching fidelity lens joins the review. The why:
 
 ## Trade-offs
 
-- **The inner loop leaves no trace in the history.** Only each scenario's red and green are
-  committed; nobody sees the unit tests written in between fail. The review judges them.
+- **The inner loop leaves no trace in the history.** Only the story's red and its green
+  are committed; nobody sees the unit tests written in between fail. The review judges them.
 - **A story can ship without a mutation run.** The pipeline no longer proves the tests would
   catch a mistake; the developer's own run does, when they make it.
 - **No negotiable threshold.** 80 % on the core and on the boundary, whatever the repository:

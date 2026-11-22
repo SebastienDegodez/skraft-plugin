@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, actsAs, copilotHost, firstOptionPerson, journalEvents, simulatedContext, workingCopy } from './simulated-host.mjs'
+import { PLUGIN_ROOT, actsAs, copilotHost, firstOptionPerson, journalEvents, settled, simulatedContext, workingCopy } from './simulated-host.mjs'
 import { SLUG, pipelineRepository, scriptedLlm } from '../support/pipeline-repository.mjs'
 import { git } from '../support/workspace.mjs'
 
@@ -65,63 +65,19 @@ const STILL_MS = 30_000
 
 /** The size of the run's journal, which grows while the run moves. @param {string} cwd */
 const journalSize = (cwd) => statSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'events.jsonl'), { throwIfNoEntry: false })?.size ?? 0
-
-test('a run the host cancels while a gate runs ends that command with every process it started', { skip: process.platform === 'win32' && 'Windows ends only the direct child (a written limit)', timeout: 120_000 }, async (t) => {
-  const { cwd } = pipelineRepository(t)
-  const marker = join(cwd, 'lint.pid')
-  const hang = `const { spawn } = require('node:child_process'); const sleeper = spawn('sleep', ['300'], { stdio: 'ignore' }); require('node:fs').writeFileSync(${JSON.stringify(marker)}, String(sleeper.pid)); setInterval(() => {}, 1000)\n`
-  writeFileSync(join(cwd, 'tools', 'hang.cjs'), hang)
-  const config = JSON.parse(readFileSync(join(cwd, 'skraft-config.json'), 'utf8'))
-  config.components[0].commands.lint = `"${process.execPath}" tools/hang.cjs`
-  writeFileSync(join(cwd, 'skraft-config.json'), JSON.stringify(config, null, 2))
-  git(cwd, 'add', '-A')
-  git(cwd, 'commit', '-q', '-m', 'chore: a lint command that never ends')
-  const controller = new AbortController()
-  const { ctx } = simulatedContext({ args: { slug: SLUG }, signal: controller.signal, otherwise: actsAs(scriptedLlm({ cwd })) })
-  let running = true
-  // The run goes through every phase before its lint gate, which only the gates run: a loaded machine makes it slow, not
-  // still. It is cancelled once the gate's command started, once it ended, or once its journal
-  // stood still for STILL_MS: a run hung before the gate fails the test then, however long the
-  // phases before took.
-  const cancelOnceRunning = (async () => {
-    let [size, moved] = [journalSize(cwd), Date.now()]
-    while (running && !t.signal.aborted && !existsSync(marker) && Date.now() - moved < STILL_MS) {
-      await new Promise((done) => setTimeout(done, 50))
-      if (journalSize(cwd) !== size) [size, moved] = [journalSize(cwd), Date.now()]
-    }
-    controller.abort(new DOMException('Workflow run was aborted', 'AbortError'))
-  })()
-
-  const ended = await runAnsweringQuestions(ctx, cwd).catch((error) => error).finally(() => { running = false })
-  await cancelOnceRunning
-
-  assert.equal(existsSync(marker), true, 'the run ended or stood still before its lint gate started')
-  assert.equal(ended.name, 'AbortError')
-  // A command the cancellation ended is not the machine's fault: once the run is cancelled no question is put to the
-  // person, so none is answered RETRY and asked again (it looped, unseen, while dialogs were capped).
-  const events = await journalEvents(cwd, SLUG)
-  assert.ok(events.filter((event) => event.type === 'question.asked' && event.kind === 'environment').length <= 1)
-  assert.deepEqual(events.filter((event) => event.type === 'question.answered' && event.answer === 'RETRY'), [])
-  const sleeper = Number(readFileSync(marker, 'utf8'))
-  let alive = true
-  for (const deadline = Date.now() + 10_000; alive && Date.now() < deadline; await new Promise((done) => setTimeout(done, 50))) {
-    try { process.kill(sleeper, 0) } catch { alive = false }
-  }
-  assert.equal(alive, false)
-})
-
 /** Runs the workflow to its end, the person answering each question with its first option. */
 const runAnsweringQuestions = (ctx, cwd) => runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, firstOptionPerson()))
 
-test('an AbortError from an agent call while the run goes on is that agent\'s failure, not a cancellation', async (t) => {
+test('an AbortError from an agent call while the run goes on is that agent\'s failure, not a cancellation: the run asks for its recovery', async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const aborts = async () => { throw new DOMException('This operation was aborted', 'AbortError') }
   const { ctx } = simulatedContext({ args: { slug: 'checkout' }, behaviours: [aborts] })
 
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd))
+  assert.deepEqual(await settled(runSkraftPipelineWorkflow(ctx, copilotHost(cwd))), { paused: 'research-1' })
 
-  assert.deepEqual([outcome.status, outcome.code], ['blocked', 'agent-failed'])
+  const asked = (await journalEvents(cwd, 'checkout')).filter(({ type }) => type === 'question.asked').at(-1)
+  assert.deepEqual([asked.kind, asked.incidents[0].category], ['unforeseen', 'agent-failed'])
 })
 
 test('an agent call the host cancels stops the run there: the cancellation is rethrown and no agent failure is journaled', async (t) => {

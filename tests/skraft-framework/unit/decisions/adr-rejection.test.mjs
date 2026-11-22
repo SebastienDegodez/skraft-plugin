@@ -76,7 +76,7 @@ test('a pass a human refused has no failing test to stand for its red: a feat co
 }`
   const host = scripted({ workflow, files: { [ADR_1]: adrText() }, answers: [{ answer: 'REJECTED', reason: REASON }] }, (it) => [
     agent()(it),
-    agent({ work: ({ git }) => git.commit('feat(checkout): pay by bank', ['src/Pay.cs']) })(it),
+    agent({ work: ({ git }) => git.commit('feat(checkout): S1 pay by bank', ['src/Pay.cs']) })(it),
     () => ({ ok: false, unavailable: true, text: '' }),
   ])
 

@@ -36,22 +36,22 @@ cours.
 
 Chaque outil prend aussi `workspace` ([le dossier où travaille un outil](#workspace)). Sa réponse
 est le stdout de la commande, puis son journal ; c'est une erreur seulement quand la commande a
-échoué sans afficher de réponse, si bien qu'un doctor ou un gate en échec répond quand même son
+échoué sans afficher de réponse, si bien qu'un doctor en échec répond quand même son
 JSON.
 
 | Outil | Arguments | Ligne de commande | Offert à |
 | --- | --- | --- | --- |
-| `skraft_doctor` | `run?`, `base?` | `doctor [--run] [--base <ref>] --json` | tout hôte |
-| `skraft_init` | `add?` (dossiers), `mutation?` | `init [--add <folder>]... [--mutation]` | tout hôte |
-| `skraft_mutation` | `record?`, `key?`, `answer?`, `reason?` | `mutation [record] --json` ; avec `answer`, enregistre la réponse humaine sur le run de mutation de la branche, comme `skraft_answer` sur le pipeline | tout hôte |
+| `skraft_doctor` | — | `doctor --json` | tout hôte |
+| `skraft_init` | `add?` (dossiers) | `init [--add <folder>]...` | tout hôte |
 | `skraft_start` | `slug`, `issue?`, `title?`, `base?`, `fromArtifacts?` | `init <slug> [--issue <n>] [--title <t>] [--base <ref>] [--from-artifacts]` | VS Code |
 | `skraft_next` | — | `next --json` | VS Code |
 | `skraft_record` | — | `record --json` | VS Code |
 | `skraft_status` | — | `status --json` | tout hôte |
 | `skraft_report` | — | `report --json` | tout hôte |
 | `skraft_journal` | `last?` | `journal show [--last <n>] --json` | tout hôte |
-| `skraft_gate` | `all?` | `gate [--all] --json` | tout hôte |
 | `skraft_precheck` | — | `precheck --json` | tout hôte |
+| `skraft_repl` | `code` | le REPL de la tentative ouverte, [`skraft_repl`](./repl.md) ; pas de ligne de commande : le cas d'usage répond, hors de la file | tout hôte ; les agents qui le nomment |
+| `skraft_repl_reset` | — | arrête le noyau de la tentative ouverte et ses runs, même en pleine cellule ([`skraft_repl_reset`](./repl.md#cell)) ; pas de ligne de commande : le cas d'usage répond, hors de la file, jamais refusé pour occupation ; marqué destructif | tout hôte ; les agents qui le nomment |
 | `skraft_review` | `pr`, `record?` | `review --pr <n> [--record] --json` | VS Code |
 | `skraft_workflow_check` | — | `workflow check --json` | tout hôte |
 | `skraft_workflow_diff` | — | `workflow diff --json` | tout hôte |
@@ -60,7 +60,7 @@ JSON.
 
 `skraft_status`, `skraft_report`, `skraft_journal`, `skraft_workflow_check`,
 `skraft_workflow_diff` et `skraft_migrate` sont marqués en lecture seule. Les appels passent l'un
-après l'autre. Quand l'hôte envoie un `progressToken`, chaque ligne du journal de la commande lui
+après l'autre, sauf `skraft_repl` et `skraft_repl_reset`, qui n'attendent dans aucune file. Quand l'hôte envoie un `progressToken`, chaque ligne du journal de la commande lui
 parvient en `notifications/progress` pendant l'appel.
 
 Une étape de `skraft_start`, `skraft_next`, `skraft_record` ou `skraft_review` nomme dans `then`

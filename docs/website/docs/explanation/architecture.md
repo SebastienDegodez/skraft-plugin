@@ -27,7 +27,7 @@ The **engine** (`plugins/skraft-framework/engine/`) follows the Clean Architectu
 rule: the pure rules (`domain/`) depend on nothing, the use cases (`application/`) depend only on
 them, and the details — files, git, processes, hosts — are outside
 ([Martin, 2017](../reference/citations.mdx#cite-martin-cleanarch-2017)). A **use case** is a complete action from
-the user's point of view: start a pipeline, move it forward, observe its state, run the gates,
+the user's point of view: start a pipeline, move it forward, observe its state,
 answer a question. It decides; it does no input or output itself, it goes through contracts the
 outside implements — the ports-and-adapters idea
 ([Cockburn, 2005](../reference/citations.mdx#cite-cockburn-hexagonal-2005)).
@@ -137,10 +137,8 @@ A missing output starts the agent again with the list of what is missing, within
 An agent whose last two refused attempts failed exactly the same way (the same missing outputs
 and the same failures, compared as written) is not started a third time, because an identical
 attempt would teach nothing: the run asks a human for an instruction, as it does after the
-agent's last attempt, and the instruction starts the agent again on a new pass. A failed gate step sends the work back through its `FAIL` edge
-until that edge's `max_visits`; then the run asks a human for an instruction. Attempts and
-edges taken are read from the journal, so a resumed run keeps them. A gate stopped by a signal or
-a crash fails like a check: its evidence goes back to the agent. A step the machine cannot run
+agent's last attempt, and the instruction starts the agent again on a new pass. Attempts and
+edges taken are read from the journal, so a resumed run keeps them. A step the machine cannot run
 (program not found, git failing), or cannot run with what `skraft-config.json` gives it, is not
 blamed on the agent and uses none of its attempts: the
 engine asks a human, naming whose it is to fix and the log of what the command printed, then
@@ -164,9 +162,10 @@ the computation: [Gates](../reference/gates.md#review-run).
 ## The checks live in the code
 
 What an agent could forget, the engine checks: the phase order, computed from the workflow graph;
-the expected outputs, pre-created then checked; the journal's integrity; the command gates; what
+the expected outputs, pre-created then checked; the journal's integrity; what
 each step may write, through a git diff; the red and green TDD commits; the ADR lifecycle; the
-review verdict. Each of these checks is tested without a host, and behaves the same everywhere.
+review verdict. What judgement alone can settle goes to the review lenses: the criteria and the
+form of the Gherkin in DISTILL, the traced gate runs in DELIVER (the `quality-gates` lens). Each of these checks is tested without a host, and behaves the same everywhere.
 Why they left the v1 hooks: [Guardrails](./guardrails.md). How
 the workflow that carries them is read and copied:
 [DOT workflow](../reference/workflow-dot.mdx).
@@ -175,16 +174,21 @@ the workflow that carries them is read and copied:
 
 The engine reads only stable formats: a Conventional Commit message, a file that exists, a folder
 a step may write to, an exit code. It reads no test report (JUnit, TRX or another) and no runner's output.
-To check a red or a green commit, it replays the commit's test commands in a throwaway checkout and
-keeps what each printed, unchanged, in a log. An exit code of 0 is all it tells apart: a red whose
-commands all pass is refused on the spot. Everything else goes to the
-[replay judge](pathname:///dashboard/#agent-replay-judge), an agent the driver starts at depth 1,
-like a lens: it reads the logs, the parent's when a red failed, and the commit, and answers
-`accept`, `send-back`, `retry` or `ask-human` with a note. The engine reads the decision alone and
-keeps the answer as the evidence a human or the next attempt reads. A decision only the machine
-can settle (a program not installed, a container runtime that does not answer) reaches a human
-through the same `environment` question as any other step. The rules:
-[Commits and replays](../reference/gates.md#commits).
+It runs no test to check a red or a green commit: it reads the Git history, the order and the
+kinds of the commits, the files each changes, its message. Whether a red fails on an assertion
+is for the acceptance designer's run, which it logs, and for the DISTILL review; whether a green
+makes its tests pass is for the command that chains the commit to the test command, and the
+DELIVER review. A decision only the machine can settle (a program not installed, a container
+runtime that does not answer) reaches a human through the `environment` question of any other
+step. The rules: [Commits](../reference/gates.md#commits).
+
+The commands an agent runs during its attempt go through `skraft_repl`: the server, not the cell,
+starts each program and writes its signed trace. A kernel must never hold the server: each bound
+has a value fixed by code (a run of 7200 s at most, a cell of 7260 s, a call answered at 90 s,
+eight live runs, a 64 MiB log written as it runs, 1 MiB of what a cell prints, a 2 GiB heap, a
+start bounded to 30 s, its library loaded), and the kernel ends with everything its cells started. `.repl/` belongs
+to the project: the engine reads it, never writes it. The detail: [The REPL of an
+attempt](../reference/repl.md).
 
 ## Alternatives considered
 

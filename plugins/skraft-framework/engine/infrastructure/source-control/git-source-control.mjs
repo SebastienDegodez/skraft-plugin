@@ -19,6 +19,7 @@ export const createGitSourceControl = ({ commandRunner }) => Object.freeze({
   isAncestor: (/** @type {string} */ dir, /** @type {string} */ ancestor, /** @type {string} */ descendant) => isAncestor(gitThrough(commandRunner), dir, { ancestor, descendant }),
   commitFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => commitFiles(commandRunner, dir, { paths, message }),
   commitCopies: (/** @type {string} */ dir, /** @type {Copy[]} */ copies, /** @type {string} */ message) => commitCopies(commandRunner, dir, { copies, message }),
+  refusedImages: (/** @type {string} */ dir, /** @type {Array<{ from: string, within: string }>} */ files) => refusedOf(commandRunner, dir, files),
 })
 
 /** @param {Git} git */
@@ -196,33 +197,52 @@ const copiedAndCommitted = async (git, copies, message) => {
 }
 
 /**
- * Node, by the script INSPECT, says which files to refuse: a symbolic link, one whose real path
- * leaves its folder, one that does not start with the PNG signature or cannot be read. Every
- * file is refused when Node cannot run.
- * @param {CommandRunner} commandRunner @param {string} dir @param {Copy[]} copies @returns {Promise<string[]>}
+ * The files to refuse, by Git alone: one Git cannot add from its folder (missing, outside its
+ * repository, beyond a symbolic link), one that is itself a symbolic link or no regular file,
+ * one whose bytes do not start with the PNG signature.
+ * @param {CommandRunner} commandRunner @param {string} dir @param {Array<{ from: string, within: string }>} files @returns {Promise<string[]>}
  */
-const refusedOf = async (commandRunner, dir, copies) => {
-  const result = await commandRunner.run({ argv: ['node', '-e', INSPECT, '--', ...copies.flatMap(({ within, from }) => [within, from])], cwd: dir })
-  const accepted = result.started && result.exitCode === 0 ? new Set(lines(result.stdout)) : new Set()
-  return copies.map(({ from }) => from).filter((from) => !accepted.has(from))
+const refusedOf = async (commandRunner, dir, files) => {
+  const refused = []
+  for (const file of files) if (!(await isPngFile(commandRunner, dir, file))) refused.push(file.from)
+  return refused
 }
 
 /**
- * Prints each file of its (folder, file) argument pairs that may be copied. It runs in a child
- * Node, never in the module that loads this file: its globals are reached through `module` and
- * `globalThis`, which the mod's import check leaves alone.
+ * @param {CommandRunner} commandRunner @param {string} dir @param {{ from: string, within: string }} file
  */
-const INSPECT = [
-  "const { closeSync, lstatSync, openSync, readSync, realpathSync } = module.require('node:fs')",
-  "const { isAbsolute, relative, sep } = module.require('node:path')",
-  'const SIGNATURE = globalThis.Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])',
-  'const isPng = (path) => { const fd = openSync(path, "r"); const head = globalThis.Buffer.alloc(8); readSync(fd, head, 0, 8, 0); closeSync(fd); return head.equals(SIGNATURE) }',
-  'const inside = (folder, path) => { const rel = relative(realpathSync(folder), realpathSync(path)); return rel !== "" && !isAbsolute(rel) && rel.split(sep)[0] !== ".." }',
-  'const args = globalThis.process.argv.slice(1)',
-  'for (let i = 0; i < args.length; i += 2) {',
-  '  try { if (!lstatSync(args[i + 1]).isSymbolicLink() && inside(args[i], args[i + 1]) && isPng(args[i + 1])) console.log(args[i + 1]) } catch {}',
-  '}',
-].join('\n')
+const isPngFile = async (commandRunner, dir, { from, within }) => {
+  const inner = innerPath(from, within)
+  if (inner === null) return false
+  const git = (/** @type {string[]} */ args) => commandRunner.run({ argv: ['git', ...args], cwd: joinRelative(dir, within) })
+  if (!succeeded(await git(['add', '--dry-run', '--force', '--', inner]))) return false
+  if (!REGULAR.test((await git(['diff', '--no-index', '--raw', '--', '/dev/null', inner])).stdout)) return false
+  return startsAsPng(git, inner)
+}
+
+/** The path of a file inside its folder, null when it is not under it. @param {string} from @param {string} within */
+const innerPath = (from, within) => {
+  if (within === '.') return from
+  return from.startsWith(`${within}/`) ? from.slice(within.length + 1) : null
+}
+
+/** What `git diff --no-index --raw` prints of a regular file added: never a symbolic link (120000). */
+const REGULAR = /^:000000 100(?:644|755) /
+
+/**
+ * Whether the bytes Git stores for the file start with the PNG signature: its first byte, 0x89,
+ * is no UTF-8, so the text the CommandRunner carries reads it as U+FFFD.
+ * @param {GitRun} git @param {string} inner
+ */
+const startsAsPng = async (git, inner) => {
+  const stored = await git(['hash-object', '-w', '--no-filters', '--', inner])
+  if (!succeeded(stored)) return false
+  const blob = await git(['cat-file', 'blob', stored.stdout.trim()])
+  return succeeded(blob) && blob.stdout.startsWith(PNG_SIGNATURE)
+}
+
+/** The PNG signature as text decoded from UTF-8. */
+const PNG_SIGNATURE = '\uFFFDPNG\r\n\u001a\n'
 
 /**
  * Commits the staged paths alone, ignored ones included; nothing staged for them is no commit, and ok.

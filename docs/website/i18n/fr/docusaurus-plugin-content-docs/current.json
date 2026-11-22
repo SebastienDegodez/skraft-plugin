@@ -147,6 +147,10 @@
     "message": "Lancer les gates",
     "description": "The label for the doc item 'Run the gates' in sidebar 'howTo', linking to the doc how-to/run-gates"
   },
+  "sidebar.howTo.doc.how-to/keep-repl-scripts": {
+    "message": "Garder ses scripts REPL dans .repl",
+    "description": "The label for the doc item 'Keep your REPL scripts in .repl' in sidebar 'howTo', linking to the doc how-to/keep-repl-scripts"
+  },
   "sidebar.howTo.doc.how-to/run-mutation": {
     "message": "Lancer la mutation sur sa branche",
     "description": "The label for the doc item 'Run mutation on your branch' in sidebar 'howTo', linking to the doc how-to/run-mutation"
@@ -164,8 +168,8 @@
     "description": "The label for the doc item 'Publish the pull request' in sidebar 'howTo', linking to the doc how-to/publish-pull-request"
   },
   "sidebar.howTo.doc.how-to/attach-screenshots": {
-    "message": "Joindre les captures",
-    "description": "The label for the doc item 'Attach screenshots' in sidebar 'howTo', linking to the doc how-to/attach-screenshots"
+    "message": "Joindre les preuves QA",
+    "description": "The label for the doc item 'Attach QA evidence' in sidebar 'howTo', linking to the doc how-to/attach-screenshots"
   },
   "sidebar.howTo.doc.how-to/review-a-pull-request": {
     "message": "Revoir une pull request avec skraft",
@@ -538,6 +542,10 @@
   "sidebar.reference.doc.reference/backlog-canvas": {
     "message": "Canvas du backlog et carte des stories",
     "description": "The label for the doc item 'Backlog canvas and story map' in sidebar 'reference', linking to the doc reference/backlog-canvas"
+  },
+  "sidebar.reference.doc.reference/repl": {
+    "message": "REPL d'une tentative",
+    "description": "The label for the doc item 'Attempt REPL' in sidebar 'reference', linking to the doc reference/repl"
   },
   "sidebar.reference.doc.reference/catalogue": {
     "message": "Agents, skills et chaînes",

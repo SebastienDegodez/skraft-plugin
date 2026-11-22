@@ -1,22 +1,23 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { loadWorkflow } from '../../../../plugins/skraft-framework/engine/application/workflow/load-workflow.mjs'
-import { BUILT_IN_WORKFLOW, MUTATION_WORKFLOW } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { ejectedPipeline, edit, host, WITH_SECURITY } from './support.mjs'
 
 const LENSES = {
   design_review: ['consistency', 'architecture-compliance', 'fitness'],
   distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
-  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'],
+  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity', 'contract-fidelity'],
 }
 const PLUGIN_AGENTS = {
   'solution-researcher': 'plugin', 'solution-architect': 'plugin', 'acceptance-designer': 'plugin', 'software-engineer': 'plugin',
   ...Object.fromEntries(Object.values(LENSES).flat().map((lens) => [`${lens}-lens`, 'plugin'])),
-  'finding-refuter': 'plugin', 'pr-writer': 'plugin', 'replay-judge': 'plugin',
+  'finding-refuter': 'plugin', 'pr-writer': 'plugin',
 }
+const GATE_GONE = 'a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline)'
 /** The line, from 1, of the first line of the text that starts with `start`. */
 const lineOf = (text, start) => text.split('\n').findIndex((line) => line.startsWith(start)) + 1
-const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, gates: [], lenses: [], question: null, goal: false, locked: false, unlock: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, each: null, proposal: false, publish: null, when: null, fanOut: null, branches: [], mandatory: null, call: null, refutedBy: null, ...fields })
+const node = (id, kind, fields = {}) => ({ id, kind, phase: null, agent: null, lenses: [], question: null, outputs: [], writes: [], maxAttempts: null, model: null, refuter: null, publish: null, when: null, fanOut: null, branches: [], mandatory: null, call: null, refutedBy: null, ...fields })
 /**
  * A review fan-in as the run follows it: its lenses read from the branches of `<id>_lenses`, each lens node `<id>_<lens>`.
  * @param {{ triggers?: Record<string, string>, mandatory?: string[] }} [marks] the lenses' when=; the lenses marked mandatory=true, `review` for the fan-in
@@ -36,27 +37,27 @@ const DELIVER_CALL = node('deliver_review', 'call', {
   lenses: LENSES.deliver_review,
   fanOut: 'lenses',
   mandatory: true,
-  branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
+  branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'quality-gates': 'delivery', 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
   refutedBy: { id: 'refuter', mandatory: true },
-  call: { workflow: 'review', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' }, fanIn: 'verdict', mandatory: true },
+  call: { workflow: 'review', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components', trace: 'trace' }, fanIn: 'verdict', mandatory: true },
 })
 
 /** check() refused with these errors, in this order. */
 /** The plugin workflow a case's dot was edited from: the mutation loop's cases come from MUTATION_WORKFLOW. @param {string} dot */
-const builtInOf = (dot) => (dot.includes('kill_proposal') ? MUTATION_WORKFLOW : BUILT_IN_WORKFLOW)
+const builtInOf = () => BUILT_IN_WORKFLOW
 
-const refused = (name, errors) => ({ ok: false, name, errors, unlocked: [], warnings: [], reason: `${name} is invalid: ${errors.join('; ')}` })
+const refused = (name, errors) => ({ ok: false, name, errors, warnings: [], reason: `${name} is invalid: ${errors.join('; ')}` })
 
 test('with no workflow designated, the plugin workflow runs and checks ok with its five phases', async () => {
   const { commands, deps } = host()
 
-  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], unlocked: [], warnings: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
+  assert.deepEqual(await commands.check(), { ok: true, name: 'skraft', errors: [], warnings: [], reason: 'skraft is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
   const { workflow: { called, ...workflow }, ...loaded } = await loadWorkflow(deps, {})
   assert.deepEqual(Object.entries(called).map(([file, { path }]) => [file, path]), [['review', null]])
   assert.deepEqual({ ...loaded, workflow }, {
     ok: true,
     name: 'skraft',
-    unlocked: [],
+   
     sources: PLUGIN_AGENTS,
     workflow: {
       version: '2',
@@ -69,18 +70,18 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         design: node('design', 'agent', { phase: 'DESIGN', agent: 'solution-architect' }),
         design_review: review('design_review', 'DESIGN', { mandatory: ['review'] }),
         adr: node('adr', 'ask', { phase: 'DESIGN', question: 'adr-ratification' }),
-        distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer', each: 'scenario' }),
+        distill: node('distill', 'agent', { phase: 'DISTILL', agent: 'acceptance-designer' }),
         distill_review: review('distill_review', 'DISTILL', { mandatory: ['review'] }),
         scenario_review: node('scenario_review', 'ask', { phase: 'DISTILL', question: 'scenario-review' }),
-        deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer', each: 'scenario' }),
-        gates: node('gates', 'gate', { phase: 'DELIVER', gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], goal: true, locked: true }),
+        deliver: node('deliver', 'agent', { phase: 'DELIVER', agent: 'software-engineer' }),
+       
         deliver_review: DELIVER_CALL,
         visuals: node('visuals', 'publish', { phase: 'DELIVER', publish: 'playwright-visuals', when: 'frontend' }),
         pr_writer: node('pr_writer', 'agent', { phase: 'PUBLISH', agent: 'pr-writer' }),
         publish: node('publish', 'publish', { phase: 'PUBLISH', publish: 'pull-request' }),
         exit: node('exit', 'exit', { phase: 'PUBLISH' }),
       },
-      order: ['start', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver', 'gates', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit'],
+      order: ['start', 'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit'],
       edges: [
         { from: 'start', to: 'research', label: null, maxVisits: null },
         { from: 'research', to: 'design', label: null, maxVisits: null },
@@ -94,9 +95,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
         { from: 'distill_review', to: 'scenario_review', label: 'APPROVED', maxVisits: null },
         { from: 'scenario_review', to: 'deliver', label: 'APPROVED', maxVisits: null },
         { from: 'scenario_review', to: 'distill', label: 'REVISE', maxVisits: 2 },
-        { from: 'deliver', to: 'gates', label: null, maxVisits: null },
-        { from: 'gates', to: 'deliver', label: 'FAIL', maxVisits: 3 },
-        { from: 'gates', to: 'deliver_review', label: 'PASS', maxVisits: null },
+        { from: 'deliver', to: 'deliver_review', label: null, maxVisits: null },
         { from: 'deliver_review', to: 'deliver', label: 'NEEDS_REWORK', maxVisits: 2 },
         { from: 'deliver_review', to: 'visuals', label: 'APPROVED', maxVisits: null },
         { from: 'visuals', to: 'pr_writer', label: null, maxVisits: null },
@@ -112,7 +111,7 @@ test('with no workflow designated, the plugin workflow runs and checks ok with i
 test('a repository agent added between design and distill checks ok and runs in the DESIGN phase', async () => {
   const { commands, deps } = host({ files: ejectedPipeline(WITH_SECURITY), repository: ['acme-security-reviewer'] })
 
-  assert.deepEqual(await commands.check(), { ok: true, name: '.skraft/pipeline.skraft.dot', errors: [], unlocked: [], warnings: [], reason: '.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
+  assert.deepEqual(await commands.check(), { ok: true, name: '.skraft/pipeline.skraft.dot', errors: [], warnings: [], reason: '.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH' })
   const loaded = await loadWorkflow(deps, {})
   assert.equal(loaded.ok, true)
   assert.deepEqual(loaded.workflow.nodes.security, node('security', 'agent', {
@@ -122,7 +121,7 @@ test('a repository agent added between design and distill checks ok and runs in 
     writes: ['docs/security/', 'src/'],
     maxAttempts: 2,
   }))
-  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'security', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver', 'gates', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit'])
+  assert.deepEqual(loaded.workflow.order, ['start', 'research', 'design', 'security', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit'])
   assert.deepEqual(loaded.sources, { ...PLUGIN_AGENTS, 'acme-security-reviewer': 'repository' })
 })
 
@@ -143,9 +142,9 @@ test('an invalid configuration is refused', async () => {
 })
 
 test('a loop without max_visits is refused, naming the loop', async () => {
-  const { commands } = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['[label="FAIL", max_visits=3]', '[label="FAIL"]'])) })
+  const { commands } = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]', 'deliver_review -> deliver [label="NEEDS_REWORK"]'])) })
 
-  assert.deepEqual(await commands.check(), refused('.skraft/pipeline.skraft.dot', ['loop gates -> deliver -> gates has no max_visits']))
+  assert.deepEqual(await commands.check(), refused('.skraft/pipeline.skraft.dot', ['loop deliver_review -> deliver -> deliver_review has no max_visits']))
 })
 
 test('a node the start cannot reach, or one that never reaches an exit, is refused', async () => {
@@ -160,7 +159,7 @@ test('a node the start cannot reach, or one that never reaches an exit, is refus
   const spinning = host({
     files: ejectedPipeline(edit(
       BUILT_IN_WORKFLOW,
-      ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> spin [label="FAIL"]\n  spin [shape=box, agent="software-engineer"]\n  spin -> spin [max_visits=2]'],
+      ['deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]', 'deliver_review -> spin [label="NEEDS_REWORK"]\n  spin [shape=box, agent="software-engineer"]\n  spin -> spin [max_visits=2]'],
     )),
   })
   assert.deepEqual(await spinning.commands.check(), refused('.skraft/pipeline.skraft.dot', ['node spin never reaches an exit']))
@@ -176,42 +175,6 @@ test('a workflow without one start or without an exit is refused', async () => {
     'the workflow needs at least one exit node (shape=Msquare)',
   ]))
 })
-
-test('removing the locked gates node is refused, whether it is dropped or turned into an agent', async () => {
-  const dropped = edit(
-    BUILT_IN_WORKFLOW,
-    [/  gates    \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], ''],
-    ['deliver -> gates', 'deliver -> deliver_review'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', ''],
-  )
-  const error = 'locked node gates is missing; keep it with unlock="<reason>" to skip it'
-  assert.deepEqual(await host({ files: ejectedPipeline(dropped) }).commands.check(), refused('.skraft/pipeline.skraft.dot', [error]))
-
-  const turned = edit(
-    BUILT_IN_WORKFLOW,
-    [/  gates    \[.*\]\n/.exec(BUILT_IN_WORKFLOW)[0], '  gates    [shape=box, agent="software-engineer", phase="DELIVER"]\n'],
-    ['  gates -> deliver [label="FAIL", max_visits=3]\n  gates -> deliver_review [label="PASS"]\n', '  gates -> deliver_review\n'],
-  )
-  assert.deepEqual(await host({ files: ejectedPipeline(turned) }).commands.check(), refused('.skraft/pipeline.skraft.dot', [error]))
-})
-
-test('the locked gates node kept with unlock is skipped and said so; dropping gates from it without unlock is refused', async () => {
-  const unlocked = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['gate="build,format,lint,test,architecture,coverage"', 'gate="build", unlock="the CI runs the other gates"'])) })
-  assert.deepEqual(await unlocked.commands.check(), {
-    ok: true,
-    name: '.skraft/pipeline.skraft.dot',
-    errors: [],
-    unlocked: [{ node: 'gates', reason: 'the CI runs the other gates' }],
-    warnings: [],
-    reason: '.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH; gates is unlocked and skipped: the CI runs the other gates',
-  })
-
-  const trimmed = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['gate="build,format,lint,test,architecture,coverage"', 'gate="lint,build,format,test"'])) })
-  assert.deepEqual(await trimmed.commands.check(), refused('.skraft/pipeline.skraft.dot', [
-    'locked node gates drops architecture, coverage; keep them, or skip the node with unlock="<reason>"',
-  ]))
-})
-
 test('a node with a shape the engine does not run, or with none, is refused', async () => {
   const ellipse = host({ files: ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['design   [shape=box,', 'design   [shape=ellipse,'], ['"acceptance-designer", phase="DISTILL"', '"acceptance-designer"'])) })
   assert.deepEqual(await ellipse.commands.check(), refused('.skraft/pipeline.skraft.dot', [
@@ -267,17 +230,17 @@ test('every faulty node attribute is reported with its node, in declaration orde
     'node plan: outputs="/plan.md" must list paths relative to the tracking folder, without ..',
     'node plan: writes="C:/src" must list paths relative to the working copy',
     'node plan: model="GPT 5" must be a model family, a kebab-case word whose every part starts with a letter, such as reviewer, planner or gpt-codex',
-    'node plan: attribute locked is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)',
+    'node plan: locked is gone with the gate node: skraft runs no gate',
     'node draft: outputs="notes/../draft.md" must list paths relative to the tracking folder, without ..',
     'node draft: a box node needs agent="…"',
     'node "../../escape": an id is a word of letters, digits, _ and -, since it names the node\'s files',
-    'node check: gate="build,smoke" must list gates among build, format, lint, test, architecture, coverage, mutation',
-    'node check: goal_gate="yes" must be true or false',
-    'node check: locked="maybe" must be true or false',
-    'node check: unlock=" " needs the reason the node is skipped',
-    'node check: attribute agent is not supported on a parallelogram node (supported: label, shape, phase, gate, goal_gate, locked, unlock)',
-    'node verify: gate="" must list gates among build, format, lint, test, architecture, coverage, mutation',
-    'node confirm: a parallelogram node needs gate="…"',
+    `node check: ${GATE_GONE}`,
+    'node check: goal_gate is gone with the gate node: skraft runs no gate',
+    'node check: locked is gone with the gate node: skraft runs no gate',
+    'node check: unlock is gone with the gate node: skraft runs no gate',
+    'node check: attribute agent is not supported on a parallelogram node (supported: label, shape, phase, publish, when)',
+    `node verify: ${GATE_GONE}`,
+    `node confirm: ${GATE_GONE}`,
   ]))
 })
 
@@ -288,8 +251,8 @@ test('every faulty edge, branching and phase order is reported', async () => {
   plan   [shape=box, agent="planner", phase="PLAN"]
   build  [shape=box, agent="builder", phase="BUILD"]
   loose  [shape=box, agent="builder"]
-  idle   [shape=parallelogram, gate="lint"]
-  check  [shape=parallelogram, gate="test"]
+  idle   [shape=parallelogram, publish="pull-request"]
+  check  [shape=parallelogram, publish="pull-request"]
   done   [shape=Msquare]
   start -> plan
   start -> build
@@ -307,12 +270,13 @@ test('every faulty edge, branching and phase order is reported', async () => {
 
   assert.deepEqual(await commands.check(), refused('.skraft/pipeline.skraft.dot', [
     'edge first -> loose: attribute weight is not supported (supported: label, max_visits)',
-    "edge plan -> build: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
+    "edge plan -> build: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
+    "edge check -> plan: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
     'edge check -> start: max_visits="0" must be a positive integer',
-    'edge check -> done: label="pass" must be PASS or FAIL',
+    "edge check -> start: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
+    "edge check -> done: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
     'node start: start node needs exactly one outgoing edge, has 2',
-    'node check: gate node needs exactly one PASS edge, has 2',
-    'node check: gate node takes at most one FAIL edge, has 2',
+    'node check: publish node needs exactly one outgoing edge, has 4',
     'node done: exit node takes no outgoing edge, has 1',
     'the workflow needs exactly one start node (shape=Mdiamond), has 2',
     'node loose has no phase; set phase="<PHASE>" on it or on a node before it',
@@ -327,64 +291,9 @@ test('an agent with two ways out is refused', async () => {
 
   assert.deepEqual(await commands.check(), refused('.skraft/pipeline.skraft.dot', ['node design: agent node needs exactly one outgoing edge, has 2']))
 })
-
-test('a workflow that lets the run reach the exit around the locked gates, or around a gate node that runs them all, is refused', async () => {
-  const bypass = 'keep the run going through gates, or skip gates with unlock="<reason>"'
-  const aroundReview = ['start', 'deliver'].map((node) => `${node} reaches the exit without passing mandatory node deliver_review; this node is mandatory and cannot be removed`)
-  const cases = [
-    {
-      dot: edit(BUILT_IN_WORKFLOW, ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> exit [label="FAIL"]']),
-      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to exit', ...aroundReview],
-    },
-    {
-      dot: edit(BUILT_IN_WORKFLOW,
-        ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  review   [shape=box, agent="solution-architect", phase="REVIEW"]\n  reviewed [shape=Msquare]'],
-        ['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> review [label="FAIL"]\n  review -> reviewed']),
-      errors: ['locked node gates must send FAIL back to an agent of DELIVER, not to review', ...aroundReview],
-    },
-    {
-      dot: edit(BUILT_IN_WORKFLOW, ['  gates -> deliver [label="FAIL", max_visits=3]\n', '']),
-      errors: ['locked node gates has no FAIL edge back to an agent of DELIVER'],
-    },
-    {
-      dot: edit(BUILT_IN_WORKFLOW,
-        ['scenario_review -> deliver [label="APPROVED"]', 'scenario_review -> gates [label="APPROVED"]'],
-        ['deliver -> gates\n', 'deliver -> deliver_review\n'],
-        ['  gates -> deliver_review [label="PASS"]\n', '  gates -> deliver\n']),
-      errors: [`deliver reaches the exit without passing gates; ${bypass}`],
-    },
-    {
-      dot: edit(BUILT_IN_WORKFLOW,
-        ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  quick    [shape=parallelogram, gate="build"]'],
-        ['deliver -> gates\n', 'deliver -> quick\n  quick -> exit [label="PASS"]\n  quick -> gates [label="FAIL"]\n']),
-      errors: [`start reaches the exit without passing gates; ${bypass}`, `deliver reaches the exit without passing gates; ${bypass}`, ...aroundReview],
-    },
-    {
-      dot: edit(MUTATION_WORKFLOW, ['mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage"', 'mutation_gates [shape=parallelogram, gate="build,test"']),
-      errors: ['kill_proposal', 'kill_mutants'].map((node) => `${node} reaches the exit without passing gates; ${bypass}`),
-    },
-    {
-      dot: edit(MUTATION_WORKFLOW, ['architecture,coverage", goal_gate=true]', 'architecture,coverage", goal_gate=false]']),
-      errors: ['kill_proposal', 'kill_mutants'].map((node) => `${node} reaches the exit without passing gates; ${bypass}`),
-    },
-    {
-      dot: edit(MUTATION_WORKFLOW, ['architecture,coverage", goal_gate=true]', 'architecture,coverage", goal_gate=true, unlock="the CI runs them"]']),
-      errors: ['kill_proposal', 'kill_mutants'].map((node) => `${node} reaches the exit without passing gates; ${bypass}`),
-    },
-    {
-      dot: edit(BUILT_IN_WORKFLOW, ['goal_gate=true, locked=true', 'goal_gate=false, locked=true']),
-      errors: ['locked node gates must stay goal_gate=true; skip it with unlock="<reason>" instead'],
-    },
-  ]
-  for (const { dot, errors } of cases) {
-    const { commands } = host({ files: ejectedPipeline(dot), builtIn: builtInOf(dot) })
-    assert.deepEqual(await commands.check(), refused('.skraft/pipeline.skraft.dot', errors))
-  }
-})
-
 test('an ask node names a question the engine knows, and leads each of its answers somewhere, a refusal by an edge of its own', async () => {
   const cases = [
-    { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, mutation-plan, scenario-review'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['question="adr-ratification"', 'question="budget"']), errors: ['node adr: question="budget" must be one of adr-ratification, scenario-review'] },
     { dot: edit(BUILT_IN_WORKFLOW, [', question="adr-ratification"', '']), errors: ['node adr: a hexagon node needs question="…"'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['  adr -> design    [label="REJECTED", max_visits=1]\n', '']), errors: ['node adr: REJECTED needs an edge of its own, back to the node whose work it refuses'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['adr -> distill   [label="RATIFIED"]', 'adr -> distill']), errors: [] },
@@ -394,87 +303,54 @@ test('an ask node names a question the engine knows, and leads each of its answe
       errors: ['node adr: ask node takes at most one unlabeled edge, has 2'],
     },
     { dot: edit(BUILT_IN_WORKFLOW, ['adr -> design    [label="REJECTED", max_visits=1]', 'adr -> design    [label="REJECTED", max_visits=1]\n  adr -> design    [label="REJECTED", max_visits=1]']), errors: ['node adr: ask node takes one REJECTED edge, has 2'] },
-    { dot: edit(MUTATION_WORKFLOW, ['mutation_plan -> kill_mutants [label="APPLY"]', 'mutation_plan -> kill_mutants']), errors: [] },
-    {
-      dot: edit(MUTATION_WORKFLOW, ['mutation_plan -> kill_mutants [label="APPLY"]', 'mutation_plan -> kill_mutants [label="STOP"]']),
-      errors: ['edge mutation_plan -> kill_mutants: label="STOP" must be APPLY', 'node mutation_plan: no edge for APPLY; label one APPLY, or leave one unlabeled'],
-    },
   ]
   for (const { dot, errors } of cases) {
-    const { commands } = host({ files: ejectedPipeline(dot), builtIn: builtInOf(dot) })
+    const { commands } = host({ files: ejectedPipeline(dot), })
     const checked = await commands.check()
     assert.deepEqual(checked.errors, errors, dot)
   }
 })
 
-test('each="scenario" pairs the agent that writes each scenario\'s failing acceptance test with the agent that makes it pass, and the scenario review needs that pair', async () => {
-  const pair = 'each="scenario" goes on two agent nodes, the one that writes each scenario\'s failing acceptance test, then the one that makes it pass'
+test('each="scenario" is gone, and the scenario review needs the node that writes the scenarios and the node that delivers them', async () => {
+  const gone = (id) => `node ${id}: each is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node`
   const cases = [
-    { dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER", each="scenario"]', 'agent="software-engineer", phase="DELIVER"]']), errors: [`${pair}; it is on 1: distill`] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER"]', 'agent="software-engineer", phase="DELIVER", each="scenario"]']), errors: [gone('deliver')] },
     {
-      dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", each="scenario"]']),
-      errors: [`${pair}; it is on 3: distill, deliver, pr_writer`],
+      dot: edit(BUILT_IN_WORKFLOW, ['agent="acceptance-designer", phase="DISTILL"]', 'agent="acceptance-designer", phase="DISTILL", each="scenario"]'], ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", each="scenario"]']),
+      errors: [gone('distill'), gone('pr_writer')],
     },
     {
-      dot: edit(BUILT_IN_WORKFLOW, ['phase="DISTILL", each="scenario"]', 'phase="DISTILL"]'], ['phase="DELIVER", each="scenario"]', 'phase="DELIVER"]']),
-      errors: ['node scenario_review: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows'],
+      dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER"]', 'agent="pr-writer", phase="DELIVER"]']),
+      errors: ['node scenario_review: question="scenario-review" needs the node that writes the scenarios and the node that delivers them'],
     },
     {
-      dot: edit(BUILT_IN_WORKFLOW, ['phase="DISTILL", each="scenario"]', 'phase="DISTILL"]'], ['phase="DELIVER", each="scenario"]', 'phase="DELIVER"]'], ['distill_review -> scenario_review [label="APPROVED"]', 'distill_review -> deliver [label="APPROVED"]'], ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''], ['  scenario_review -> deliver [label="APPROVED"]\n', ''], ['  scenario_review -> distill [label="REVISE", max_visits=2]\n', '']),
+      dot: edit(BUILT_IN_WORKFLOW, ['agent="software-engineer", phase="DELIVER"]', 'agent="pr-writer", phase="DELIVER"]'], ['distill_review -> scenario_review [label="APPROVED"]', 'distill_review -> deliver [label="APPROVED"]'], ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''], ['  scenario_review -> deliver [label="APPROVED"]\n', ''], ['  scenario_review -> distill [label="REVISE", max_visits=2]\n', '']),
       errors: [],
     },
-    { dot: edit(BUILT_IN_WORKFLOW, ['phase="DISTILL", each="scenario"]', 'phase="DISTILL", each="slice"]']), errors: ['node distill: each="slice" must be survivor-file or scenario', `${pair}; it is on 1: deliver`] },
-    { dot: edit(MUTATION_WORKFLOW, ['each="survivor-file", proposal=true]', 'each="scenario", proposal=true]']), errors: ['node kill_proposal: proposal=true needs each="survivor-file", the mutants it proposes for', `${pair}; it is on 3: distill, deliver, kill_proposal`] },
     { dot: edit(BUILT_IN_WORKFLOW, ['  scenario_review -> distill [label="REVISE", max_visits=2]\n', '']), errors: ['node scenario_review: REVISE needs an edge of its own, back to the node whose work it refuses'] },
   ]
   for (const { dot, errors } of cases) {
-    const { commands } = host({ files: ejectedPipeline(dot), builtIn: builtInOf(dot) })
+    const { commands } = host({ files: ejectedPipeline(dot), })
     assert.deepEqual((await commands.check()).errors, errors, dot)
   }
 })
-
-test('an agent proposes for the surviving mutants it takes by file, proposal= being true or false', async () => {
-  const cases = [
-    { dot: edit(MUTATION_WORKFLOW, ['each="survivor-file", proposal=true]', 'proposal=true]']), errors: ['node kill_proposal: proposal=true needs each="survivor-file", the mutants it proposes for'] },
-    { dot: edit(MUTATION_WORKFLOW, ['proposal=true]', 'proposal=yes]']), errors: ['node kill_proposal: proposal="yes" must be true or false'] },
-    { dot: edit(MUTATION_WORKFLOW, ['proposal=true]', 'proposal=false]']), errors: [] },
-  ]
-  for (const { dot, errors } of cases) {
-    const { commands } = host({ files: ejectedPipeline(dot), builtIn: builtInOf(dot) })
-    assert.deepEqual((await commands.check()).errors, errors, dot)
-  }
-})
-
 test('a publish node publishes the pull request or the screenshots, runs when a kind of component is there, takes no other attribute, and has a phase like any working node', async () => {
   const cases = [
     { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="visuals"]']), errors: ['node publish: publish="visuals" must be pull-request or playwright-visuals'] },
-    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", goal_gate=true]']), errors: ['node publish: attribute goal_gate is not supported on a parallelogram node (supported: label, shape, phase, publish, when)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", goal_gate=true]']), errors: ['node publish: goal_gate is gone with the gate node: skraft runs no gate'] },
     { dot: edit(BUILT_IN_WORKFLOW, ['publish="pull-request"]', 'publish="pull-request", when="backend"]']), errors: ['node publish: when="backend" must be frontend'] },
-    { dot: edit(BUILT_IN_WORKFLOW, ['phase="DELIVER", each="scenario"]', 'phase="DELIVER", each="scenario", when="frontend"]']), errors: ['node deliver: attribute when is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)'] },
-    { dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", publish="pull-request"]']), errors: ['node pr_writer: attribute publish is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['phase="DELIVER"]', 'phase="DELIVER", when="frontend"]']), errors: ['node deliver: attribute when is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts)'] },
+    { dot: edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"]', 'agent="pr-writer", phase="PUBLISH", publish="pull-request"]']), errors: ['node pr_writer: attribute publish is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts)'] },
     {
       dot: 'digraph p {\n  start [shape=Mdiamond]\n  publish [shape=parallelogram, publish="pull-request"]\n  exit [shape=Msquare]\n  start -> publish -> exit\n}',
       errors: ['node publish has no phase; set phase="<PHASE>" on it or on a node before it'],
     },
   ]
   for (const { dot, errors } of cases) {
-    const { commands } = host({ files: ejectedPipeline(dot), builtIn: builtInOf(dot) })
+    const { commands } = host({ files: ejectedPipeline(dot), })
     assert.deepEqual((await commands.check()).errors, errors, dot)
   }
 })
-
-test('an ask node whose answers need no routing leads them all by one unlabeled edge', async () => {
-  const asking = edit(BUILT_IN_WORKFLOW,
-    ['  exit     [shape=Msquare]', '  exit     [shape=Msquare]\n  replan   [shape=hexagon, question="mutation-plan"]'],
-    ['deliver_review -> visuals [label="APPROVED"]', 'deliver_review -> replan [label="APPROVED"]\n  replan -> visuals'])
-  const { commands, deps } = host({ files: ejectedPipeline(asking) })
-
-  assert.equal((await commands.check()).ok, true)
-  const loaded = await loadWorkflow(deps, {})
-  assert.deepEqual(loaded.workflow.nodes.replan, node('replan', 'ask', { phase: 'DELIVER', question: 'mutation-plan' }))
-  assert.deepEqual(loaded.workflow.edges.find((edge) => edge.from === 'replan'), { from: 'replan', to: 'visuals', label: null, maxVisits: null })
-})
-
 test('in an ejected workflow, a model=, a lens\'s @family or a refuter= that an agent rule masks is a warning naming the rule, the plugin\'s defaults included', async () => {
   const dot = edit(BUILT_IN_WORKFLOW,
     ['agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'],
@@ -582,7 +458,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
       what: 'a verdict edge on the fan-out',
       dot: edit(BUILT_IN_WORKFLOW, ['design_review -> design  [label="NEEDS_REWORK", max_visits=2]', 'design_review_lenses -> design  [label="NEEDS_REWORK", max_visits=1]']),
       errors: [
-        "edge design_review_lenses -> design: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
+        "edge design_review_lenses -> design: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label",
         'edge design_review_lenses -> design: each branch of a fan-out holds exactly one lens node (shape=note), then the refuter',
       ],
     },
@@ -603,7 +479,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
     {
       what: 'a trigger the engine does not know',
       dot: edit(BUILT_IN_WORKFLOW, ['lens="coverage"', 'lens="coverage", when="frontend"']),
-      errors: ['node distill_review_coverage: when="frontend" must be mock or contract'],
+      errors: ['node distill_review_coverage: when="frontend" must be mock or contract or delivery'],
     },
   ]
   for (const { what, dot, errors } of cases) {
@@ -612,25 +488,17 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
 })
 
 test('a workflow still written with lenses= on a review node is refused, each such node with the nodes and edges that replace it', async () => {
-  const former = edit(MUTATION_WORKFLOW,
+  const former = edit(BUILT_IN_WORKFLOW,
     ['  deliver_review [shape=house, workflow="review", mandatory=true]\n',
-      '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", label="Delivery review", phase="DELIVER", model="economy", refuter="frontier", mandatory=true]\n'],
-    ['  mutation_review_lenses [shape=component]\n  mutation_review_test_integrity [shape=note, lens="test-integrity"]\n  mutation_review_refuter [shape=octagon, mandatory=true]\n  mutation_review [shape=tripleoctagon, mandatory=true]\n', '  mutation_review [shape=component, lenses="test-integrity", label="Mutation review", phase="DELIVER", model="economy", refuter="frontier"]\n'],
-    ['kill_mutants -> mutation_review_lenses\n  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter\n  mutation_review_refuter -> mutation_review\n', 'kill_mutants -> mutation_review\n'])
+      '  deliver_review [shape=component, lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity", label="Delivery review", phase="DELIVER", model="economy", refuter="frontier", mandatory=true]\n'])
 
-  const checked = await host({ files: ejectedPipeline(former), builtIn: MUTATION_WORKFLOW }).commands.check()
+  const checked = await host({ files: ejectedPipeline(former) }).commands.check()
 
-  const keep = (id) => `keep the edges leaving ${id}; the plugin's mandatory=true stays on ${id}`
   assert.deepEqual(checked.errors, [
     'node deliver_review: lenses="test-integrity, cold-reader@frontier,mock-fidelity,contract-fidelity" is the former review form, no longer read; replace node deliver_review with the plugin\'s call:'
       + ' deliver_review [shape=house, workflow="review", label="Delivery review", phase="DELIVER"];'
       + ' keep the edges entering and leaving deliver_review; its lenses live in review: skraft workflow eject review copies it into .skraft/review.skraft.dot,'
       + ' where its fan-in takes model="economy" and refuter="frontier"; the plugin\'s mandatory=true stays on deliver_review',
-    'node mutation_review: lenses="test-integrity" is the former review form, no longer read; replace node mutation_review with:'
-      + ' mutation_review_lenses [shape=component]; mutation_review_test_integrity [shape=note, lens="test-integrity"]; mutation_review_refuter [shape=octagon];'
-      + ' mutation_review [shape=tripleoctagon, label="Mutation review", phase="DELIVER", model="economy", refuter="frontier"];'
-      + ' kill_mutants -> mutation_review_lenses; mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter;'
-      + ` mutation_review_refuter -> mutation_review; ${keep('mutation_review')}`,
   ])
   const plain = edit(BUILT_IN_WORKFLOW, ['  deliver_review [shape=house, workflow="review", mandatory=true]\n', '  deliver_review [shape=component, lenses="test-integrity"]\n'])
   assert.deepEqual((await host({ files: ejectedPipeline(plain) }).commands.check()).errors, [

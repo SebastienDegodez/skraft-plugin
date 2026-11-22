@@ -173,15 +173,16 @@ test('a spawn the host fails to make is made once more with the same arguments; 
   assert.equal(aborted.spawned.length, 1)
 })
 
-test('a turn that did not end on an answer is not ok, and says why', async () => {
-  const { runner } = runnerWith({
+test('a turn that did not end on an answer is not ok, and says why; one a person aborted says so', async () => {
+  const ended = (reason) => runnerWith({
     spawn: (args, answers) => {
-      answers.complete({ agentId: 'a3', reason: 'aborted' })
+      answers.complete({ agentId: 'a3', reason })
       return { model: 'm', agentId: 'a3' }
     },
-  })
+  }).runner.run(DISPATCH)
 
-  assert.deepEqual(await runner.run(DISPATCH), { ok: false, text: '', error: 'skraft:solution-researcher ended: aborted', model: 'm' })
+  assert.deepEqual(await ended('aborted'), { ok: false, text: '', error: 'skraft:solution-researcher ended: aborted', interrupted: true, model: 'm' })
+  assert.deepEqual(await ended('none'), { ok: false, text: '', error: 'skraft:solution-researcher ended: none', model: 'm' })
 })
 
 test('the dispatch reports the session cost it added, and none when the session keeps no cost', async () => {

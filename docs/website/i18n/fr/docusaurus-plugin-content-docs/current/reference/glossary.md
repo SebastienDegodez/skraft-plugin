@@ -39,7 +39,7 @@ Liste priorisée de fonctionnalités ou User Stories à développer. Le backlog 
 ## C
 
 **Classe d'échec**
-Nature d'une gate en échec : `interrupted` (une personne l'a arrêtée : le run s'arrête), `environment` (la machine ou la config doit changer : programme absent, ligne de commande refusée, rapport de mutation illisible : un humain agit) ou `deterministic` (la commande a échoué, un signal ou un plantage compris : l'agent reçoit sa preuve par l'arête `FAIL`).
+Nature d'une commande en échec : `interrupted` (une personne l'a arrêtée : le run s'arrête), `environment` (la machine ou la config doit changer : programme absent, ligne de commande refusée : un humain agit) ou `deterministic` (la commande a échoué, un signal ou un plantage compris).
 → Voir [Classe d'échec](../how-to/run-gates.md)
 
 **Composant**
@@ -94,8 +94,8 @@ Un défaut qu'une lentille signale : la gate concernée, une sévérité (`block
 ## G
 
 **Gate (porte de qualité)**
-Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation`) que le moteur lance lui-même pour prouver la qualité. Chaque gate laisse un fichier de preuve et un événement `gate.ran`. Le moteur les lance en DELIVER (le nœud verrouillé `gates`) ; `skraft gate` les lance à la main. `mutation` revient au développeur : le pipeline du plugin ne la lance nulle part.
-→ Voir [skraft-config.json](./skraft-config.md) ; les critères de revue des lentilles : [Gates](./gates.md)
+Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`) qui prouve la qualité. Le moteur n'en lance aucune : dans DELIVER, l'ingénieur logiciel lance chacune par `skraft_repl`, le moteur journalise la trace signée de sa tentative (`evidence.checked`) et la lentille `quality-gates` de la revue DELIVER la juge. Une gate dont le projet ne nomme aucune commande se déclare `absent` ; `test` ne l'est jamais. `mutation` revient au développeur : une recette de sa session.
+→ Voir [Gates](./gates.md#command-gates) ; les critères de revue des lentilles : [Gates](./gates.md)
 
 **Gherkin**
 Langage structuré pour écrire des scénarios BDD : `Given` (contexte), `When` (action), `Then` (résultat attendu).
@@ -118,30 +118,26 @@ Les six qualités d'une bonne story : indépendante, négociable, porteuse de va
 Fichier du dossier de suivi où le moteur écrit un événement par ligne, chaque ligne portant le hachage de la précédente. L'état du run est recalculé depuis lui ; une modification à la main est détectée.
 → Voir [Journal (events.jsonl)](./run-journal.md)
 
-**Juge du rejeu (`replay-judge`)**
-L'agent que le moteur interroge sur chaque commit rouge ou vert qu'il rejoue. Il lit les logs des rejeux et le commit, ne change rien, et répond `accept`, `send-back`, `retry` ou `ask-human` avec une note ; le moteur lui-même ne lit aucun rapport de test.
-→ Voir [Commits et rejeux](./gates.md#commits)
-
 ## L
 
 **Langage ubiquitaire**
 Vocabulaire partagé entre développeurs et experts métier, utilisé aussi bien dans les conversations que dans le code. Concept central du DDD.
 
 **Lentille (reviewer lens)**
-Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé en lecture seule `<nom>-lens`. Le pilote d'hôte lance les lentilles d'un nœud de revue et le moteur calcule le verdict à partir de leurs findings. Lentilles livrées avec le plugin : DESIGN `consistency`, `architecture-compliance`, `fitness` ; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity`, `contract-fidelity` (`quality-gates` est retirée en V2 : le moteur lance les gates lui-même).
+Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé en lecture seule `<nom>-lens`. Le pilote d'hôte lance les lentilles d'un nœud de revue et le moteur calcule le verdict à partir de leurs findings. Lentilles livrées avec le plugin : DESIGN `consistency`, `architecture-compliance`, `fitness` ; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates`, `mock-fidelity`, `contract-fidelity`.
 → Voir [Lentilles](pathname:///dashboard/)
 
 ## M
 
 **Microcks**
-Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; ses tests le démarrent par Testcontainers (image uber native, un conteneur par session de tests), sur Docker ou Podman. C'est le mocking par défaut de toutes les stacks sauf React (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne ; sans l'un ni l'autre, le juge de rejeu demande à un humain d'en démarrer un, et le test n'est jamais sauté. `inprocess` s'en passe.
+Outil qui simule les API dont dépend un composant, à partir de leurs contrats ; ses tests le démarrent par Testcontainers (image uber native, un conteneur par session de tests), sur Docker ou Podman. C'est le mocking par défaut de toutes les stacks sauf React (`"mocking": { "strategy": "microcks" }`) : les tests qui l'utilisent exigent alors que Docker ou Podman tourne ; sans l'un ni l'autre, l'agent s'arrête bloqué et un humain est prié d'en démarrer un, et le test n'est jamais sauté. `inprocess` s'en passe.
 → Voir [Microcks](./skraft-config.md)
 
 **MoSCoW**
 Priorisation en *Must*, *Should*, *Could*, *Won't* utilisée par le triage et la carte des stories.
 
 **Moteur**
-Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, gates), le même sur tous les hôtes.
+Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, journal des exécutions de gates), le même sur tous les hôtes.
 → Voir [Moteur](../explanation/architecture.md)
 
 **Mutant survivant**
@@ -154,7 +150,7 @@ Technique qui modifie légèrement le code source (introduit des "mutants") pour
 ## N
 
 **Nœud question**
-Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`, `"scenario-review"`, `"mutation-plan"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`, `REVISE`) ramène au nœud dont il refuse le travail.
+Un nœud du workflow de forme `hexagon` qui pose une question à un humain (`question="adr-ratification"`, `"scenario-review"`). Ses arêtes sortantes portent les réponses en label ; un refus (`REJECTED`, `REVISE`) ramène au nœud dont il refuse le travail.
 → Voir [Répondre à une question du run](../how-to/answer-a-question.mdx)
 
 ## O
@@ -181,7 +177,7 @@ Les quatre phases RESEARCH → DESIGN → DISTILL → DELIVER qu'une story trave
 → Voir [Le pipeline](../explanation/pipeline/index.mdx)
 
 **Pipeline actif**
-Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status`, `skraft gate` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
+Le slug écrit dans `.copilot-tracking/skraft-plans/.active-slug` : le run sur lequel agissent `skraft status` et la reprise. Un par copie de travail (donc par worktree) ; il ne change que par un init explicite, jamais deviné.
 → Voir [Pipeline actif](./run-journal.md)
 
 **Politique d'infrastructure**
@@ -191,7 +187,7 @@ Sur quoi les tests d'un composant font tourner chaque sorte de dépendance, dans
 ## Q
 
 **Question d'environnement**
-La question que le moteur pose quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json` (programme introuvable, Git en échec, une commande de gate absente), ou quand le juge du rejeu interroge un humain sur un commit rejoué. Elle nomme la cause (la machine, `skraft-config.json`, ou ce qu'a lu le juge du rejeu) et le log de la commande en échec ou la réponse du juge. `RETRY` relance la même étape là où elle s'est arrêtée, sans consommer de tentative ; `ABORT` bloque le run.
+La question que le moteur pose quand une étape ne peut pas tourner sur la machine ou avec ce que lui donne `skraft-config.json` (programme introuvable, Git en échec, une commande absente). Elle nomme la cause (la machine ou `skraft-config.json`) et le log de la commande en échec. `RETRY` relance la même étape là où elle s'est arrêtée, sans consommer de tentative ; `ABORT` bloque le run.
 → Voir [La question environment](./run-journal.md#environment-question)
 
 ## R

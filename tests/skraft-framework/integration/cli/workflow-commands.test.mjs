@@ -34,7 +34,7 @@ test('skraft workflow eject copies the plugin workflow into the working copy, ch
   writeFileSync(join(cwd, '.claude', 'agents', 'acme-security-reviewer.md'), '---\nname: acme-security-reviewer\n---\nReview.\n')
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), { status: 0, stdout: `.skraft/pipeline.skraft.dot is valid: ${PHASES}\n`, stderr: '' })
   const json = await skraft(cwd, ['workflow', 'check', '--json'])
-  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: '.skraft/pipeline.skraft.dot', errors: [], unlocked: [], warnings: [], reason: `.skraft/pipeline.skraft.dot is valid: ${PHASES}` }])
+  assert.deepEqual([json.status, JSON.parse(json.stdout)], [0, { ok: true, name: '.skraft/pipeline.skraft.dot', errors: [], warnings: [], reason: `.skraft/pipeline.skraft.dot is valid: ${PHASES}` }])
   const checked = readFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), 'utf8')
   writeFileSync(join(cwd, '.skraft/pipeline.skraft.dot'), checked.replace('agent="solution-researcher", phase="RESEARCH"]', 'agent="solution-researcher", phase="RESEARCH", model="frontier"]'))
   assert.deepEqual(await skraft(cwd, ['workflow', 'check']), {
@@ -67,7 +67,7 @@ test('skraft workflow eject review copies the plugin\'s .skraft/review.skraft.do
     status: 0, stdout: '.skraft/review.skraft.dot holds the skraft in-process review; every call to review runs it\n', stderr: '',
   })
   const ejected = readFileSync(join(cwd, '.skraft/review.skraft.dot'), 'utf8')
-  assert.equal(ejected, REVIEW.replace('input_components="optional"]', 'input_components="optional", skraft_version="in-process"]'))
+  assert.equal(ejected, REVIEW.replace('input_trace="optional"]', 'input_trace="optional", skraft_version="in-process"]'))
   assert.deepEqual(await skraft(cwd, ['workflow', 'eject', 'review']), { status: 1, stdout: '', stderr: '.skraft/review.skraft.dot already exists; edit it, or remove it\n' })
 
   writeFileSync(join(cwd, '.skraft/review.skraft.dot'), ejected.replace('  lenses -> cold_reader -> refuter\n', '').replace('  cold_reader             [shape=note, lens="cold-reader"]\n', ''))

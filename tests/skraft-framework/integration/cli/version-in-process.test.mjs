@@ -37,7 +37,7 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
   }
   assert.deepEqual(USAGE.split('\n').map((line) => line.trim().split(/\s{2,}/)[0]), [
     'usage: skraft --version',
-    'skraft init [--add <folder>]... [--mutation]',
+    'skraft init [--add <folder>]...',
     'skraft init <slug> [--issue <number>] [--title <text>] [--base <ref>] [--from-artifacts]',
     'skraft status [--json]',
     'skraft report [--json]',
@@ -48,12 +48,8 @@ test('an unknown command or a malformed option prints the usage on stderr and ex
     'skraft migrate [--dry-run] [--json]',
     'skraft next [--json]',
     'skraft record [--json]',
-    'skraft gate [--all] [--json]',
     'skraft precheck [--json]',
-    'skraft doctor [--run] [--base <ref>] [--json]',
-    'skraft mutation [--json]',
-    'skraft mutation record [--json]',
-    'skraft mutation decide [<key>] <answer> [--reason <text>]',
+    'skraft doctor [--json]',
     'skraft review --pr <number> [--publish] [--record] [--json]',
     'skraft workflow eject [review]',
     'skraft workflow check [--json]',

@@ -66,9 +66,9 @@ aucun hook, et le journal de l'hôte reste silencieux.
   n'en lance un autre ; le journal voit chaque lancement.
 
 Deux contrôles n'ont pas d'équivalent en v1 : le **bail de session**, qui refuse une deuxième
-session sur un pipeline qu'une autre conduit, et les **nœuds verrouillés et obligatoires** du
-workflow, qu'une copie du dépôt ne peut pas retirer en silence
-([Workflow DOT](../reference/workflow-dot.mdx#locked-nodes)).
+session sur un pipeline qu'une autre conduit, et les **nœuds obligatoires** du
+workflow, qu'une copie du dépôt ne peut pas retirer
+([Workflow DOT](../reference/workflow-dot.mdx)).
 
 ## Prévenir ou détecter
 

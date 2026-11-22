@@ -5,14 +5,13 @@ import { reviewModels } from './agent-models.mjs'
 
 /**
  * The facts of a run a pull request description shows, read from its journal alone: the red
- * commits replayed, the last result of each gate, what the review found and what it refuted,
+ * commits, the traced runs of the delivery's gates, what the review found and what it refuted,
  * the model families and models the agents ran on.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
- * @typedef {{ sha: string, subject: string, exitCode: number | null }} RedCommit
- *   exitCode: that of the replay that proved the commit red (its test or e2e command), null when it was not replayed (a test that kills mutants).
- * @typedef {{ component: string, gate: string, command: string, status: string, durationMs: number, evidence: string, survivors?: number | null }} GateFact
- *   survivors: the mutants a mutation gate handed out, null when it passed or could not tell; absent for any other gate.
+ * @typedef {{ sha: string, subject: string }} RedCommit
+ * @typedef {{ gate: string, folder: string, run: number, log: string }} EvidenceFact
+ *   a traced run of `skraft_repl` the delivery stands on: its gate, the folder it ran in, its id and its log.
  * @typedef {{ step: string, lens: string, id: string, gate: string, severity: string, location: string, description: string, verdict: string | null, reason: string | null, dissent: boolean, carried: number | null, since: number | null, accepted: boolean, rule: string | null }} FindingFact
  *   rule: the name the lens's descriptor gives its gate, null when the journal does not hold it
  *   (an older journal, a lens without a Name column); verdict: the refuter's, null for a finding it does not check (noted); carried: the pass
@@ -36,32 +35,26 @@ import { reviewModels } from './agent-models.mjs'
  */
 
 /**
- * The red commits the run accepted, each once, in commit order; a check the machine stopped
- * (`settled: false`) accepted none of its commits.
+ * The red commits the run accepted, each once, in commit order.
  * @param {RunEvent[]} events @returns {RedCommit[]}
  */
 export const redCommits = (events) => {
-  const commits = events.filter((event) => event.type === 'commits.checked' && event.settled !== false).flatMap((event) => event.commits)
+  const commits = events.filter((event) => event.type === 'commits.checked').flatMap((event) => event.commits)
   const last = new Map(commits.map((/** @type {any} */ commit) => [commit.sha, commit]))
   return [...last.values()]
     .filter((commit) => commit.kind === 'red' && commit.verdict === 'ok')
-    .map((commit) => ({ sha: commit.sha.slice(0, 7), subject: commit.subject, exitCode: commit.replay?.exitCode ?? null }))
+    .map((commit) => ({ sha: commit.sha.slice(0, 7), subject: commit.subject }))
 }
 
 /**
- * The last result of each gate of each component, in the order they first ran; a component the
- * machine could not gate (`none`, retried since) is no gate.
- * @param {RunEvent[]} events @returns {GateFact[]}
+ * The traced runs the last delivery attempt that held its evidence stands on, in the order they ran.
+ * @param {RunEvent[]} events @returns {EvidenceFact[]}
  */
-export const finalGates = (events) => {
-  /** @type {Map<string, GateFact>} */
-  const gates = new Map()
-  for (const event of events.filter((candidate) => candidate.type === 'gate.ran' && candidate.gate !== 'none')) gates.set(`${event.component}/${event.gate}`, gateOf(event))
-  return [...gates.values()]
+export const qualityEvidence = (events) => {
+  const checked = events.findLast((event) => event.type === 'evidence.checked' && event.red !== true)
+  if (checked === undefined) return []
+  return checked.runs.map((/** @type {{ gate: string, cwd: string, run: number, log: string }} */ { gate, cwd, run, log }) => ({ gate, folder: cwd, run, log }))
 }
-
-/** @param {RunEvent} event @returns {GateFact} */
-const gateOf = ({ component, gate, command, status, durationMs, evidence, survivors }) => ({ component, gate, command, status, durationMs, evidence, survivors })
 
 /** The statuses of a review's findings, in the order a review shows them. */
 export const REVIEW_STATUSES = Object.freeze(/** @type {const} */ (['fix', 'decide', 'accepted', 'note', 'refuted']))

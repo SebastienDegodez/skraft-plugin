@@ -178,13 +178,18 @@ const spawnOnce = async (spawn, args) => {
 /** @param {string} error @returns {AgentAnswer} */
 const notStarted = (error) => ({ ok: false, text: '', unavailable: true, error })
 
-/** @param {string} subagentType @param {TurnComplete} turn */
+/**
+ * A turn ended on its answer, else why it ended; `aborted` is the reason Claude Code gives a turn a
+ * person stopped (Esc), so the run stops with it rather than ask for a recovery.
+ * @param {string} subagentType @param {TurnComplete} turn
+ */
 const turnResult = (subagentType, turn) => {
   const ok = turn.reason === 'answer'
   return {
     ok,
     text: turn.answer ?? '',
     ...(ok ? {} : { error: `${subagentType} ended: ${turn.reason}` }),
+    ...(turn.reason === 'aborted' ? { interrupted: true } : {}),
   }
 }
 

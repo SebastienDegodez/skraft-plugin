@@ -28,7 +28,7 @@ const started = async (host, confirm) => {
 }
 
 test('a working copy whose configuration nobody confirmed is asked once, before anything starts; START is kept in skraft-config.local.json and the run goes on', async () => {
-  const host = confirming({ files: { [LOCAL]: JSON.stringify({ tdd: { replay: 'last-red' } }), '.gitignore': 'node_modules/\n' } })
+  const host = confirming({ files: { [LOCAL]: JSON.stringify({ notes: 'kept as written' }), '.gitignore': 'node_modules/\n' } })
 
   const waiting = await started(host)
 
@@ -45,7 +45,7 @@ test('a working copy whose configuration nobody confirmed is asked once, before 
   assert.equal((await host.decide({ answer: 'start' })).ok, true)
   assert.equal((await run(host)).status, 'done')
 
-  assert.deepEqual(JSON.parse(host.workspace.files.get(LOCAL)), { tdd: { replay: 'last-red' }, configurationConfirmed: true })
+  assert.deepEqual(JSON.parse(host.workspace.files.get(LOCAL)), { notes: 'kept as written', configurationConfirmed: true })
   assert.equal(host.workspace.files.get('.gitignore'), 'node_modules/\nskraft-config.local.json\n')
   assert.deepEqual(eventsOf(host, 'question.asked').map(({ key, step }) => [key, step]), [['configuration-1', 'configuration']])
   assert.deepEqual(eventsOf(host, 'question.answered').map(({ key, answer, by }) => [key, answer, by]), [['configuration-1', 'START', 'decide']])

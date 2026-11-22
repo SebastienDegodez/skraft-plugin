@@ -1,6 +1,6 @@
 ---
 title: "Add a repository agent to the pipeline"
-description: "Hand a pipeline step to an agent written in your repository: add it as a node of the ejected workflow, before the gates, and check it."
+description: "Hand a pipeline step to an agent written in your repository: add it as a node of the ejected workflow, before the DELIVER review, and check it."
 persona: tech-lead
 ---
 
@@ -39,16 +39,15 @@ Read the brief, update docs/user for what the story changes, then write the summ
 ## 2. Add the node to the workflow
 
 In `.skraft/pipeline.skraft.dot`, declare a `shape=box` node that names the agent, then wire it.
-An agent that changes the working copy goes **before** `gates`, so that its changes pass the
-gates and the DELIVER review:
+An agent that changes the working copy goes **before** `deliver_review`, so that the DELIVER review reads its changes:
 
 ```text
 user_docs [shape=box, agent="user-docs-writer", outputs="changes/{date}/user-docs-{slug}.md", writes="docs/user"]
 
-deliver -> user_docs -> gates
+deliver -> user_docs -> deliver_review
 ```
 
-and remove the `deliver -> gates` edge it replaces.
+and remove the `deliver -> deliver_review` edge it replaces.
 
 | Attribute | Effect |
 |---|---|
@@ -81,8 +80,8 @@ Expected result:
 .skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH
 + node user_docs (agent user-docs-writer)
 + edge deliver -> user_docs
-+ edge user_docs -> gates
-- edge deliver -> gates
++ edge user_docs -> deliver_review
+- edge deliver -> deliver_review
 .skraft/pipeline.skraft.dot: 4 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 
@@ -96,8 +95,7 @@ Commit `.skraft/` and the agent's files: the step runs on the next run.
 | Message | Action |
 |---|---|
 | `node user_docs: agent user-docs-writer not found in the plugin, .claude/agents/ or .github/agents/` | Create the agent's file under the id's exact name, for the host in use. |
-| `user_docs reaches the exit without passing gates; keep the run going through gates, or skip gates with unlock="<reason>"` | The node sits after the gates: move it before `gates`. |
-| `user_docs reaches the exit without passing mandatory node deliver_review; …` | Same cause: the node bypasses the DELIVER review. |
+| `user_docs reaches the exit without passing mandatory node deliver_review; …` | The node sits after the review or beside it: place it before `deliver_review`. |
 | `node user_docs: attribute <key> is not supported on a box node (supported: …)` | Use only the attributes listed in step 2. |
 | `out of write scope: <path>` in the journal | The agent wrote outside `writes`: widen `writes`, or tighten its prompt. |
 | `<node> is blocked: <agent> still failed after 3 attempts`, `missing outputs: <path>` under it | The agent did not fill an output of `outputs` after its attempts: fix its prompt, then answer the `blocked` question with an instruction, which starts it again on a new pass. `STOP` ends the run with `missing-outputs`. |

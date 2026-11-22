@@ -11,7 +11,7 @@ asks nothing. Ask every question in this file; never guess an answer you could a
 Called with the argument `mutation`, do the section *Mutation* alone, then stop.
 
 When the host lists the skraft MCP tools, use them instead of `<cli>`: `skraft_init` for
-`<cli> init` (`{ add: [<folder>, …] }` for `--add`, `{ mutation: true }` for `--mutation`), `skraft_doctor` for `<cli> doctor`
+`<cli> init` (`{ add: [<folder>, …] }` for `--add`), `skraft_doctor` for `<cli> doctor`
 (`{ run: true }` for `--run`). Pass `workspace`, the absolute path of the root of the working
 copy, to every skraft tool call. When a skraft tool refuses, tell the developer its refusal and
 stop: never run `<cli>` or any `node` command in its place. Only when the host lists no skraft
@@ -22,8 +22,8 @@ not, and never search the disk for the plugin folder.
 
 ## 1. The components
 
-Run `<cli> init`. It detects each project folder and writes `skraft-config.json`; it never
-overwrites a value the file already holds.
+Run `<cli> init`. It writes each project's name, root, stack and paths to `skraft-config.json`,
+with no command; it never overwrites a value the file already holds.
 
 A folder it missed is added with `<cli> init --add <folder>`, one `--add` per folder. Ask the
 developer only when the result lists no component, or lists one whose root surprises you.
@@ -36,10 +36,31 @@ names another ref, leave it: the developer chose it.
 ## 3. The gate commands
 
 For each component, `commands` must hold at least one of `build`, `format`, `lint`, `test`,
-`architecture`, `coverage`, `e2e`; a component with none can prove nothing and the gates refuse
-the run. `mutation` counts for none of them: ask nothing about it here, *Mutation* declares it.
+`architecture`, `coverage`, `e2e`; a component with none can prove nothing: the engine refuses a delivery
+that holds no traced run of its gates. `mutation` counts for none of them: ask nothing about it here, *Mutation* declares it.
 
-`<cli> init` fills the commands of the stack it detected. Two it cannot detect:
+`<cli> init` writes no command: every command is the developer's. For each component, load the
+skill of its stack and propose the lines of its *Gate command lines* table that this working copy
+can run (a script its manifest declares before a tool it implies; the project's `./mvnw` or
+`./gradlew` before the global tool):
+
+- `dotnet`: `quality-gates-dotnet`; `python`: `quality-gates-python`;
+- `typescript` and `react` with Vitest: `quality-gates-typescript`; `javascript` run by
+  `node --test`: `quality-gates-javascript`;
+- `java`, which has no such skill:
+
+  | Gate | Maven | Gradle |
+  |---|---|---|
+  | build | `mvn -B -q -DskipTests package` | `gradle build -x test` |
+  | test | `mvn -B -q verify` | `gradle test` |
+
+  with `./mvnw` or `./gradlew` in place of `mvn` or `gradle` when the project ships it.
+
+Write the interpreter a Python line needs as this machine needs it, with forward slashes
+(`.venv/bin/python …` on macOS and Linux, `.venv/Scripts/python.exe …` on Windows; never a
+backslash, which JSON refuses): the engine starts a program as written. A team on several systems
+chooses one form per component, since `skraft-config.json` holds one line. Two commands no table
+gives:
 
 - `architecture` — the command that runs the architecture tests. Look for them in the working
   copy (a test project or folder whose name holds `architecture` or `arch`, a NetArchTest,
@@ -49,10 +70,14 @@ the run. `mutation` counts for none of them: ask nothing about it here, *Mutatio
 - `e2e` — the end-to-end command, for a front end only.
 
 Propose each command and have the developer confirm it. A command the developer writes always
-wins. A command runs with no shell, the same under sh, PowerShell and cmd: a pipe, a redirection,
-`&&` or a `VAR=value` before the program is refused. A command that needs variables or several
-steps is a script of the component, and the command calls the script. Then run `<cli> doctor --run` and fix every failure before you go on: a command that does
-not run is worse than an absent one.
+wins. The software engineer runs each command through `skraft_repl` from the component's root,
+under sh, Git Bash or PowerShell: a command that needs variables or several steps is a script of
+the component, and the command calls the script. Helpers the agents reuse across cells belong in
+the project's `.repl/lib/<name>.mjs`, written and committed by the developer, their packages in
+`.repl/package.json` with its lockfile; `<cli> init` lists `.repl/node_modules/` in `.gitignore`.
+When the developer asks about `.repl/`, point to
+https://sebastiendegodez.github.io/skraft-plugin/how-to/keep-repl-scripts and write nothing under
+`.repl/` yourself. Then run `<cli> doctor` and fix every failure before you go on.
 
 ## 4. The two publication consents
 
@@ -65,13 +90,14 @@ Ask each one in these words, which are the ones the answer is kept against:
 - `publish.pullRequest` — *May skraft push this branch and open or update its pull request when a
   run ends, and keep one comment on its story's issue up to date with the run's progress, time and
   cost?*
-- `publish.visuals` — *May skraft publish the screenshots and videos of its runs in the pull
-  request of the branch? They can show private data.*
+- `publish.visuals` — *May skraft show the screenshots of its front end's e2e runs in the pull
+  request of the branch (on GitHub gh attaches them to it; on Azure DevOps they are committed on
+  the branch)? They can show private data.*
 
 Ask `visuals` only when a component is a front end (a `react` stack, or an `e2e` command).
 
 Write each answer with the version of the question it answers, under `publish.questionVersions`:
-`pullRequest` is at version 2, `visuals` at version 1. An answer kept against an earlier version
+`pullRequest` is at version 2, `visuals` at version 2. An answer kept against an earlier version
 is not settled, and a run is refused until you ask again.
 
 A refusal is an answer: a run then publishes nothing and is not held up.
@@ -161,21 +187,36 @@ again. Then tell the developer, in one line each:
 
 ## Mutation
 
-Mutation testing is the developer's: no run of the pipeline mutates, and nothing is declared
-until they ask for it.
+Mutation testing is the developer's: no run of the pipeline mutates, the engine runs none, and
+nothing is declared until they ask for it. The `skraft-mutation` skill runs the command in the
+developer's session.
 
-1. Run `<cli> init --mutation`. It writes the mutation command of each component's stack to
-   every component that has none, and keeps a command already written. Its reason names the
-   components that now carry one, and those whose root holds no project.
+1. For each component that has no `mutation` command, propose one from its stack's
+   `quality-gates-<stack>` skill and the tool the working copy declares; keep a command already
+   written. The `quality-gates-<stack>` skills hold no mutation line: propose the one whose report
+   the `skraft-mutation` recipe reads, relative to the component root:
+
+   | Tool | Command | Report |
+   |---|---|---|
+   | Stryker.NET | `dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput` | `StrykerOutput/reports/mutation-report.json` |
+   | PIT, Maven | `mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory` | `target/pit-reports/mutations.xml` |
+   | PIT, Gradle | `gradle pitest` with its XML output | `build/reports/pitest/mutations.xml` |
+   | StrykerJS | `npx stryker run --incremental --reporters json,clear-text` | `reports/mutation/mutation.json` |
+
+   `./mvnw` or `./gradlew` replace `mvn` or `gradle` when the project ships them. For any other
+   tool, or one writing elsewhere, propose a command that writes its result to the file
+   `SKRAFT_MUTATION_RESULT` names; mutmut alone (`python -m mutmut run`) writes no report the
+   recipe reads.
 2. Show each component's `mutation` command, one line each, and ask the developer to confirm it,
-   rewrite it, or leave the component out. A component left out loses its `mutation` key; write
-   nothing else for it.
+   rewrite it, or leave the component out. Write each confirmed line yourself into
+   `commands.mutation` of the component in `skraft-config.json`; a component left out gets no
+   `mutation` key and nothing else.
 3. Install nothing and write no configuration of the tool (Stryker, PIT, mutmut): no scaffold.
    Name what the command needs that the working copy lacks (the tool, its plugin, its
    configuration file) and leave it to the developer.
 4. A command the developer writes either writes its result, score already computed, to the file
-   the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves the report its tool writes
-   at the tool's default path. `skraft-quality-bar` gives the result's form and the bar.
-5. Run `<cli> doctor`. Its `mutation` line names the components that declare a command; fix every
-   `<component>/mutation` failure. Then tell the developer that `skraft mutation` runs mutation on
-   the branch HEAD is on, in its own run.
+   the environment variable `SKRAFT_MUTATION_RESULT` names, or leaves a report at one of the
+   paths of the table above. `skraft-quality-bar` gives the result's form and the bar.
+5. Run `<cli> doctor`. It lists each component's commands; fix every failure it names. Then tell
+   the developer that the `skraft-mutation` skill runs mutation on the branch HEAD is on, in their
+   session.

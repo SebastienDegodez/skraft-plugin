@@ -4,7 +4,7 @@ import { agent, API, finding, green, lenses, nominal, refutes, says, scripted, S
 import { BUILT_IN_WORKFLOW } from '../support/in-memory-host.mjs'
 import { ejectedPipeline, withLenses } from '../workflow/support.mjs'
 
-const DISSENT = '- Only cold-reader found a blocker, high or medium finding; test-integrity, architecture-boundaries found none.'
+const DISSENT = '- Only cold-reader found a blocker, high or medium finding; test-integrity, architecture-boundaries, quality-gates found none.'
 
 /** The refuter's dispatches. @param {ReturnType<typeof scripted>} host */
 const checks = (host) => host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'finding-refuter')

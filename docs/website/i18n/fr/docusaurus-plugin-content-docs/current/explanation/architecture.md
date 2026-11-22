@@ -28,7 +28,7 @@ Architecture : les règles pures (`domain/`) ne dépendent de rien, les cas d'us
 (`application/`) ne dépendent que d'elles, et les détails — fichiers, git, processus, hôtes —
 sont à l'extérieur ([Martin, 2017](../reference/citations.mdx#cite-martin-cleanarch-2017)). Un **cas
 d'usage** est une action complète du point de vue de l'utilisateur : démarrer un pipeline, le
-faire avancer, observer son état, lancer les gates, répondre à une question. Il décide ; il ne
+faire avancer, observer son état, répondre à une question. Il décide ; il ne
 fait aucune entrée-sortie lui-même, il passe par des contrats que l'extérieur implémente — l'idée
 des ports et adaptateurs ([Cockburn, 2005](../reference/citations.mdx#cite-cockburn-hexagonal-2005)).
 
@@ -143,11 +143,8 @@ tentatives. Un agent dont les deux dernières tentatives refusées ont échoué 
 façon (les mêmes sorties absentes et les mêmes échecs, comparés tels qu'écrits) n'est pas lancé une
 troisième fois, parce qu'une tentative identique n'apprendrait rien : le run demande une consigne à
 un humain, comme après la dernière tentative de l'agent, et la consigne relance l'agent sur un
-nouveau passage. Une étape de gates en échec
-renvoie le travail par son arête `FAIL` jusqu'au `max_visits` de cette arête ; le run demande
-alors une consigne à un humain. Les tentatives et les arêtes empruntées sont relues dans le
-journal, si bien qu'un run repris les garde. Une gate arrêtée par un signal ou un plantage échoue comme une
-vérification : sa preuve revient à l'agent. Une étape que la machine ne peut pas exécuter
+nouveau passage. Les tentatives et les arêtes empruntées sont relues dans le
+journal, si bien qu'un run repris les garde. Une étape que la machine ne peut pas exécuter
 (programme introuvable, git en échec), ou pas avec ce que lui donne `skraft-config.json`, n'est
 pas imputée à l'agent et ne consomme aucune de ses tentatives : le
 moteur demande à un humain, en nommant à qui revient la correction et le log de ce qu'a affiché
@@ -172,8 +169,8 @@ le calcul : [Gates](../reference/gates.md#review-run).
 
 Ce qu'un agent pourrait oublier, le moteur le vérifie : l'ordre des phases, calculé depuis le
 graphe du workflow ; les sorties attendues, pré-créées puis vérifiées ; l'intégrité du journal ;
-les gates de commandes ; ce que chaque étape a le droit d'écrire, par un diff git ; les commits
-rouges et verts du TDD ; le cycle de vie des ADR ; le verdict des revues. Chacun de ces
+ce que chaque étape a le droit d'écrire, par un diff git ; les commits
+rouges et verts du TDD ; le cycle de vie des ADR ; le verdict des revues. Ce que seul un jugement tranche va aux lentilles de revue : les critères et la forme du Gherkin en DISTILL, les exécutions tracées des gates en DELIVER (la lentille `quality-gates`). Chacun de ces
 contrôles est testé sans hôte, et se comporte pareil partout. Pourquoi ils ont quitté les hooks
 de la v1 : [Garde-fous](./guardrails.md). Comment le workflow
 qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.mdx).
@@ -182,17 +179,21 @@ qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.mdx)
 
 Le moteur ne lit que des formats stables : un message de Conventional Commit, un fichier qui
 existe, un dossier où une étape a le droit d'écrire, un code de sortie. Il ne lit aucun rapport de
-test (JUnit, TRX ou autre) ni la sortie d'aucun runner. Pour vérifier un commit rouge ou vert, il rejoue
-les commandes de test du commit dans une copie jetable et garde ce que chacune a affiché, tel
-quel, dans un log. Il ne distingue qu'un code de sortie 0 : un rouge dont toutes les commandes
-passent est refusé sur-le-champ. Tout le reste va au
-[juge du rejeu](pathname:///dashboard/#agent-replay-judge), un agent que le pilote lance à
-profondeur 1, comme une lentille : il lit les logs, ceux du parent quand un rouge a échoué, et le
-commit, et répond `accept`, `send-back`, `retry` ou `ask-human` avec une note. Le moteur ne lit
-que la décision et garde la réponse comme la preuve que lit un humain ou la tentative suivante.
-Une décision que seule la machine peut trancher (un programme non installé, un runtime de
+test (JUnit, TRX ou autre) ni la sortie d'aucun runner. Il ne lance aucun test pour vérifier un commit rouge ou vert : il lit l'historique Git, l'ordre
+et les types des commits, les fichiers que chacun change, son message. Qu'un rouge échoue sur une
+assertion, c'est l'affaire du lancement du designer d'acceptation, qu'il journalise, et de la revue
+DISTILL ; qu'un vert fasse passer ses tests, celle de la commande qui enchaîne le commit au test, et
+de la revue DELIVER. Une décision que seule la machine peut trancher (un programme non installé, un runtime de
 conteneurs qui ne répond pas) arrive à un humain par la même question `environment` que toute
-autre étape. Les règles : [Commits et rejeux](../reference/gates.md#commits).
+autre étape. Les règles : [Commits](../reference/gates.md#commits).
+
+Les commandes qu'un agent lance pendant sa tentative passent par `skraft_repl` : le serveur, pas la
+cellule, démarre chaque programme et en écrit la trace signée. Un noyau ne doit jamais tenir le
+serveur : chaque borne a une valeur fixée par le code (un run de 7200 s au plus, une cellule de
+7260 s, une réponse d'appel à 90 s, huit runs vivants, un journal de 64 Mio écrit à mesure, 1 Mio
+de ce qu'une cellule affiche, un tas de 2 Gio, un démarrage borné à 30 s, sa bibliothèque chargée), et le noyau s'arrête
+avec tout ce que ses cellules ont lancé. `.repl/` appartient au projet : le moteur le lit, ne
+l'écrit jamais. Le détail : [Le REPL d'une tentative](../reference/repl.md).
 
 ## Alternatives écartées
 

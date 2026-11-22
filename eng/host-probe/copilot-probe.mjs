@@ -656,6 +656,7 @@ const skraftChecks = async (context) => {
     checks.push(...await skraftMcpChecks(session))
     checks.push(await sessionAgents(session, pluginRoot))
     checks.push(await agentMcpReach(context, pluginRoot))
+    checks.push(await agentReplReach(context, pluginRoot))
   } finally {
     await session.disconnect?.().catch(() => undefined)
   }
@@ -677,10 +678,14 @@ const skraftMcpServer = async (session) => {
   return { servers, tools: tools.map(({ name }) => name).sort() }
 }
 
+const MCP_REPL_EXPECTED = "Le serveur MCP `skraft` liste `skraft_repl`, le REPL JavaScript de la tentative d'un agent qui livre du code, et `skraft_repl_reset`, qui en termine le noyau, sous Copilot CLI."
+/** The two tools of the REPL, by their names on the server. */
+const REPL_TOOLS = Object.freeze(['skraft_repl', 'skraft_repl_reset'])
+
 const skraftMcpChecks = async (session) => {
   let seen
   try { seen = await skraftMcpServer(session) } catch (error) {
-    return [check({ id: 'skraft-mcp-server-loaded', expected: MCP_SERVER_EXPECTED, observed: { error: messageOf(error) } }), check({ id: 'skraft-mcp-loop-hidden', expected: MCP_LOOP_EXPECTED, observed: { error: messageOf(error) } })]
+    return [check({ id: 'skraft-mcp-server-loaded', expected: MCP_SERVER_EXPECTED, observed: { error: messageOf(error) } }), check({ id: 'skraft-mcp-loop-hidden', expected: MCP_LOOP_EXPECTED, observed: { error: messageOf(error) } }), check({ id: 'skraft-repl-listed', expected: MCP_REPL_EXPECTED, observed: { error: messageOf(error) } })]
   }
   const loaded = seen.tools.includes('skraft_status')
   const offered = seen.tools.filter((name) => MCP_LOOP_TOOLS.includes(name))
@@ -695,7 +700,18 @@ const skraftMcpChecks = async (session) => {
       title: "V2 — le serveur MCP skraft propose la boucle d'agent sous Copilot CLI", labels: ['bug', 'gain:reliability'],
       body: "Sous Copilot CLI, le serveur MCP `skraft` liste `skraft_start` : l'hôte se nomme `Visual Studio Code` à la poignée de main, et un agent peut démarrer un pipeline hors du workflow `skraft-pipeline`.",
     }),
+    replListed(seen, loaded),
   ]
+}
+
+/** Whether the server lists both tools of the REPL. */
+const replListed = (seen, loaded) => {
+  const listed = REPL_TOOLS.filter((name) => seen.tools.includes(name))
+  return check({
+    id: 'skraft-repl-listed', expected: MCP_REPL_EXPECTED, verdict: loaded ? (listed.length === REPL_TOOLS.length ? 'pass' : 'fail') : 'inconclusive', observed: { listed },
+    title: "V2 — le serveur MCP skraft ne liste pas skraft_repl ou skraft_repl_reset sous Copilot", labels: ['bug', 'gain:reliability'],
+    body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, `rpc.mcp.listTools` ne liste pas `skraft_repl` ou `skraft_repl_reset` : les agents qui livrent du code ne peuvent pas lancer leurs commandes par le REPL, dont les runs seuls comptent comme preuve, ou ne peuvent pas en terminer un noyau bloqué.",
+  })
 }
 
 /**
@@ -706,6 +722,7 @@ const skraftMcpChecks = async (session) => {
 const MCP_AGENT_TOOL = 'skraft-skraft_doctor'
 const MCP_AGENT_TOOL_DECLARED = 'skraft/skraft_doctor'
 const AGENT_MCP_REACH_EXPECTED = "Un agent reçoit un outil du serveur MCP du plugin quand son `tools:` le nomme, et ne le reçoit pas sinon : la session offre `skraft-skraft_doctor` à l'agent qui le déclare, et ne l'offre pas à celui qui déclare un autre outil (#581)."
+const AGENT_REPL_REACH_EXPECTED = "Un agent reçoit `skraft_repl` et `skraft_repl_reset` quand son `tools:` les nomme, et ne les reçoit pas sinon : la session offre `skraft-skraft_repl` et `skraft-skraft_repl_reset` à l'agent qui les déclare, et ne les offre pas à celui qui déclare un autre outil. Un agent qui n'est pas le sien n'ouvre donc pas de REPL et n'en termine aucun."
 
 /** What one session offers its active agent, the agent declaring exactly `tools`. */
 const toolsOfferedToAgent = async (context, pluginRoot, tools) => {
@@ -721,26 +738,42 @@ const toolsOfferedToAgent = async (context, pluginRoot, tools) => {
   }
 }
 
-/** Whether a producer agent can be given a pre-check tool at all, and whether declaring it is what decides. */
-const agentMcpReach = async (context, pluginRoot) => {
+/** Given to none, to some, or to all of the tools: a host that hands over only some of them gates them badly. */
+const reachVerdict = (tools, declared, control) => {
+  const reached = tools.filter((tool) => declared.includes(tool)).length
+  if (tools.some((tool) => control.includes(tool))) return 'fail'
+  if (reached === tools.length) return 'pass'
+  return reached === 0 ? 'inconclusive' : 'fail'
+}
+
+/** The reach of tools of the plugin's MCP server: given to the agent that declares them, withheld from the one that does not. */
+const toolReach = async (context, pluginRoot, { id, tools, declaredAs, expected, title, body }) => {
   let declared
   let control
   try {
-    declared = await toolsOfferedToAgent(context, pluginRoot, [MCP_AGENT_TOOL])
+    declared = await toolsOfferedToAgent(context, pluginRoot, tools)
     control = await toolsOfferedToAgent(context, pluginRoot, ['view'])
   } catch (error) {
-    return check({ id: 'agent-mcp-reach', expected: AGENT_MCP_REACH_EXPECTED, observed: { error: messageOf(error) } })
+    return check({ id, expected, observed: { error: messageOf(error) } })
   }
-  const reached = declared.includes(MCP_AGENT_TOOL)
-  const leaked = control.includes(MCP_AGENT_TOOL)
-  const reason = reached || leaked ? undefined : 'the session offers no tool of the plugin MCP server: nothing to gate'
-  return check({
-    id: 'agent-mcp-reach', expected: AGENT_MCP_REACH_EXPECTED, verdict: leaked ? 'fail' : reached ? 'pass' : 'inconclusive',
-    observed: { tool: MCP_AGENT_TOOL, declaredAs: MCP_AGENT_TOOL_DECLARED, declared, control, reason },
-    title: "V2 — un outil MCP n'atteint pas l'agent qui le déclare sous Copilot", labels: ['bug', 'gain:reliability'],
-    body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, la session n'offre pas `skraft-skraft_doctor` à l'agent dont le `tools:` le nomme, ou l'offre à un agent qui ne le nomme pas : un précontrôle ne peut pas être donné à un agent producteur, ou ne peut pas lui être retiré (#581).",
-  })
+  const verdict = reachVerdict(tools, declared, control)
+  const reason = verdict === 'inconclusive' ? 'the session offers no tool of the plugin MCP server: nothing to gate' : undefined
+  return check({ id, expected, verdict, observed: { tools, declaredAs, declared, control, reason }, title, labels: ['bug', 'gain:reliability'], body })
 }
+
+/** Whether a producer agent can be given a pre-check tool at all, and whether declaring it is what decides. */
+const agentMcpReach = (context, pluginRoot) => toolReach(context, pluginRoot, {
+  id: 'agent-mcp-reach', tools: [MCP_AGENT_TOOL], declaredAs: [MCP_AGENT_TOOL_DECLARED], expected: AGENT_MCP_REACH_EXPECTED,
+  title: "V2 — un outil MCP n'atteint pas l'agent qui le déclare sous Copilot",
+  body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, la session n'offre pas `skraft-skraft_doctor` à l'agent dont le `tools:` le nomme, ou l'offre à un agent qui ne le nomme pas : un précontrôle ne peut pas être donné à un agent producteur, ou ne peut pas lui être retiré (#581).",
+})
+
+/** Whether the two tools of the REPL reach only the agent that declares them: an agent that is not its own opens none and ends none. */
+const agentReplReach = (context, pluginRoot) => toolReach(context, pluginRoot, {
+  id: 'agent-repl-reach', tools: REPL_TOOLS.map((name) => `skraft-${name}`), declaredAs: REPL_TOOLS.map((name) => `skraft/${name}`), expected: AGENT_REPL_REACH_EXPECTED,
+  title: "V2 — skraft_repl ou skraft_repl_reset atteint un agent qui ne le déclare pas, ou pas celui qui le déclare, sous Copilot",
+  body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, la session n'offre pas `skraft-skraft_repl` ou `skraft-skraft_repl_reset` à l'agent dont le `tools:` les nomme, ou en offre un à un agent qui ne le nomme pas : le REPL ne peut pas être donné aux seuls agents qui livrent du code.",
+})
 
 const skraftWorkflowChecks = async (session) => {
   const plain = await runWorkflow(session, 'skraft-pipeline', { slug: 'Not A Slug' })
@@ -1193,6 +1226,24 @@ const pluginHooksCheck = async (context) => {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Check: gh attaches a pull request's screenshots. No forge is reached: gh's own help is read.
+
+const GH_ATTACH_EXPECTED = "`gh pr create --help` nomme l'option `--attach` : le moteur joint les captures d'écran d'un front end à la pull request qu'il ouvre sur GitHub, chaque référence `![alt](./<chemin>)` du corps réécrite par gh vers le fichier téléversé."
+
+/** The help of `gh pr create` on this machine; null when gh does not start. */
+export const ghCreateHelp = () => {
+  const run = spawnSync('gh', ['pr', 'create', '--help'], { encoding: 'utf8', timeout: 30_000 })
+  return run.status === 0 ? run.stdout : null
+}
+
+/** Whether gh names --attach; inconclusive without gh. @param {() => string | null} help */
+export const ghAttachCheck = (help) => {
+  const text = help()
+  if (text === null) return check({ id: 'gh-pr-attach', expected: GH_ATTACH_EXPECTED, observed: { gh: 'not started' } })
+  return check({ id: 'gh-pr-attach', expected: GH_ATTACH_EXPECTED, verdict: text.includes('--attach') ? 'pass' : 'fail', observed: { attach: text.includes('--attach') } })
+}
+
+// ---------------------------------------------------------------------------------------------
 // Check: a model session reads an incident question and answers it while the run is paused (#566).
 // The only check that sends a prompt; it runs with --incident-session.
 
@@ -1269,7 +1320,7 @@ const incidentCheck = async ({ sdk, client, dirs, incidentSession }) => {
  * `agentCalls`: whether the checks that start an agent run; `incidentSession`: whether the incident
  * check sends its prompt to the host default model.
  */
-export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = homedir(), models = {}, agentCalls = false, incidentSession = false, timings = {}, log = () => undefined }) => {
+export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = homedir(), models = {}, agentCalls = false, incidentSession = false, timings = {}, log = () => undefined, ghHelp = ghCreateHelp }) => {
   T = { ...DEFAULT_TIMINGS, ...timings }
   const root = workRoot ?? await mkdtemp(join(tmpdir(), 'skraft-host-probe-'))
   const dirs = { root, home, repoA: join(root, 'repo-a'), repoB: join(root, 'repo-b'), questionA: join(root, 'question-a'), questionB: join(root, 'question-b'), incident: join(root, 'incident') }
@@ -1299,6 +1350,8 @@ export const runProbe = async ({ sdk, sdkPath, environment, workRoot, home = hom
     checks.push(await pluginHooksCheck({ sdk, dirs }))
     log('native tools…')
     checks.push(await nativeToolNames(sdk, client, dirs))
+    log('gh attachments…')
+    checks.push(ghAttachCheck(ghHelp))
   } finally {
     await client.stop().catch(() => undefined)
   }

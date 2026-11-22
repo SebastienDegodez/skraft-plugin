@@ -6,7 +6,7 @@ import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mj
 import { DELIVER_LENSES, ejectedPipeline, edit, host, reviewWithLenses } from './support.mjs'
 
 const CALL = '  deliver_review [shape=house, workflow="review", mandatory=true]'
-const INPUTS = 'input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"'
+const INPUTS = 'input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional", input_trace="optional"'
 
 /** The errors `skraft workflow check` gives on the working copy's files. @param {Record<string, string>} files */
 const errorsOf = async (files, repository = []) => (await host({ files, repository }).commands.check()).errors
@@ -21,15 +21,15 @@ test('the plugin\'s DELIVER review is a call to the plugin\'s .skraft/review.skr
 
   const call = workflow.nodes.deliver_review
   assert.equal(call.kind, 'call')
-  assert.deepEqual(call.lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'])
-  assert.deepEqual(call.branches.map(({ id, when }) => `${id} ${when}`), ['test_integrity null', 'architecture_boundaries null', 'cold_reader null', 'mock_fidelity mock', 'contract_fidelity contract'])
+  assert.deepEqual(call.lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity', 'contract-fidelity'])
+  assert.deepEqual(call.branches.map(({ id, when }) => `${id} ${when}`), ['test_integrity null', 'architecture_boundaries null', 'cold_reader null', 'quality_gates delivery', 'mock_fidelity mock', 'contract_fidelity contract'])
   assert.deepEqual(call.call, {
     workflow: 'review', with: {}, fanIn: 'verdict', mandatory: true,
-    inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' },
+    inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components', trace: 'trace' },
   })
   const { path, workflow: review } = workflow.called.review
   assert.equal(path, null)
-  assert.deepEqual(review.inputs, { base: 'required', head: 'required', story: 'optional', documents: 'optional', components: 'optional' })
+  assert.deepEqual(review.inputs, { base: 'required', head: 'required', story: 'optional', documents: 'optional', components: 'optional', trace: 'optional' })
   assert.deepEqual([review.order, review.phases], [['start', 'verdict', 'exit'], []])
 })
 
@@ -80,7 +80,7 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
     'node deliver_review: attribute model is not supported on a house node (supported: label, shape, phase, workflow, mandatory, with_<input>)',
   ])
   assert.deepEqual(await errorsOf(ejectedPipeline(edit(BUILT_IN_WORKFLOW, ['agent="pr-writer", phase="PUBLISH"', 'agent="pr-writer", phase="PUBLISH", with_story="story"']))), [
-    'node pr_writer: attribute with_story is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts, each, proposal)',
+    'node pr_writer: attribute with_story is not supported on a box node (supported: label, shape, phase, agent, model, outputs, writes, max_attempts)',
   ])
   const unphased = 'digraph mine {\n  start [shape=Mdiamond]\n  review [shape=house, workflow="review"]\n  exit [shape=Msquare]\n  start -> review -> exit\n}\n'
   assert.deepEqual(await errorsOf(ejectedPipeline(unphased)), ['node review has no phase; set phase="<PHASE>" on it or on a node before it'])
@@ -106,7 +106,7 @@ test('a call to a workflow found nowhere, named with a folder, or to one that ru
 test('each input of the called workflow is bound by name, or by its with_; a required input left unbound, a with_ that binds no input, or changes not bound from base to head is refused', async () => {
   const withTicket = (need) => edit(BUILT_IN_REVIEW, [INPUTS, `${INPUTS}, input_ticket="${need}"`])
   assert.deepEqual(await errorsOf({ '.skraft/review.skraft.dot': withTicket('required') }), [
-    'node deliver_review: review needs input ticket; bind it with with_ticket="<base | head | story | documents | components>"',
+    'node deliver_review: review needs input ticket; bind it with with_ticket="<base | head | story | documents | components | trace>"',
   ])
   const optional = host({ files: { '.skraft/review.skraft.dot': withTicket('optional') } })
   assert.equal((await optional.commands.check()).ok, true)
@@ -117,12 +117,12 @@ test('each input of the called workflow is bound by name, or by its with_; a req
   const { call } = (await loadWorkflow(bound.deps, {})).workflow.nodes.deliver_review
   assert.deepEqual([call.with, call.inputs], [
     { ticket: 'story', story: 'documents' },
-    { base: 'base', head: 'head', story: 'documents', documents: 'documents', components: 'components', ticket: 'story' },
+    { base: 'base', head: 'head', story: 'documents', documents: 'documents', components: 'components', trace: 'trace', ticket: 'story' },
   ])
 
   assert.deepEqual(await errorsOf(calling('workflow="review", mandatory=true, with_nothing="base"')), ['node deliver_review: with_nothing binds no input of review'])
   assert.deepEqual(await errorsOf(calling('workflow="review", mandatory=true, with_story="pr", with_9="story", "with_pr-x"="story"')), [
-    'node deliver_review: with_story="pr" must be base, head, story, documents, components',
+    'node deliver_review: with_story="pr" must be base, head, story, documents, components, trace',
     'node deliver_review: with_9="story" must be with_<input>, an input of lower-case letters, digits and _',
     'node deliver_review: with_pr-x="story" must be with_<input>, an input of lower-case letters, digits and _',
   ])

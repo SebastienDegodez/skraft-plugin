@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runSkraftPipelineWorkflow } from '../../../../plugins/skraft-framework/engine/drivers/copilot-workflow/skraft-pipeline-workflow.mjs'
-import { PLUGIN_ROOT, copilotHost, actsAs, firstOptionPerson, simulatedContext, trackingDir } from './simulated-host.mjs'
+import { PLUGIN_ROOT, copilotHost, actsAs, firstOptionPerson, settled, simulatedContext, trackingDir } from './simulated-host.mjs'
 import {
   FAMILY_MODELS, LENSES, NOMINAL, SECURITY_LENS, SLUG, checksOf, dropMandatoryLens, refutes, batchesSorted, commit, fillOutputs, finding, lensLabels, pipelineRepository, reviewBriefOf, reviewsOf, says,
   scriptedLlm, writeResult,
@@ -140,26 +140,21 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '---\nstatus: Accepted\ndecision: We will pay by card.\n---\n# ADR-001 Card payment\n\n**Status:** Accepted\n\nAccepted: Acme Pay.')
 })
 
-test('a lens that answers twice without a readable verdict stops the run as lens-unreadable, naming its agent; the resumed run calls only that lens again', async (t) => {
+test('a lens that answers twice without a readable verdict pauses the run on an unforeseen incident naming its agent', async (t) => {
   const { cwd } = pipelineRepository(t)
+  const llm = scriptedLlm({ cwd, reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
+  const host = simulatedContext({ args: { slug: SLUG }, otherwise: answersTogether(llm, () => host.calls, { design_review: 3, distill_review: 4, deliver_review: 3 }) })
 
-  const { outcome, calls, events } = await runOn(cwd, { reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
+  const outcome = await settled(resumedUntilDone(host.ctx, cwd))
 
-  assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['blocked', 'DESIGN', 'lens-unreadable'])
-  assert.equal(outcome.reason, 'fitness-lens answered 2 times without a readable verdict: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)')
-  const fitness = calls.filter((call) => call.label.includes(' · fitness · '))
+  const events = journal(cwd, SLUG)
+  const asked = events.filter((event) => event.type === 'question.asked').at(-1)
+  assert.deepEqual(outcome, { paused: asked.key })
+  assert.deepEqual([asked.kind, asked.step, asked.incidents[0].category], ['unforeseen', 'design_review', 'lens-unreadable'])
+  const fitness = host.calls.filter((call) => call.label.includes(' · fitness · '))
   assert.deepEqual(fitness.map((call) => call.label), [`skraft ${SLUG} · design_review · fitness · attempt 1`, `skraft ${SLUG} · design_review · fitness · attempt 2`])
-  assert.ok(fitness[1].prompt.endsWith('Your previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), fitness[1].prompt)
   assert.deepEqual(recordedReview(events), [])
-  assert.deepEqual([events.at(-1).type, events.at(-1).code], ['run.stopped', 'lens-unreadable'])
-  assert.equal(calls.some((call) => call.label.includes(' · distill ')), false)
-
-  const resumed = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
-  const done = await resumedUntilDone(resumed.ctx, cwd)
-
-  assert.equal(done.status, 'done')
-  assert.deepEqual(resumed.calls.filter((call) => reviewNodeOf(call.label) === 'design_review').map((call) => call.label), [`skraft ${SLUG} · design_review · fitness · attempt 1`])
-  assert.deepEqual(recordedReview(journal(cwd, SLUG))[0], ['design_review', 'approved', null])
+  assert.equal(host.calls.some((call) => call.label.includes(' · distill ')), false)
 })
 
 test('a lens that answers inconclusive blocks the review as lens-inconclusive, naming it, and DESIGN is not sent back', async (t) => {

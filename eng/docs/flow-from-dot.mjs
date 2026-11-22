@@ -19,7 +19,7 @@
 //     when= and mandatory=; a gate's commands; max_visits; each= (one run per file).
 // Sub-tasks are placed automatically: a lens or a command added to the .dot appears with no
 // change to the sidecar. What the figure fixes is only what the engine fixes: steps marked
-// mandatory, locked or goal_gate, human questions, their FAIL / NEEDS_REWORK edges, and the
+// mandatory, human questions, their FAIL / NEEDS_REWORK edges, and the
 // refuter node each review joins its lenses in (shape=octagon), read from the .dot like the rest.
 //
 // Usage:
@@ -48,18 +48,16 @@ const REFUTING = Object.freeze({ agent: REFUTER, severities: BLOCKING, outcomes:
 const DETOURS = ['FAIL', 'NEEDS_REWORK', 'REJECTED']
 const isDetour = (edge) => DETOURS.includes(edge.label)
 
-const KIND = { agent: 'agent', gate: 'gate', publish: 'code', ask: 'question', review: 'review', call: 'review', start: 'terminal', exit: 'terminal' }
+const KIND = { agent: 'agent', publish: 'code', ask: 'question', review: 'review', call: 'review', start: 'terminal', exit: 'terminal' }
 
 /** Invariant: what the engine forbids a copy to drop, bypass or weaken. */
 export const sealOf = (node) => {
-  if (node.locked) return 'locked'
-  if (node.mandatory === true || node.goal || node.kind === 'ask') return 'mandatory'
+  if (node.mandatory === true || node.kind === 'ask') return 'mandatory'
   return undefined
 }
 
 const monoOf = (node) => {
   if (node.kind === 'agent') return node.agent
-  if (node.kind === 'gate') return node.gates.length > 1 ? `${node.gates[0]} … ${node.gates.at(-1)}` : `gate ${node.gates[0]}`
   if (node.kind === 'call') return `workflow ${node.call.workflow}`
   if (node.kind === 'review') return node.lenses.join(', ')
   if (node.kind === 'ask') return node.question
@@ -116,10 +114,6 @@ function foldOf(workflow, parent, column) {
 const edgeOf = (e) => ({ id: `${e.from}->${e.to}`, from: e.from, to: e.to, label: e.label, maxVisits: e.maxVisits })
 
 // ---------------------------------------------------------------- sub-tasks
-
-function commandsSub(node) {
-  return { kind: 'commands', count: node.gates.length, all: [...node.gates], nodes: node.gates.map((id) => ({ id, kind: 'gate', command: true })), edges: [] }
-}
 
 function lensesSub(node, parentVerdicts) {
   const fan = node.fanOut
@@ -244,7 +238,6 @@ export async function buildFlow(layout, texts) {
     const verdicts = verdictsOf(workflow.edges, node.id)
     if (folds.has(node.id)) subs[node.id] = loopSub(workflow, node.id, folds.get(node.id), node.badge)
     else if ((n.kind === 'call' || n.kind === 'review') && n.branches.length) subs[node.id] = lensesSub(n, verdicts)
-    else if (n.kind === 'gate' && n.gates.length > 1) subs[node.id] = commandsSub(n)
     if (subs[node.id]) node.children = subs[node.id].kind
   }
   for (const sub of Object.values(subs)) {
@@ -279,7 +272,7 @@ export async function buildFlow(layout, texts) {
 
 /**
  * What the figure must show whatever the copy of the workflow says: the steps of the column and
- * of its folds marked locked, mandatory or goal_gate, human questions, the mandatory lenses of
+ * of its folds marked mandatory, human questions, the mandatory lenses of
  * a review, the FAIL / NEEDS_REWORK / REJECTED edges leaving those steps, and the mandatory
  * refuter of every review. Lenses without mandatory=, commands, max_visits and labels move with the .dot.
  */

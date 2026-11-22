@@ -48,8 +48,8 @@ l'exécute**.
 
 ```mermaid
 flowchart LR
-    V1["Logiciel bien conçu"] --> M1["Gates verrouillées<br/>seuil de qualité fixe"]
-    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>un scénario à la fois,<br/>commits rouge → vert"]
+    V1["Logiciel bien conçu"] --> M1["Gates tracées<br/>seuil de qualité fixe"]
+    V2["Ajouter de la valeur<br/>régulièrement"] --> M2["Walking skeleton<br/>chaque test d'acceptation rouge,<br/>un vert par histoire"]
     V3["Communauté de<br/>professionnels"] --> M3["Revue avant la revue<br/>lentilles + réfutation"]
     V4["Partenariats<br/>productifs"] --> M4["Décisions humaines<br/>ratification d'ADR, consentements"]
 ```
@@ -64,8 +64,8 @@ Le skill `skraft-quality-bar` est l'unique endroit où un seuil est écrit : 80 
 mutation sur Domain et Application comme sur API et Infrastructure, jugés à part, et 100 % de
 couverture de lignes sur Domain et Application. Il n'y a ni niveau « conseil », ni dérogation, ni réglage par dépôt ;
 la configuration `skraft-config.json` choisit les **commandes** des gates, jamais leurs seuils.
-Dans `pipeline.skraft.dot`, le nœud `gates` de DELIVER est `locked` : le retirer d'une copie du
-workflow exige une raison écrite (`unlock="<raison>"`).
+Dans DELIVER, l'ingénieur lance chaque gate par `skraft_repl` et la lentille `quality-gates` de la
+revue juge les exécutions tracées.
 
 C'est la réponse de skraft à l'idée de Mancuso : la qualité n'est pas une variable
 d'ajustement. Le détail des gates est dans la [référence des gates](../reference/gates.md).
@@ -76,18 +76,17 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 
 - **Le walking skeleton.** Chaque story s'ouvre sur un test simple qui parcourt son premier
   scénario, S1, à travers un composant back de son vrai point d'entrée jusqu'à une vraie base, et
-  n'affirme que le câblage ; S1 garde son propre test d'acceptation par le cas d'usage. Le moteur
-  refuse un plan de test qui ne tague pas S1 `@walking-skeleton` ni ne déclare pourquoi la story
-  n'en a pas besoin, et la lentille `boundary-enforcement` vérifie que le walking skeleton
-  parcourt ce vrai chemin (son G8). Voir
+  n'affirme que le câblage ; S1 garde son propre test d'acceptation par le cas d'usage. La lentille
+  `boundary-enforcement` juge que S1 est taguée `@walking-skeleton` (ou que la story déclare pourquoi elle
+  n'en a pas besoin) et que le walking skeleton parcourt ce vrai chemin (son G8). Voir
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **Un scénario, un rouge, un vert.** En DISTILL, l'`acceptance-designer` commite le test
-  d'acceptation en échec d'un scénario et le squelette qu'il appelle ; le moteur le rejoue et le juge
-  du rejeu ne l'accepte que si le test du scénario échoue sur une assertion ; le walking skeleton
-  est commité et rejoué de même avant S1. En DELIVER, le `software-engineer` tourne la
-  boucle rouge → vert → refactor de ses tests unitaires, puis commite une fois : un `feat(…)` que
-  le moteur rejoue aussi, et qui doit faire passer le scénario sans toucher à son test
-  d'acceptation, et garder le walking skeleton au vert. Puis le scénario suivant. Le test d'abord de Beck
+- **Le rouge de chaque scénario, puis un seul vert pour l'histoire.** En DISTILL, l'`acceptance-designer`
+  commite le test d'acceptation en échec de chaque scénario, le walking skeleton et le squelette
+  qu'ils appellent en un commit, après un lancement qui montre chacun échouant sur une assertion.
+  En DELIVER, un seul passage du `software-engineer` tourne la boucle rouge → vert → refactor de ses
+  tests unitaires, puis commite une seule fois, après avoir travaillé les groupes de scénarios dans l'ordre du plan : un
+  unique `feat(…)` qui fait passer chaque groupe et le walking skeleton sans toucher aux tests d'acceptation ;
+  le moteur refuse un deuxième (`green-split`). Le test d'abord de Beck
   ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait vérifié dans l'historique git,
   pas une promesse. Voir [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 
@@ -96,8 +95,8 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 Une suite verte ne prouve pas qu'elle détecterait une erreur. Le mutation testing injecte de
 petites fautes dans le code et mesure la part que les tests attrapent
 ([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). Dans skraft, le mutation testing
-revient au développeur : le pipeline du plugin n'en lance aucun. Le développeur choisit l'outil,
-écrit sa configuration et le lance à part, contre le seuil de `skraft-quality-bar` ; un agent à
+revient au développeur : ni le pipeline du plugin ni le moteur n'en lancent. Le développeur choisit l'outil,
+écrit sa configuration et le lance dans sa propre session (le skill `skraft-mutation`), contre le seuil de `skraft-quality-bar` ; un agent à
 qui il demande de l'aide lit les survivants avec la skill `quality-gates-<stack>` du composant.
 Dans le pipeline, la lentille `test-integrity` vérifie que les tests peuvent réellement échouer
 (son G7) et qu'aucun test n'a été affaibli pour passer (son G9).
@@ -132,9 +131,8 @@ que laissé en attente. Voir
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>un scénario à la fois"] --> G["gates verrouillées<br/>build · format · lint · test<br/>architecture · coverage"]
-    G -- "FAIL" --> D
-    G -- "PASS" --> DR["revue DELIVER<br/>lentilles + verdict"]
+    D["deliver<br/>software-engineer<br/>les groupes dans l'ordre du plan"] --> G["exécutions de gates tracées<br/>build · format · lint · test<br/>architecture · coverage"]
+    G --> DR["revue DELIVER<br/>lentilles + verdict"]
     DR -- "NEEDS_REWORK" --> D
     DR -- "APPROVED" --> P["pr-writer puis publication"]
 ```

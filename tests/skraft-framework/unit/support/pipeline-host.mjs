@@ -3,38 +3,20 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { answerYaml, withContext } from './answer-yaml.mjs'
-import { strykerWritesItsReports } from './mutation-reports.mjs'
+import { writeDeliveryTrace, writeRedTrace } from './delivery-trace.mjs'
 import { createInit } from '../../../../plugins/skraft-framework/engine/application/pipeline/init-usecase.mjs'
-import { createStartMutation } from '../../../../plugins/skraft-framework/engine/application/mutation/start-mutation-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-framework/engine/application/pipeline/observe-usecase.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-framework/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-framework/engine/application/decisions/decide-usecase.mjs'
 import { createPublish } from '../../../../plugins/skraft-framework/engine/application/publish/publish-usecase.mjs'
 import { createPrecheck } from '../../../../plugins/skraft-framework/engine/application/pipeline/precheck-usecase.mjs'
 import {
-  BUILT_IN_MUTATION, BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
-  ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine, ScriptedReplay,
+  BUILT_IN_WORKFLOW, FakeHasher, FixedClock, InMemoryAgentCatalog, InMemoryCodeHost, InMemoryGit, InMemoryPullRequests, InMemoryRunLock, InMemoryTemplates, InMemoryTracking, InMemoryUserSettings, InMemoryWorkflowSource, InMemoryWorkspace,
+  ManualTimer, RecordingProgress, ScriptedAgentRunner, ScriptedHuman, ScriptedMachine,
 } from './in-memory-host.mjs'
 
 export const SLUG = 'checkout'
 
-/**
- * The plugin's workflow as a repository ejected it before stories were built scenario by
- * scenario: no each="scenario", no scenario review. DISTILL's test commits are replayed, DELIVER
- * commits whole TDD cycles, as on a pass the gates send back.
- */
-export const CYCLE_WORKFLOW = [
-  ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", each="scenario"]', 'distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]'],
-  ['deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]', 'deliver  [shape=box, agent="software-engineer", phase="DELIVER"]'],
-  ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''],
-  ['  distill_review -> scenario_review [label="APPROVED"]\n  scenario_review -> deliver [label="APPROVED"]\n  scenario_review -> distill [label="REVISE", max_visits=2]\n', '  distill_review -> deliver [label="APPROVED"]\n'],
-].reduce((text, [old, now]) => {
-  if (!text.includes(old)) throw new Error(`${JSON.stringify(old)} is not in the workflow`)
-  return text.replace(old, now)
-}, BUILT_IN_WORKFLOW)
-
-/** The options of a host whose repository ejected CYCLE_WORKFLOW. */
-export const CYCLE = Object.freeze({ files: Object.freeze({ '.skraft/pipeline.skraft.dot': CYCLE_WORKFLOW }) })
 /**
  * The docs folders the plugin's agents write in, as a repository that already has them holds
  * them; a scenario of a repository without them deletes them from the workspace.
@@ -53,14 +35,14 @@ export const PROSE_TEMPLATE_FR = readFileSync(new URL('../../../../plugins/skraf
 export const API = Object.freeze({
   name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
-  commands: { build: 'dotnet build', test: 'dotnet test', mutation: 'dotnet stryker' },
+  commands: { build: 'dotnet build', test: 'dotnet test' },
   bdd: false,
 })
 
 /**
  * @param {{
  *   components?: object[], config?: object, files?: Record<string, string>, behaviours?: Array<Function>,
- *   git?: InMemoryGit, machine?: ScriptedMachine, replay?: ScriptedReplay, catalog?: InMemoryAgentCatalog,
+ *   git?: InMemoryGit, machine?: ScriptedMachine, catalog?: InMemoryAgentCatalog,
  *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string, codeHost?: InMemoryCodeHost,
  *   tracking?: InMemoryTracking, owner?: string, journalKeys?: import('./in-memory-host.mjs').InMemoryJournalKeys,
  * }} [options] config: the rest of skraft-config.json, where a run of a workflow that asks the publish-consent or the
@@ -74,7 +56,7 @@ export const API = Object.freeze({
  *   mutation workflow unless workflow says otherwise
  */
 export const pipelineHost = ({
-  components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, replay, catalog = new InMemoryAgentCatalog(),
+  components = [API], config = {}, files = {}, behaviours = [], git = new InMemoryGit(), machine, catalog = new InMemoryAgentCatalog(),
   workflow, clock = new FixedClock('2026-10-11T09:00:00.000Z'), answers = [], user, codeHost = new InMemoryCodeHost(),
   tracking = new InMemoryTracking(), owner = 'session-a', journalKeys = tracking.journalKeys, forge = 'github',
   slug = SLUG, scenarioReviews = null, follows = 'pipeline',
@@ -95,15 +77,12 @@ export const pipelineHost = ({
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),
-    commitReplay: replay ?? new ScriptedReplay({ clock }),
-    workflowSource: follows === 'pipeline' ? new InMemoryWorkflowSource(workflow) : new InMemoryWorkflowSource(workflow ?? BUILT_IN_MUTATION, undefined, follows),
+    workflowSource: follows === 'pipeline' ? new InMemoryWorkflowSource(workflow) : new InMemoryWorkflowSource(workflow ?? undefined, follows),
     agentCatalog: catalog,
     forges: { [forge]: { codeHost, pullRequests: new InMemoryPullRequests({ repository: codeHost.named }) } },
     runLock: new InMemoryRunLock(tracking, owner),
     timer: new ManualTimer(clock),
   }
-  deps.commitReplay.git ??= git
-  strykerWritesItsReports(deps)
   const host = {
     deps,
     slug,
@@ -115,24 +94,16 @@ export const pipelineHost = ({
     workspace: deps.workspace,
     progress: deps.progress,
     machine: deps.commandRunner,
-    replay: deps.commitReplay,
     codeHost,
     timer: deps.timer,
     /** The lock file of the pipeline, null when none. */
     lock: () => tracking.files.get(`${slug}/.lock`) ?? null,
     /** What the next pr-writers do, in order; once spent, each writes PROSE. @type {Array<ReturnType<typeof prWriter>>} */
     prWriters: [],
-    /**
-     * What the acceptance designer's next passes on the first scenario do, the red of its
-     * acceptance test after the plan, in order; once spent, each commits it as agent() does.
-     * Set agentRunner.firstRed to null for the script's queue to answer them instead.
-     * @type {Array<ReturnType<typeof agent>>}
-     */
-    firstReds: [],
     events: () => tracking.journal(slug),
     types: () => tracking.journal(slug).map((event) => event.type),
     /** @param {object} [request] */
-    init: (request = {}) => (follows === 'mutation' ? createStartMutation(deps).start() : createInit(deps).init({ slug, ...request })),
+    init: (request = {}) => createInit(deps).init({ slug, ...request }),
     run: () => createRunPipeline(deps).run({ slug }),
     view: () => createObserve(deps).view(),
     report: () => createObserve(deps).report(),
@@ -153,7 +124,6 @@ export const pipelineHost = ({
   }
   codeHost.read = (file) => tracking.files.get(file.slice(`${tracking.root}/`.length)) ?? ''
   deps.agentRunner.writer = (dispatch) => (host.prWriters.shift() ?? prWriter())(host)(dispatch)
-  deps.agentRunner.firstRed = (dispatch) => (host.firstReds.shift() ?? agent())(host)(dispatch)
   return host
 }
 
@@ -174,11 +144,11 @@ const passingMatrix = (slug) => Object.freeze([`details/2026-10-11/consistency-m
 export const PASSING_MATRIX = passingMatrix(SLUG)
 
 /**
- * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: Function, answer?: object, plan?: Array<[string, string?, string?]>, exemption?: string }} [behaviour]
+ * @param {{ result?: object | string | null, fill?: boolean, records?: boolean, work?: Function, answer?: object, trace?: false | Parameters<typeof writeDeliveryTrace>[2], plan?: Array<[string, string?, string?]>, exemption?: string }} [behaviour]
  *   plan: the scenarios the acceptance designer lists on the pass that writes them, each `[title, component, tags]`;
  *   one walking skeleton in the first component unless given; exemption: the walking skeleton exemption it declares under them
  */
-export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work, answer, plan, exemption } = {}) => (host) => async () => {
+export const agent = ({ result = { status: 'done', summary: 'done' }, fill = true, records = true, work, answer, plan, exemption, trace } = {}) => (host) => async () => {
   const step = asked(host)
   const matrix = records && step.agent === 'solution-architect'
   const [matrixPath, matrixText] = passingMatrix(host.slug)
@@ -186,28 +156,40 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   if (fill) {
     for (const path of step.outputs.filter((output) => !(matrix && output === matrixPath))) {
       const before = (await host.tracking.read(host.slug, path)) ?? ''
-      await host.tracking.write(host.slug, path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\nFindings for ${step.step}.\n${plansScenarios(host, step) ? scenarioTable(host, plan, exemption) : ''}`)
+      await host.tracking.write(host.slug, path, `${before.replace(/\{\{[^{}]*\}\}/g, 'filled in')}\nFindings for ${step.step}.\n${plansScenarios(step) ? scenarioTable(host, plan, exemption) : ''}`)
     }
   }
   if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
   await (work ?? scenarioWork(host, step, exemption))(host)
+  const traced = trace === false || host.tracking.files.has(`${host.slug}/logs/runs/${step.step}-${step.visit}-${step.attempt}/runs.jsonl`)
+  if (step.agent === 'software-engineer' && !traced) await writeDeliveryTrace(host, step, trace)
+  if (plansScenarios(step) && !traced) await writeRedTrace(host, step)
   return answer
 }
 
 /**
- * What a scripted agent with no work of its own commits on a pass of a node marked
- * each="scenario", as its descriptor asks: the acceptance designer the red of the walking
- * skeleton on the pass that writes the plan (none for a story exempt of one), the red of its
- * scenario's acceptance test on the others, the software engineer one green; nothing on any other pass or node.
+ * What a scripted agent with no work of its own commits, as its descriptor asks: the acceptance
+ * designer one red holding the walking skeleton and every acceptance test on the pass that writes
+ * the plan (the acceptance tests alone for a story exempt of a walking skeleton), the software
+ * engineer one green for every group of the plan the story is still owed; nothing on any other pass.
  * @param {ReturnType<typeof pipelineHost>} host @param {object} step its step.started @param {string} [exemption]
  */
 const scenarioWork = (host, step, exemption) => {
-  if (!onScenarioNode(host, step)) return () => {}
-  const index = step.group ?? 1
-  if (plansScenarios(host, step)) return exemption === undefined ? scenarioCommit(host, { type: 'test', subject: 'walking skeleton', paths: 'tests', file: 'Integration/WalkingSkeletonTests.cs' }) : () => {}
-  if (step.agent === 'acceptance-designer') return scenarioCommit(host, { type: 'test', index, paths: 'tests', file: `Acceptance/S${index}AcceptanceTests.cs` })
-  if (step.agent === 'software-engineer' && step.group !== undefined && step.groups !== undefined) return scenarioCommit(host, { type: 'feat', index, paths: 'src', file: `Scenario${index}.cs` })
-  return () => {}
+  if (plansScenarios(step)) return exemption === undefined ? scenarioCommit(host, { type: 'test', subject: 'walking skeleton', paths: 'tests', file: 'Integration/WalkingSkeletonTests.cs' }) : scenarioCommit(host, { type: 'test', subject: 'acceptance tests', paths: 'tests', file: 'Acceptance/AcceptanceTests.cs' })
+  const owed = step.agent === 'software-engineer' ? groupsOwed(host) : []
+  return (repos) => { if (owed.length > 0) scenarioCommit(host, { type: 'feat', subject: `${owed.map(({ label }) => label).join(', ')} delivered`, paths: 'src', file: 'Delivery.cs' })(repos) }
+}
+
+/**
+ * The groups of the last plan no green made pass yet, each with its subject label, from the
+ * journal: the story's delivery pass owes them all.
+ * @param {ReturnType<typeof pipelineHost>} host
+ */
+const groupsOwed = (host) => {
+  const recorded = host.events().filter((event) => event.type === 'step.recorded')
+  const planned = recorded.findLast((event) => event.groups !== undefined)
+  const delivered = Math.max(0, ...recorded.map((event) => event.green?.group ?? 0))
+  return (planned?.groups ?? []).filter(({ index }) => index > delivered).map(({ index, scenarios }) => ({ index, label: scenarios.map((number) => `S${number}`).join(', ') }))
 }
 
 /**
@@ -222,15 +204,8 @@ const scenarioCommit = (host, { type, index, subject = `scenario ${index}`, path
   git.commit(`${type}(${host.slug}): ${subject}`, [`${folder === '' ? '' : `${folder}/`}${file}`], issue ? `Refs: #${issue}` : '')
 }
 
-/** The pass of the acceptance designer that writes the story's scenarios: the one on no scenario. @param {ReturnType<typeof pipelineHost>} host @param {object} step */
-const plansScenarios = (host, step) => step.agent === 'acceptance-designer' && step.group === undefined && onScenarioNode(host, step)
-
-/**
- * Whether the step runs on a node the run's workflow, the repository's or the plugin's, marks
- * each="scenario".
- * @param {ReturnType<typeof pipelineHost>} host @param {object} step its step.started
- */
-const onScenarioNode = (host, step) => new RegExp(`^\\s*${step.step}\\s*\\[[^\\]]*each="scenario"`, 'm').test(host.workspace.files.get('.skraft/pipeline.skraft.dot') ?? host.deps.workflowSource.text)
+/** The pass of the acceptance designer that writes the story's scenarios. @param {object} step */
+const plansScenarios = (step) => step.agent === 'acceptance-designer' && step.outputs.some((path) => path.includes('/test-plan-'))
 
 /**
  * The Scenarios table of a test plan: the scenarios given, or one walking skeleton in the first
@@ -245,13 +220,13 @@ export const scenarioTable = (host, plan, exemption) => {
 
 /**
  * The scenario review a human is asked on a story whose plan is the default one, a single
- * scenario: its walking skeleton the red commit `skeleton`, the acceptance test of S1 the red commit given.
- * @param {{ skeleton?: string, sha?: string, subject?: string, files?: string, key?: string }} [red]
+ * scenario in one group: the walking skeleton and its acceptance test the red commit given.
+ * @param {{ sha?: string, subject?: string, files?: string, key?: string }} [red]
  */
-export const scenarioReview = ({ skeleton = 'root-1', sha = 'root-2', subject = `test(${SLUG}): scenario 1`, files = 'tests/Acceptance/S1AcceptanceTests.cs', key = 'scenario_review-1' } = {}) => ({
+export const scenarioReview = ({ sha = 'root-1', subject = `test(${SLUG}): walking skeleton`, files = 'tests/Integration/WalkingSkeletonTests.cs', key = 'scenario_review-1' } = {}) => ({
   key,
   kind: 'scenario-review',
-  text: `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (api; @walking-skeleton). The walking skeleton and the skeleton of its chain are commit ${skeleton} "test(${SLUG}): walking skeleton": tests/Integration/WalkingSkeletonTests.cs. The acceptance test of S1 is commit ${sha} "${subject}": ${files}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
+  text: `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (api; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${sha} "${subject}": ${files}. skraft does not run them: check that each fails on its own assertion; the designer's traced run is in ${TRACKING}/logs/runs/distill-1-1/1.log. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`,
   options: ['APPROVED', 'REVISE'],
   refusals: ['REVISE'],
   header: 'Scenarios',
@@ -293,12 +268,22 @@ export const tddCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }
 }
 
 /**
- * The one green commit that makes a scenario pass in the api component: the code and the unit
- * tests of its inner loop.
- * @param {string} [story] @param {string} [name] @param {string} [body] its body: `Refs: #<issue>` for a story with one
+ * A whole TDD cycle after the story is delivered: one fix holding its test and its code, then a
+ * refactor under green.
  */
-export const green = (story = SLUG, name = 'Checkout', body = '') => ({ git }) => {
-  git.commit(`feat(${story}): ${name} pays by card`, [`src/${name}.cs`, `tests/${name}Tests.cs`], body)
+export const reworkCycle = (story = SLUG, name = 'Checkout', body = '') => ({ git }) => {
+  git.commit(`fix(${story}): ${name} pays by card`, [`src/${name}.cs`, `tests/${name}Tests.cs`], body)
+  git.commit(`refactor(${story}): name the card payment`, [`src/${name}.cs`], body)
+}
+
+/**
+ * The one green commit that makes a group of scenarios pass in the api component: the code and
+ * the unit tests of its inner loop, its subject starting with the group's scenarios.
+ * @param {string} [story] @param {string} [name] @param {string} [body] its body: `Refs: #<issue>` for a story with one
+ * @param {string} [label] the group's scenarios, as its green names them
+ */
+export const green = (story = SLUG, name = 'Checkout', body = '', label = 'S1') => ({ git }) => {
+  git.commit(`feat(${story}): ${label} ${name} pays by card`, [`src/${name}.cs`, `tests/${name}Tests.cs`], body)
 }
 
 /**

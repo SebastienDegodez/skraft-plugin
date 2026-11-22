@@ -43,9 +43,8 @@ Créez `web/package.json` :
 }
 ```
 
-Le script `test` affiche chaque test et la raison de son échec sur la sortie standard : quand le
-moteur rejoue un commit, le juge du rejeu lit cette sortie pour distinguer une assertion en échec
-d'une erreur de build.
+Le script `test` affiche chaque test et la raison de son échec sur la sortie standard : le designer
+d'acceptation lit cette sortie pour distinguer une assertion en échec d'une erreur de build.
 
 Créez `web/src/cart.js` :
 
@@ -117,7 +116,8 @@ qui précède `/engine/`. Dans la suite, `skraft …` veut dire cette commande c
 [`npm i -g @skraft/cli`](../how-to/install-on-a-host.mdx#skraft-command) met en place.
 
 `skraft init` cherche les projets du dépôt et écrit un **composant** par projet : une partie du
-dépôt avec sa racine, sa stack, ses chemins et ses commandes. Vous voyez :
+dépôt avec sa racine, sa stack et ses chemins. Il n'écrit aucune commande : les commandes sont
+les vôtres. Vous voyez :
 
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
@@ -136,23 +136,27 @@ Ouvrez `skraft-config.json` à la racine de `shop` :
         "src": ["src/"],
         "tests": ["test/"]
       },
-      "commands": {
-        "test": "npm test",
-        "mutation": "npx stryker run --incremental --reporters json,clear-text"
-      }
+      "commands": {}
     }
   ]
 }
 ```
 
-`test` vient du script de `web/package.json` ; `mutation` est le défaut StrykerJS, une commande à
-vous : le pipeline ne la lance jamais, le mutation testing est à vous de le lancer quand vous le
-choisissez. `paths` est aussi
+`commands` est vide : skraft ne détient aucune ligne de commande d'aucune stack, qui casserait
+quand un outil ou une version change. `paths` est aussi
 le **périmètre d'écriture** de DELIVER : le software engineer ne pourra écrire que dans `web/src` et
 `web/test`. `skraft init` a aussi ajouté `skraft-config.local.json`, votre couche personnelle, au
 `.gitignore`.
 
-Deux réponses vous appartiennent, et `skraft init` n'en écrit aucune. La première est le Gherkin :
+Trois réponses vous appartiennent, et `skraft init` n'en écrit aucune. La première est les
+commandes : l'ingénieur lance celles que vous écrivez, donnez donc à `web` sa commande de test, le
+script de `web/package.json` :
+
+```json title="skraft-config.json"
+      "commands": { "test": "npm test" }
+```
+
+Une commande est lancée depuis la racine du composant. La deuxième est le Gherkin :
 il détecte les dossiers qu'un runner lit quand un projet en a, et celui-ci n'en a pas, donc dites
 que ses tests s'écrivent sans :
 
@@ -172,7 +176,7 @@ démarre qu'une fois qu'ils sont réglés ; ce dépôt n'a pas de remote, donc r
   "publish": {
     "pullRequest": false,
     "visuals": false,
-    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+    "questionVersions": { "pullRequest": 2, "visuals": 2 }
   }
 ```
 
@@ -189,7 +193,7 @@ $ git commit -m "chore: describe the shop for skraft"
 
 ## 4. Vérifier avec `skraft doctor` <!-- #4-check-with-skraft-doctor -->
 
-`skraft doctor` vérifie que chaque commande peut tourner sur votre machine et montre sur quel
+`skraft doctor` vérifie le fichier et que chaque commande se découpe, et montre sur quel
 modèle chaque agent tournera :
 
 ```console
@@ -281,10 +285,9 @@ seul : `git log --oneline -1 -- docs/adr` montre `docs(adr): ratify ADR-001`.
 
 `acceptance-designer` écrit les scénarios et le plan de test
 (`details/<AAAA-MM-JJ>/test-plan-checkout.md`) : son tableau `## Scenarios` les liste en S1, S2, …
-dans l'ordre où DELIVER les construit, tous dans `web`. Il commite d'abord le walking skeleton en
-échec, `test(checkout): walking skeleton of <titre de S1>`, puis, à son passage suivant, le seul
-test d'acceptation en échec de S1, `test(checkout): <titre de S1>`. Le moteur rejoue chaque commit
-et le juge du rejeu lit ce qu'a affiché `npm test` : un test doit échouer sur une assertion. Quatre
+dans l'ordre où DELIVER les construit, tous dans `web`. Il commite le walking skeleton en
+échec et le test d'acceptation en échec de chaque scénario en un commit, `test(checkout): acceptance tests S1–S2`,
+après un lancement de `npm test` qui montre chacun échouant sur une assertion, et écrit la sortie de ce lancement dans un log. Quatre
 lentilles les revoient
 (coverage, business-alignment, testability, boundary-enforcement).
 
@@ -292,19 +295,19 @@ Puis une boîte de dialogue intitulée **Scenarios** demande, avec les scénario
 concepteur d'acceptation (deux ici) :
 
 ```text
-Read the 2 scenarios of the story before DELIVER builds them, one at a time: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). The walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): walking skeleton of <title>": <files>. The acceptance test of S1 is commit <sha> "test(checkout): <title>": <files>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+Read the 2 scenarios of the story before DELIVER builds them: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1; 2. S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): acceptance tests S1–S2": <files>. skraft does not run them: check that each fails on its own assertion; the designer's run is in <log>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
 ```
 
 Ouvrez le plan de test et les commits que nomme la question, lisez-les, puis choisissez **APPROVED**.
 
-`software-engineer` fait ensuite passer S1 : tests unitaires et code d'abord, sans commit, puis un
-seul commit, `feat(checkout): <titre de S1>`, enchaîné à `npm test`. Le moteur le rejoue et le juge du
-rejeu lit la sortie : le test de S1 et le walking skeleton passent et rien n'échoue. `acceptance-designer` écrit le test en échec de S2,
-`software-engineer` le fait passer, et ainsi de suite : le panneau montre à nouveau `distill` et
-`deliver`, avec leur passage, pour chaque scénario.
+`software-engineer` fait ensuite passer chaque groupe en un seul passage, en les travaillant dans l'ordre du plan :
+tests unitaires et code d'abord, sans commit, puis un commit pour l'histoire, `feat(checkout): S1–S2 <les règles de l'histoire>`,
+enchaîné à `npm test`, si bien que le commit n'existe que si les tests passent. Il fait
+passer ensemble le test de S1, celui de S2 et le walking skeleton ; un deuxième commit vert est refusé (`green-split`).
 
-Le moteur lance ensuite les gates du composant (`test`), puis la revue DELIVER (test-integrity,
-architecture-boundaries, cold-reader). Le panneau coche `gates` et `deliver_review`.
+L'ingénieur lance les gates du composant par `skraft_repl` (la ligne de commit est l'exécution `test`),
+le moteur journalise leur trace signée, puis la revue DELIVER (test-integrity,
+architecture-boundaries, cold-reader, quality-gates) tourne. Le panneau coche `deliver` et `deliver_review`.
 
 ## 9. PUBLISH <!-- #9-publish -->
 
@@ -334,16 +337,6 @@ $ skraft status
 *Figure 3 — Un run terminé : chaque phase est `closed`. Capture faite sur le dépôt scripté des tests
 d'intégration ; sous Claude Code, une ligne `cost:` s'ajoute avec le coût que l'hôte a rapporté.*
 
-Relancez vous-même les gates sur le code livré :
-
-```console
-$ skraft gate --all
-```
-
-![Terminal : skraft gate --all, pass web/test, « 1 gates passed on web »](/img/screenshots/shared/terminal-gates.svg)
-
-*Figure 4 — La gate du composant `web` passe ; sa commande `mutation` est à vous de la lancer.*
-
 Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintenant :
 
 | Fichier | Ce que c'est |
@@ -351,15 +344,14 @@ Le dossier de suivi `.copilot-tracking/skraft-plans/checkout/` contient maintena
 | `events.jsonl` | le journal : un événement signé et chaîné par fait |
 | `WORKFLOW.md` | le graphe du workflow avec chaque étape faite |
 | `run-report.md` | le tableau qu'affiche `skraft report` (temps, coût et relances de chaque étape), puis chaque commit que le moteur a vérifié avec son verdict |
-| `qa-report.md` | le plan de test, les dernières gates, les commits rouges, le verdict de chaque revue |
+| `qa-report.md` | le plan de test, les preuves de qualité, les commits rouges, le verdict de chaque revue |
 | `pull-request.md` | la description de la pull request, prête à publier |
-| `gates/web/` | la sortie de chaque gate |
-| `logs/` | ce qu'a affiché chaque rejeu d'un commit rouge ou vert, et les réponses du juge du rejeu |
+| `logs/` | le lancement des tests d'acceptation par le designer, la trace signée des exécutions de gates de l'ingénieur (`logs/runs/`), et ce qu'ont affiché les commits refusés |
 | `reviews/` | ce que chaque passage de revue a lu, et son `verdict.yaml` |
 
 Ouvrez `pull-request.md` : c'est le résultat de votre premier run. `git log --oneline` montre, sur
-`pay-by-card`, les documents de recherche et de conception, l'ADR ratifié, puis, pour chaque
-scénario, son rouge `test(checkout): …` et son vert `feat(checkout): …`.
+`pay-by-card`, les documents de recherche et de conception, l'ADR ratifié, puis le rouge
+`test(checkout): …` de chaque test d'acceptation et un seul vert `feat(checkout): …`.
 
 ## Ce que vous avez construit <!-- #what-you-built -->
 
@@ -372,7 +364,7 @@ PUBLISH et la description de sa pull request. En chemin, vous avez appris que :
   tourne ;
 - `/skraft <slug> #<issue> <titre>` lance la story ; le moteur conduit chaque phase, ne vous demande
   que les décisions, et enregistre tout ;
-- `skraft status` relit le run depuis un terminal, et `skraft gate` repasse ses gates ;
+- `skraft status` relit le run depuis un terminal, et la pull request liste les preuves de qualité de la livraison ;
 - le run se termine par une description de pull request, publiée quand vous y consentez.
 
 ## Prochaines étapes <!-- #next-steps -->

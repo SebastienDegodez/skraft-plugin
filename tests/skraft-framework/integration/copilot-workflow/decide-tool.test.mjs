@@ -41,7 +41,7 @@ test('Copilot reports an invalid judgment as a recorded stop, not as nothing rec
   t.after(cleanup)
   await waitingForIncident(cwd)
 
-  const reply = await decide(cwd).handler({ key: 'gate-1', answer: 'SEND_TO:publish', by: 'host-llm', model: 'observed-test-model', cost: 0.02, costUnit: 'USD' })
+  const reply = await decide(cwd).handler({ key: 'gate-1', answer: 'RUN:publish', by: 'host-llm', model: 'observed-test-model', cost: 0.02, costUnit: 'USD' })
 
   assert.match(reply, /^Stopped:/)
   assert.equal(reply.includes('nothing was recorded'), false)

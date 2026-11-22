@@ -48,6 +48,9 @@ The changes a user sees, grouped by version; the commit-by-commit detail is in `
 | alpha.1 | A progress comment on the story's issue, at each phase and at the end. |
 | alpha.1 | `skraft review --pr` reviews a single pull request with the `review` workflow. |
 | alpha.12 | Evidence sections folded in the pull request; what waits on a human stays open. |
+| next | The pull request's QA section: how many scenarios passed on the final commit, by which run, and a folded table from each scenario's acceptance criteria to that run; `qa-report.md` shows the same. The `qa-reporting` skill is gone. |
+| next | On GitHub gh attaches a front end's screenshots to the pull request (`--attach`); nothing is committed. On Azure DevOps they stay committed on the branch, linked at their commit. The e2e command is a gate the software engineer runs. |
+| next | The screenshots consent is at version 2 (no video is published): an acceptance of version 1 is asked again. |
 
 ### Hosts <!-- #v2-hosts -->
 

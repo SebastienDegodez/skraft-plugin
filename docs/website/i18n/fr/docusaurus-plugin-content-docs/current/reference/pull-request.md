@@ -18,11 +18,13 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 |---|---|---|---|
 | Ce qui change | titre | pr-writer | le texte ne correspond pas au changement |
 | Pourquoi | titre | pr-writer | le texte ne correspond pas à la story |
-| Décisions appliquées | titre | moteur | une porte verrouillée a été sautée |
+| Décisions appliquées | titre | moteur | une décision ne correspond pas au code |
+| QA | titre | moteur | moins de scénarios ont réussi que la story n'en a |
+| Résultats des scénarios | repliée, compte les scénarios réussis | moteur | un scénario n'est pas prouvé |
 | Matrice de cohérence | repliée | moteur | jamais : information seule |
 | Tests | repliée | moteur | jamais : information seule |
-| Preuves RED | repliée, compte les commits red | moteur | un commit red n'a pas été rejoué |
-| Portes de qualité | repliée, s'ouvre seule quand une porte a échoué | moteur | une porte a échoué |
+| Preuves RED | repliée, compte les commits red | moteur | un commit red est listé |
+| Preuves de qualité | repliée | moteur | une gate n'a aucune exécution listée |
 | Revue | repliée, s'ouvre seule sur un constat à corriger ou à trancher | moteur | un constat est à corriger ou à trancher |
 | Captures d'écran | repliée | moteur | jamais : information seule |
 | Plus de tests Domain que de tests d'acceptation | titre, seulement quand les lignes Domain dépassent les lignes d'acceptation | moteur | vous voulez élaguer les tests |
@@ -56,11 +58,11 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 
 ### Décisions appliquées <!-- #decisions -->
 
-- **Contient** : `- ADR-00N <titre> (<chemin>), ratifié dans ce run` ; `- Porte verrouillée <nœud> sautée, déverrouillée : <raison>` ; sinon `Aucune consignée : aucun ADR n'a été ratifié et aucune porte verrouillée n'a été déverrouillée dans ce run.`
+- **Contient** : `- ADR-00N <titre> (<chemin>), ratifié dans ce run` ; sinon `Aucune consignée : aucun ADR n'a été ratifié dans ce run.`
 - **Affichée** : sous son titre.
 - **Rédigée par** : le moteur, à partir du journal du run.
-- **À lire pour** : voir les décisions d'architecture que suit le code et les portes verrouillées que quelqu'un a sautées.
-- **Agir quand** : une porte verrouillée a été sautée et vous n'acceptez pas la raison.
+- **À lire pour** : voir les décisions d'architecture que suit le code.
+- **Agir quand** : une décision ne correspond pas au code.
 
 ### Matrice de cohérence <!-- #consistency-matrix -->
 
@@ -80,19 +82,19 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 
 ### Preuves RED <!-- #red-evidence -->
 
-- **Contient** : un tableau `Commit | Sujet | Code de sortie du rejeu` (`non rejoué` sans rejeu), puis `Les extraits de sortie des rejeux ne sont pas encore consignés.` ; sans commit red, `Aucune consignée : aucun commit red n'a été accepté dans ce run.`
+- **Contient** : un tableau `Commit | Sujet`, une ligne par commit red ; sans commit red, `Aucune consignée : aucun commit red n'a été accepté dans ce run.`
 - **Affichée** : repliée ; le résumé dit `Preuves RED: N commits red`, jamais ouverte seule.
 - **Rédigée par** : le moteur, à partir des commits red que le journal a acceptés.
 - **À lire pour** : voir que chaque test a échoué avant le code qui le fait passer.
-- **Agir quand** : un commit red affiche `non rejoué` et vous voulez une preuve.
+- **Agir quand** : vous voulez la preuve qu'un test a échoué : lisez le lancement du designer d'acceptation dans les `logs/` du run.
 
-### Portes de qualité <!-- #quality-gates -->
+### Preuves de qualité <!-- #quality-evidence -->
 
-- **Contient** : un tableau `Composant | Porte | Commande | Résultat | Durée | Preuve` ; sans porte, `Aucune consignée : aucune porte n'a tourné dans ce run.`
-- **Affichée** : repliée ; le résumé dit `Portes de qualité: [N en échec, ]M réussies` et le bloc s'ouvre seul quand une porte a échoué.
-- **Rédigée par** : le moteur, à partir des portes que le journal a consignées.
-- **À lire pour** : voir quelles vérifications ont tourné, avec quelle commande, et en combien de temps.
-- **Agir quand** : une porte a échoué.
+- **Contient** : un tableau `Gate | Dossier | Exécution | Preuve`, une ligne par gate de chaque composant que l'histoire a modifié, lu dans l'événement `evidence.checked` ; sans lui, `Aucune consignée : aucune preuve de gate n'a été contrôlée dans ce run.`
+- **Affichée** : repliée ; le résumé dit `Preuves de qualité : N exécutions de gates`.
+- **Rédigée par** : le moteur, à partir des exécutions tracées de la tentative de l'ingénieur logiciel ([Gates](./gates.md#command-gates)) ; elle ne porte ni commande, ni sortie, ni durée.
+- **À lire pour** : voir à quelle exécution tracée correspond chaque gate, dans quel dossier, et le hash de son log.
+- **Agir quand** : une gate attendue manque, ou son exécution n'est pas celle à laquelle vous vous fiez.
 
 ### Revue <!-- #review -->
 
@@ -102,9 +104,25 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 - **À lire pour** : voir ce que les lentilles ont trouvé et ce que le réfuteur a décidé.
 - **Agir quand** : une ligne est À corriger ou À trancher ; lisez une ligne Accepté avant de fusionner.
 
+### QA <!-- #qa -->
+
+- **Contient** : `QA : <réussis>/<total> scénarios réussis sur <sha> (run r<n>, <s> s).`, le run de chaque composant nommé quand il y en a plusieurs ; le chemin du plan de test ; *Livré n'est pas déployé*.
+- **Affichée** : sous son titre, aussi sur Azure DevOps quand le reste part dans les détails du run.
+- **Rédigée par** : le moteur, à partir du journal et de la trace signée de la livraison.
+- **À lire pour** : savoir d'un coup d'œil si chaque scénario est prouvé sur le commit que vous fusionnez.
+- **Agir quand** : le compte est en dessous des scénarios de la story.
+
+### Résultats des scénarios <!-- #scenario-outcomes -->
+
+- **Contient** : une ligne par scénario : numéro, titre, tags `@AC`, composant, red, green, le run final ou `non prouvé : <raison>`, si le log nomme son test, les thèmes de ses captures.
+- **Affichée** : repliée ; le résumé compte les scénarios réussis.
+- **Rédigée par** : le moteur : `passed` seulement quand le test d'acceptation est toujours celui du commit red, qu'un green a livré son groupe et que toute la suite de son composant est passée sur le commit final.
+- **À lire pour** : tracer chaque critère d'acceptation jusqu'au run qui le prouve.
+- **Agir quand** : une ligne n'est pas prouvée.
+
 ### Captures d'écran <!-- #screenshots -->
 
-- **Contient** : les captures claires et sombres d'un front end que le run a gardées ; voir [Joindre les captures d'un frontend](../how-to/attach-screenshots.md).
+- **Contient** : les captures claires et sombres d'un front end que le run a gardées ; voir [Joindre les preuves QA](../how-to/attach-screenshots.md).
 - **Affichée** : repliée ; les captures sombres sont repliées à leur tour.
 - **Rédigée par** : le moteur, à partir de ce qu'a consigné la dernière étape visuals.
 - **À lire pour** : juger les écrans sans lancer l'application.

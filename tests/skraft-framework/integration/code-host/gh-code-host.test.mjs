@@ -10,8 +10,8 @@ import { commitAll, envWithPath, git, shortLimit, tempFolder, toolFolders } from
 // gh stands for the forge, which no test reaches: a script that keeps each argv it is given
 // and answers from gh-state.json. git is real, its remote a bare repository on disk.
 const FAKE_GH = [
-  "import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'",
-  "import { dirname, join } from 'node:path'",
+  "import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'",
+  "import { dirname, join, resolve } from 'node:path'",
   "import { fileURLToPath } from 'node:url'",
   'const here = dirname(fileURLToPath(import.meta.url))',
   'const args = process.argv.slice(2)',
@@ -25,8 +25,23 @@ const FAKE_GH = [
   "if (args[1] === 'set-default') { if (state.defaultRepo) said(state.defaultRepo); process.stderr.write('no default repository has been set\\n'); process.exit(1) }",
   "if (args[0] === 'repo') said(state.defaultBranch)",
   "if (args[1] === 'list') said(typeof state.open === 'string' ? state.open : JSON.stringify(state.open))",
+  // As gh 2.103.3 says it does: each --attach file is read from where gh runs, each reference of the body from the body file's folder, else from where gh runs; a file is uploaded when both name it.
+  "const bodyFile = args.find((arg) => arg.startsWith('--body-file='))?.slice('--body-file='.length)",
+  "for (const attach of args.filter((arg) => arg.startsWith('--attach=')).map((arg) => arg.slice('--attach='.length).split('#')[0])) {",
+  "  const file = resolve(process.cwd(), attach)",
+  "  const body = bodyFile === undefined ? '' : readFileSync(bodyFile, 'utf8')",
+  "  const referred = bodyFile !== undefined && existsSync(resolve(dirname(bodyFile), attach)) ? resolve(dirname(bodyFile), attach) : file",
+  "  if (existsSync(file) && body.includes(`](${attach})`) && referred === file) appendFileSync(join(here, 'gh-uploads.jsonl'), `${JSON.stringify(file)}\\n`)",
+  "}",
+  "if (args[1] === 'create' && args.includes('--help')) said(state.help ?? 'FLAGS\\n      --attach file          Attach an image or video file')",
+  // A gh older than --attach: its help names none, and it refuses the flag as an unknown one.
+  "if (state.help !== undefined && args.some((arg) => arg.startsWith('--attach='))) { process.stderr.write('unknown flag: --attach\\n'); process.exit(1) }",
+  "if (args[1] === 'create' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(`Creating pull request\\n${state.created}`, 1)",
   "if (args[1] === 'create') said(`Creating pull request\\n${state.created}`)",
+  "if (args[1] === 'edit' && state.attachFails && args.some((arg) => arg.startsWith('--attach='))) said(state.created, 1)",
   "if (args[1] === 'edit') said(state.created)",
+  "if (args[1] === 'comment' && state.attachFails) said(state.commented, 1)",
+  "if (args[1] === 'comment') said(state.commented)",
   "if (args[0] === 'issue' && state.issue === undefined) { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
   "if (args[0] === 'issue' && state.issueFails) { process.stderr.write('SECRET-STDERR\\n'); process.exit(1) }",
   "if (args[0] === 'issue') said(typeof state.issue === 'string' ? state.issue : JSON.stringify(state.issue))",
@@ -74,6 +89,7 @@ const ghFolder = (root, state) => {
   mkdirSync(bin, { recursive: true })
   writeFileSync(join(bin, 'gh.mjs'), FAKE_GH)
   writeFileSync(join(bin, 'gh-calls.jsonl'), '')
+  writeFileSync(join(bin, 'gh-uploads.jsonl'), '')
   writeFileSync(join(bin, 'gh-state.json'), JSON.stringify(state))
   writeFileSync(join(bin, 'gh.cmd'), `@"${process.execPath}" "%~dp0gh.mjs" %*\r\n`)
   writeFileSync(join(bin, 'gh'), `#!/bin/sh\nexec "${process.execPath}" "${join(bin, 'gh.mjs')}" "$@"\n`)
@@ -81,6 +97,7 @@ const ghFolder = (root, state) => {
   return {
     bin,
     calls: () => readFileSync(join(bin, 'gh-calls.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
+    uploads: () => readFileSync(join(bin, 'gh-uploads.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)),
     set: (more) => writeFileSync(join(bin, 'gh-state.json'), JSON.stringify({ ...state, ...more })),
   }
 }
@@ -204,6 +221,62 @@ test('the pull request is opened with its body from a file, then found by its he
   assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true }), { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment' })
   assert.deepEqual(await host.edit({ number: 7, bodyFile }), { ok: false, reason: 'gh could not update pull request #7 on github.example.com/acme/payment' })
   assert.equal(await host.defaultBranch(), null)
+})
+
+test('the screenshots of a pull request go with its body: gh uploads each one --attach names, the pull request opened even when one fails; the doctor asks gh whether it takes --attach', async (t) => {
+  const { cwd, forge, codeHost } = repository(t)
+  const host = codeHost()
+  const tracking = join(cwd, '.copilot-tracking', 'skraft-plans', 'checkout')
+  const bodyFile = join(tracking, 'pull-request-body.md')
+  mkdirSync(join(cwd, 'web', 'skraft-visuals'), { recursive: true })
+  for (const name of ['checkout light.png', 'paid.png']) writeFileSync(join(cwd, 'web', 'skraft-visuals', name), 'PNG')
+  // A file of the tracking folder under the same name as a screenshot, which gh would take for it were the body's reference relative to the working copy.
+  mkdirSync(join(tracking, 'web', 'skraft-visuals'), { recursive: true })
+  writeFileSync(join(tracking, 'web', 'skraft-visuals', 'paid.png'), 'not the screenshot')
+  writeFileSync(bodyFile, '![Checkout form, card filled in](../../../web/skraft-visuals/checkout light.png)\n\n![Payment accepted](../../../web/skraft-visuals/paid.png)\n')
+  const attachments = [{ path: 'web/skraft-visuals/checkout light.png', alt: 'Checkout form, card filled in', reference: '../../../web/skraft-visuals/checkout light.png' }, { path: 'web/skraft-visuals/paid.png', alt: 'Payment accepted', reference: '../../../web/skraft-visuals/paid.png' }]
+  const attached = ['--attach=../../../web/skraft-visuals/checkout light.png#Checkout form, card filled in', '--attach=../../../web/skraft-visuals/paid.png#Payment accepted']
+
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
+  assert.deepEqual(forge.uploads(), [join(cwd, 'web', 'skraft-visuals', 'checkout light.png'), join(cwd, 'web', 'skraft-visuals', 'paid.png')])
+  const commented = 'https://github.example.com/acme/payment/pull/7#issuecomment-1001'
+  forge.set({ commented })
+  const details = join(tracking, 'pull-request-details-2.md')
+  writeFileSync(details, '<!-- skraft:run-details slug=checkout part=2 -->\n\n![Payment accepted](../../../web/skraft-visuals/paid.png)\n')
+  const comment = { number: 7, marker: '<!-- skraft:run-details slug=checkout part=2 -->', url: 'https://github.example.com/acme/payment/pull/7#issuecomment-900', bodyFile: details, body: '', threadFile: '', commentFile: '', attachments: [attachments[1]] }
+  assert.deepEqual(await host.keepPullRequestComment(comment), { ok: true, url: commented })
+  forge.set({ commented, attachFails: true })
+  assert.deepEqual(await host.keepPullRequestComment(comment), { ok: true, url: commented })
+  forge.set({ commented: 'Done' })
+  assert.deepEqual(await host.keepPullRequestComment(comment), { ok: false, reason: 'gh could not comment pull request #7 on github.example.com/acme/payment' })
+  assert.deepEqual(forge.calls().filter(([command, sub]) => command === 'pr' && sub === 'comment'), [0, 1, 2].map(() => ['pr', 'comment', '7', '--repo=github.example.com/acme/payment', `--body-file=${details}`, '--attach=../../../web/skraft-visuals/paid.png#Payment accepted']))
+  assert.deepEqual(forge.uploads().slice(2), [0, 1, 2].map(() => join(cwd, 'web', 'skraft-visuals', 'paid.png')))
+  forge.set({})
+  assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
+  forge.set({ attachFails: true })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
+  assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments: [] }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7' })
+  assert.deepEqual(forge.calls().filter(([command, sub, option]) => command === 'pr' && sub !== 'list' && sub !== 'comment' && option !== '--help').map((args) => args.filter((arg) => arg.startsWith('--attach='))), [attached, attached, attached, attached, []])
+  forge.set({ fails: true })
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: false, reason: 'gh could not open the pull request of checkout on github.example.com/acme/payment' })
+
+  const older = 'FLAGS\n  -B, --base branch'
+  const noAttach = 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots'
+  forge.set({ help: older })
+  const before = forge.calls().length
+  assert.deepEqual(await host.create({ base: 'main', head: 'checkout', title: 'Pay by card', bodyFile, draft: true, attachments }), { ok: true, number: 7, url: 'https://github.example.com/acme/payment/pull/7', note: noAttach })
+  assert.deepEqual(await host.edit({ number: 7, bodyFile, attachments }), { ok: true })
+  forge.set({ help: older, login: 'sebastien', comments: [] })
+  assert.deepEqual(await host.keepPullRequestComment({ ...comment, url: null }), { ok: true, url: 'https://github.example.com/acme/payment/issues/7#issuecomment-901' })
+  assert.deepEqual(forge.calls().slice(before).filter((args) => args.some((arg) => arg.startsWith('--attach='))), [], 'a gh without --attach is never handed one')
+
+  forge.set({})
+  assert.deepEqual([host.attachesFiles, host.attachLimit], [true, 50])
+  assert.equal(await host.screenshotsBlocked(), null)
+  forge.set({ help: 'FLAGS\n  -B, --base branch' })
+  assert.equal(await host.screenshotsBlocked(), 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots')
+  assert.equal(await host.fileUrl('abc123', 'docs/a b.png'), 'https://github.example.com/acme/payment/raw/abc123/docs/a%20b.png')
 })
 
 test('the run\'s comment is kept on an issue, or the pull request its number names, of the forge the remote names: posted once, then rewritten by its URL, found again by its marker among the user\'s own comments, posted again once deleted; gh\'s output never reaches a reason', async (t) => {

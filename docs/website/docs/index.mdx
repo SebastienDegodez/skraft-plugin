@@ -79,12 +79,12 @@ branch, and one final pull request to `main` ships 2.0.0.
 
 | Lot | Capability | State |
 | --- | --- | --- |
-| 0 – 2 | **RESEARCH** phase end to end (pre-created document, retry when missing, stop at the cap), hash-chained journal, resume, component-based `skraft-config.json`, detection (`skraft init`), `skraft doctor`, per-repository base, gates run by hand (`skraft gate`) | Available |
-| 3 | DESIGN, DISTILL and DELIVER driven by the engine on a DOT workflow; write scope by git diff; gates as pipeline steps | Available |
+| 0 – 2 | **RESEARCH** phase end to end (pre-created document, retry when missing, stop at the cap), hash-chained journal, resume, component-based `skraft-config.json`, detection (`skraft init`), `skraft doctor` (lists each component's commands), per-repository base | Available |
+| 3 | DESIGN, DISTILL and DELIVER driven by the engine on a DOT workflow; write scope by git diff; gates run by the engineer through `skraft_repl`, the DELIVER review judges their traced runs | Available |
 | 4 | Code review through isolated lenses, refuter, computed verdict, incremental re-review | Available |
 | 5 | Human decisions (`skraft decide`, dialogs, pane buttons), ADR ratification | Available |
 | 6 | v1 agents and skills pruned | Available |
-| 7 | Mutation run of the developer's own (80 % per scope) | Available |
+| 7 | Mutation testing as a recipe of the developer's own session, the `skraft-mutation` skill (80 % per scope) | Available |
 | 8 | Pane view, run and QA reports, end-of-run pull request, screenshot publishing, issue progress | Available; the Copilot Canvas's display in the app is to be checked by hand |
 | 9 | `skraft-brownfield` plugin | Available |
 | 10 | VS Code: Copilot SDK driver, then the `skraft next` / `skraft record` fallback | Available |

@@ -62,9 +62,8 @@ dans son brief, et `skraft doctor` l'affiche avec sa source.
 
 Les tests démarrent Microcks eux-mêmes, par Testcontainers, depuis l'image uber native, un
 conteneur par session de tests, dans le setup global du framework de test (xUnit, JUnit, pytest,
-Vitest, Playwright). Docker et Podman conviennent tous deux. Quand aucun ne répond, rien ne saute le test ni ne remplace Microcks par un double in-process : le
-juge du rejeu lit le log du rejeu et demande à un humain d'en démarrer un, et le run attend
-([Commits et rejeux](../../reference/gates.md#commits)).
+Vitest, Playwright). Docker et Podman conviennent tous deux. Quand aucun ne répond, rien ne saute le test ni ne remplace Microcks par un double in-process : l'agent s'arrête, bloqué, et demande à un humain d'en démarrer un, et le run attend
+([Commits](../../reference/gates.md#commits)).
 
 ## Comment la lentille de fidélité l'audite
 

@@ -184,26 +184,6 @@ test('a resumed run whose question is still open passes the pause and waits', as
   assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'waiting', code: 'adr-ratification' })
   assert.equal(journal(cwd, SLUG).filter((event) => event.type === 'question.asked').length, 1)
 })
-
-test('a gate the machine cannot run pauses the run on an environment question; RETRY on resume runs the gate again', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  const { ctx, calls } = simulatedContext({ args: { slug: SLUG }, otherwise: actsAs(scriptedLlm({ cwd })) })
-  const session = answeringSession({ answers: ['RATIFIED', null, 'RETRY'] })
-  const configPath = join(cwd, 'skraft-config.json')
-  const config = JSON.parse(readFileSync(configPath, 'utf8'))
-  const broken = { ...config, components: [{ ...config.components[0], commands: { test: TEST_COMMAND, build: 'skraft-missing-build' } }] }
-  writeFileSync(configPath, JSON.stringify(broken))
-
-  await assert.rejects(runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session)), { message: 'paused at gates-1' })
-  writeFileSync(configPath, JSON.stringify(config))
-  const outcome = await runSkraftPipelineWorkflow(ctx, copilotHost(cwd, PLUGIN_ROOT, session))
-
-  assert.equal(outcome.status, 'done')
-  assert.equal(phaseCalls(calls).length, 9)
-  assert.deepEqual(session.asked.map(({ options }) => options), [['RATIFIED', 'REJECTED'], ['APPROVED', 'REVISE'], ['RETRY', 'ABORT'], ['RETRY', 'ABORT']])
-  assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'step.started' && event.step === 'gates').length, 1)
-})
-
 test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again', async (t) => {
   const { cwd } = pipelineRepository(t)
   const tokens = 'docs/adr/adr-002-card-tokens.md'

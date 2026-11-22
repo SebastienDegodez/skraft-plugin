@@ -9,7 +9,8 @@ persona: software-engineer
 Obtenez un `skraft-config.json` dont chaque commande tourne sur votre machine, avant de lancer un
 run.
 
-`skraft init` propose ce qu'il voit ; le fichier est le vôtre, et le rendre juste vous revient. Le
+`skraft init` détecte les composants ; les commandes et le fichier sont les vôtres, et les rendre
+justes vous revient. Le
 moteur le prend pour la vérité et n'a aucun moyen de savoir qu'un chemin que vous avez accepté
 n'est pas celui que vos outils utilisent — et un chemin faux coûte du silence, pas un échec. Relisez
 le résultat de chaque étape avant le run suivant.
@@ -27,14 +28,15 @@ $ skraft init
 ```
 
 Le moteur cherche les projets jusqu'à trois niveaux sous la copie de travail, hors dossiers
-cachés et `node_modules`, et écrit un composant par projet, avec les commandes par défaut de sa
-stack :
+cachés et `node_modules`, et écrit un composant par projet, avec sa stack, sa racine et ses chemins, et aucune commande :
+skraft ne détient aucune ligne de commande d'aucune stack (`/skraft-init` les propose depuis le
+skill de la stack) :
 
 ```text
 skraft-config.json: payment-api (dotnet, services/payment-api), web (react, web)
 ```
 
-Ouvrez le fichier et relisez chaque commande. Renommez un composant si vous le voulez : la suite
+Ouvrez le fichier et écrivez les commandes de chaque composant (étape suivante). Renommez un composant si vous le voulez : la suite
 de cette page a renommé `payment-api` en `api`. Relancer `skraft init` n'ajoute que les projets
 nouveaux et laisse le reste du fichier tel quel.
 
@@ -47,28 +49,32 @@ $ skraft init --add ../payment-web
 `--add` prend un dossier relatif à la copie de travail et se répète. Le composant obtenu a pour
 racine `../payment-web` ; sa base se calcule dans son propre dépôt.
 
-## 3. Remplacer une commande qui ne marche pas chez vous
+## 3. Écrire ou remplacer une commande
 
-Une commande écrite dans `skraft-config.json` est toujours celle qui tourne. Modifiez la ligne :
+Une commande écrite dans `skraft-config.json` est toujours celle qui tourne, et la seule : le moteur
+n'en remplit aucune. Écrivez la ligne :
 
 ```json
 { "name": "web", "root": "../payment-web", "stack": "react",
   "commands": { "build": "npm run build", "lint": "npm run lint", "test": "npm run test:ci" } }
 ```
 
-Écrivez une commande pour un lancement **sans shell**, depuis la racine du composant :
+Écrivez une commande que l'ingénieur logiciel lance depuis la racine du composant par `skraft_repl`, sous `sh`
+(sous Windows, Git Bash quand il est installé, sinon PowerShell) :
 
-- découpée sur les blancs ; `"…"` ou `'…'` gardent les blancs dans un argument ;
-- sans `|`, `&`, `;`, `<`, `>` hors guillemets : pour enchaîner des étapes, appelez un script
-  (`npm run test:ci`, `node scripts/ci-test.mjs`) ;
-- `npm`, `npx`, `gradlew.bat` s'écrivent pareil sous Windows.
+- une seule ligne, écrite pour marcher dans les shells de votre équipe ; pour enchaîner beaucoup d'étapes, un script
+  (`npm run test:ci`, `node scripts/ci-test.mjs`) garde la ligne courte ;
+- `npm`, `npx`, `gradlew.bat` s'écrivent pareil sous Windows ;
+- un programme démarre tel qu'écrit : `python` reste `python`, écrivez donc `.venv/bin/python` (ou
+  `.venv/Scripts/python.exe` : barres obliques, une barre inverse est un échappement invalide en
+  JSON) quand l'interpréteur du projet n'est pas celui du PATH. Une équipe sur plusieurs systèmes choisit une forme par composant, car
+  `skraft-config.json` ne porte qu'une ligne par commande.
 
 ## 4. Ajouter une gate
 
 Ajoutez la commande sous l'un des noms `build`, `format`, `lint`, `test`, `architecture`,
-`coverage` (l'ordre d'exécution) ; `mutation`, votre propre commande de mutation, que le pipeline
-ne lance jamais et que [Lancer la mutation sur sa branche](./run-mutation.md) déclare ; ou `e2e`,
-que `skraft doctor` vérifie mais qu'aucune gate ne lance :
+`coverage`, les gates que l'ingénieur logiciel lance par `skraft_repl` ([Lancer les gates](./run-gates.md)) ; `mutation`, votre propre commande de mutation, qu'aucun run du moteur ne démarre
+et que [Lancer la mutation sur sa branche](./run-mutation.md) déclare ; ou `e2e`, la commande de bout en bout d'un front end :
 
 ```json
 "commands": {
@@ -127,12 +133,12 @@ La rangée de la gateway externe suit `mocking.strategy` ; `infrastructure` la r
 
 ## 7. Laisser la commande de test afficher ce qui a échoué
 
-Le moteur rejoue chaque test d'acceptation en échec que DISTILL commite et le vert de chaque
-scénario avec la commande `test` du composant (et `e2e`), et garde ce qu'affiche la commande dans
-un log du run. Il ne lit aucun rapport de test, JUnit ou autre : le juge du rejeu lit ce log
-([Commits et rejeux](../reference/gates.md#commits)). La commande `test` n'a donc besoin d'aucune
-option de reporter pour skraft ; sa sortie par défaut, qui nomme chaque test en échec et pourquoi,
-est ce que lit le juge.
+Les agents lancent eux-mêmes la commande `test` du composant (et `e2e`) ; le designer
+d'acceptation envoie la sortie de son unique lancement dans un log du run, que lit la revue DISTILL.
+Le moteur ne lance aucun test et ne lit aucun rapport de test, JUnit ou autre
+([Commits](../reference/gates.md#commits)). La commande `test` n'a donc besoin d'aucune option de
+reporter pour skraft ; sa sortie par défaut, qui nomme chaque test en échec et pourquoi, est ce que
+lit la revue.
 
 Un rapport qu'une commande écrit dans la copie de travail (le fichier JUnit de votre propre CI, un
 dossier TRX) est un changement comme un autre, tenu au périmètre d'écriture : listez-le dans
@@ -178,7 +184,7 @@ copie de travail.
 Un run qui publie ne démarre qu'une fois qu'ils sont réglés, et `skraft init` vous les laisse :
 
 ```json
-{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 1 } } }
+{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 2 } } }
 ```
 
 `pullRequest` autorise un run à pousser sa branche, ouvrir sa pull request et tenir un commentaire
@@ -193,23 +199,19 @@ antérieure n'est pas réglée. Sans elles, un run est refusé avant son premier
 $ skraft doctor
 ```
 
-Sans `--run`, aucune de vos commandes n'est lancée : le doctor vérifie Node, le fichier, la forge, la
-racine de chaque composant, au moins une gate par composant et le programme de chaque commande.
+Le doctor ne lance aucune de vos commandes : il vérifie Node, le fichier, la forge et la racine de
+chaque composant, et liste les commandes de chaque composant telles que vous les avez écrites. Il ne cherche jamais un programme sur le PATH.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    forge: github, deduced from the Git remote
-ok    api/build: dotnet → /usr/local/bin/dotnet
-FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
-skraft doctor: 1 checks failed
+ok    api/build: dotnet build --nologo (listed; skraft_repl starts it, never skraft)
+ok    web/test: npm run test:ci (listed; skraft_repl starts it, never skraft)
+skraft doctor: every check passed
 ```
 
-Corrigez chaque `FAIL`, puis lancez chaque commande une fois, avec la base calculée :
-
-```console
-$ skraft doctor --run
-```
+Corrigez chaque `FAIL`, puis relancez `skraft doctor`.
 
 Résultat attendu : `skraft doctor: every check passed`, ou `no check failed, N with a warning`.
 Code de sortie 0.
@@ -232,7 +234,6 @@ Toutes les clés et tous les messages : [skraft-config.json](../reference/skraft
 
 ## Étapes suivantes <!-- #next-steps -->
 
-- [skraft-config.json](../reference/skraft-config.md) — schéma, défauts
-  par stack, détection.
+- [skraft-config.json](../reference/skraft-config.md) — schéma, détection.
 - [Lancer les gates et lire leurs preuves](./run-gates.md)
 - [Choisir les modèles des agents](./choose-models.md)

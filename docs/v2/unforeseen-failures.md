@@ -29,12 +29,10 @@ avec `invalid-judgment`. Aucune disponibilité automatique de ces métriques dan
 interactif n'est affirmée. Les valeurs d'usage valides restent journalisées même si l'action
 est refusée.
 
-Menu fermé : `RETRY`, `RETRY_WITH_NOTE`, `SEND_TO:<producteur>` et `STOP`. Une note contient
+Menu fermé : `RETRY`, `RETRY_WITH_NOTE` et `STOP`. Une note contient
 1 à 500 caractères après `inert` et mise sur une ligne ; elle reste une donnée de suivi,
-jamais une commande. `SEND_TO` n'offre que les arêtes `FAIL` vers un agent déjà prévu par
-le graphe : aucun saut par-dessus une gate verrouillée ou une question humaine. Les plafonds
-de visite restent applicables et une arête modifiée pendant la pause ne remplace pas le choix
-journalisé. Toute réponse hors menu ou invalide arrête avec diagnostic. Une seule intervention
+jamais une commande. Aucun retour vers un producteur n'est offert : le graphe n'a plus de nœud
+de gates ni d'arête `FAIL`. Toute réponse hors menu ou invalide arrête avec diagnostic. Une seule intervention
 automatisée par signature sur tout le journal ; la suivante pose `environment` à une personne,
 y compris après reprise.
 
@@ -139,7 +137,7 @@ qu'elle touche.
 | D11 | Interruption par une personne | Exit **130** (SIGINT) ou **`0xC000013A`** (Ctrl-C Windows) : classe `interrupted`, prioritaire sur `unknown` ; le run **s'arrête** (`run.stopped`, reprenable), sans question ni rejeu, aussi au parent | Le spike du lot 6 : un modèle rejoue 3 fois sur 3 un Ctrl-C Windows. Celui qui a interrompu sait pourquoi ; le relancer n'est pas une décision de la machine |
 | D12 | `skraft decide` tapé dans le shell d'un agent | **Refusé** : sans TTY (déjà le cas), et aussi quand l'environnement marque le shell d'un agent (`AI_AGENT`, `COPILOT_AGENT_SESSION_ID`, `CLAUDECODE`) | Trou relevé par le spike du lot 6. Mesuré sous l'app Copilot (CLI 1.0.102) : le shell d'agent n'a pas de TTY, en sync comme en async ; la variable couvre un hôte dont le shell async serait un PTY (non mesuré) |
 | D13 | Formats lus par le moteur | **Seulement des formats stables** : Conventional Commits, présence d'un fichier, dossier autorisé. **Aucune lecture de rapport de test** (JUnit, xUnit, TRX…) ni de sortie de runner : un LLM lit ce qu'il faut. Lots 1 et 1 bis annulés (signature et normalisation), avec la lecture JUnit étendue aux runners de chaque stack | Décision de l'auteur : mieux vaut payer des tokens que bloquer, ou deviner un format qui bougera ; chaque runner nouveau demandait une version de skraft |
-| D14 | Qui juge un red ou un green | **Un agent `replay-judge`**, lancé par le pilote comme le refuteur (les deux hôtes savent le faire), **jamais l'agent qui code**. Le moteur rejoue le commit (et son parent pour un red en échec), garde les logs bruts, puis donne au juge des **pointeurs** (sha, commandes, fin de chaque commande, chemins des logs, scénario) ; le juge lit lui-même, chaque log en entier avec son outil de lecture : mesuré sur 27 cas réels (4 stacks), RTK n'apporte rien et masque la ligne qui décide (`rtk log` voit « 0 errors » sur un red .NET en français et sur des greens au test filtré ; `rtk git -C` échoue) ; le hook RTK du développeur reste libre de compacter `git show`. Réponse : `decision` (`accept`, `send-back`, `retry`, `ask-human`) et `note` ; le moteur ne lit que `decision` et garde la réponse telle quelle dans `logs/judge-<sha7>-<red\|green>.md`. Un red dont tout passe est refusé sans juge ; un green est toujours jugé | L'agent qui code pourrait simuler son propre red. La lecture d'un rapport ou d'une sortie dépend du langage et du runner ; un LLM la fait mieux et ne demande aucune version de skraft |
+| D14 | Qui juge un red ou un green | **Un agent `replay-judge`**, lancé par le pilote comme le refuteur (les deux hôtes savent le faire), **jamais l'agent qui code**. Le moteur rejoue le commit (et son parent pour un red en échec), garde les logs bruts, puis donne au juge des **pointeurs** (sha, commandes, fin de chaque commande, chemins des logs, scénario) ; le juge lit lui-même, chaque log en entier avec son outil de lecture : mesuré sur 27 cas réels (4 stacks), RTK n'apporte rien et masque la ligne qui décide (`rtk log` voit « 0 errors » sur un red .NET en français et sur des greens au test filtré ; `rtk git -C` échoue) ; le hook RTK du développeur reste libre de compacter `git show`. Réponse : `decision` (`accept`, `send-back`, `retry`, `ask-human`) et `note` ; le moteur ne lit que `decision` et garde la réponse telle quelle dans `logs/judge-<sha7>-<red\|green>.md`. Un red dont tout passe est refusé sans juge ; un green est toujours jugé | L'agent qui code pourrait simuler son propre red. La lecture d'un rapport ou d'une sortie dépend du langage et du runner ; un LLM la fait mieux et ne demande aucune version de skraft | *(retiré : le moteur ne rejoue plus les commits ni n'a de `replay-judge`.)*
 | D15 | Gates en échec | **Renvoyées à l'agent** par l'arête `FAIL`, avec leur log de preuve, même arrêtées par un signal, un plantage ou un délai ; l'agent corrige ou s'arrête `blocked`. Restent à un humain : Ctrl-C (arrêt), un programme introuvable (non démarré, 127, 9009 : fait de l'OS, aucun agent ne l'installe), une gate sans commande (config), une mutation dont le rapport ne se lit pas ou qui s'est arrêtée avant la fin (son rapport peut être celui d'un run précédent). La classe et la cause `unknown` disparaissent | Le LLM essaie d'abord de corriger lui-même ; le code ne garde que des faits valables pour toutes les langues |
 | D16 | Agent refusé deux fois de la même façon, ou à sa dernière tentative | **Question `blocked`** au lieu d'un arrêt sans recours : une consigne relance le nœud sur une nouvelle passe (tentatives remises à 1), avec les sorties manquantes, les refus et la consigne ; `STOP` termine le run comme avant (`run.finished` `blocked`, code du refus) | Avant, ces deux arrêts ne posaient aucune question et relancer le run redonnait le même blocage : seul un nouveau slug en sortait. Mieux vaut payer des tokens que bloquer |
 
@@ -325,8 +323,7 @@ fermé.
 
 **Conception, si les données le justifient :**
 1. Un nouveau type de question, `unforeseen`, distinct des questions humaines, avec un menu
-   fermé : `RETRY`, `RETRY_WITH_NOTE` (note bornée, passée par le filtre `inert`),
-   `SEND_TO:<nœud du graphe>`, `STOP`.
+   fermé : `RETRY`, `RETRY_WITH_NOTE` (note bornée, passée par le filtre `inert`), `STOP`.
 2. La réponse est journalisée `by: host-llm`, avec son coût et son modèle.
 3. `review-ceiling`, `adr-ratification` et `blocked` **refusent** toute réponse `by: host-llm`,
    et un test le prouve.
@@ -352,7 +349,7 @@ Il faut décider sur des données, pas sur un nombre arbitraire d'incidents :
 |---|---|---|
 | Runs réels observés | ≥ 10 runs complets, d'au moins 2 développeurs, sur 2 hôtes | assez de variété d'environnements |
 | Signatures **inconnues distinctes** | ≥ 5 | sinon une table codée en dur (lot 7) suffit |
-| Part des inconnus qu'un humain a réglés par RETRY ou SEND_TO | ≥ 50 % | c'est la part qu'un LLM pourrait trancher ; en dessous, le gain ne vaut pas le risque |
+| Part des inconnus qu'un humain a réglés par RETRY | ≥ 50 % | c'est la part qu'un LLM pourrait trancher ; en dessous, le gain ne vaut pas le risque |
 | Temps humain perdu par arrêt | mesuré | justifie l'effort |
 
 Lecture : si la plupart des arrêts se règlent par une action simple et sûre, le lot 6 vaut la

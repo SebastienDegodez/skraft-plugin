@@ -40,7 +40,7 @@ test("an agent's own skills stay out of its brief: only the skills of the compon
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
-  const [research, , , , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [research, , , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   assert.deepEqual(skillLines(research), [])
   assert.ok(deliver.includes([
     '- Attempt: 1 of 3',
@@ -65,7 +65,7 @@ test('the agent of the TDD cycles reads the mocking skill of each component, and
 
   await host.start()
 
-  const [research, design, distill, , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [research, design, distill, deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   const componentSkills = [
     '- /plugin/skills/mocking-inprocess-dotnet/SKILL.md',
     '- /plugin/skills/contract-testing/SKILL.md',
@@ -97,12 +97,12 @@ test('a skill found nowhere is named in the brief with its component, never read
     agent()(it),
     agent({ work: ({ git }) => git.commit('docs(checkout): ADR for the order', ['docs/adr/adr-001-order.md']) })(it),
     agent({ work: ({ git }) => git.commit('test(checkout): acceptance of the order', ['orders/src/test/OrderAcceptanceTest.java']) })(it),
-    agent({ work: ({ git }) => git.commit('feat(checkout): an order needs a line', ['orders/src/main/Order.java', 'orders/src/test/OrderTest.java']) })(it),
+    agent({ work: ({ git }) => git.commit('feat(checkout): S1 an order needs a line', ['orders/src/main/Order.java', 'orders/src/test/OrderTest.java']) })(it),
   ])
 
   await host.start()
 
-  const [, , distill, , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [, , distill, deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   assert.deepEqual(skillLines(deliver), ['- /plugin/skills/contract-testing/SKILL.md', '- /plugin/skills/mocking-inprocess-typescript/SKILL.md'])
   assert.deepEqual(sectionLines(deliver, NOWHERE), [
     '- mocking-microcks-java (orders)',

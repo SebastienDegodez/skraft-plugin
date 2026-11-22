@@ -74,7 +74,7 @@ test('lenses that all pass approve each review, spawned together, each agent on 
   const review = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'reviews', 'design_review-1')
   assert.match(readFileSync(join(review, 'changes.patch'), 'utf8'), /^diff --git a\/docs\/adr\/\.gitkeep b\/docs\/adr\/\.gitkeep\nnew file mode 100644\n[^]*?\ndiff --git a\/docs\/adr\/adr-001-card-payment\.md b\/docs\/adr\/adr-001-card-payment\.md\n/)
   assert.match(readFileSync(join(review, 'verdict.yaml'), 'utf8'), /^status: "APPROVED"\ncode: null\nsummary: "APPROVED: every lens passed"\nfindings: \[\]\n/)
-  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`), mod.published.at(-1).log.join('\n'))
+  assert.ok(mod.published.at(-1).log.includes(`${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`), mod.published.at(-1).log.join('\n'))
 })
 
 test('a blocker the refuter confirms sends DESIGN back as pass 2 with the finding in its brief, then the review approves it', async (t) => {
@@ -108,25 +108,17 @@ test('a blocker the refuter confirms sends DESIGN back as pass 2 with the findin
   assert.equal(git(cwd, 'show', 'HEAD:docs/adr/adr-001-card-payment.md'), '---\nstatus: Accepted\ndecision: We will pay by card.\n---\n# ADR-001 Card payment\n\n**Status:** Accepted\n\nAccepted: Acme Pay.')
 })
 
-test('a lens that answers twice without a readable verdict stops the run as lens-unreadable, naming its agent; the resumed run spawns only that lens again', async (t) => {
+test('a lens that answers twice without a readable verdict waits on an unforeseen incident naming its agent', async (t) => {
   const { cwd } = pipelineRepository(t)
 
-  const { outcome, spawns, events, mod } = await runOn(cwd, { reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
+  const { outcome, spawns, events } = await runOn(cwd, { reviews: { fitness: ['The design fits.', 'It fits, really.'] } })
 
-  assert.deepEqual([outcome.status, outcome.phase, outcome.code], ['blocked', 'DESIGN', 'lens-unreadable'])
-  assert.equal(outcome.reason, 'fitness-lens answered 2 times without a readable verdict: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)')
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'unforeseen'])
+  const asked = events.filter((event) => event.type === 'question.asked').at(-1)
+  assert.deepEqual([asked.step, asked.incidents[0].category], ['design_review', 'lens-unreadable'])
   assert.deepEqual(spawns.slice(2).map((spawn) => spawn.description), [...lensLabels('design_review'), `skraft ${SLUG} · design_review · fitness · attempt 2`])
   assert.ok(spawns.at(-1).prompt.endsWith('Your previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), spawns.at(-1).prompt)
   assert.deepEqual(recorded(events, 'design_review'), [])
-  assert.deepEqual([events.at(-1).type, events.at(-1).code], ['run.stopped', 'lens-unreadable'])
-  assert.equal(mod.notes.at(-1), `skraft ${SLUG}: blocked (lens-unreadable) — ${outcome.reason}`)
-
-  const reloaded = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })) })
-  await reloaded.command(SLUG)
-
-  assert.equal((await reloaded.settled()).status, 'done')
-  assert.deepEqual(reloaded.spawns.filter((spawn) => reviewNodeOf(spawn.description) === 'design_review').map((spawn) => spawn.description), [`skraft ${SLUG} · design_review · fitness · attempt 1`])
-  assert.deepEqual(reviewsOf(journal(cwd, SLUG))[0], ['design_review', 1, 'approved', 'adr'])
 })
 
 test('a lens that answers inconclusive blocks the review as lens-inconclusive, naming it, and DESIGN is not sent back', async (t) => {
@@ -207,10 +199,10 @@ test('the session cost a review batch adds lands on the review step.recorded, no
 
   assert.equal(outcome.status, 'done')
   assert.deepEqual(['design', 'design_review', 'distill_review', 'deliver_review'].map((step) => [step, recorded(events, step).map(({ cost }) => cost)]), [
-    ['design', [0.25]], ['design_review', [0.75]], ['distill_review', [1]], ['deliver_review', [0.75]],
+    ['design', [0.25]], ['design_review', [0.75]], ['distill_review', [1]], ['deliver_review', [1]],
   ])
   assert.deepEqual(events.filter((event) => event.type === 'review.lens' && 'cost' in event), [])
-  assert.equal(events.filter((event) => event.type === 'review.lens').length, 10)
+  assert.equal(events.filter((event) => event.type === 'review.lens').length, 11)
 })
 
 test('a blocker the refuter refutes does not count; an unverifiable high finding does, marked as not verified', async (t) => {

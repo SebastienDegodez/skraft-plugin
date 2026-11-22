@@ -77,7 +77,6 @@ stimuli:
           required:
             - bdd-methodology
             - test-design-mandates
-            - outside-in-tdd
             - clean-architecture-testing
       - type: output-not-matches
         name: No mandatory skill is reported as unavailable
@@ -218,7 +217,6 @@ stimuli:
           required:
             - bdd-methodology
             - test-design-mandates
-            - outside-in-tdd
 
   - name: A criterion an existing test already covers is relied on only once that test is run, else tested anew
     prompt: |
@@ -321,7 +319,6 @@ stimuli:
           required:
             - bdd-methodology
             - test-design-mandates
-            - outside-in-tdd
     rubric:
       - The 7-cent Bronze criterion ends either relying on the test the research lists for it, named by file and test name, or with a new test planned for it; it is never left with neither.
       - When it relies on that test, the session ran that one test on its own before relying on it, and saw it pass; reading the test is not enough.
@@ -361,4 +358,66 @@ stimuli:
           required:
             - bdd-methodology
             - test-design-mandates
-            - outside-in-tdd
+
+  # The one pass of DISTILL: the walking skeleton and the acceptance test of every scenario in one
+  # red commit, each test named by its scenario, the implementation plan grouping them by rule.
+  - name: Every scenario's acceptance test is written first, in one red commit, and grouped by rule for DELIVER
+    prompt: |
+      The loyalty tier pricing story is designed and the criteria are agreed. Write its executable
+      specification and the plan the implementer will follow, every scenario at once: the
+      implementer delivers them rule by rule afterwards, and never writes an acceptance test.
+    tags:
+      agent: acceptance-designer
+      scenario: all-acceptance-tests-first
+      permissions: workspace-write
+      cost: high
+    supported_executors:
+      - skraft-agent-runner
+    environment:
+      files: *designed-workspace
+      commands: *designed-setup
+    graders:
+      - type: completed
+      - type: run-command
+        name: One test commit holds every acceptance test, and no production behaviour follows it
+        config:
+          command: node
+          args:
+            - -e
+            - |
+              const { execFileSync } = require("node:child_process");
+              const git = (...args) => execFileSync("git", ["--no-replace-objects", ...args], { encoding: "utf8", timeout: 5000 }).trimEnd();
+              const seed = git("rev-list", "--max-parents=0", "HEAD").split("\n")[0];
+              const subjects = git("log", "--format=%s", seed + "..HEAD").split("\n").filter(Boolean);
+              const tests = subjects.filter((subject) => /^test(\(|:)/.test(subject));
+              const greens = subjects.filter((subject) => /^(feat|fix)(\(|:)/.test(subject));
+              if (tests.length !== 1 || greens.length > 0) { console.log(subjects.join("\n")); process.exit(1); }
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Each acceptance test is named by its scenario's number
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'grep -rEq "void S[0-9]+_|S[0-9]+_[A-Za-z]" tests/CheckoutPricing.UnitTest'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: The implementation plan groups the scenarios for DELIVER
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'grep -rEq "^\|[[:space:]]*Group[[:space:]]*\|[[:space:]]*Scenarios[[:space:]]*\|" .copilot-tracking/skraft-plans/pricing/details'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: Every acceptance test fails on the missing behaviour, not on a broken build
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'dotnet build CheckoutPricing.slnx --no-restore >/dev/null && { dotnet test CheckoutPricing.slnx --no-restore --no-build; [ $? -ne 0 ]; }'
+          expected_exit_code: 0
+          timeout: 4m

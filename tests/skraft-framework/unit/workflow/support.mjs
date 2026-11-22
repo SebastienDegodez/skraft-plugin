@@ -54,7 +54,7 @@ export const reviewWithLenses = (lenses, text = BUILT_IN_REVIEW) => {
 }
 
 /** The DELIVER lenses of the plugin's .skraft/review.skraft.dot, as `withLenses` takes them. */
-export const DELIVER_LENSES = Object.freeze(['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity when=mock', 'contract-fidelity when=contract'])
+export const DELIVER_LENSES = Object.freeze(['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates when=delivery', 'mock-fidelity when=mock', 'contract-fidelity when=contract'])
 
 /** The plugin workflow with a security review in DESIGN, between the architect and the design review. */
 export const WITH_SECURITY = edit(

@@ -238,7 +238,10 @@ const answerAsThePageDoes = (cwd) => {
   const path = join(cwd, 'skraft-config.json')
   const config = JSON.parse(readFileSync(path, 'utf8'))
   config.publish = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } }
-  for (const component of config.components) component.bdd = false
+  for (const component of config.components) {
+    component.bdd = false
+    component.commands = { test: 'npm test' }
+  }
   writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
 }
 
@@ -286,8 +289,7 @@ const canvasShot = async (cwd, home, name, { fullPage = true, tab = null } = {})
 }
 
 /**
- * The tutorial's repository through the command line: init, doctor, the start of its pipeline,
- * waiting on its first question (the canvas then, when the pipeline group is wanted), its gates.
+ * The tutorial's repository through the command line: init, doctor.
  */
 const shopCaptures = async () => {
   log('terminal: the tutorial repository, through the skraft command line')
@@ -306,13 +308,6 @@ const shopCaptures = async () => {
   const doctor = await say(['doctor'])
   if (doctor.code !== 0) throw new Error(`skraft doctor: ${doctor.lines.join('\n')}`)
   writeSvg('terminal-doctor.svg', ['$ skraft doctor', ...doctorShown(doctor.lines)], '~/shop', `skraft doctor: ${doctor.lines.at(-1)}`, 132)
-
-  const start = await say(['init', 'checkout', '--title', 'Pay by card'])
-  if (start.code !== 0) throw new Error(`skraft init checkout: ${start.lines.join('\n')}`)
-
-  const gates = await say(['gate', '--all'])
-  if (gates.code !== 0) throw new Error(`skraft gate --all: ${gates.lines.join('\n')}`)
-  writeSvg('terminal-gates.svg', ['$ skraft gate --all', ...gates.lines], '~/shop', `skraft gate --all: ${gates.lines.at(-1)}`)
 }
 
 /** The integration tests' scripted repository, run by the Copilot workflow driver: paused on its ADR, then done. */

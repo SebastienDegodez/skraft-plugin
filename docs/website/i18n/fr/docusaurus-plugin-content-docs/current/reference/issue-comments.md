@@ -27,9 +27,9 @@ Un commentaire par run, sur l'issue de la story. Le run le retrouve par un marqu
 
 ### Faits <!-- #progress-facts -->
 
-- **Contient** : `Revues : <étape> <résultat> (N passes), …` ou `Revues : aucune pour l'instant.` ; `Portes de qualité :` avec une ligne par porte, `<composant>/<porte> <statut>[, N mutants survivants] · <preuve>` ; `Pull request : <url>[ (mise à jour)]` ; `Total : N tentatives, N reprises, <durée>, coût <coût>`, suivi d'une note disant que le coût est approximatif ; l'endroit du rapport du run et des preuves, dans la copie de travail sous le dossier de suivi du run.
-- **À lire pour** : juger le run sans ouvrir la pull request : quelles revues sont passées et en combien de passes, quelles portes sont vertes, ce que le run a coûté.
-- **Agir quand** : une porte n'est pas verte ou a des mutants survivants, ou une revue a pris plusieurs passes. La pull request est décrite dans [Pull request et commentaire de revue](./pull-request.md).
+- **Contient** : `Revues : <étape> <résultat> (N passes), …` ou `Revues : aucune pour l'instant.` ; `Preuves de qualité :` avec une ligne par exécution de gate, `<composant>/<gate> exécution <n> · <preuve>` ; `Pull request : <url>[ (mise à jour)]` ; `Total : N tentatives, N reprises, <durée>, coût <coût>`, suivi d'une note disant que le coût est approximatif ; l'endroit du rapport du run et des preuves, dans la copie de travail sous le dossier de suivi du run.
+- **À lire pour** : juger le run sans ouvrir la pull request : quelles revues sont passées et en combien de passes, sur quelles exécutions de gates la preuve repose, ce que le run a coûté.
+- **Agir quand** : une gate attendue n'a aucune exécution dans la preuve, ou une revue a pris plusieurs passes. La pull request est décrite dans [Pull request et commentaire de revue](./pull-request.md).
 
 ### Étapes <!-- #progress-steps -->
 

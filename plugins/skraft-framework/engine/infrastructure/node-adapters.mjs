@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
-import { createReviewStore, createTrackingStore, MUTATION_FOLDER, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
+import { createReviewStore, createTrackingStore, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
 import { createReviewFolder } from './tracking/review-folder.mjs'
 import { createNodeRunLock } from './tracking/lock-file.mjs'
 import { createPluginTemplates } from './templates/plugin-templates.mjs'
@@ -12,12 +13,15 @@ import { createWorkspaceFiles } from './workspace/workspace-files.mjs'
 import { createUserSettings } from './settings/user-settings.mjs'
 import { createHostSettings } from './settings/host-settings.mjs'
 import { createGitSourceControl } from './source-control/git-source-control.mjs'
-import { createGitCommitReplay } from './source-control/git-commit-replay.mjs'
 import { createForges } from './code-host/forges.mjs'
 import { createAgentCatalog } from './agents/agent-catalog.mjs'
 import { createPluginWorkflows } from './workflows/plugin-workflows.mjs'
 import { createNodeCommandRunner, createNodeExecutables } from './process/node-processes.mjs'
 import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
+import { createProgramLauncher } from './process/program-launcher.mjs'
+import { createNodeKernelHost } from './repl/node-kernel.mjs'
+import { createRunDigests } from './repl/run-digests.mjs'
+import { createOrphanJournal, processCreation } from './repl/orphans.mjs'
 
 /**
  * Every adapter a Node host needs, except the host's own AgentRunner and progress.
@@ -69,8 +73,7 @@ const trackedState = (files, cwd) => {
 }
 
 /**
- * What the plugin ships, the agents the working copy adds to it for the host that starts them,
- * and the mutation run's workflow with the folder it keeps.
+ * What the plugin ships, the agents the working copy adds to it for the host that starts them.
  * @param {ReturnType<typeof createNodeFiles>} files
  * @param {{ pluginRoot: string, cwd: string, agentHost: import('./agents/agent-catalog.mjs').AgentHost | undefined }} where
  */
@@ -78,21 +81,9 @@ const pluginContent = (files, { pluginRoot, cwd, agentHost }) => ({
   templates: createPluginTemplates({ files, pluginRoot }),
   workflowSource: createPluginWorkflows({ files, pluginRoot }),
   agentCatalog: createAgentCatalog({ files, pluginRoot, root: cwd, host: agentHost }),
-  mutationRun: mutationRun(files, { pluginRoot, cwd }),
 })
 
-/**
- * What a mutation run keeps apart from the pipelines, in `.copilot-tracking/skraft-mutation/`,
- * and the workflow it follows: the adapters that replace the pipeline's for it.
- * @param {ReturnType<typeof createNodeFiles>} files @param {{ pluginRoot: string, cwd: string }} where
- */
-const mutationRun = (files, { pluginRoot, cwd }) => {
-  const runs = createTrackingStore({ files, root: cwd, parts: MUTATION_FOLDER })
-  const workflowSource = createPluginWorkflows({ files, pluginRoot, name: 'mutation' })
-  return Object.freeze({ ...runs, runLock: createNodeRunLock({ root: cwd, folder: MUTATION_FOLDER }), workflowSource })
-}
-
-/** How long a command may run, by kind: git, and the developer's commands (gates, TDD replay). */
+/** How long a command may run, by kind: git, and the developer's commands (gates). */
 const GIT_TIMEOUT_MS = 300_000
 const COMMAND_TIMEOUT_MS = 7_200_000
 
@@ -107,8 +98,42 @@ const programs = (cwd, env, signal) => {
   return {
     commandRunner,
     sourceControl: createGitSourceControl({ commandRunner: createNodeCommandRunner({ root: cwd, env, signal, timeoutMs: GIT_TIMEOUT_MS }) }),
-    commitReplay: createGitCommitReplay({ commandRunner }),
     forges: createForges({ commandRunner: forge }),
     executables: createNodeExecutables({ root: cwd, env }),
+    repl: replAdapters(cwd, env),
   }
 }
+
+/**
+ * This server's own start time, asked of the system once per process, while the server goes on;
+ * null until the system has answered, or when it cannot.
+ * @type {{ created: string | null, asked: boolean }}
+ */
+const serverStart = { created: null, asked: false }
+
+/** @returns {{ pid: number, created: string | null }} */
+const thisServer = () => {
+  if (!serverStart.asked) askServerStart()
+  return { pid: process.pid, created: serverStart.created }
+}
+
+const askServerStart = () => {
+  serverStart.asked = true
+  void processCreation(process.pid).then((created) => { serverStart.created = created })
+}
+
+/**
+ * What the agents' REPL needs: the kernel host, the launcher of its programs, the journal of the
+ * processes it started (for a later server to end what a killed one left), the lease on each
+ * attempt, and this server as the leases and the journal name it.
+ * @param {string} cwd @param {NodeJS.ProcessEnv} env
+ */
+const replAdapters = (cwd, env) => Object.freeze({
+  root: cwd,
+  kernels: createNodeKernelHost(),
+  launcher: createProgramLauncher({ root: cwd, env }),
+  digests: createRunDigests(),
+  orphans: createOrphanJournal({ folder: join(cwd, '.copilot-tracking', 'skraft-repl') }),
+  locks: createNodeRunLock({ root: cwd }),
+  get server() { return thisServer() },
+})

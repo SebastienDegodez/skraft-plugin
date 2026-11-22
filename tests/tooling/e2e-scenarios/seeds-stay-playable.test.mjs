@@ -6,7 +6,6 @@ import { tmpdir } from 'node:os'
 import { join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readConfig } from '../../../plugins/skraft-framework/engine/domain/config/skraft-config.mjs'
-import { parseCommand } from '../../../plugins/skraft-framework/engine/domain/gates/command-line.mjs'
 import { inventoryOf } from '../../../plugins/skraft-backlog/prd-backlog/prd-inventory.mjs'
 import { branchOf, plantTree, readIssue } from '../../../eng/e2e-scenarios/seed.mjs'
 
@@ -118,16 +117,10 @@ test('a pipeline scenario opens an issue with a title; a backlog scenario ships 
   }
 })
 
-test('the engine accepts the config each scenario plants, and can start each of its commands', () => {
+test('the engine accepts the config each scenario plants', () => {
   for (const name of scenarios) {
     const reading = readConfig(configText(name))
     assert.ok(reading.ok, `${name}: ${(reading.errors ?? []).join('; ')}`)
-    for (const { commands } of componentsOf(name)) {
-      for (const [gate, line] of Object.entries(commands)) {
-        const parsed = parseCommand(line, { baseSha: 'abc1234' })
-        assert.ok(parsed.ok, `${name} ${gate}: ${parsed.reason}`)
-      }
-    }
   }
 })
 

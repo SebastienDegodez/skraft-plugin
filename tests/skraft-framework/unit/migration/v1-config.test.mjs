@@ -29,7 +29,7 @@ test('a v1 configuration loses its v1 keys, keeps the keys V2 reads, and lists t
 })
 
 test('every key V2 reads stays as written, and a project at the root is named after the working copy', async () => {
-  const v2 = { baseBranch: 'develop', tdd: { replay: 'last-red' }, publish: { pullRequest: false }, models: {}, assign: {} }
+  const v2 = { baseBranch: 'develop', publish: { pullRequest: false }, models: {}, assign: {} }
   const { deps, workspace } = host({ trackingLayout: 'namespaced', ...v2 }, { 'Payment.sln': '', 'Payment.csproj': '' })
 
   const outcome = await createMigrate(deps).migrate({ dryRun: false, workingCopyName: 'payments' })

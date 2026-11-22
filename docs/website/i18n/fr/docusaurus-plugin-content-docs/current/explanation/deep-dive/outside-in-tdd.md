@@ -37,45 +37,43 @@ boucle externe (acceptation) qui encadre une boucle interne (unitaire).
 
 ## Application dans SKRAFT
 
-Le pipeline applique la **double boucle**, un scénario à la fois. La boucle externe est le
-scénario d'acceptation : DISTILL commite son test en échec, le moteur rejoue ce commit, et le
-[juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le log du rejeu pour confirmer
-qu'il échoue sur une assertion. La boucle interne est le cycle RED → GREEN → REFACTOR
+Le pipeline applique la **double boucle**, un seul passage pour toute la story. La boucle externe est le
+scénario d'acceptation : DISTILL commite en un commit le test en échec de chacun, après un
+lancement dont la sortie montre chacun échouant sur une assertion, que lit la revue DISTILL. La boucle interne est le cycle RED → GREEN → REFACTOR
 unitaire, que le `software-engineer` tourne en DELIVER sans le commiter.
 
 La story elle-même s'ouvre sur une boucle externe plus large, son
 [walking skeleton](walking-skeleton.md) : un test simple qui entre par le vrai point d'entrée et
-ne vérifie que le câblage. DISTILL le commite en échec avant le test d'acceptation de S1 ; le vert
-de S1 les fait passer tous deux, et chaque vert suivant garde le walking skeleton au vert. Le test
+ne vérifie que le câblage. DISTILL le commite en échec avec les tests d'acceptation ; l'unique vert de l'histoire les fait passer tous deux. Le test
 d'acceptation de chaque scénario, S1 compris, entre par le cas d'usage.
 
 ```text
-┌─ Boucle externe (acceptation, scénario k) ───────────────────┐
-│  RED  : DISTILL commite le test du scénario, en échec         │
-│         → test(<story>): <scénario>   (rejoué : assertion)    │
+┌─ Boucle externe (acceptation, chaque groupe dans l'ordre du plan) ┐
+│  RED  : DISTILL commite le test de chaque scénario, une fois  │
+│         → test(<story>): acceptance tests S1–Sn               │
 │   ┌─ Boucle interne (unitaire, non commitée) ─────────────┐  │
 │   │  RED → un test unitaire échoue                         │   │
 │   │  GREEN → implémentation minimale qui le fait passer    │   │
 │   │  REFACTOR → on nettoie sans changer le comportement    │   │
 │   └────────────────────────────────────────────────────────┘  │
-│  GREEN : le scénario d'acceptation passe à son tour           │
-│         → feat(<story>): <scénario>   (rejoué : passe)        │
+│  GREEN : les scénarios d'acceptation de chaque groupe passent │
+│         → un seul feat(<story>): <règles>, après le dernier groupe │
 └──────────────────────────────────────────────────────────────┘
-puis le scénario k+1
+les groupes sont travaillés dans l'ordre du plan, en un passage, un commit
 ```
 
 Concrètement, le `software-engineer` ne crée une interface que lorsqu'un test unitaire en a
 besoin pour isoler une frontière — jamais « au cas où ». Le test d'acceptation reste rouge tant
 que le scénario n'est pas complet, ce qui garde le cap sur le comportement métier, et il ne
-change jamais : écrit par un autre agent, il est l'oracle que le code doit satisfaire. Chaque
-scénario se termine par un seul commit vert, enchaîné à la commande de test pour n'avoir lieu
-qu'une fois les tests passés.
+change jamais : écrit par un autre agent, il est l'oracle que le code doit satisfaire. L'histoire
+se termine par un seul commit vert, enchaîné à la commande de test pour n'avoir lieu
+qu'une fois tous les tests passés ; un deuxième vert est refusé (`green-split`).
 
-Un seul test d'acceptation est rouge à la fois, à côté du walking skeleton tant que S1 n'est pas
-vert. DISTILL écrit le test du scénario suivant une
-fois le précédent passé, si bien qu'un rouge dans l'historique nomme toujours le scénario en
-cours. Le moteur ne voit jamais échouer les tests unitaires de la boucle interne ; la mutation,
-lancée en dernier sur toute la story, montre qu'ils détecteraient une erreur.
+DISTILL commite tous les tests d'acceptation rouges d'un coup, à côté du walking skeleton en échec,
+dans un seul commit de test : l'historique ne porte qu'un rouge pour toute la story, et la revue lit
+le run qui montre chaque test échouer sur son assertion métier. Le moteur ne voit jamais échouer les
+tests unitaires de la boucle interne ; la mutation, que le développeur lance sur sa branche hors du
+pipeline, montre qu'ils détecteraient une erreur.
 
 ## Pièges & anti-patterns
 

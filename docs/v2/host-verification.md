@@ -5,6 +5,74 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### À mesurer — captures d'écran jointes par gh, commitées sur Azure Repos (branche feat/engine-repl-enforcement)
+
+Le moteur ne commite plus les captures d'un front end sur GitHub : `gh pr create` et `gh pr edit`
+les téléversent (`--attach <chemin>#<alt>`, gh lancé depuis le dossier du fichier du corps, chaque référence du corps relative à ce dossier), et le corps relu dit celles qui ne sont pas jointes. Un chemin qui contient `#` est refusé à la lecture du manifeste.
+Sur Azure DevOps, `az` n'envoie aucun fichier binaire : `az devops invoke --in-file` lit son
+fichier comme du JSON, `az rest --body @<fichier>` envoie un binaire encodé en base64 (lu dans les
+sources d'azure-cli 2.90.0 et de son extension azure-devops 1.0.10, macOS) ; la route
+`pullRequests/{id}/attachments/{fileName}` (Learn, Git 7.1, corps `application/octet-stream`)
+reste donc hors d'atteinte, et les captures restent commitées sur la branche de travail, liées par
+la route Items à leur commit. Le contrôle de chaque fichier passe par Git seul (`git add --dry-run`,
+`git diff --no-index --raw`, `git cat-file blob`), et non plus par un `node -e`.
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| `gh pr create --help` nomme `--attach` (aide lue sur la machine du développeur) | gh **2.103.3** | pass (lecture de l'aide) | « Use `--attach` to upload an image or video… If the body references an attached file, such as `![alt](./login.png)`, that reference is rewritten… Paths in a `--body-file` are relative to its directory, falling back to the working directory… up to 50 files per command… If some attachments upload and others fail, the pull request is still created… exits with a non-zero status, but the new pull request's URL is still printed » |
+| `gh-pr-attach` (`eng/host-probe/copilot-probe.mjs`, aide de `gh pr create`, aucun appel réseau) | gh local | not measured (sonde non lancée sur cette branche) | — |
+| première version de gh qui propose `--attach` (le plan dit v2.88.0) | gh | not measured | — |
+| une référence relative au dossier du fichier du corps (`../../../web/…`), gh lancé depuis ce dossier, est réécrite par `gh pr create` et `gh pr edit` ; un chemin qui contient une espace aussi | GitHub | not measured ; couvert par un faux gh qui lit chaque `--attach` depuis son dossier et chaque référence depuis le dossier du corps, puis le dossier de travail, comme l'aide de gh 2.103.3 le dit | `infrastructure/code-host/gh-code-host.mjs` (`attachArgs`), test `integration/code-host/gh-code-host` |
+| `gh pr comment --attach` publie un commentaire dont il réécrit les références, imprime son URL (`…/pull/<n>#issuecomment-<id>`), et sort non nulle en l'imprimant quand une pièce jointe échoue, comme `gh pr create` | gh **2.103.3** (aide lue : `--attach`, « Paths in a `--body-file` are relative to its directory ») | not measured (URL imprimée et code de sortie) ; couvert par le faux gh | `infrastructure/code-host/gh-code-host.mjs` (`postAttached`), test `integration/code-host/gh-code-host` |
+| `gh pr edit --attach` réécrit les références d'un corps remplacé ; une capture déjà jointe et jointe à nouveau ne s'ajoute pas en double | GitHub | not measured | `application/publish/pull-request.mjs` (`attachNote`, hash du corps sans les adresses d'images) |
+| la route Items (`…/_apis/git/repositories/<repo>/items?path=…&versionDescriptor.version=<sha>&versionDescriptor.versionType=commit&api-version=7.1`) est affichée comme image dans la description d'une pull request Azure Repos, pour un lecteur connecté | Azure Repos | not measured ; aucune organisation de test, l'équipe du propriétaire valide plus tard | `infrastructure/code-host/az-code-host.mjs` (`itemUrl`), faux az : test `integration/code-host/az-code-host` |
+| `git diff --no-index --raw -- /dev/null <fichier>` sous Windows (Git for Windows traduit `/dev/null`) | Git for Windows | not measured ; mesuré sur macOS (Git 2.x) : `100644` pour un fichier, `120000` pour un lien symbolique ; `git add --dry-run` refuse un chemin « beyond a symbolic link » | `infrastructure/source-control/git-source-control.mjs` (`isPngFile`) |
+
+### À mesurer — `skraft_repl_reset` : permission, liste, atteinte (branche feat/engine-repl-enforcement)
+
+Le REPL est devenu deux outils : `skraft_repl` n'accepte plus `reset`, `skraft_repl_reset` termine
+le noyau de la tentative et ses runs. Les sondes couvrent le second outil ; elles n'ont pas encore
+été lancées sur cette branche (environ 0,6 USD pour la sonde Claude Code, quatre sessions `-p` ; la
+sonde Copilot ne fait aucun appel de modèle).
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| `claude-repl-permission` (quatre sessions `claude -p`, `Bash` refusé) : `skraft_repl_reset` refusé par l'hôte quand seul `skraft_repl` est autorisé, et atteignant le moteur (`repl-unavailable`) quand les deux le sont | Claude Code | not measured | — |
+| `skraft-repl-listed` : `rpc.mcp.listTools` liste `skraft_repl` et `skraft_repl_reset` | SDK Copilot | not measured | — |
+| `agent-repl-reach` : l'agent dont `tools:` nomme `skraft/skraft_repl` et `skraft/skraft_repl_reset` reçoit `skraft-skraft_repl` et `skraft-skraft_repl_reset` ; celui qui nomme `view` n'en reçoit aucun | SDK Copilot | not measured | — |
+
+### 2026-11-22 — `skraft_repl` : permission, liste, atteinte (lot D, branche feat/engine-repl-evidence)
+
+Le REPL d'une tentative laisse tourner n'importe quel programme (`run()`), hors des règles `Bash`
+de l'hôte : sa permission est la seule garde. Les agents ne reçoivent l'outil que par ces mesures.
+Darwin, Node 22.23.2.
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| `claude-repl-permission` (`eng/host-probe/claude-repl-permission-probe.mjs`, deux sessions `claude -p`, `Bash` refusé, deux appels de modèle, 0,63 USD) | Claude Code **2.1.325** | pass | outil non listé : appelé, refusé par l'hôte (`permission_denials`), le moteur n'est jamais atteint (`NOT CALLED`) ; outil autorisé par son nom (`mcp__plugin_skraft_skraft__skraft_repl`) : aucun refus, le moteur répond `repl-unavailable` (appel hors tentative) |
+| `skraft-repl-listed` (headless, sans appel de modèle) | SDK Copilot **1.0.112** | pass | `rpc.mcp.listTools` liste `skraft_repl` |
+| `agent-repl-reach` (headless, sans appel de modèle) | SDK Copilot **1.0.112** | pass | l'agent dont `tools:` nomme `skraft/skraft_repl` reçoit `skraft-skraft_repl` ; l'agent qui nomme `view` ne le reçoit pas |
+
+Un appel `-p` non autorisé est refusé : sous `-p`, l'invite de permission se lit comme un refus.
+Les conséquences pour les descripteurs : un agent ne peut pas compter sur l'outil tant que la
+session ne l'autorise pas par son nom ; les descripteurs le nomment dans `tools:` et la
+documentation dit de l'autoriser.
+
+Non mesuré, faute de pouvoir le faire ici sans session interactive ni autre hôte :
+
+- Que « toujours autoriser » persiste, et si les appels suivants d'une session interactive demandent encore (Claude Code interactif, Copilot CLI, VS Code).
+- Le comportement en autopilote et en `-p` de Copilot CLI ; les demandes de permission d'un agent Copilot ou VS Code pour cet outil.
+- Que les règles d'autorisation et de refus de `Bash` ne contraignent pas le REPL : lu dans la documentation de Claude Code (un outil MCP n'est pas une commande `Bash`), non mesuré, car l'outil refuse hors d'une tentative ouverte et un run complet coûterait un pipeline entier.
+- Le délai d'appel MCP de chaque hôte (le budget d'une cellule est 90 s par défaut, non borné par une mesure).
+- Si un hôte envoie `notifications/cancelled` pour une requête en cours ; le serveur l'écoute (testé sur hôte simulé), aucun hôte réel n'a été observé en train de l'envoyer.
+- Windows : choix du shell (Git Bash, puis `pwsh`, puis `powershell`), arrêt de l'arbre par `taskkill`, heure de création d'un processus par PowerShell. Écrits, jamais lancés.
+- Les notifications de progression d'une cellule longue (`progressToken`) : non branchées.
+
+| Comportement | Hôte | Verdict | Où |
+| --- | --- | --- | --- |
+| `skraft_repl_reset` sans annulation : un agent sort d'une cellule bloquée sur un hôte qui n'envoie jamais `notifications/cancelled` | Claude Code, Copilot CLI, VS Code | not measured ; testé sur hôte simulé (`while (true) {}` arrêté en moins de 10 s) | `application/repl/repl-usecase.mjs` (`reset`) |
+| `.repl/lib` sous Windows : chargement des modules par `pathToFileURL`, `require` depuis `.repl/`, arrêt de l'arbre du noyau par `taskkill /T /F` | Windows | not measured ; écrit, testé sous macOS seulement | `infrastructure/repl/repl-library.mjs`, `repl-require.mjs`, `node-kernel.mjs` |
+
 ### #566 — périmètre des preuves existantes
 
 Les mesures du 2026-11-12 ci-dessous sont historiques : le jugement `unforeseen` est désormais
@@ -172,7 +240,7 @@ Ce que le pilote suppose déjà sans mesure ; la prochaine passe de la sonde rem
 | Claude Code : les `mcpServers` de `.claude-plugin/plugin.json` démarrent avec `${CLAUDE_PLUGIN_ROOT}` remplacé ; nom des outils offerts (`mcp__plugin_skraft_skraft__skraft_status` supposé), sans collision avec `mcp__skraft__run_pipeline` du mod ; `roots` déclaré | #566 | measured true pour le démarrage et les noms (2026-11-12, Claude Code 2.1.319, `-p --plugin-dir`, macOS) : serveur `plugin:skraft:skraft` connecté, outils `mcp__plugin_skraft_skraft__skraft_*`, `skraft_answer` enregistre dans la copie de travail ; collision avec le mod et `roots` not measured | `.claude-plugin/plugin.json`, `drivers/cli/mcp-server.mjs` |
 | VS Code : `clientInfo.name` envoyé à `initialize` vaut `Visual Studio Code` (ou `Visual Studio Code - Insiders`) ; Claude Code envoie un autre nom | — | not measured ; lu dans microsoft/vscode `src/vs/workbench/contrib/mcp/common/mcpServerRequestHandler.ts` (`productService.nameLong`), rien lu pour Claude Code ; Copilot CLI 1.0.105 mesuré (section suivante). Un nom inattendu cache la boucle d'agent (repli `node`), jamais l'inverse | `drivers/cli/mcp-server.mjs` (`LOOP_HOSTS`) |
 | tout hôte : nom sous lequel les prompts MCP `init`, `run`, `status`, `review` apparaissent dans le menu `/` | — | not measured | `drivers/cli/mcp-prompts.mjs` |
-| tout hôte : `notifications/progress` affichées pendant un appel long (`skraft_next`, `skraft_gate`) quand l'hôte envoie un `progressToken` | — | not measured | `drivers/cli/mcp-server.mjs` |
+| tout hôte : `notifications/progress` affichées pendant un appel long (`skraft_next`) quand l'hôte envoie un `progressToken` | — | not measured | `drivers/cli/mcp-server.mjs` |
 
 ### Sonde d'hôte Copilot — 2026-11-11 (branche fix/canvas-hve-alignment, le run n'ouvre plus le canvas, #537)
 
@@ -222,7 +290,7 @@ Question : Copilot CLI démarre-t-il le serveur `skraft` que déclare `plugins/s
 
 | Contrôle | Issue | Verdict | Observé |
 | --- | --- | --- | --- |
-| `skraft-mcp-server-loaded` | ouvre une issue en cas d'échec | pass | un seul serveur : `{ name: skraft, status: connected, sourcePlugin: skraft }` ; outils `skraft_doctor`, `skraft_gate`, `skraft_init`, `skraft_journal`, `skraft_migrate`, `skraft_report`, `skraft_status`, `skraft_workflow_check`, `skraft_workflow_diff`, `skraft_workflow_eject` |
+| `skraft-mcp-server-loaded` | ouvre une issue en cas d'échec | pass | un seul serveur : `{ name: skraft, status: connected, sourcePlugin: skraft }` ; outils `skraft_doctor`, `skraft_init`, `skraft_journal`, `skraft_migrate`, `skraft_report`, `skraft_status`, `skraft_workflow_check`, `skraft_workflow_diff`, `skraft_workflow_eject` |
 | `skraft-mcp-loop-hidden` | ouvre une issue en cas d'échec | pass | `offered: []` : ni `skraft_start`, ni `skraft_next`, ni `skraft_record`, ni `skraft_review` |
 
 Lecture : Copilot CLI 1.0.105 lit `mcp.json` (Agent Plugins 1.0.0), remplace `${PLUGIN_ROOT}` dans `args` et démarre le serveur une seule fois, bien que `.claude-plugin/plugin.json` déclare le même serveur dans `mcpServers`. Le nom que le CLI donne à la poignée de main n'est pas `Visual Studio Code` : la boucle d'agent reste aux workflows `skraft-pipeline` et `skraft-review`. Le nom exact n'est pas relevé (la sonde lit la liste d'outils, pas la poignée de main). Le nom sous lequel le modèle voit ces outils dans la session est mesuré depuis le 2026-11-13 (#581, section plus haut) : `skraft-<outil>`.
@@ -733,6 +801,8 @@ Copilot CLI GitHub Copilot CLI 1.0.101-0. · SDK 1.0.101-0 · Node v22.17.1 · d
 
 ## Rejeu d'un commit rouge (`CommitReplay`, tout hôte) — 2026-10-27 (branche fix/298-e2e-rouge)
 
+> Retiré : le moteur ne rejoue plus les commits (DISTILL commite tous les tests d'acceptation en un rouge, DELIVER livre tous les groupes en un passage). Cette section reste comme historique.
+
 Mesuré à la main, issue #298 : la graine `eng/e2e-scenarios/mastermind/seed` copiée dans un dépôt
 neuf, `npm ci` dans `api/` et `web/` de la copie de travail, puis un commit
 `test(jouer-une-partie): …` qui n'ajoute que `web/e2e/partie.spec.ts` (un bouton absent).
@@ -789,7 +859,8 @@ Mesures annexes, même machine :
   0 au commit vert et en 1 au rouge (`AssertionError`) ; `python -m pytest` tel qu'écrit ne
   démarre pas (`command not found: python`, et le `python3` du PATH n'a pas pytest). Le rejeu
   prend donc l'interpréteur comme les gates : `.venv/bin/python`, `.venv/Scripts/python.exe`,
-  `python`, `python3`.
+  `python`, `python3`. **Retiré** : le moteur ne choisit plus l'interpréteur ; le développeur écrit
+  `.venv/bin/python …` ou `.venv\Scripts\python.exe …` dans sa commande, qui démarre telle qu'écrite.
 - Une jonction n'a pas été mesurée sous Windows : le rejeu retire ses liens avant `git worktree
   remove`, et seulement des liens, pour que Git n'en suive jamais un.
 
@@ -806,7 +877,7 @@ Python 3.14.7, un paquet `src/shop/` installé en éditable (`pip install pytest
 | hatchling | exit 0, 1 passé | exit 1, 1 échec | exit 0 |
 
 Le rejeu d'un composant `python` met donc ses dossiers `paths.src`, pris dans le commit, en tête de
-`PYTHONPATH`, avant la valeur déjà là ; il lance chaque choix d'interpréteur par un lanceur
+`PYTHONPATH`, avant la valeur déjà là ; il lance l'interpréteur écrit par un lanceur
 `node -e`, le mod ne passant pas d'environnement.
 
 ### Espaces de travail npm/pnpm — 2026-10-28 (branche v2/dotnet-and-misc-fixes, #330)

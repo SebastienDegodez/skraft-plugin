@@ -43,8 +43,8 @@ saying so. skraft starts from there: **a craft rule exists only if a check runs 
 
 ```mermaid
 flowchart LR
-    V1["Well-crafted<br/>software"] --> M1["Locked gates<br/>fixed quality bar"]
-    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>one scenario at a time,<br/>red → green commits"]
+    V1["Well-crafted<br/>software"] --> M1["Traced gates<br/>fixed quality bar"]
+    V2["Steadily<br/>adding value"] --> M2["Walking skeleton<br/>every acceptance test red,<br/>one green per story"]
     V3["Community of<br/>professionals"] --> M3["Review before review<br/>lenses + refutation"]
     V4["Productive<br/>partnerships"] --> M4["Human decisions<br/>ADR ratification, consents"]
 ```
@@ -59,8 +59,8 @@ The `skraft-quality-bar` skill is the only place a threshold is written: 80 % mu
 Domain and Application and on API and Infrastructure, judged apart, and 100 % line coverage on
 Domain and Application. There is
 no "advisory" level, no waiver and no per-repository setting; `skraft-config.json` chooses the
-gates' **commands**, never their thresholds. In `pipeline.skraft.dot`, the DELIVER `gates` node
-is `locked`: removing it from a copy of the workflow needs a written reason (`unlock="<reason>"`).
+gates' **commands**, never their thresholds. In DELIVER, the engineer
+runs each gate through `skraft_repl` and the `quality-gates` lens of the review judges the traced runs.
 
 This is skraft's answer to Mancuso's point: quality is not an adjustment variable. The details of
 each gate are in the [gates reference](../reference/gates.md).
@@ -71,18 +71,16 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 
 - **The walking skeleton.** Every story opens on a plain test that walks its first scenario, S1,
   across a back-end component from its real entry point to a real database, and asserts the wiring
-  only; S1 keeps its own acceptance test through the use case. The engine refuses a test plan that
-  does not tag S1 `@walking-skeleton` or declare why the story needs none, and the
-  `boundary-enforcement` lens checks that the walking skeleton runs that real path (its G8). See
+  only; S1 keeps its own acceptance test through the use case. The
+  `boundary-enforcement` lens judges that S1 is tagged `@walking-skeleton` (or that the story declares why it needs none)
+  and that the walking skeleton runs that real path (its G8). See
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
-- **One scenario, one red, one green.** In DISTILL, the `acceptance-designer` commits the failing
-  acceptance test of one scenario and the skeleton it calls; the engine replays it and the replay
-  judge accepts it only when the scenario's test fails on an assertion; the walking skeleton is
-  committed and replayed the same way before S1. In DELIVER, the `software-engineer` runs the
-  red → green → refactor loop of its unit tests, then commits once: a `feat(…)` the engine
-  replays too, which must make the scenario pass without touching its acceptance test, and keep the
-  walking skeleton passing. Then the
-  next scenario. Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
+- **Every scenario's red, then one green for the story.** In DISTILL, the `acceptance-designer` commits
+  the failing acceptance test of every scenario, the walking skeleton and the skeleton they call
+  in one commit, after one run that shows each failing on an assertion. In DELIVER, one dispatch of
+  the `software-engineer` runs the red → green → refactor loop of its unit tests, then commits once,
+  after working the groups of scenarios in plan order: a single `feat(…)` that makes every group and the walking skeleton
+  pass without touching the acceptance tests; the engine refuses a second one (`green-split`). Beck's test first ([Beck, 2003](../reference/citations.mdx#cite-beck-tdd-2003)) becomes a fact
   checked in the git history, not a promise. See
   [Outside-In TDD](./deep-dive/outside-in-tdd.md).
 
@@ -91,8 +89,8 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 A green suite does not prove it would catch a mistake. Mutation testing injects small faults into
 the code and measures how many the tests catch
 ([Jia & Harman, 2011](../reference/citations.mdx#cite-jia-mutation-2011)). In skraft, mutation testing is the
-developer's: the plugin's pipeline runs none. The developer picks the tool, writes its
-configuration and runs it apart, against the bar of `skraft-quality-bar`; an agent asked to help
+developer's: neither the plugin's pipeline nor the engine runs it. The developer picks the tool, writes its
+configuration and runs it in their own session (the `skraft-mutation` skill), against the bar of `skraft-quality-bar`; an agent asked to help
 with the survivors reads them with the component's `quality-gates-<stack>` skill. Inside the
 pipeline, the `test-integrity` lens checks that the tests can really fail (its G7) and that no
 test was weakened to pass (its G9).
@@ -127,9 +125,8 @@ waiting. See
 
 ```mermaid
 flowchart LR
-    D["deliver<br/>software-engineer<br/>one scenario at a time"] --> G["locked gates<br/>build · format · lint · test<br/>architecture · coverage"]
-    G -- "FAIL" --> D
-    G -- "PASS" --> DR["DELIVER review<br/>lenses + verdict"]
+    D["deliver<br/>software-engineer<br/>the groups in plan order"] --> G["traced gate runs<br/>build · format · lint · test<br/>architecture · coverage"]
+    G --> DR["DELIVER review<br/>lenses + verdict"]
     DR -- "NEEDS_REWORK" --> D
     DR -- "APPROVED" --> P["pr-writer then publication"]
 ```

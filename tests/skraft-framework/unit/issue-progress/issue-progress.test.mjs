@@ -1,9 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { BUILT_IN_WORKFLOW, InMemoryCodeHost, MUTATION_WORKFLOW, ScriptedMachine } from '../support/in-memory-host.mjs'
+import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { agent, finding, forgeLostAtFirstAgent, lenses, nominal, REFS_42, says, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { ADR_1, adrText, afterDesign, architect, eventsOf } from '../support/decisions.mjs'
-import { strykerReport } from '../support/mutation-reports.mjs'
 import { edit } from '../workflow/support.mjs'
 
 const CONSENTED = { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } }
@@ -12,8 +11,6 @@ const PHASES = ['RESEARCH', 'DESIGN', 'DISTILL', 'DELIVER', 'PUBLISH']
 const MARKER = `<!-- skraft:issue-progress slug=${SLUG} -->`
 const COMMENT = 'https://github.example.com/acme/shop/issues/42#issuecomment-901'
 const STRYKER = '. $ dotnet stryker'
-const MUTATION_REPORT = 'StrykerOutput/reports/mutation-report.json'
-const CHECKOUT_SURVIVORS = strykerReport({ '/work/src/Checkout.cs': [[12, 'Equality', '!=', 'Survived'], [20, 'Boolean', 'false', 'NoCoverage']] }, { projectRoot: '/work/src' })
 /** A software-engineer that commits a test to kill the checkout's mutants. */
 const killer = agent({ work: ({ git }) => git.commit(`test(${SLUG}): kill the mutants of Checkout`, ['tests/CheckoutTests.cs'], REFS_42) })
 /** A repository review `<id>` the consistency lens alone runs: its fan-out, its lens, its fan-in. @param {string} id */
@@ -55,7 +52,7 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Reviews: none yet.',
     '',
-    'Quality gates: none ran.',
+    'Quality evidence: none recorded.',
     '',
     'Pull request: none opened or updated by this run.',
     '',
@@ -82,13 +79,17 @@ test('a run from an issue keeps one comment on it, posted when the first phase c
     '',
     'Reviews: design_review approved (1 pass), distill_review approved (1 pass), deliver_review approved (1 pass).',
     '',
-    'Quality gates:',
-    '- api/build pass · `gates/api/build-1.log`',
-    '- api/test pass · `gates/api/test-1.log`',
+    'Quality evidence:',
+    '- build · `.` · `logs/runs/deliver-1-1/1.log`',
+    '- format · `.` · `logs/runs/deliver-1-1/2.log`',
+    '- lint · `.` · `logs/runs/deliver-1-1/3.log`',
+    '- test · `.` · `logs/runs/deliver-1-1/4.log`',
+    '- architecture · `.` · `logs/runs/deliver-1-1/5.log`',
+    '- coverage · `.` · `logs/runs/deliver-1-1/6.log`',
     '',
     'Pull request: https://github.example.com/acme/shop/pull/42',
     '',
-    'Total: 14 attempts, 1 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
+    'Total: 12 attempts, 0 retries, 0 s, cost ~$0.75 (approximate: what the Claude Code session cost while each agent ran, anything else exchanged meanwhile included).',
     '',
     `Run report and evidence: in the working copy, under the run's tracking folder (slug \`${SLUG}\`).`,
     '',
@@ -227,25 +228,6 @@ test('a pull request the run updated after opening it is said updated', async ()
   assert.ok(told.includes('\nPull request: https://github.example.com/acme/shop/pull/42\n'), told)
   assert.ok(bodies.at(-1).includes('\nPull request: https://github.example.com/acme/shop/pull/42 (updated)\n'), bodies.at(-1))
 })
-
-test('each gate shows its last result and its log, a mutation gate that handed mutants out how many survive', async () => {
-  const host = scripted({ config: CONSENTED, workflow: MUTATION_WORKFLOW, machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
-  host.machine.meanwhile[STRYKER] = async () => {
-    host.machine.exits[STRYKER] = 1
-    await host.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)
-  }
-
-  assert.equal((await host.start(STORY)).code, 'repeated-failure')
-
-  const { body } = host.codeHost.comments[0]
-  assert.ok(body.includes([
-    '\nQuality gates:',
-    '- api/build pass · `gates/api/build-2.log`',
-    '- api/test pass · `gates/api/test-2.log`',
-    '- api/mutation fail, 2 surviving mutants · `gates/api/mutation-2.log`\n',
-  ].join('\n')), body)
-})
-
 test('a blocked run is summarised where it stopped by its status and code: neither what an agent wrote nor a path of the machine reaches the issue', async () => {
   const host = scripted({ config: CONSENTED, answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: { status: 'blocked', summary: 'No provider named. Closes #7, ask @alice.' } })(it)])
   const missing = scripted({ config: CONSENTED, answers: [{ answer: 'STOP' }] }, (it) => [agent({ fill: false })(it), agent({ fill: false })(it)])
@@ -273,7 +255,7 @@ test('a blocked run is summarised where it stopped by its status and code: neith
     '',
     'Reviews: none yet.',
     '',
-    'Quality gates: none ran.',
+    'Quality evidence: none recorded.',
     '',
     'Pull request: none opened or updated by this run.',
     '',
@@ -332,7 +314,7 @@ test('a French story\'s comment is in French, the pull request shown once by its
     '',
     'Revues : aucune pour l\'instant.',
     '',
-    'Portes de qualité : aucune n\'a tourné.',
+    'Preuves de qualité : aucune consignée.',
     '',
     'Pull request : aucune ouverte ni mise à jour par ce run.',
     '',
@@ -360,13 +342,17 @@ test('a French story\'s comment is in French, the pull request shown once by its
     '',
     'Revues : design_review approved (1 passe), distill_review approved (1 passe), deliver_review approved (1 passe).',
     '',
-    'Portes de qualité :',
-    '- api/build pass · `gates/api/build-1.log`',
-    '- api/test pass · `gates/api/test-1.log`',
+    'Preuves de qualité :',
+    '- build · `.` · `logs/runs/deliver-1-1/1.log`',
+    '- format · `.` · `logs/runs/deliver-1-1/2.log`',
+    '- lint · `.` · `logs/runs/deliver-1-1/3.log`',
+    '- test · `.` · `logs/runs/deliver-1-1/4.log`',
+    '- architecture · `.` · `logs/runs/deliver-1-1/5.log`',
+    '- coverage · `.` · `logs/runs/deliver-1-1/6.log`',
     '',
     'Pull request : https://github.example.com/acme/shop/pull/42',
     '',
-    'Total : 14 tentatives, 1 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
+    'Total : 12 tentatives, 0 reprises, 0 s, coût ~$0.75 (approximatif : ce que la session Claude Code a coûté pendant que chaque agent tournait, tout autre échange de cette session inclus).',
     '',
     `Rapport du run et preuves : dans la copie de travail, sous le dossier de suivi du run (slug \`${SLUG}\`).`,
     '',
@@ -375,7 +361,7 @@ test('a French story\'s comment is in French, the pull request shown once by its
   assert.ok(host.progress.lines.includes(`${SLUG}: issue #42 updated (RESEARCH closed): ${COMMENT}`), host.progress.lines.join('\n'))
 })
 
-test('a French story\'s comment tells in French a review that sent the work back, a pull request updated, surviving mutants and where a blocked run stopped', async () => {
+test('a French story\'s comment tells in French a review that sent the work back, a pull request updated', async () => {
   const blocker = says('consistency', 'fail', [finding('F1', 'blocker', 'the ADR contradicts the context map')])
   const reworked = scripted({ config: CONSENTED, codeHost: french() }, (it) => [...nominal(it, REFS_42).slice(0, 2), agent()(it), ...nominal(it, REFS_42).slice(2)])
   reworked.agentRunner.review = lenses({ consistency: [blocker] })
@@ -394,14 +380,4 @@ test('a French story\'s comment tells in French a review that sent the work back
   await updated.start(FRENCH)
   assert.ok(updated.codeHost.comments[0].body.includes('\nPull request : https://github.example.com/acme/shop/pull/42 (mise à jour)\n'), updated.codeHost.comments[0].body)
 
-  const mutated = scripted({ config: CONSENTED, workflow: MUTATION_WORKFLOW, codeHost: french(), machine: new ScriptedMachine(), answers: [{ answer: 'APPLY' }, { answer: 'APPLY' }] }, (it) => [...nominal(it, REFS_42), agent()(it), killer(it), agent()(it), killer(it)])
-  mutated.machine.meanwhile[STRYKER] = async () => {
-    mutated.machine.exits[STRYKER] = 1
-    await mutated.workspace.write(MUTATION_REPORT, CHECKOUT_SURVIVORS)
-  }
-  assert.equal((await mutated.start(FRENCH)).code, 'repeated-failure')
-  const stalled = mutated.codeHost.comments[0].body
-  assert.ok(stalled.includes('\n- api/mutation fail, 2 mutants survivants · `gates/api/mutation-2.log`\n'), stalled)
-  assert.ok(stalled.includes('\n### skraft · checkout — run bloqué\n\nbloqué (repeated-failure)\n\n'), stalled)
-  assert.ok(stalled.includes('\n- [ ] DELIVER — arrêté ici\n'), stalled)
 })
