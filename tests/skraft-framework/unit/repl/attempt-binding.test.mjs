@@ -279,6 +279,29 @@ test('a kernel whose attempt is over, or that no one has used for 15 minutes wit
   assert.equal(kernels.kernels[0].stopped, true, 'once the attempt is closed, the sweep ends the kernel')
 })
 
+test('a run asked for while its kernel ends never starts, and is traced as not started', async () => {
+  const kernels = new ScriptedKernelHost()
+  const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0, text: 'passed' } } })
+  kernels.script.set('go', async ({ run }) => { void run('npm test'); return null })
+  let release = () => undefined
+  const { host, repl } = replRun({ kernels, launcher, calls: { 2: async (one, run) => {
+    const real = run.deps.sourceControl
+    run.deps.sourceControl = { ...real, repository: (cwd) => new Promise((resolve) => { release = () => resolve(real.repository(cwd)) }) }
+    await one.call({ code: 'go' })
+    const closing = one.close()
+    release()
+    await closing
+    run.deps.sourceControl = real
+  } } })
+
+  await host.start()
+  await repl.close()
+
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
+  assert.equal(launcher.started.length, 0)
+  assert.deepEqual(trace.map(({ type, started }) => [type, started]), [['run', false]])
+})
+
 test('a cancellation interrupts the cell in flight and ends the runs it started; the session closing ends the kernel', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher()

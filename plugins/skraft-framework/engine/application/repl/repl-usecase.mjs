@@ -26,6 +26,8 @@ import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 const DEFAULT_BUDGET_MS = 90_000
 /** How long an attempt's kernel may stay unused, with no run alive, before it is ended. */
 const IDLE_MS = 15 * 60 * 1000
+/** How long ending a kernel waits for its runs to be over. */
+const RETIRE_WAIT_MS = 10_000
 
 /**
  * @param {any} deps @param {ReplState} state
@@ -179,13 +181,24 @@ const retire = async (deps, state) => {
   const entry = state.entry
   if (entry === null) return
   state.entry = null
+  entry.retired = true
   endRuns(entry, 'SIGKILL', 0)
   entry.kernel.stop()
-  await Promise.allSettled([...entry.pending])
+  await settledWithin(deps, entry.pending, RETIRE_WAIT_MS)
   await entry.recording
   await deps.repl.orphans.forget(deps.repl.server.pid)
   await releaseLease(deps, entry, entry.lease)
 }
+
+/**
+ * The runs in flight are awaited until they are over or the time is spent: a program that does
+ * not close after its SIGKILL never holds the end of the kernel.
+ * @param {any} deps @param {Set<Promise<void>>} pending @param {number} ms
+ */
+const settledWithin = (deps, pending, ms) => new Promise((resolve) => {
+  const stop = deps.timer.every(ms, () => { stop(); resolve(undefined) })
+  void Promise.allSettled([...pending]).then(() => { stop(); resolve(undefined) })
+})
 
 /** @param {any} deps @param {Entry} entry @param {{ code: string, flight: Flight }} request @param {string | null} notice @returns {Promise<ReplOutcome>} */
 const evaluate = async (deps, entry, { code, flight }, notice) => {

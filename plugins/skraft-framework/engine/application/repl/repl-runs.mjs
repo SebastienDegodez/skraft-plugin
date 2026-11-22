@@ -15,9 +15,9 @@ import { gitFacts, traceEnd, traceStart } from './repl-trace.mjs'
  * @typedef {{
  *   key: string, slug: string, folder: string, kernel: import('../ports/kernel-host.mjs').Kernel, lease: string,
  *   runs: Map<number, Run>, cells: number, lastUsed: number, gone: string | null, pending: Set<Promise<void>>, signingKey: string | null, chain: Promise<void>,
- *   recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
+ *   retired?: boolean, recording?: Promise<void>, tracked?: Map<number, Promise<{ pid: number, created: string | null }>>,
  * }} Entry
- *   recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
+ *   retired: the kernel is being ended, and no run starts any more; recording: the last write of the orphan journal; tracked: each process recorded, with its start time, by pid.
  */
 
 /** The longest a program may run, and the output kept of it. */
@@ -60,13 +60,19 @@ const carry = async (deps, entry, request) => {
   const run = openRun(deps, entry, request)
   if (refusal !== null) return end(deps, entry, run, { ...NOT_STARTED, error: refusal })
   run.before = await gitFacts(deps, request.cwd)
+  if (entry.retired === true) return end(deps, entry, run, { ...NOT_STARTED, error: ENDED })
   return launch(deps, entry, run, request)
 }
 
+/** Why a run asked for while its kernel ends does not start. */
+const ENDED = "the attempt's REPL was ended"
+
 /** @param {any} deps @param {Entry} entry @param {Run} run @param {RunRequest} request */
 const launch = async (deps, entry, run, request) => {
+  if (entry.retired === true) return end(deps, entry, run, { ...NOT_STARTED, error: ENDED })
   const launched = await deps.repl.launcher.start({ command: request.command, cwd: request.cwd, timeoutMs: request.timeout * 1000, maxOutputBytes: MAX_OUTPUT_BYTES, onData: (text) => entry.kernel.chunk(request.rid, text) })
   if (!launched.ok) return end(deps, entry, run, { ...NOT_STARTED, error: launched.reason })
+  if (entry.retired === true) launched.program.kill('SIGKILL', 0)
   Object.assign(run, { program: launched.program, argv: launched.argv, shell: launched.shell })
   await recordProcesses(deps, entry)
   await traceStart(deps, entry, run)

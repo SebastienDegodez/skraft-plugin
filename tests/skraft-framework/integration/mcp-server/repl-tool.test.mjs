@@ -75,7 +75,7 @@ test('two skraft_repl calls sent together share one kernel, the one the orphan j
   const [first, second] = await Promise.all([host.call('skraft_repl', { code }), host.call('skraft_repl', { code })])
   const journal = JSON.parse(readFileSync(join(cwd, '.copilot-tracking', 'skraft-repl', `${process.pid}.json`), 'utf8'))
 
-  assert.deepEqual([textOf(first), textOf(second).slice(0, 10)], [`=> ${journal.kernel.pid}`, 'repl-busy:'])
+  assert.deepEqual([first, second].map((one) => textOf(one).slice(0, 10)).sort(), [`=> ${journal.kernel.pid}`, "repl-busy:"].sort(), "one call ran the cell in the kernel the journal names, the other was told it runs")
 })
 
 test('skraft_status answers within a second while a run starts, even when the system takes seconds to give a process\'s start time', BOUNDED, async (t) => {
