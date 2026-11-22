@@ -16,7 +16,7 @@ class ScriptedProgram {
   }
   /** @param {{ exitCode?: number | null, text?: string, timedOut?: boolean, killed?: boolean, signal?: string | null, started?: boolean }} [result] */
   finish({ exitCode = 0, text = '', timedOut = false, killed = false, signal = null, started = true } = {}) {
-    this.end({ started, exitCode, signal, timedOut, killed, text, cut: false, bytes: text.length, error: null })
+    this.end({ started, exitCode, signal, timedOut, killed, text, cut: false, bytes: Buffer.byteLength(text), error: null })
   }
 }
 
@@ -25,16 +25,21 @@ class ScriptedProgram {
  * scripted there, and stays running otherwise.
  */
 export class ScriptedLauncher {
-  /** @param {{ outputs?: Record<string, { exitCode?: number, text?: string }>, refuses?: string | null }} [options] */
-  constructor({ outputs = {}, refuses = null } = {}) {
+  /**
+   * @param {{ outputs?: Record<string, { exitCode?: number, text?: string }>, refuses?: string | null, stubborn?: boolean }} [options]
+   *   stubborn: a program a kill never ends. A test that sets `holdStart` to a promise holds each start until it settles.
+   */
+  constructor({ outputs = {}, refuses = null, stubborn = false } = {}) {
     this.outputs = outputs
     this.refuses = refuses
+    this.stubborn = stubborn
     /** @type {Array<{ command: string | string[], cwd: string, timeoutMs: number, maxOutputBytes: number, program: ScriptedProgram }>} */
     this.started = []
   }
   async start({ command, cwd, timeoutMs, maxOutputBytes, onData }) {
+    await this.holdStart
     if (this.refuses !== null) return { ok: false, reason: this.refuses }
-    const program = new ScriptedProgram(5000 + this.started.length, (one) => one.finish({ exitCode: null, killed: true, signal: 'SIGTERM' }))
+    const program = new ScriptedProgram(5000 + this.started.length, (one) => { if (!this.stubborn) one.finish({ exitCode: null, killed: true, signal: 'SIGTERM' }) })
     this.started.push({ command, cwd, timeoutMs, maxOutputBytes, program })
     const scripted = this.outputs[Array.isArray(command) ? command.join(' ') : command]
     if (scripted !== undefined) {
@@ -113,9 +118,10 @@ export class ScriptedKernelHost {
     /** Cell behaviours every kernel starts with, by code. @type {Map<string, Function>} */
     this.script = new Map()
   }
-  async start(events) {
+  async start(events, _cwd, { firstRid = 1 } = {}) {
     if (this.fails) throw new Error('no kernel')
     const kernel = new ScriptedKernel(events, 4000 + this.kernels.length)
+    kernel.nextRid = firstRid - 1
     kernel.restartsOnInterrupt = this.restartsOnInterrupt
     kernel.lib = this.lib
     for (const [code, behaviour] of this.script) kernel.on(code, behaviour)
@@ -133,8 +139,15 @@ export class InMemoryOrphans {
     this.forgotten = []
     this.reaps = 0
   }
-  async keep(entry) { this.kept.push(entry) }
-  async forget(serverPid) { this.forgotten.push(serverPid) }
+  /** The record of this server on disk: what the last keep wrote, null once forgotten. */
+  get record() { return this.current ?? null }
+  async keep(entry) { this.kept.push(entry); this.current = entry }
+  /** A test that sets `slowForget` to a promise holds each forget until it settles. */
+  async forget(serverPid) {
+    await this.slowForget
+    this.forgotten.push(serverPid)
+    this.current = null
+  }
   async reap() { this.reaps += 1; return 0 }
   track(pid) { return { pid, created: `started-${pid}` } }
   gone() { return this.holderGone }

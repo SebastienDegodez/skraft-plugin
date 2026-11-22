@@ -27,7 +27,7 @@ lancés. Non mesurés non plus : `reset: true` sur un hôte qui n'envoie jamais 
 | --- | --- |
 | Agents | le concepteur d'acceptation et l'ingénieur logiciel, dont les descripteurs nomment l'outil ; jamais une lentille de revue |
 | Tentative | l'appel est lié à la tentative ouverte du run actif : sans tentative ouverte, ou pour un agent qui ne commite aucun code, il est refusé par `repl-unavailable` |
-| Noyau | un processus enfant par tentative, démarré au premier appel et arrêté quand la tentative se ferme, quand une autre tentative appelle, après 15 minutes sans usage, sans cellule ni run vivants, quand la session se ferme ou quand le noyau meurt. Il doit se dire prêt en dix secondes, sinon l'appel répond `repl-failed` ; il tourne avec ses propres options Node, jamais celles du serveur, et un tas de 2 Gio au plus : au-delà le noyau s'arrête et l'appel répond `repl-crashed`. Un noyau s'arrête avec tous les processus que ses cellules ont lancés elles-mêmes : son groupe de processus sous POSIX, son arbre sous Windows |
+| Noyau | un processus enfant par tentative, démarré au premier appel et arrêté quand la tentative se ferme, quand une autre tentative appelle, après 15 minutes sans usage, sans cellule ni run vivants, quand la session se ferme ou quand le noyau meurt. Il doit se dire vivant en dix secondes et être prêt en trente, sa bibliothèque chargée, sinon il est arrêté et l'appel répond `repl-failed` ; il tourne avec ses propres options Node, jamais celles du serveur, et un tas de 2 Gio au plus : au-delà le noyau s'arrête et l'appel répond `repl-crashed`. Un noyau s'arrête avec tous les processus que ses cellules ont lancés elles-mêmes : son groupe de processus sous POSIX, son arbre sous Windows |
 | Concurrence | l'appel n'attend pas dans la file du serveur : `skraft_status` et `skraft_precheck` répondent pendant qu'une cellule tourne ; deux appels envoyés ensemble partagent un seul noyau, le second attendant son démarrage ; un second appel pendant une cellule est refusé par `repl-busy` ; une annulation nomme sa requête et n'atteint que cet appel |
 | Bail | `logs/runs/<étape>-<visite>-<tentative>/.lock` nomme le serveur qui tient le REPL de la tentative ; le serveur le renouvelle toutes les 30 secondes. Un autre serveur est refusé par `repl-held-elsewhere`, sauf si le détenteur a disparu (le système dit qu'aucun processus ne tourne sous son pid, ou qu'un processus démarré à une autre heure y tourne) ou n'a pas renouvelé le bail depuis cinq minutes ; un détenteur dont l'heure de démarrage ne peut pas être lue n'est jamais tenu pour disparu |
 
@@ -51,17 +51,17 @@ Une cellule qui dépasse 90 secondes répond avec ce qu'elle a affiché, ses run
 
 ## La bibliothèque REPL du projet <!-- #lib -->
 
-`.repl/` à la racine de la copie de travail appartient au projet : le moteur le lit et ne l'écrit jamais ; le développeur le tient à jour. Chaque `.repl/lib/<nom>.mjs` est importé par le noyau à son démarrage, dans l'ordre alphabétique des noms, et chaque cellule reçoit ses exports nommés en `lib.<nom>`. Un module tourne dans le noyau : il peut appeler `run` et `gate` comme une cellule. Un module qui lève une exception au chargement, ou prend plus de dix secondes, est laissé de côté et le noyau continue. Le premier résultat d'un noyau nomme ce qu'il a chargé (`lib: a, b`) et chaque module qu'il n'a pas pu charger.
+`.repl/` à la racine de la copie de travail appartient au projet : le moteur le lit et ne l'écrit jamais ; le développeur le tient à jour. Chaque `.repl/lib/<nom>.mjs` est importé par le noyau à son démarrage, dans l'ordre alphabétique des noms, et chaque cellule reçoit ses exports nommés en `lib.<nom>`. `<nom>` doit être un identifiant JavaScript ; tout autre fichier de `.repl/lib/` n'est pas chargé, et le premier résultat le nomme. Un module tourne dans le noyau : il peut appeler `run` et `gate` comme une cellule. Un module qui lève une exception au chargement, ou prend plus de dix secondes, est laissé de côté et le noyau continue. Le premier résultat d'un noyau nomme ce qu'il a chargé (`lib: a, b`) et chaque module qu'il n'a pas pu charger.
 
 Les paquets dont une bibliothèque a besoin sont déclarés dans `.repl/package.json`, avec son lockfile, tous deux commités ; le développeur les installe par `npm ci --prefix .repl`, sous `.repl/node_modules/`, qui n'est pas commité. `require` dans une cellule cherche d'abord dans `.repl/`, puis dans la copie de travail. Quand `.repl/package.json` nomme des paquets et que `.repl/node_modules/` est absent, le premier résultat le dit et nomme cette commande.
 
 ## Ce que l'agent relit <!-- #result -->
 
-Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Ce qu'une cellule affiche est gardé à 1 Mio, ses 512 premiers et 512 derniers Kio autour d'un marqueur, dans le résultat comme dans ce fichier. Le noyau garde la sortie de ses 50 derniers runs ; l'`output()` d'une poignée plus ancienne nomme le journal du run. Le journal d'un run s'écrit pendant que le programme tourne, on peut donc le lire pendant le run ; il contient les 64 premiers Mio de la sortie, et la ligne `run` dit quand le reste a été coupé (`cut`). Son SHA-256 se calcule à mesure qu'il s'écrit. Chaque ligne de `runs.jsonl` est ajoutée à la fin ; une ligne ou un journal qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, qui nomme le `logs/unexpected.log` du run.
+Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Ce qu'une cellule affiche est gardé à 1 Mio, ses 512 premiers et 512 derniers Kio autour d'un marqueur, dans le résultat comme dans ce fichier. Le noyau garde la sortie de ses 50 derniers runs ; l'`output()` d'une poignée plus ancienne nomme le journal du run. Le journal d'un run s'écrit pendant que le programme tourne, on peut donc le lire pendant le run ; au-delà de 64 Mio de sortie il garde les 32 premiers et les 32 derniers Mio autour d'un marqueur, coupés sur des caractères entiers, et la ligne `run` le dit (`cut`). Son SHA-256 se calcule à mesure qu'il s'écrit. Chaque ligne de `runs.jsonl` est ajoutée à la fin ; une ligne ou un journal qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, qui nomme le `logs/unexpected.log` du run.
 
 ## La trace <!-- #trace -->
 
-Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans le dossier de la tentative `logs/runs/<étape>-<visite>-<tentative>/` :
+Le serveur, pas la cellule, lance chaque programme et écrit `runs.jsonl` dans le dossier de la tentative `logs/runs/<étape>-<visite>-<tentative>/`. Les ids de runs continuent d'un noyau à l'autre d'une tentative (un reset, un crash, un autre serveur) : un id, et son journal, ne sert jamais deux fois.
 
 | Ligne | Quand | Contient |
 | --- | --- | --- |
@@ -83,9 +83,9 @@ Chaque borne est fixée par le moteur ; aucune n'est configurable.
 | runs vivants d'une tentative | 8 | le `run()` suivant ne démarre pas |
 | un appel | répond au bout de 90 s | la cellule continue ; un appel vide l'attend |
 | une cellule | 7260 s | interrompue, son noyau redémarré trois secondes plus tard : `repl-restarted` |
-| démarrage du noyau | 10 s pour se dire vivant | `repl-failed` |
-| un module de `.repl/lib` | 10 s pour se charger | laissé de côté, le noyau continue |
-| le journal d'un run | ses 64 premiers Mio, écrits à mesure | le reste n'est pas écrit ; `cut` dans la trace |
+| démarrage du noyau | 10 s pour se dire vivant, 30 s en tout pour être prêt, sa bibliothèque chargée | le noyau et son groupe s'arrêtent : `repl-failed` |
+| `.repl/lib` | 10 s par module, 20 s pour toute la bibliothèque | un module laissé de côté, le noyau continue ; un module qui ne rend jamais la main arrête le démarrage à ses 30 s |
+| le journal d'un run | 64 Mio, écrits à mesure | ses 32 premiers et 32 derniers Mio gardés autour d'un marqueur, coupés sur des caractères entiers ; `cut` dans la trace |
 | un résultat | 24 Kio | le reste dans `cell-<n>.log` |
 | ce qu'une cellule affiche | 1 Mio : ses 512 premiers et 512 derniers Kio | un marqueur entre les deux |
 | sorties gardées par un noyau | ses 50 derniers runs | une poignée plus ancienne nomme son journal |
@@ -106,6 +106,7 @@ Un noyau vit du premier appel d'une tentative jusqu'à la fermeture de la tentat
 | `repl-crashed` | le noyau s'est arrêté seul : ses variables sont perdues |
 | `repl-trace-failed` | en tête de chaque résultat dès qu'une ligne de la trace ou le journal d'un run n'a pas pu s'écrire : la trace est incomplète |
 | `repl-reset` | en tête du résultat d'un appel avec `reset: true` : le noyau a été arrêté et un neuf démarré, ses variables sont perdues |
+| `repl-fresh` | en tête du premier résultat après que le balayage ou la session a arrêté le noyau de la tentative : un neuf a démarré, ses variables sont perdues |
 | `repl-failed` | le noyau n'a pas pu démarrer ; le refus nomme le `logs/unexpected.log` du run, qui dit pourquoi |
 | `repl-unexpected` | skraft lui-même a échoué pendant l'appel ; le refus nomme le `logs/unexpected.log` du run, qui contient l'exception |
 

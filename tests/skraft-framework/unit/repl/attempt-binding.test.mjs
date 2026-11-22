@@ -156,6 +156,30 @@ test('two calls at once share one kernel: the second is told the first cell runs
   assert.equal(kernels.kernels[0].stopped, true)
 })
 
+test('a call that arrives while the session ends its kernel gets a fresh kernel, which holds the lease and the orphan record, and is told its variables are gone', async () => {
+  const kernels = new ScriptedKernelHost()
+  const orphans = new InMemoryOrphans()
+  const seen = []
+  const { host } = replRun({ kernels, orphans, calls: { 2: async (repl, one) => {
+    await repl.call({ code: '1' })
+    let release = () => undefined
+    orphans.slowForget = new Promise((resolve) => { release = resolve })
+    const closing = repl.close()
+    const calling = repl.call({ code: '2' })
+    await sleep(10)
+    release()
+    await closing
+    seen.push(await calling, one.deps.repl.locks.held(`${SLUG}/logs/runs/distill-1-1`), orphans.record)
+  } } })
+
+  await host.start()
+
+  assert.equal(kernels.kernels.length, 2)
+  assert.match(seen[0].text, /^repl-fresh: /)
+  assert.notEqual(seen[1], null, 'the lease of the fresh kernel is held')
+  assert.equal(seen[2]?.kernel?.pid, kernels.kernels[1].pid, 'the orphan record names the fresh kernel')
+})
+
 test('a run that finished while another cell went on is told at the start of the next result', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher()
@@ -294,6 +318,45 @@ test('a lease whose running holder has not renewed it for five minutes is taken 
   assert.equal(answers[2], answers[3])
 })
 
+test('the sweep renews its lease in place only well before its end, takes it back past that, and ends the kernel when the lease is not its own once written', async () => {
+  const calls = []
+  const kernels = new ScriptedKernelHost()
+  const { host } = replRun({ kernels, calls: { 2: async (repl, one) => {
+    const locks = one.deps.repl.locks
+    const counted = (name) => async (...args) => { calls.push(name); return locks[name](...args) }
+    one.deps.repl.locks = { create: (...args) => locks.create(...args), read: (...args) => locks.read(...args), renew: counted('renew'), replace: counted('replace'), held: (slug) => locks.held(slug) }
+    await repl.call({ code: '1' })
+    one.clock.sleep(30_000)
+    await repl.sweep()
+    one.clock.sleep(5 * 60_000 - 5_000)
+    await repl.sweep()
+    one.deps.repl.locks = { ...one.deps.repl.locks, renew: async (slug, seen, text) => { await locks.renew(slug, seen, text); locks.tracking.files.set(locks.tracking.key(slug, '.lock'), 'another server'); return true } }
+    one.clock.sleep(30_000)
+    await repl.sweep()
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(calls.slice(0, 2), ['renew', 'replace'])
+  assert.equal(kernels.kernels[0].stopped, true, 'a lease another server wrote over is no longer this kernel\'s')
+})
+
+test('an exception of the sweep goes to the run\'s unexpected.log, and the sweep goes on next time', async () => {
+  const seen = []
+  const { host } = replRun({ calls: { 2: async (repl, one) => {
+    await repl.call({ code: '1' })
+    const locks = one.deps.repl.locks
+    one.deps.repl.locks = { ...locks, read: (slug) => locks.read(slug), renew: async () => { throw new Error('disk gone while renewing') } }
+    seen.push(await repl.sweep().then(() => 'swept', () => 'rejected'))
+    one.deps.repl.locks = locks
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(seen, ['swept'])
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /^Error: disk gone while renewing\n/)
+})
+
 test('a kernel that cannot start is a refusal with a fixed text naming the run\'s unexpected.log, which holds the error, and the lease is given back', async () => {
   const answers = []
   const { host } = replRun({ kernels: new ScriptedKernelHost({ fails: true }), calls: { 2: async (repl, one) => {
@@ -375,6 +438,65 @@ test('a kernel whose attempt is over, or that no one has used for 15 minutes wit
 
   assert.deepEqual(outcomes, [false, false])
   assert.equal(kernels.kernels[0].stopped, true, 'once the attempt is closed, the sweep ends the kernel')
+})
+
+test('ending a kernel whose run does not close after its SIGKILL waits for it until its time is spent, then ends', async () => {
+  const launcher = new ScriptedLauncher({ stubborn: true })
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('start', async ({ run }) => { void run('npm run e2e'); return null })
+  const seen = []
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl, run) => {
+    await repl.call({ code: 'start' })
+    await sleep(10)
+    const closing = repl.close().then(() => 'ended')
+    await sleep(10)
+    seen.push(await Promise.race([closing, sleep(50).then(() => 'waiting')]))
+    run.clock.advance(10_000)
+    seen.push(await Promise.race([closing, sleep(50).then(() => 'waiting')]))
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(seen, ['waiting', 'ended'])
+  assert.deepEqual(launcher.started[0].program.killed, [['SIGKILL', 0]])
+})
+
+test('a run this server still ends after a reset is never closed as lost by the kernel the reset starts', async () => {
+  const launcher = new ScriptedLauncher({ stubborn: true })
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('start', async ({ run }) => { void run('npm run e2e'); return null })
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl, run) => {
+    await repl.call({ code: 'start' })
+    await sleep(10)
+    const resetting = repl.call({ code: '1', reset: true })
+    await sleep(10)
+    run.clock.advance(10_000)
+    await resetting
+  } } })
+
+  await host.start()
+
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
+  assert.deepEqual(trace.map(({ type }) => type), ['start'])
+})
+
+test('a program the launcher starts while the kernel ends is killed as soon as the launcher hands it over', async () => {
+  const launcher = new ScriptedLauncher()
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('start', async ({ run }) => { void run('npm run e2e'); return null })
+  const { host } = replRun({ kernels, launcher, calls: { 2: async (repl) => {
+    let release = () => undefined
+    launcher.holdStart = new Promise((resolve) => { release = resolve })
+    await repl.call({ code: 'start' })
+    await sleep(10)
+    const closing = repl.close()
+    release()
+    await Promise.race([closing, sleep(100)])
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(launcher.started[0].program.killed, [['SIGKILL', 0]])
 })
 
 test('a reset during a cell that never ends ends its kernel and its runs, starts a fresh kernel and says the variables are gone', async () => {

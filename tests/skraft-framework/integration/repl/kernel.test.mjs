@@ -2,7 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createNodeKernelHost } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/node-kernel.mjs'
 import { createLiveProcesses } from '../../../../plugins/skraft-framework/engine/infrastructure/process/live-processes.mjs'
-import { fileURLToPath } from 'node:url'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { tempFolder } from '../support/workspace.mjs'
 
 // A kernel the test fails to end would hold the test run: each test has a time limit.
@@ -230,6 +231,18 @@ test('what a cell prints past 1 MiB comes back as its first and last half megaby
   assert.ok(noisy.printed.startsWith('first\n'))
   assert.ok(noisy.printed.endsWith('\nlast\n'))
   assert.match(noisy.printed, /\n… the cell printed more than 1 MiB: its first and last 512 KiB are kept …\n/)
+})
+
+test('a kernel that exits before it says it is alive is refused, and leaves no deadline holding the server', BOUNDED, async (t) => {
+  const host = fileURLToPath(new URL('../../../../plugins/skraft-framework/engine/infrastructure/repl/node-kernel.mjs', import.meta.url))
+  const child = fileURLToPath(new URL('./fixtures/exits-at-once.mjs', import.meta.url))
+  const script = `import(${JSON.stringify(pathToFileURL(host).href)}).then(({ createNodeKernelHost }) => createNodeKernelHost({ entry: ${JSON.stringify(child)} }).start({ onRun() {}, onKill() {}, onAbsent() {}, onGone() {} }, ${JSON.stringify(tempFolder(t))})).then(() => console.log('ready'), () => console.log('refused'))`
+  const asked = Date.now()
+
+  const ran = spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', timeout: 25_000 })
+
+  assert.equal(ran.stdout.trim(), 'refused')
+  assert.ok(Date.now() - asked < 8000, `the server process lived ${Date.now() - asked} ms after the refusal`)
 })
 
 test('a kernel that exits by itself reports it crashed with the cell it was running', BOUNDED, async (t) => {

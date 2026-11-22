@@ -67,14 +67,30 @@ const endedRecord = (run, result, { headAfter, sha256, cut }) => runRecord({
 /**
  * The runs a server that is gone left open in the attempt's trace are closed as lost, each by a
  * line of this server. The trace is read as it stands, signed or not: closing a run proves nothing.
- * @param {any} deps @param {Entry} entry @returns {Promise<number[]>} the runs closed
+ * Runs this server still ends are its own, never lost.
+ * @param {any} deps @param {Entry} entry @param {Set<number>} [still] @returns {Promise<number[]>} the runs closed
  */
-export const closeLostRuns = async (deps, entry) => {
-  const text = (await deps.files.read(entry.slug, tracePath(entry.folder))) ?? ''
-  const lost = openRuns(text.split('\n').map(recordOf).filter((record) => record !== null))
+export const closeLostRuns = async (deps, entry, still = new Set()) => {
+  const lost = openRuns(await recordsAsWritten(deps, entry)).filter((run) => !still.has(run))
   const at = iso(deps.clock.now().getTime())
   for (const run of lost) await appendRecord(deps, entry, lostRecord({ run, at }))
   return lost
+}
+
+/**
+ * The id the next kernel of the attempt gives its first run: one more than any id the trace holds,
+ * so that no id, and no log, is ever reused within the attempt.
+ * @param {any} deps @param {{ slug: string, folder: string }} where @returns {Promise<number>}
+ */
+export const nextRunId = async (deps, where) => {
+  const ids = (await recordsAsWritten(deps, where)).map((record) => record.run).filter((run) => Number.isInteger(run) && run > 0)
+  return Math.max(0, ...ids) + 1
+}
+
+/** The trace's records as they stand, signed or not. @param {any} deps @param {{ slug: string, folder: string }} where @returns {Promise<any[]>} */
+const recordsAsWritten = async (deps, { slug, folder }) => {
+  const text = (await deps.files.read(slug, tracePath(folder))) ?? ''
+  return text.split('\n').map(recordOf).filter((record) => record !== null)
 }
 
 /** @param {string} line @returns {any} null when the line is no record */

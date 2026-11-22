@@ -27,7 +27,7 @@ host that never sends a cancellation, and `.repl/lib` (loading, `require`) under
 | --- | --- |
 | Agents | the acceptance designer and the software engineer, whose descriptors name the tool; never a review lens |
 | Attempt | the call is bound to the open attempt of the active run: no open attempt, or an agent that commits no code, is refused with `repl-unavailable` |
-| Kernel | one child process per attempt, started by the first call and ended when the attempt closes, when another attempt calls, after 15 minutes unused with no cell nor run alive, when the session closes or when the kernel dies. It must say it is ready within ten seconds, else the call answers `repl-failed`; it runs with Node flags of its own, never the server's, and a heap of 2 GiB at most: past it the kernel ends and the call answers `repl-crashed`. A kernel ends with every process its cells started by themselves: its process group under POSIX, its tree under Windows |
+| Kernel | one child process per attempt, started by the first call and ended when the attempt closes, when another attempt calls, after 15 minutes unused with no cell nor run alive, when the session closes or when the kernel dies. It must say it is alive within ten seconds and be ready within thirty, its library loaded, else it is ended and the call answers `repl-failed`; it runs with Node flags of its own, never the server's, and a heap of 2 GiB at most: past it the kernel ends and the call answers `repl-crashed`. A kernel ends with every process its cells started by themselves: its process group under POSIX, its tree under Windows |
 | Concurrency | the call does not wait in the server's queue, so `skraft_status` and `skraft_precheck` answer while a cell runs; two calls sent at once share one kernel, the second waiting for it to start; a second call while a cell runs is refused with `repl-busy`; a cancellation names its request, so it reaches only that call |
 | Lease | `logs/runs/<step>-<visit>-<attempt>/.lock` names the server that holds the attempt's REPL; the server renews it every 30 seconds. Another server is refused with `repl-held-elsewhere` unless the holder is gone (the system says no process runs under its pid, or one that started at another time) or has not renewed the lease for five minutes; a holder whose start time cannot be read is never taken for gone |
 
@@ -51,17 +51,17 @@ A cell that runs past 90 seconds answers with what it printed so far while its r
 
 ## The project's REPL library <!-- #lib -->
 
-`.repl/` at the root of the working copy belongs to the project: the engine reads it and never writes it; the developer keeps it. Each `.repl/lib/<name>.mjs` is imported by the kernel when it starts, in the alphabetical order of the names, and every cell gets its named exports as `lib.<name>`. A module runs in the kernel, so it may call `run` and `gate` as a cell does. A module that throws on load, or takes more than ten seconds, is left out and the kernel goes on. The first result of a kernel names what it loaded (`lib: a, b`) and each module it could not.
+`.repl/` at the root of the working copy belongs to the project: the engine reads it and never writes it; the developer keeps it. Each `.repl/lib/<name>.mjs` is imported by the kernel when it starts, in the alphabetical order of the names, and every cell gets its named exports as `lib.<name>`. `<name>` must be a JavaScript identifier; any other file of `.repl/lib/` is not loaded, and the first result names it. A module runs in the kernel, so it may call `run` and `gate` as a cell does. A module that throws on load, or takes more than ten seconds, is left out and the kernel goes on. The first result of a kernel names what it loaded (`lib: a, b`) and each module it could not.
 
 The packages a library needs are declared in `.repl/package.json`, with its lockfile, both committed; the developer installs them with `npm ci --prefix .repl`, under `.repl/node_modules/`, which is not committed. `require` in a cell looks in `.repl/` first, then in the working copy. When `.repl/package.json` names packages and `.repl/node_modules/` is absent, the first result says so and names that command.
 
 ## What the agent reads back <!-- #result -->
 
-The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives in `cell-<n>.log` beside the runs, and the result names it. What a cell prints is kept to 1 MiB, its first and last 512 KiB around a marker, in the result and in that file alike. The kernel keeps the output of its last 50 runs; the `output()` of an older handle names the run's log. The log of a run is written as the program runs, so it can be read while the run goes on; it holds the first 64 MiB of the output, and the `run` line says when the rest was cut (`cut`). Its SHA-256 is computed as it is written. Each line of `runs.jsonl` is appended; a line or a log that cannot be written heads every next result with `repl-trace-failed`, which names the run's `logs/unexpected.log`.
+The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives in `cell-<n>.log` beside the runs, and the result names it. What a cell prints is kept to 1 MiB, its first and last 512 KiB around a marker, in the result and in that file alike. The kernel keeps the output of its last 50 runs; the `output()` of an older handle names the run's log. The log of a run is written as the program runs, so it can be read while the run goes on; past 64 MiB of output it keeps the first and the last 32 MiB around a marker, cut on whole characters, and the `run` line says so (`cut`). Its SHA-256 is computed as it is written. Each line of `runs.jsonl` is appended; a line or a log that cannot be written heads every next result with `repl-trace-failed`, which names the run's `logs/unexpected.log`.
 
 ## The trace <!-- #trace -->
 
-The server, not the cell, starts every program and writes `runs.jsonl` in the attempt's folder `logs/runs/<step>-<visit>-<attempt>/`:
+The server, not the cell, starts every program and writes `runs.jsonl` in the attempt's folder `logs/runs/<step>-<visit>-<attempt>/`. Run ids go on across the kernels of an attempt (a reset, a crash, another server): an id, and its log, is never reused.
 
 | Line | When | Holds |
 | --- | --- | --- |
@@ -83,9 +83,9 @@ Every bound is fixed by the engine; none is configurable.
 | live runs of an attempt | 8 | the next `run()` does not start |
 | a call | answers after 90 s | the cell goes on; an empty call waits for it |
 | a cell | 7260 s | interrupted, its kernel restarted three seconds later: `repl-restarted` |
-| kernel start | 10 s to say it is alive | `repl-failed` |
-| one module of `.repl/lib` | 10 s to load | left out, the kernel goes on |
-| a run's log | its first 64 MiB, written as it runs | the rest is not written; `cut` in the trace |
+| kernel start | 10 s to say it is alive, 30 s in all to be ready, its library loaded | the kernel and its group end: `repl-failed` |
+| `.repl/lib` | 10 s per module, 20 s for the whole library | a module left out, the kernel goes on; a module that never yields ends the start at its 30 s |
+| a run's log | 64 MiB, written as it runs | its first and last 32 MiB kept around a marker, cut on whole characters; `cut` in the trace |
 | a result | 24 KiB | the rest in `cell-<n>.log` |
 | what a cell prints | 1 MiB: its first and last 512 KiB | a marker between them |
 | outputs a kernel keeps | its last 50 runs | an older handle names its log |
@@ -106,6 +106,7 @@ A kernel lives from the first call of an attempt until the attempt closes, anoth
 | `repl-crashed` | the kernel exited by itself: its variables are gone |
 | `repl-trace-failed` | heads every result once a line of the trace or a run's log could not be written: the trace is incomplete |
 | `repl-reset` | heads the result of a call with `reset: true`: the kernel was ended and a fresh one started, its variables are gone |
+| `repl-fresh` | heads the first result after the sweep or the session ended the attempt's kernel: a fresh one started, its variables are gone |
 | `repl-failed` | the kernel could not start; the refusal names the run's `logs/unexpected.log`, which holds why |
 | `repl-unexpected` | skraft itself failed during the call; the refusal names the run's `logs/unexpected.log`, which holds the exception |
 

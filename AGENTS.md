@@ -141,8 +141,8 @@ the probe or a test says otherwise.
 - **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole;
   every `run()` of `skraft_repl` too: a timeout always set (7200 s at most), an output cap, its
   process group (its tree under Windows) ended as a whole. The REPL's bounds are fixed by code:
-  a call answers at 90 s, a cell lives 7260 s, a kernel starts within 10 s (each `.repl/lib`
-  module loads within 10 s), 8 live runs per attempt, a run's log 64 MiB written as it runs, a
+  a call answers at 90 s, a cell lives 7260 s, a kernel is alive within 10 s and ready within 30 s (each `.repl/lib`
+  module loads within 10 s, the library within 20 s), 8 live runs per attempt, a run's log 64 MiB written as it runs, a
   result 24 KiB, a cell's printed output 1 MiB, the output of the last 50 runs kept, a 2 GiB heap,
   a kill's grace 30 s at most and never past the timeout; a lease is taken over only when its
   holder is gone or has not renewed it for 5 minutes.

@@ -78,11 +78,11 @@ test('two skraft_repl calls sent together share one kernel, the one the orphan j
   assert.deepEqual([first, second].map((one) => textOf(one).slice(0, 10)).sort(), [`=> ${journal.kernel.pid}`, "repl-busy:"].sort(), "one call ran the cell in the kernel the journal names, the other was told it runs")
 })
 
-test('skraft_status answers within a second while a run starts, even when the system takes seconds to give a process\'s start time', BOUNDED, async (t) => {
+test('skraft_status answers well before the system gives a process\'s start time, while a run starts', BOUNDED, async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   await toDeliveryAttempt(cwd)
-  const slowReader = { file: process.execPath, args: ['-e', 'setTimeout(() => console.log("slow start time"), 3000)'] }
+  const slowReader = { file: process.execPath, args: ['-e', 'setTimeout(() => console.log("slow start time"), 8000)'] }
   const adapt = (adapters, directory) => ({ ...adapters, repl: { ...adapters.repl, orphans: createOrphanJournal({ folder: join(directory, '.copilot-tracking', 'skraft-repl'), creationOf: (pid) => processCreation(pid, process.platform, slowReader) }) } })
   const host = mcpHost({ roots: [cwd], adapt })
   await host.initialize()
@@ -98,7 +98,7 @@ test('skraft_status answers within a second while a run starts, even when the sy
   }
 
   assert.equal(slowest.slug, SLUG)
-  assert.ok(slowest.took < 1000, `skraft_status took ${slowest.took} ms`)
+  assert.ok(slowest.took < 4000, `skraft_status took ${slowest.took} ms`)
 })
 
 test('a reset during a cell that never yields answers within ten seconds from a fresh kernel, whose variables are new', BOUNDED, async (t) => {

@@ -82,11 +82,11 @@ class Handle {
 
 /**
  * Starts the kernel on an IPC channel (the child's `process`, or a test's double).
- * @param {Ipc} ipc @param {{ libFolder?: string | null }} [options] libFolder: the working copy's absolute .repl/lib folder @returns {Kernel}
+ * @param {Ipc} ipc @param {{ libFolder?: string | null, firstRid?: number }} [options] libFolder: the working copy's absolute .repl/lib folder; firstRid: the id of its first run @returns {Kernel}
  */
-export const startKernel = (ipc, { libFolder = null } = {}) => {
+export const startKernel = (ipc, { libFolder = null, firstRid = 1 } = {}) => {
   /** @type {Kernel} */
-  const kernel = /** @type {Kernel} */ ({ ipc, handles: new Map(), nextRun: 1, cell: null, prompted: null, server: null })
+  const kernel = /** @type {Kernel} */ ({ ipc, handles: new Map(), nextRun: firstRid, cell: null, prompted: null, server: null })
   routeConsole(kernel)
   kernel.server = replServer(kernel)
   defineApi(kernel)
@@ -104,9 +104,9 @@ export const startKernel = (ipc, { libFolder = null } = {}) => {
 const announce = async (kernel, folder) => {
   const root = folder === null ? null : dirname(dirname(folder))
   if (root !== null) kernel.server.context.require = projectRequire(root)
-  const library = folder === null ? { lib: {}, loaded: [], failed: [] } : await loadLibrary(folder)
+  const library = folder === null ? { lib: {}, loaded: [], failed: [], refused: [] } : await loadLibrary(folder)
   Object.assign(globalThis, { lib: Object.freeze(library.lib) })
-  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed, notInstalled: root !== null && notInstalled(root) } })
+  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed, refused: library.refused, notInstalled: root !== null && notInstalled(root) } })
 }
 
 /** What a cell prints, and what runs later print, goes to the server as `print`. @param {Kernel} kernel */
@@ -235,9 +235,15 @@ const errorText = (error) => String(error?.stack ?? error ?? 'the cell failed').
 /** The frames of the kernel and of Node itself say nothing of the agent's cell. */
 const FRAMEWORK_FRAME = /kernel-child\.mjs|\(node:|node:internal|node:vm|node:repl|node:domain|at new Promise/
 
+/** The id of the first run, as the server passes it; 1 when it passes none. @param {string | undefined} text */
+const firstRidOf = (text) => {
+  const rid = Number(text)
+  return Number.isInteger(rid) && rid > 0 ? rid : 1
+}
+
 // Started by the MCP server with `fork`; imported by the tests, which hand it a channel of their own.
 if (process.send !== undefined && process.argv[1] === fileURLToPath(import.meta.url)) {
-  const kernel = startKernel(process, { libFolder: process.argv[2] ?? null })
+  const kernel = startKernel(process, { libFolder: process.argv[2] ?? null, firstRid: firstRidOf(process.argv[3]) })
   routeStdio(kernel)
   process.on('disconnect', () => process.exit(0))
   for (const event of ['uncaughtException', 'unhandledRejection']) process.on(event, (error) => kernel.ipc.send({ t: 'print', cell: null, text: `${errorText(error)}\n` }))
