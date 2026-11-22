@@ -678,7 +678,9 @@ const skraftMcpServer = async (session) => {
   return { servers, tools: tools.map(({ name }) => name).sort() }
 }
 
-const MCP_REPL_EXPECTED = "Le serveur MCP `skraft` liste `skraft_repl`, le REPL JavaScript de la tentative d'un agent qui livre du code, sous Copilot CLI."
+const MCP_REPL_EXPECTED = "Le serveur MCP `skraft` liste `skraft_repl`, le REPL JavaScript de la tentative d'un agent qui livre du code, et `skraft_repl_reset`, qui en termine le noyau, sous Copilot CLI."
+/** The two tools of the REPL, by their names on the server. */
+const REPL_TOOLS = Object.freeze(['skraft_repl', 'skraft_repl_reset'])
 
 const skraftMcpChecks = async (session) => {
   let seen
@@ -698,12 +700,18 @@ const skraftMcpChecks = async (session) => {
       title: "V2 — le serveur MCP skraft propose la boucle d'agent sous Copilot CLI", labels: ['bug', 'gain:reliability'],
       body: "Sous Copilot CLI, le serveur MCP `skraft` liste `skraft_start` : l'hôte se nomme `Visual Studio Code` à la poignée de main, et un agent peut démarrer un pipeline hors du workflow `skraft-pipeline`.",
     }),
-    check({
-      id: 'skraft-repl-listed', expected: MCP_REPL_EXPECTED, verdict: loaded ? (seen.tools.includes('skraft_repl') ? 'pass' : 'fail') : 'inconclusive', observed: { listed: seen.tools.includes('skraft_repl') },
-      title: "V2 — le serveur MCP skraft ne liste pas skraft_repl sous Copilot", labels: ['bug', 'gain:reliability'],
-      body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, `rpc.mcp.listTools` ne liste pas `skraft_repl` : les agents qui livrent du code ne peuvent pas lancer leurs commandes par le REPL, dont les runs seuls comptent comme preuve.",
-    }),
+    replListed(seen, loaded),
   ]
+}
+
+/** Whether the server lists both tools of the REPL. */
+const replListed = (seen, loaded) => {
+  const listed = REPL_TOOLS.filter((name) => seen.tools.includes(name))
+  return check({
+    id: 'skraft-repl-listed', expected: MCP_REPL_EXPECTED, verdict: loaded ? (listed.length === REPL_TOOLS.length ? 'pass' : 'fail') : 'inconclusive', observed: { listed },
+    title: "V2 — le serveur MCP skraft ne liste pas skraft_repl ou skraft_repl_reset sous Copilot", labels: ['bug', 'gain:reliability'],
+    body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, `rpc.mcp.listTools` ne liste pas `skraft_repl` ou `skraft_repl_reset` : les agents qui livrent du code ne peuvent pas lancer leurs commandes par le REPL, dont les runs seuls comptent comme preuve, ou ne peuvent pas en terminer un noyau bloqué.",
+  })
 }
 
 /**
@@ -714,7 +722,7 @@ const skraftMcpChecks = async (session) => {
 const MCP_AGENT_TOOL = 'skraft-skraft_doctor'
 const MCP_AGENT_TOOL_DECLARED = 'skraft/skraft_doctor'
 const AGENT_MCP_REACH_EXPECTED = "Un agent reçoit un outil du serveur MCP du plugin quand son `tools:` le nomme, et ne le reçoit pas sinon : la session offre `skraft-skraft_doctor` à l'agent qui le déclare, et ne l'offre pas à celui qui déclare un autre outil (#581)."
-const AGENT_REPL_REACH_EXPECTED = "Un agent reçoit `skraft_repl` quand son `tools:` le nomme, et ne le reçoit pas sinon : la session offre `skraft-skraft_repl` à l'agent qui le déclare, et ne l'offre pas à celui qui déclare un autre outil. Un agent qui n'est pas le sien n'ouvre donc pas de REPL."
+const AGENT_REPL_REACH_EXPECTED = "Un agent reçoit `skraft_repl` et `skraft_repl_reset` quand son `tools:` les nomme, et ne les reçoit pas sinon : la session offre `skraft-skraft_repl` et `skraft-skraft_repl_reset` à l'agent qui les déclare, et ne les offre pas à celui qui déclare un autre outil. Un agent qui n'est pas le sien n'ouvre donc pas de REPL et n'en termine aucun."
 
 /** What one session offers its active agent, the agent declaring exactly `tools`. */
 const toolsOfferedToAgent = async (context, pluginRoot, tools) => {
@@ -730,34 +738,41 @@ const toolsOfferedToAgent = async (context, pluginRoot, tools) => {
   }
 }
 
-/** The reach of one tool of the plugin's MCP server: given to the agent that declares it, withheld from the one that does not. */
-const toolReach = async (context, pluginRoot, { id, tool, declaredAs, expected, title, body }) => {
+/** Given to none, to some, or to all of the tools: a host that hands over only some of them gates them badly. */
+const reachVerdict = (tools, declared, control) => {
+  const reached = tools.filter((tool) => declared.includes(tool)).length
+  if (tools.some((tool) => control.includes(tool))) return 'fail'
+  if (reached === tools.length) return 'pass'
+  return reached === 0 ? 'inconclusive' : 'fail'
+}
+
+/** The reach of tools of the plugin's MCP server: given to the agent that declares them, withheld from the one that does not. */
+const toolReach = async (context, pluginRoot, { id, tools, declaredAs, expected, title, body }) => {
   let declared
   let control
   try {
-    declared = await toolsOfferedToAgent(context, pluginRoot, [tool])
+    declared = await toolsOfferedToAgent(context, pluginRoot, tools)
     control = await toolsOfferedToAgent(context, pluginRoot, ['view'])
   } catch (error) {
     return check({ id, expected, observed: { error: messageOf(error) } })
   }
-  const reached = declared.includes(tool)
-  const leaked = control.includes(tool)
-  const reason = reached || leaked ? undefined : 'the session offers no tool of the plugin MCP server: nothing to gate'
-  return check({ id, expected, verdict: leaked ? 'fail' : reached ? 'pass' : 'inconclusive', observed: { tool, declaredAs, declared, control, reason }, title, labels: ['bug', 'gain:reliability'], body })
+  const verdict = reachVerdict(tools, declared, control)
+  const reason = verdict === 'inconclusive' ? 'the session offers no tool of the plugin MCP server: nothing to gate' : undefined
+  return check({ id, expected, verdict, observed: { tools, declaredAs, declared, control, reason }, title, labels: ['bug', 'gain:reliability'], body })
 }
 
 /** Whether a producer agent can be given a pre-check tool at all, and whether declaring it is what decides. */
 const agentMcpReach = (context, pluginRoot) => toolReach(context, pluginRoot, {
-  id: 'agent-mcp-reach', tool: MCP_AGENT_TOOL, declaredAs: MCP_AGENT_TOOL_DECLARED, expected: AGENT_MCP_REACH_EXPECTED,
+  id: 'agent-mcp-reach', tools: [MCP_AGENT_TOOL], declaredAs: [MCP_AGENT_TOOL_DECLARED], expected: AGENT_MCP_REACH_EXPECTED,
   title: "V2 — un outil MCP n'atteint pas l'agent qui le déclare sous Copilot",
   body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, la session n'offre pas `skraft-skraft_doctor` à l'agent dont le `tools:` le nomme, ou l'offre à un agent qui ne le nomme pas : un précontrôle ne peut pas être donné à un agent producteur, ou ne peut pas lui être retiré (#581).",
 })
 
-/** Whether the REPL reaches only the agent that declares it: an agent that is not its own opens none. */
+/** Whether the two tools of the REPL reach only the agent that declares them: an agent that is not its own opens none and ends none. */
 const agentReplReach = (context, pluginRoot) => toolReach(context, pluginRoot, {
-  id: 'agent-repl-reach', tool: 'skraft-skraft_repl', declaredAs: 'skraft/skraft_repl', expected: AGENT_REPL_REACH_EXPECTED,
-  title: "V2 — skraft_repl atteint un agent qui ne le déclare pas, ou pas celui qui le déclare, sous Copilot",
-  body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, la session n'offre pas `skraft-skraft_repl` à l'agent dont le `tools:` le nomme, ou l'offre à un agent qui ne le nomme pas : le REPL ne peut pas être donné aux seuls agents qui livrent du code.",
+  id: 'agent-repl-reach', tools: REPL_TOOLS.map((name) => `skraft-${name}`), declaredAs: REPL_TOOLS.map((name) => `skraft/${name}`), expected: AGENT_REPL_REACH_EXPECTED,
+  title: "V2 — skraft_repl ou skraft_repl_reset atteint un agent qui ne le déclare pas, ou pas celui qui le déclare, sous Copilot",
+  body: "Dans un hôte SDK headless, avec `pluginDirectories` sur `plugins/skraft-framework`, la session n'offre pas `skraft-skraft_repl` ou `skraft-skraft_repl_reset` à l'agent dont le `tools:` les nomme, ou en offre un à un agent qui ne le nomme pas : le REPL ne peut pas être donné aux seuls agents qui livrent du code.",
 })
 
 const skraftWorkflowChecks = async (session) => {

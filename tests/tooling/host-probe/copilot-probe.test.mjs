@@ -7,7 +7,7 @@ import { parseArgs, reportMarkdown, requiredFailures, runProbe, toolText } from 
 import { planIssueActions } from '../../../eng/host-probe/issues.mjs'
 import { CONFIGURED_MODELS, NATIVE_TOOLS, REFUSALS, WORKFLOWS_UNAVAILABLE, notRegistered, simulatedSdk } from './simulated-copilot-host.mjs'
 
-const SHARED_MCP_TOOLS = ['skraft_answer', 'skraft_doctor', 'skraft_init', 'skraft_journal', 'skraft_migrate', 'skraft_precheck', 'skraft_repl', 'skraft_report', 'skraft_status', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject']
+const SHARED_MCP_TOOLS = ['skraft_answer', 'skraft_doctor', 'skraft_init', 'skraft_journal', 'skraft_migrate', 'skraft_precheck', 'skraft_repl', 'skraft_repl_reset', 'skraft_report', 'skraft_status', 'skraft_workflow_check', 'skraft_workflow_diff', 'skraft_workflow_eject']
 const FAST = { tools: 50, isolationTools: 50, poll: 10, settle: 0 }
 const ENVIRONMENT = { copilot: '1.0.100', sdk: 'test', node: 'v22', os: 'linux' }
 
@@ -92,11 +92,24 @@ test('a tool of the plugin MCP server is offered to the agent whose tools name i
   assert.equal(gated.verdict, 'pass')
   assert.ok(gated.observed.declared.includes('skraft-skraft_doctor'), 'the agent that declares the tool is offered it')
   assert.ok(!gated.observed.control.includes('skraft-skraft_doctor'), 'the agent that declares another tool is not')
-  assert.equal(gated.observed.declaredAs, 'skraft/skraft_doctor')
+  assert.deepEqual(gated.observed.declaredAs, ['skraft/skraft_doctor'])
 
   const ignored = reachOf((await probe(t, { agentTools: 'ignored' })).report)
   assert.equal(ignored.verdict, 'fail')
   assert.ok(ignored.observed.control.includes('skraft-skraft_doctor'), 'a host that ignores the list hands the tool to an agent that never asked for it')
+})
+
+test('the REPL is two tools: both are listed by the server, both reach the agent whose tools name them, and neither reaches another; a host that ignores that list fails the check', async (t) => {
+  const { report } = await probe(t)
+  const listed = report.checks.find((item) => item.id === 'skraft-repl-listed')
+  const reach = report.checks.find((item) => item.id === 'agent-repl-reach')
+
+  assert.deepEqual([listed.verdict, listed.observed], ['pass', { listed: ['skraft_repl', 'skraft_repl_reset'] }])
+  assert.deepEqual([reach.verdict, reach.observed.tools, reach.observed.declaredAs], ['pass', ['skraft-skraft_repl', 'skraft-skraft_repl_reset'], ['skraft/skraft_repl', 'skraft/skraft_repl_reset']])
+  assert.ok(reach.observed.tools.every((tool) => reach.observed.declared.includes(tool) && !reach.observed.control.includes(tool)))
+
+  const ignored = (await probe(t, { agentTools: 'ignored' })).report.checks.find((item) => item.id === 'agent-repl-reach')
+  assert.equal(ignored.verdict, 'fail')
 })
 
 test('with --agent-calls, a skill an agent lists under skills is measured as preloaded only when that agent knows its token and its twin without the field does not', async (t) => {

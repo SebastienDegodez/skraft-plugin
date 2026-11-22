@@ -5,6 +5,19 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### À mesurer — `skraft_repl_reset` : permission, liste, atteinte (branche feat/engine-repl-enforcement)
+
+Le REPL est devenu deux outils : `skraft_repl` n'accepte plus `reset`, `skraft_repl_reset` termine
+le noyau de la tentative et ses runs. Les sondes couvrent le second outil ; elles n'ont pas encore
+été lancées sur cette branche (environ 0,6 USD pour la sonde Claude Code, quatre sessions `-p` ; la
+sonde Copilot ne fait aucun appel de modèle).
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| `claude-repl-permission` (quatre sessions `claude -p`, `Bash` refusé) : `skraft_repl_reset` refusé par l'hôte quand seul `skraft_repl` est autorisé, et atteignant le moteur (`repl-unavailable`) quand les deux le sont | Claude Code | not measured | — |
+| `skraft-repl-listed` : `rpc.mcp.listTools` liste `skraft_repl` et `skraft_repl_reset` | SDK Copilot | not measured | — |
+| `agent-repl-reach` : l'agent dont `tools:` nomme `skraft/skraft_repl` et `skraft/skraft_repl_reset` reçoit `skraft-skraft_repl` et `skraft-skraft_repl_reset` ; celui qui nomme `view` n'en reçoit aucun | SDK Copilot | not measured | — |
+
 ### 2026-11-22 — `skraft_repl` : permission, liste, atteinte (lot D, branche feat/engine-repl-evidence)
 
 Le REPL d'une tentative laisse tourner n'importe quel programme (`run()`), hors des règles `Bash`
@@ -34,7 +47,7 @@ Non mesuré, faute de pouvoir le faire ici sans session interactive ni autre hô
 
 | Comportement | Hôte | Verdict | Où |
 | --- | --- | --- | --- |
-| `reset: true` sans annulation : un agent sort d'une cellule bloquée sur un hôte qui n'envoie jamais `notifications/cancelled` | Claude Code, Copilot CLI, VS Code | not measured ; testé sur hôte simulé (`while (true) {}` arrêté en moins de 10 s) | `application/repl/repl-usecase.mjs` (`reset`) |
+| `skraft_repl_reset` sans annulation : un agent sort d'une cellule bloquée sur un hôte qui n'envoie jamais `notifications/cancelled` | Claude Code, Copilot CLI, VS Code | not measured ; testé sur hôte simulé (`while (true) {}` arrêté en moins de 10 s) | `application/repl/repl-usecase.mjs` (`reset`) |
 | `.repl/lib` sous Windows : chargement des modules par `pathToFileURL`, `require` depuis `.repl/`, arrêt de l'arbre du noyau par `taskkill /T /F` | Windows | not measured ; écrit, testé sous macOS seulement | `infrastructure/repl/repl-library.mjs`, `repl-require.mjs`, `node-kernel.mjs` |
 
 ### #566 — périmètre des preuves existantes
