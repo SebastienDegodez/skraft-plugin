@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -120,4 +120,18 @@ test('a front end in a subfolder resolves its own node_modules and core', async 
 	const p = await project(t, { pkgDir: 'web', scenario: { coverage: { 'src/todos/application/ListTodos.ts': { total: 3, covered: 3, skipped: 0, pct: 100 } } } })
 	const result = await runCoverageGate({ root: p.root, package: 'web', evidence: 'evidence' })
 	assert.equal(result.exitCode, 0, result.lines.join('\n'))
+})
+
+test('eslint-rules.mjs imported by another module reads no argument and loads no ESLint; started as a program it answers the rules', async (t) => {
+	const p = await project(t)
+	await p.put('node_modules/eslint/api.mjs', `process.stdout.write('eslint loaded\\n')\nexport * from ${JSON.stringify(fakeEslintApi)}\n`)
+	await p.put('files.json', JSON.stringify(['src/todos/application/ListTodos.ts']))
+	const helper = new URL('../../../plugins/skraft-framework/skills/quality-gates-typescript/scripts/eslint-rules.mjs', import.meta.url)
+
+	const imported = spawnSync(process.execPath, ['--input-type=module', '-e', `await import(${JSON.stringify(helper.href)})`, 'unused', 'files.json', 'boundaries/dependencies'], { cwd: p.pkg, encoding: 'utf8' })
+	const started = spawnSync(process.execPath, [fileURLToPath(helper), 'files.json', 'boundaries/dependencies'], { cwd: p.pkg, encoding: 'utf8' })
+
+	assert.deepEqual([imported.status, imported.stdout, imported.stderr], [0, '', ''])
+	const [loaded, rules] = started.stdout.trim().split('\n')
+	assert.deepEqual([started.status, loaded, JSON.parse(rules)], [0, 'eslint loaded', { 'src/todos/application/ListTodos.ts': { 'boundaries/dependencies': [2, { default: 'disallow' }] } }])
 })
