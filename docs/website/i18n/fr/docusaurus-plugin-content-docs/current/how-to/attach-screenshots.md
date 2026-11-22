@@ -15,7 +15,10 @@ Faites qu'un run joigne à sa pull request les captures des tests e2e d'un front
 
 ## Étapes
 
-Pour un tel composant, le nœud `visuals` lance `commands.e2e` après la revue DELIVER.
+skraft ne lance jamais la commande e2e. Le software engineer la lance par `skraft_repl` avec
+`gate('e2e', …)` sur son dernier commit, comme les autres gates du composant ; après la revue
+DELIVER, le nœud `visuals` lit ce run tracé et le seul manifeste qu'il laisse,
+`skraft-visuals/manifest.json`.
 
 1. Déclarez la commande e2e du frontend :
 
@@ -75,10 +78,23 @@ Pour un tel composant, le nœud `visuals` lance `commands.e2e` après la revue D
    laissez `/skraft-init` vous le demander. Tant que ce n'est pas réglé, un run qui publierait des
    captures est refusé.
 
-Résultat : les captures sont commitées seules sur la branche
-(`docs(evidence): screenshots of <composants>`) et la section Screenshots de la pull request les
-montre, les sombres repliées. Les captures sont une preuve, pas une gate : un e2e en échec
-n'arrête pas le run.
+Résultat : la section Screenshots de la pull request montre les six premières captures de chaque
+thème, les sombres repliées. Le chemin dépend de la forge :
+
+- **GitHub** : elles restent là où Playwright les a écrites, rien n'est commité. Le corps renvoie
+  à chacune par `./<chemin>`, et `gh pr create` ou `gh pr edit` la téléverse avec `--attach`, en
+  réécrivant la référence. skraft relit le corps et dit quelles captures ne sont pas jointes.
+  `skraft doctor` prévient quand votre gh n'a pas `--attach` (gh 2.103.3 l'a).
+- **Azure DevOps** : `az` n'envoie aucun fichier en corps binaire, les pièces jointes de la pull
+  request sont donc hors d'atteinte. skraft commite les captures seules sur la branche
+  (`docs(evidence): screenshots of <composants>`), sous le dossier `evidence/` de la story, et lie
+  chacune par la route Items du dépôt à ce commit. `skraft doctor` prévient quand l'extension
+  `azure-devops` du CLI Azure manque. Qu'Azure Repos affiche ces images n'est pas encore mesuré sur
+  une vraie organisation.
+
+skraft contrôle chaque fichier avec Git seul avant de le joindre ou de le commiter : un lien
+symbolique, un chemin qui passe par l'un d'eux ou un fichier qui n'est pas un PNG est refusé. Les
+captures sont une preuve, pas une gate : un e2e en échec n'arrête pas le run.
 
 ## Dépannage
 
@@ -89,6 +105,16 @@ n'arrête pas le run.
 ### `skraft-visuals/manifest.json is missing or is not an object with a screenshots list`
 
 Vérifiez que le reporter est déclaré et que `commands.e2e` lance Playwright depuis la racine du composant.
+
+### `no traced e2e run`
+
+Le software engineer n'a pas lancé `gate('e2e', …)` pour ce frontend : vérifiez que le composant
+déclare `commands.e2e`, ce qui le met dans le brief de l'engineer.
+
+### `2 screenshots did not attach: …`
+
+gh a ouvert ou mis à jour la pull request sans pouvoir téléverser ces fichiers. Relancez
+`skraft publish` une fois que gh atteint GitHub ; le corps y renvoie toujours par leur chemin.
 
 ## Étapes suivantes <!-- #next-steps -->
 
