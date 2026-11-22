@@ -178,6 +178,23 @@ test('a kernel that never says it is ready is refused within ten seconds, and a 
   assert.equal(flags.value, "[ '--max-old-space-size=2048' ]")
 })
 
+test('a kernel that is stopped ends with every process its cells started by themselves', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+  const started = await cell(kernel, "require('node:child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' }).pid")
+  const pid = Number(started.value)
+  t.after(() => { try { process.kill(pid, 'SIGKILL') } catch { /* gone */ } })
+
+  kernel.stop()
+  let alive = true
+  for (let tries = 0; tries < 50 && alive; tries += 1) {
+    await new Promise((done) => setTimeout(done, 100))
+    try { process.kill(pid, 0) } catch { alive = false }
+  }
+
+  assert.ok(Number.isInteger(pid) && pid > 0, started.error ?? started.value)
+  assert.equal(alive, false)
+})
+
 test('a kernel that exits by itself reports it crashed with the cell it was running', BOUNDED, async (t) => {
   const { kernel, seen } = await openKernel(t)
 

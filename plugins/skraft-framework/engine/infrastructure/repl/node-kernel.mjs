@@ -1,5 +1,7 @@
-import { fork } from 'node:child_process'
+import { fork, spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { groupStarted, stopGroup } from '../process/process-groups.mjs'
+import { windowsTreeKill } from '../process/node-processes.mjs'
 
 /**
  * @typedef {import('../../application/ports/kernel-host.mjs').KernelHost} KernelHost
@@ -18,6 +20,9 @@ const KERNEL_CHILD = fileURLToPath(new URL('./kernel-child.mjs', import.meta.url
 const INTERRUPT_GRACE_MS = 3000
 /** How long the kernel may take to say it is ready. */
 const READY_MS = 10_000
+/** POSIX: the kernel leads a process group of its own, which ends with it. */
+const GROUPED = process.platform !== 'win32'
+const TREE_KILL_MS = 10_000
 /**
  * The kernel's Node flags, fixed: never the server's own (a test runner's, an inspector's), and a
  * heap of 2 GiB at most, past which the kernel exits and the call answers repl-crashed.
@@ -36,7 +41,8 @@ export const createNodeKernelHost = ({ entry = KERNEL_CHILD } = {}) => Object.fr
 
 /** @param {string} entry @param {KernelEvents} events @param {string} cwd @returns {Promise<Kernel>} */
 const start = (entry, events, cwd) => new Promise((resolve, reject) => {
-  const child = fork(entry, [], { cwd, execArgv: [...KERNEL_FLAGS], stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
+  const child = fork(entry, [], { cwd, execArgv: [...KERNEL_FLAGS], detached: GROUPED, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
+  if (GROUPED && child.pid !== undefined) groupStarted(child.pid)
   /** @type {State} */
   const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null }
   const late = setTimeout(() => notReady(state, reject), READY_MS)
@@ -49,7 +55,7 @@ const start = (entry, events, cwd) => new Promise((resolve, reject) => {
 /** A kernel that did not say it is ready in time is ended. @param {State} state @param {(error: Error) => void} reject */
 const notReady = (state, reject) => {
   state.stopped = true
-  state.child.kill('SIGKILL')
+  endKernel(state)
   reject(new Error('the kernel was not ready within ten seconds'))
 }
 
@@ -174,15 +180,30 @@ const interrupt = (state) => {
 /** A cell that will not stop: the kernel ends, and its variables with it. @param {State} state @param {Cell} cell */
 const restart = (state, cell) => {
   state.stopped = true
-  state.child.kill('SIGKILL')
+  endKernel(state)
   cell.settle(outcome(state, cell, 'restarted'))
   state.events.onGone('restarted')
+}
+
+/**
+ * Ends the kernel with every process its cells started: its process group under POSIX (the
+ * kernel leads one of its own), its tree under Windows.
+ * @param {State} state
+ */
+const endKernel = (state) => {
+  const pid = state.child.pid
+  if (pid === undefined) return
+  if (GROUPED) return stopGroup(pid, { signal: 'SIGKILL', graceMs: 0 })
+  const { file, args } = windowsTreeKill(pid)
+  const killer = spawn(file, args, { stdio: 'ignore', windowsHide: true, timeout: TREE_KILL_MS })
+  killer.once('error', () => state.child.kill('SIGKILL'))
 }
 
 /** @param {State} state */
 const crashed = (state) => {
   if (state.stopped) return
   state.stopped = true
+  endKernel(state)
   if (state.cell !== null) state.cell.settle(outcome(state, state.cell, 'crashed'))
   state.events.onGone('crashed')
 }
@@ -191,6 +212,6 @@ const crashed = (state) => {
 const stop = (state) => {
   if (state.stopped) return
   state.stopped = true
-  state.child.kill('SIGKILL')
+  endKernel(state)
   if (state.cell !== null) state.cell.settle(outcome(state, state.cell, 'stopped'))
 }
