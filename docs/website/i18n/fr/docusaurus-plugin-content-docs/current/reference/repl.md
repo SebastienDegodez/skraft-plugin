@@ -57,7 +57,7 @@ Les paquets dont une bibliothèque a besoin sont déclarés dans `.repl/package.
 
 ## Ce que l'agent relit <!-- #result -->
 
-Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Ce qu'une cellule affiche est gardé à 1 Mio, ses 512 premiers et 512 derniers Kio autour d'un marqueur, dans le résultat comme dans ce fichier. Le noyau garde la sortie de ses 50 derniers runs ; l'`output()` d'une poignée plus ancienne nomme le journal du run. Le journal d'un run s'écrit pendant que le programme tourne, on peut donc le lire pendant le run ; il contient les 64 premiers Mio de la sortie, et la ligne `run` dit quand le reste a été coupé (`cut`). Son SHA-256 se calcule à mesure qu'il s'écrit. Chaque ligne de `runs.jsonl` est ajoutée à la fin ; une ligne ou un journal qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, qui nomme le `logs/unexpected.log` du run.
+Le résultat contient, dans l'ordre, 24 Kio au plus : les runs finis depuis le dernier appel, ce que la cellule a affiché, une ligne par run qu'elle a lancé (id, fin, durée, commande, journal), puis la valeur finale inspectée à la profondeur 2 ou l'erreur de la cellule. Ce qui est coupé vit dans `cell-<n>.log` à côté des runs, et le résultat le nomme. Ce qu'une cellule affiche est gardé à 1 Mio, ses 512 premiers et 512 derniers Kio autour d'un marqueur, dans le résultat comme dans ce fichier. Le noyau garde la sortie de ses 50 derniers runs ; l'`output()` d'une poignée plus ancienne nomme le journal du run. Le journal d'un run s'écrit pendant que le programme tourne, on peut donc le lire pendant le run ; au-delà de 64 Mio de sortie il garde les 32 premiers et les 32 derniers Mio autour d'un marqueur, coupés sur des caractères entiers, et la ligne `run` le dit (`cut`). Son SHA-256 se calcule à mesure qu'il s'écrit. Chaque ligne de `runs.jsonl` est ajoutée à la fin ; une ligne ou un journal qui ne peut pas s'écrire met `repl-trace-failed` en tête de chaque résultat suivant, qui nomme le `logs/unexpected.log` du run.
 
 ## La trace <!-- #trace -->
 
@@ -85,7 +85,7 @@ Chaque borne est fixée par le moteur ; aucune n'est configurable.
 | une cellule | 7260 s | interrompue, son noyau redémarré trois secondes plus tard : `repl-restarted` |
 | démarrage du noyau | 10 s pour se dire vivant, 30 s en tout pour être prêt, sa bibliothèque chargée | le noyau et son groupe s'arrêtent : `repl-failed` |
 | `.repl/lib` | 10 s par module, 20 s pour toute la bibliothèque | un module laissé de côté, le noyau continue ; un module qui ne rend jamais la main arrête le démarrage à ses 30 s |
-| le journal d'un run | ses 64 premiers Mio, écrits à mesure | le reste n'est pas écrit ; `cut` dans la trace |
+| le journal d'un run | 64 Mio, écrits à mesure | ses 32 premiers et 32 derniers Mio gardés autour d'un marqueur, coupés sur des caractères entiers ; `cut` dans la trace |
 | un résultat | 24 Kio | le reste dans `cell-<n>.log` |
 | ce qu'une cellule affiche | 1 Mio : ses 512 premiers et 512 derniers Kio | un marqueur entre les deux |
 | sorties gardées par un noyau | ses 50 derniers runs | une poignée plus ancienne nomme son journal |

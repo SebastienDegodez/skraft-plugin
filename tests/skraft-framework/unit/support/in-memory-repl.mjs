@@ -16,7 +16,7 @@ class ScriptedProgram {
   }
   /** @param {{ exitCode?: number | null, text?: string, timedOut?: boolean, killed?: boolean, signal?: string | null, started?: boolean }} [result] */
   finish({ exitCode = 0, text = '', timedOut = false, killed = false, signal = null, started = true } = {}) {
-    this.end({ started, exitCode, signal, timedOut, killed, text, cut: false, bytes: text.length, error: null })
+    this.end({ started, exitCode, signal, timedOut, killed, text, cut: false, bytes: Buffer.byteLength(text), error: null })
   }
 }
 

@@ -57,7 +57,7 @@ The packages a library needs are declared in `.repl/package.json`, with its lock
 
 ## What the agent reads back <!-- #result -->
 
-The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives in `cell-<n>.log` beside the runs, and the result names it. What a cell prints is kept to 1 MiB, its first and last 512 KiB around a marker, in the result and in that file alike. The kernel keeps the output of its last 50 runs; the `output()` of an older handle names the run's log. The log of a run is written as the program runs, so it can be read while the run goes on; it holds the first 64 MiB of the output, and the `run` line says when the rest was cut (`cut`). Its SHA-256 is computed as it is written. Each line of `runs.jsonl` is appended; a line or a log that cannot be written heads every next result with `repl-trace-failed`, which names the run's `logs/unexpected.log`.
+The result holds, in order, at most 24 KiB: the runs that finished since the last call, what the cell printed, one line per run it started (id, how it ended, duration, command, log), then the trailing value inspected at depth 2 or the cell's error. What is cut lives in `cell-<n>.log` beside the runs, and the result names it. What a cell prints is kept to 1 MiB, its first and last 512 KiB around a marker, in the result and in that file alike. The kernel keeps the output of its last 50 runs; the `output()` of an older handle names the run's log. The log of a run is written as the program runs, so it can be read while the run goes on; past 64 MiB of output it keeps the first and the last 32 MiB around a marker, cut on whole characters, and the `run` line says so (`cut`). Its SHA-256 is computed as it is written. Each line of `runs.jsonl` is appended; a line or a log that cannot be written heads every next result with `repl-trace-failed`, which names the run's `logs/unexpected.log`.
 
 ## The trace <!-- #trace -->
 
@@ -85,7 +85,7 @@ Every bound is fixed by the engine; none is configurable.
 | a cell | 7260 s | interrupted, its kernel restarted three seconds later: `repl-restarted` |
 | kernel start | 10 s to say it is alive, 30 s in all to be ready, its library loaded | the kernel and its group end: `repl-failed` |
 | `.repl/lib` | 10 s per module, 20 s for the whole library | a module left out, the kernel goes on; a module that never yields ends the start at its 30 s |
-| a run's log | its first 64 MiB, written as it runs | the rest is not written; `cut` in the trace |
+| a run's log | 64 MiB, written as it runs | its first and last 32 MiB kept around a marker, cut on whole characters; `cut` in the trace |
 | a result | 24 KiB | the rest in `cell-<n>.log` |
 | what a cell prints | 1 MiB: its first and last 512 KiB | a marker between them |
 | outputs a kernel keeps | its last 50 runs | an older handle names its log |
