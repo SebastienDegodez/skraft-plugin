@@ -26,6 +26,7 @@ test('skraft_repl is listed with a closed schema that takes the cell, even an em
   const numeric = await host.call('skraft_repl', { code: 1 })
 
   assert.deepEqual([listed.inputSchema.required, listed.inputSchema.additionalProperties, Object.keys(listed.inputSchema.properties)], [['code'], false, ['code', 'workspace']])
+  assert.match(listed.description, /await handle gives \{ exitCode, output, durationMs, head, log \} \(head: the HEAD of the repository holding cwd when the program ended\)/)
   assert.deepEqual([unknown.isError, textOf(unknown)], [true, 'skraft_repl takes only these arguments: code, workspace'])
   assert.equal(textOf(missing), 'skraft_repl needs the argument code')
   assert.equal(textOf(numeric), 'the argument code of skraft_repl must be a text of at most 200000 characters')
