@@ -11,11 +11,14 @@ export const REFUSALS = Object.freeze({
   'repl-restarted': 'the kernel was ended because a cell would not stop: its variables are gone, and the runs it had started were ended',
   'repl-crashed': 'the kernel ended by itself: its variables are gone, and the runs it had started were ended',
   'repl-interrupted': 'the call was cancelled before its cell started; nothing ran',
-  'repl-failed': 'skraft could not start the kernel of this attempt; unexpected.log of the run holds what happened',
+  'repl-failed': 'skraft could not start the kernel of this attempt',
+  'repl-unexpected': 'the call stopped on an unexpected error of skraft; what was left of it did not run',
 })
 
-/** @param {string} code */
-export const refusalText = (code) => `${code}: ${REFUSALS[code]}`
+/**
+ * @param {string} code @param {string | null} [evidence] the file that holds the exception, when there is one
+ */
+export const refusalText = (code, evidence = null) => `${code}: ${REFUSALS[code]}${evidence === null ? '' : `; the error is in ${evidence}`}`
 
 /** Why a run a cell asked for does not start, by what is wrong with it. */
 export const RUN_REFUSALS = Object.freeze({

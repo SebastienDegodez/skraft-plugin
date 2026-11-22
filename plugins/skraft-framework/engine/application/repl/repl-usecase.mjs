@@ -2,6 +2,7 @@ import { composeCell } from '../../domain/repl/cell-result.mjs'
 import { refusalText } from '../../domain/repl/refusals.mjs'
 import { signingKeyOf } from '../evidence/run-trace-store.mjs'
 import { traceAbsent } from './repl-trace.mjs'
+import { keepUnexpected } from './repl-unexpected.mjs'
 import { bindAttempt, releaseLease, takeLease } from './repl-attempt.mjs'
 import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 
@@ -41,8 +42,8 @@ export const createRepl = (deps, state) => Object.freeze({
 /** An attempt of one working copy: the key a kernel is held under. @param {any} deps @param {{ slug: string, folder: string }} bound */
 const keyOf = (deps, { slug, folder }) => `${deps.repl.root}|${slug}/${folder}`
 
-/** @param {string} code @returns {ReplOutcome} */
-const refused = (code) => ({ ok: false, code, text: refusalText(code) })
+/** @param {string} code @param {string | null} [evidence] the file that holds the exception @returns {ReplOutcome} */
+const refused = (code, evidence = null) => ({ ok: false, code, text: refusalText(code, evidence) })
 
 /** @param {any} deps @param {ReplState} state @param {{ code: string }} request @returns {Promise<ReplOutcome>} */
 const call = async (deps, state, { code }) => {
@@ -58,8 +59,17 @@ const call = async (deps, state, { code }) => {
 const inAttempt = async (deps, state, code) => {
   const bound = await bindAttempt(deps)
   if (!bound.ok) return refused(bound.code)
+  try {
+    return await inEntry(deps, state, bound, code)
+  } catch (error) {
+    return refused('repl-unexpected', await keepUnexpected(deps, bound.slug, error))
+  }
+}
+
+/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {string} code @returns {Promise<ReplOutcome>} */
+const inEntry = async (deps, state, bound, code) => {
   const held = await entryFor(deps, state, bound)
-  if (!held.ok) return refused(held.code)
+  if (!held.ok) return refused(held.code, held.evidence ?? null)
   return evaluate(deps, state, held.entry, code, held.notice)
 }
 
@@ -67,7 +77,7 @@ const inAttempt = async (deps, state, code) => {
  * The entry of the attempt: the one in place, or a kernel started now, once the lease on the
  * attempt is held. A call of another attempt ends the kernel of the earlier one.
  * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
- * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string }>}
+ * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
 const entryFor = async (deps, state, bound) => {
   const key = keyOf(deps, bound)
@@ -84,17 +94,24 @@ const startEntry = async (deps, state, bound) => {
   await reapOnce(deps, state)
   const lease = await takeLease(deps, bound)
   if (lease === null) return notStarted('repl-held-elsewhere')
-  const entry = /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set(), signingKey: await signingKeyOf(deps, bound.events), chain: Promise.resolve() })
-  if (!(await startKernel(deps, entry))) {
-    await releaseLease(deps, bound, lease)
-    return notStarted('repl-failed')
-  }
+  const entry = await newEntry(deps, bound, lease)
+  const failure = await startKernel(deps, entry)
+  if (failure !== null) return kernelFailed(deps, bound, { lease, error: failure.error })
   state.entry = entry
   return { ok: /** @type {const} */ (true), entry }
 }
 
-/** @param {string} code */
-const notStarted = (code) => ({ ok: /** @type {const} */ (false), code })
+/** @param {any} deps @param {{ slug: string, folder: string, key: string, events: any[] }} bound @param {string} lease @returns {Promise<Entry>} */
+const newEntry = async (deps, bound, lease) => /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set(), signingKey: await signingKeyOf(deps, bound.events), chain: Promise.resolve() })
+
+/** The kernel did not start: the lease is given back and the run's unexpected.log holds why. @param {any} deps @param {{ slug: string, folder: string }} bound @param {{ lease: string, error: unknown }} failure */
+const kernelFailed = async (deps, bound, { lease, error }) => {
+  await releaseLease(deps, bound, lease)
+  return notStarted('repl-failed', await keepUnexpected(deps, bound.slug, error))
+}
+
+/** @param {string} code @param {string | null} [evidence] */
+const notStarted = (code, evidence = null) => ({ ok: /** @type {const} */ (false), code, evidence })
 
 /** A server starting its first kernel ends what a server killed before it left running. @param {any} deps @param {ReplState} state */
 const reapOnce = async (deps, state) => {
@@ -103,14 +120,18 @@ const reapOnce = async (deps, state) => {
   await deps.repl.orphans.reap()
 }
 
-/** @param {any} deps @param {Entry} entry @returns {Promise<boolean>} whether the kernel started */
+/**
+ * @param {any} deps @param {Entry} entry @returns {Promise<{ error: unknown } | null>} null when the kernel started;
+ *   a kernel started and not recorded is ended
+ */
 const startKernel = async (deps, entry) => {
   try {
     entry.kernel = await deps.repl.kernels.start(eventsOf(deps, entry), deps.repl.root)
     await recordProcesses(deps, entry)
-    return true
-  } catch {
-    return false
+    return null
+  } catch (error) {
+    entry.kernel?.stop()
+    return { error }
   }
 }
 
@@ -159,7 +180,7 @@ const present = async (deps, entry, outcome, notice) => {
   const { text, cut } = composeCell(partsOf(entry, outcome, cellLog))
   if (cut) await deps.files.write(entry.slug, cellLog, outcome.printed)
   const lost = ['restarted', 'crashed'].includes(outcome.status) ? `repl-${outcome.status}` : null
-  const heading = [lost ?? notice].filter((code) => code !== null).map(refusalText)
+  const heading = [lost ?? notice].filter((code) => code !== null).map((code) => refusalText(code))
   return { ok: lost === null, code: lost, text: [...heading, text].join('\n') }
 }
 

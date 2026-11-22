@@ -177,7 +177,7 @@ test('a lease on the attempt held by a running server refuses the call, and one 
   assert.equal(answers[2], JSON.stringify({ pid: 100, created: 'server-start' }))
 })
 
-test('a kernel that cannot start is a refusal with a fixed text, and the lease is given back', async () => {
+test('a kernel that cannot start is a refusal with a fixed text naming the run\'s unexpected.log, which holds the error, and the lease is given back', async () => {
   const answers = []
   const { host } = replRun({ kernels: new ScriptedKernelHost({ fails: true }), calls: { 2: async (repl, one) => {
     answers.push(await repl.call({ code: '1' }), one.deps.repl.locks.held(`${SLUG}/logs/runs/distill-1-1`))
@@ -185,7 +185,23 @@ test('a kernel that cannot start is a refusal with a fixed text, and the lease i
 
   await host.start()
 
-  assert.deepEqual([answers[0].code, answers[0].text, answers[1]], ['repl-failed', 'repl-failed: skraft could not start the kernel of this attempt; unexpected.log of the run holds what happened', null])
+  const log = `/work/.copilot-tracking/skraft-plans/${SLUG}/logs/unexpected.log`
+  assert.deepEqual([answers[0].code, answers[0].text, answers[1]], ['repl-failed', `repl-failed: skraft could not start the kernel of this attempt; the error is in ${log}`, null])
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /^Error: no kernel\n/)
+})
+
+test('an exception of skraft inside the attempt is a refusal naming the run\'s unexpected.log, never the exception', async () => {
+  const answers = []
+  const { host } = replRun({ calls: { 2: async (repl, one) => {
+    one.deps.repl.locks = { create: async () => { throw new Error('disk full at /secret/place') } }
+    answers.push(await repl.call({ code: '1' }))
+  } } })
+
+  await host.start()
+
+  assert.deepEqual([answers[0].ok, answers[0].code], [false, 'repl-unexpected'])
+  assert.equal(answers[0].text, `repl-unexpected: the call stopped on an unexpected error of skraft; what was left of it did not run; the error is in /work/.copilot-tracking/skraft-plans/${SLUG}/logs/unexpected.log`)
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /^Error: disk full at \/secret\/place\n/)
 })
 
 test('a kernel that dies is told with the cell it was running, and the next call starts a fresh one that says its variables are gone', async () => {
