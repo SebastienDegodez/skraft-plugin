@@ -44,7 +44,7 @@ When you cannot go on, write your result with `"status": "blocked"` and a summar
 
 ## One pass
 
-Every pass of yours writes the whole outer loop of the story: the first pass, and every pass the DISTILL review or the human's scenario review sends back (Rework).
+Your first pass writes the whole outer loop of the story. A pass the DISTILL review or the human's scenario review sends back edits in place only what its feedback names (Rework).
 
 ## Paths
 
@@ -121,7 +121,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - you ran that test once, filtered to it, with the component's test command, and it passed.
 
    An `existing` row: Scenario cell `{name} — covered by {test file} {test name}; ran \`{filtered command}\`: passed`, `Layer` the existing test's, `Priority` `existing`, no Scenarios row, no implementation-plan step. Every row `existing` → blocked, the summary naming each existing test and the scenario it covers.
-5. **Implementation plan.** It orders the **rule groups** the software-engineer delivers, one green commit each, without re-planning: consecutive scenarios that enter through the same use case and pin one rule or its edge cases form one group; a scenario on its own is a group of one; the group holding S1 comes first. Cover every row of the Scenarios table, each in one group. One row per group, in delivery order, the table the engine reads:
+5. **Implementation plan.** It orders the **rule groups** the software-engineer works in this order, all of them in one green commit, without re-planning: consecutive scenarios that enter through the same use case and pin one rule or its edge cases form one group; a scenario on its own is a group of one; the group holding S1 comes first. Cover every row of the Scenarios table, each in one group. One row per group, in delivery order, the table the engine reads:
 
    ```
    | Group | Scenarios | Rule | Enters through | Production code it needs | Test-plan rows |

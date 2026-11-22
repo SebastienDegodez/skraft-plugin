@@ -41,7 +41,7 @@ Each component line of your brief gives its `mocking:` strategy and whether `con
 - Never re-author an acceptance test DISTILL committed and never change one of its input or expected values.
 - Take project conventions from the research document's `Project conventions` section; do not re-derive them from the code.
 - Run tests with the component's test command from your brief, filtered to the test at hand when its runner allows; never hardcode another command.
-- Run frequency: one filtered test run per RED and per GREEN, nothing else, until the story's commit line; there the component's gates (`build`, `format`, `lint`) and the whole suite run once, each once. Re-run neither to confirm a pass, and run no `build` apart when the test command compiles the project.
+- Run frequency, the one rule: one filtered test run per RED and per GREEN; the acceptance tests of each group once, filtered by their scenarios' numbers, before its green; the whole suite once, in the commit line, after the component's gates (`build`, `format`, `lint`) ran once each. No other run: none to confirm a pass, no `build` apart when the test command compiles the project.
 
 ## The inner cycle
 
@@ -59,8 +59,7 @@ Never park a test with `Skip`, `[Ignore]` or `.skip`.
 
 Your brief lists every group of the story in plan order (`- 1 of G — S1 "…" (component …); S2 "…" …`), the acceptance tests DISTILL committed, and the one commit line of the story. You make every group pass in this one pass, in one commit.
 
-- In your first turn after the reads, run every acceptance test once, with the component's test command. A build or setup error (compile, import, missing dependency, no container runtime) is no red: stop, blocked, naming it.
-- Take the groups in the order of your brief. For each group, run its acceptance tests alone, filtered by their scenarios' numbers (`S4_`, `test_s4_`), and work its inner cycle. A scenario that already passes is covered by an earlier one: confirm it with the deletion test (revert in your head the code of the scenario you name: the test must then fail), write no code for it and name that scenario on the change-log line of the story's commit.
+- Take the groups in the order of your brief. For each group, run its acceptance tests once, filtered by their scenarios' numbers (`S4_`, `test_s4_`), before you write its code, and work its inner cycle. A build or setup error in that run (compile, import, missing dependency, no container runtime) is no red: stop, blocked, naming it. A scenario that already passes is covered by an earlier one: confirm it with the deletion test (revert in your head the code of the scenario you name: the test must then fail), write no code for it and name that scenario on the change-log line of the story's commit.
 - Commit nothing while a group works: the unit tests, the code and every fix of every group go in one commit, made once every acceptance test, the walking skeleton and the component's whole suite pass. One `feat` commit; no `test`, `refactor` or `style` commit on this pass, and no second commit.
 - The acceptance tests are the oracle: change no file your brief lists for them outside the component's source path; the skeleton under the source path is yours to fill. One that is wrong (a value that contradicts its `.feature` step, an outcome its scenario does not ask for, a setup no code can satisfy) → stop, blocked, naming the test and what is wrong.
 - Write the code the groups' tests demand, nothing more. Change another component only where a group needs it (a table, a contract, a field), in the same commit.
