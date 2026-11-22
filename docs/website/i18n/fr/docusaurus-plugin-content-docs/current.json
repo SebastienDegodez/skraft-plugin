@@ -539,6 +539,10 @@
     "message": "Canvas du backlog et carte des stories",
     "description": "The label for the doc item 'Backlog canvas and story map' in sidebar 'reference', linking to the doc reference/backlog-canvas"
   },
+  "sidebar.reference.doc.reference/repl": {
+    "message": "REPL d'une tentative",
+    "description": "The label for the doc item 'Attempt REPL' in sidebar 'reference', linking to the doc reference/repl"
+  },
   "sidebar.reference.doc.reference/catalogue": {
     "message": "Agents, skills et chaînes",
     "description": "The label for the doc item 'Agents, skills and chains' in sidebar 'reference', linking to the doc reference/catalogue"

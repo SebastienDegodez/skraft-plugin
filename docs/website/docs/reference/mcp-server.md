@@ -51,6 +51,7 @@ answer, so a failing doctor or gate still answers its JSON.
 | `skraft_journal` | `last?` | `journal show [--last <n>] --json` | every host |
 | `skraft_gate` | `all?` | `gate [--all] --json` | every host |
 | `skraft_precheck` | — | `precheck --json` | every host |
+| `skraft_repl` | `code` | the REPL of the open attempt, [`skraft_repl`](./repl.md); no command line: the use case answers, outside the queue | every host; the agents that name it |
 | `skraft_review` | `pr`, `record?` | `review --pr <n> [--record] --json` | VS Code |
 | `skraft_workflow_check` | — | `workflow check --json` | every host |
 | `skraft_workflow_diff` | — | `workflow diff --json` | every host |

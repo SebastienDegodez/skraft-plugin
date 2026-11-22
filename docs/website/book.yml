@@ -796,6 +796,14 @@ parts:
             doc: reference/backlog-canvas
             purpose_fr: "Chaque partie du canvas du backlog et de story-map.md : ce qu'elle contient, comment la lire, quand agir."
             purpose_en: "Each part of the backlog canvas and of story-map.md: what it holds, how to read it, when to act."
+          - id: repl
+            type: editorial
+            label_fr: "REPL d'une tentative"
+            label_en: "Attempt REPL"
+            sidebar_position: 12
+            doc: reference/repl
+            purpose_fr: "skraft_repl : l'API d'une cellule, la trace signee de chaque run, les limites, les refus et ce qui n'est pas mesure."
+            purpose_en: "skraft_repl: the cell API, the signed trace of every run, the limits, the refusals and what is not measured."
       - id: catalogue
         title_fr: "Catalogue agentique"
         title_en: "Agentic catalogue"
