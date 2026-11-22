@@ -192,7 +192,28 @@ test('a lease on the attempt held by a running server refuses the call, and one 
   assert.deepEqual([answers[0].ok, answers[0].code], [false, 'repl-held-elsewhere'])
   assert.equal(first.kernels.kernels.length, 0)
   assert.equal(answers[1].ok, true)
-  assert.equal(answers[2], JSON.stringify({ pid: 100, created: 'server-start' }))
+  assert.deepEqual(JSON.parse(answers[2]), { pid: 100, created: 'server-start', renewedAt: taken.host.deps.clock.now().toISOString() })
+})
+
+test('a lease whose running holder has not renewed it for five minutes is taken over, one renewed within them is respected, and the sweep renews the lease it holds', async () => {
+  const answers = []
+  const lockOf = `${SLUG}/logs/runs/distill-1-1`
+  const { host, kernels } = replRun({ orphans: new InMemoryOrphans({ holderGone: false }), calls: { 2: async (repl, one) => {
+    const ago = (minutes) => new Date(one.deps.clock.now().getTime() - minutes * 60_000).toISOString()
+    await one.deps.repl.locks.create(lockOf, JSON.stringify({ pid: 777, created: 'elsewhere', renewedAt: ago(4) }))
+    answers.push(await repl.call({ code: '1' }))
+    await one.deps.repl.locks.replace(lockOf, one.deps.repl.locks.held(lockOf), JSON.stringify({ pid: 777, created: 'elsewhere', renewedAt: ago(6) }))
+    answers.push(await repl.call({ code: '1' }))
+    one.clock.sleep(60_000)
+    await repl.sweep()
+    answers.push(JSON.parse(one.deps.repl.locks.held(lockOf)).renewedAt, one.deps.clock.now().toISOString())
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(answers.slice(0, 2).map(({ code }) => code), ['repl-held-elsewhere', null])
+  assert.equal(kernels.kernels.length, 1)
+  assert.equal(answers[2], answers[3])
 })
 
 test('a kernel that cannot start is a refusal with a fixed text naming the run\'s unexpected.log, which holds the error, and the lease is given back', async () => {

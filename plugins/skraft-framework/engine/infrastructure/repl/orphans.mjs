@@ -12,7 +12,9 @@ import { windowsTreeKill } from '../process/node-processes.mjs'
  * @typedef {{ pid: number, created: string | null }} Tracked
  *   created: the system's start time of the process, null when it cannot be read.
  * @typedef {{ server: Tracked, kernel: Tracked | null, runs: Tracked[] }} Entry
- * @typedef {{ platform?: NodeJS.Platform, creationOf?: (pid: number) => string | null, kill?: (pid: number) => void }} OrphanHost
+ * @typedef {{ platform?: NodeJS.Platform, creationOf?: (pid: number) => string | null, exists?: (pid: number) => boolean, kill?: (pid: number) => void }} OrphanHost
+ *   creationOf: null when the start time cannot be read; exists: false only when the system says no process runs under the pid.
+ * @typedef {Required<Pick<OrphanHost, 'creationOf' | 'exists' | 'kill'>>} ReapHost
  */
 
 /**
@@ -50,7 +52,7 @@ const sigkill = (target) => {
 /**
  * @param {{ folder: string } & OrphanHost} options folder: the absolute folder the entries are written in
  */
-export const createOrphanJournal = ({ folder, platform = process.platform, creationOf = (pid) => processCreation(pid, platform), kill = (pid) => killTree(pid, platform) }) => {
+export const createOrphanJournal = ({ folder, platform = process.platform, creationOf = (pid) => processCreation(pid, platform), exists = processExists, kill = (pid) => killTree(pid, platform) }) => {
   return Object.freeze({
     /** @param {Entry} entry */
     keep: (entry) => keepEntry(folder, entry),
@@ -59,9 +61,9 @@ export const createOrphanJournal = ({ folder, platform = process.platform, creat
     /** The process under a pid, with its start time, as `keep` records it. @param {number} pid @returns {Tracked} */
     track: (pid) => ({ pid, created: creationOf(pid) }),
     /** Whether the process recorded is certainly gone. @param {Tracked} tracked */
-    gone: (tracked) => isGone(tracked, { creationOf }),
+    gone: (tracked) => isGone(tracked, { creationOf, exists }),
     /** Ends what the servers that are gone left running; returns how many processes it ended. */
-    reap: () => reap(folder, { creationOf, kill }),
+    reap: () => reap(folder, { creationOf, exists, kill }),
   })
 }
 
@@ -71,7 +73,7 @@ const keepEntry = async (folder, entry) => {
   await writeFile(join(folder, `${entry.server.pid}.json`), JSON.stringify(entry), 'utf8')
 }
 
-/** @param {string} folder @param {Required<Pick<OrphanHost, 'creationOf' | 'kill'>>} host @returns {Promise<number>} */
+/** @param {string} folder @param {ReapHost} host @returns {Promise<number>} */
 const reap = async (folder, host) => {
   let ended = 0
   for (const name of await names(folder)) ended += await reapEntry(join(folder, name), host)
@@ -81,7 +83,7 @@ const reap = async (folder, host) => {
 /** @param {string} folder @returns {Promise<string[]>} */
 const names = (folder) => readdir(folder).then((all) => all.filter((name) => name.endsWith('.json')), () => [])
 
-/** @param {string} path @param {Required<Pick<OrphanHost, 'creationOf' | 'kill'>>} host @returns {Promise<number>} */
+/** @param {string} path @param {ReapHost} host @returns {Promise<number>} */
 const reapEntry = async (path, host) => {
   const entry = await readEntry(path)
   if (entry === null) {
@@ -112,11 +114,27 @@ const readEntry = async (path) => {
 const isSame = ({ pid, created }, host) => created !== null && /** @type {(pid: number) => string | null} */ (host.creationOf)(pid) === created
 
 /**
- * Whether the process recorded is certainly gone: none runs under its pid, or one that started
- * at another time. A start time that was never readable never proves it.
- * @param {Tracked} tracked @param {Pick<OrphanHost, 'creationOf'>} host
+ * Whether the process recorded is certainly gone: the system says none runs under its pid, or
+ * one that started at another time runs there. A start time that cannot be read, now or when it
+ * was recorded, never proves it.
+ * @param {Tracked} tracked @param {Pick<OrphanHost, 'creationOf' | 'exists'>} host
  */
 const isGone = ({ pid, created }, host) => {
-  const now = /** @type {(pid: number) => string | null} */ (host.creationOf)(pid)
-  return now === null || (created !== null && now !== created)
+  if (!(/** @type {(pid: number) => boolean} */ (host.exists)(pid))) return true
+  const now = created === null ? null : /** @type {(pid: number) => string | null} */ (host.creationOf)(pid)
+  return now !== null && now !== created
+}
+
+/**
+ * Whether a process runs under the pid, as the system answers a signal 0: ESRCH alone says none
+ * does; a refusal (EPERM) says one runs that this user may not signal.
+ * @param {number} pid
+ */
+export const processExists = (pid) => {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return /** @type {NodeJS.ErrnoException} */ (error).code !== 'ESRCH'
+  }
 }

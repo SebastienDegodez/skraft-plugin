@@ -3,7 +3,7 @@ import { refusalText } from '../../domain/repl/refusals.mjs'
 import { signingKeyOf } from '../evidence/run-trace-store.mjs'
 import { traceAbsent } from './repl-trace.mjs'
 import { keepUnexpected } from './repl-unexpected.mjs'
-import { bindAttempt, releaseLease, takeLease } from './repl-attempt.mjs'
+import { bindAttempt, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
 import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 
 /**
@@ -241,5 +241,13 @@ const sweep = async (deps, state) => {
   const bound = await bindAttempt(deps)
   const open = bound.ok && keyOf(deps, bound) === entry.key
   const idle = deps.clock.now().getTime() - entry.lastUsed > IDLE_MS && liveRuns(entry).length === 0
-  if (!open || idle) await retire(deps, state)
+  if (!open || idle) return retire(deps, state)
+  await renew(deps, state, entry)
+}
+
+/** The lease of a kernel kept is renewed; one another server took over ends the kernel. @param {any} deps @param {ReplState} state @param {Entry} entry */
+const renew = async (deps, state, entry) => {
+  const renewed = await renewLease(deps, entry, entry.lease)
+  if (renewed === null) return retire(deps, state)
+  entry.lease = renewed
 }
