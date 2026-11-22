@@ -35,12 +35,12 @@ export const createProgramLauncher = ({ root, platform = process.platform, env =
  * @param {{ root: string, processes: ReturnType<typeof createLiveProcesses>, host: Required<LauncherHost> }} where
  * @returns {Promise<import('../../application/ports/program-launcher.mjs').Launched>}
  */
-const launch = async ({ command, cwd, timeoutMs, maxOutputBytes, onData }, { root, processes, host }) => {
+const launch = async ({ command, cwd, timeoutMs, onData }, { root, processes, host }) => {
   const folder = await folderIn(root, cwd)
   if (folder === null) return { ok: false, reason: 'the folder is outside the working copy or does not exist' }
   const how = typeof command === 'string' ? await shellFor(command, host) : { argv: command, shell: null }
   if (how === null) return { ok: false, reason: 'no shell was found on this machine' }
-  const program = await processes.start({ argv: how.argv, cwd: folder.real, timeoutMs, maxOutputBytes, onData })
+  const program = await processes.start({ argv: how.argv, cwd: folder.real, timeoutMs, onData })
   return { ok: true, argv: how.argv, shell: how.shell, cwd: folder.within, program }
 }
 

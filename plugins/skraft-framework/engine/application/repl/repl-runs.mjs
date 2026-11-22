@@ -24,8 +24,6 @@ import { logChunk, openLog } from './run-log.mjs'
 
 /** The longest a program may run. */
 export const MAX_TIMEOUT_S = 7200
-/** What the launcher keeps of a run's output in memory: its log on disk holds it. */
-const MEMORY_TAIL_BYTES = 1_048_576
 /** The options run() takes. */
 const RUN_OPTIONS = Object.freeze(['cwd', 'timeout', 'gate', 'label'])
 
@@ -98,7 +96,6 @@ const carry = async (deps, entry, request) => {
   const run = openRun(deps, entry, request)
   if (refusal !== null) return end(deps, entry, run, { ...NOT_STARTED, error: refusal })
   run.before = await gitFacts(deps, request.cwd)
-  if (entry.retired === true) return end(deps, entry, run, { ...NOT_STARTED, error: ENDED })
   return launch(deps, entry, run, request)
 }
 
@@ -108,7 +105,7 @@ const ENDED = "the attempt's REPL was ended"
 /** @param {any} deps @param {Entry} entry @param {Run} run @param {RunRequest} request */
 const launch = async (deps, entry, run, request) => {
   if (entry.retired === true) return end(deps, entry, run, { ...NOT_STARTED, error: ENDED })
-  const launched = await deps.repl.launcher.start({ command: request.command, cwd: request.cwd, timeoutMs: request.timeout * 1000, maxOutputBytes: MEMORY_TAIL_BYTES, onData: (text) => output(deps, entry, run, text) })
+  const launched = await deps.repl.launcher.start({ command: request.command, cwd: request.cwd, timeoutMs: request.timeout * 1000, onData: (text) => output(deps, entry, run, text) })
   if (!launched.ok) return end(deps, entry, run, { ...NOT_STARTED, error: launched.reason })
   if (entry.retired === true) launched.program.kill('SIGKILL', 0)
   Object.assign(run, { program: launched.program, argv: launched.argv, shell: launched.shell, cwd: launched.cwd })

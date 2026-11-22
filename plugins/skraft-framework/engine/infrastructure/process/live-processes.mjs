@@ -13,8 +13,9 @@ import { locate, startArgs, windowsTreeKill } from './node-processes.mjs'
  * a program that cannot start is a result with `started: false`.
  *
  * @typedef {{ platform?: NodeJS.Platform, env?: NodeJS.ProcessEnv }} LiveHost
- * @typedef {{ argv: string[], cwd: string, timeoutMs: number, maxOutputBytes: number, onData?: (text: string) => void }} LiveRequest
- *   cwd: the absolute folder it starts in; maxOutputBytes: the output kept, head and tail past it.
+ * @typedef {{ argv: string[], cwd: string, timeoutMs: number, maxOutputBytes?: number, onData?: (text: string) => void }} LiveRequest
+ *   cwd: the absolute folder it starts in; maxOutputBytes: the output kept, head and tail past it;
+ *   none is kept without it (a caller that writes the output as it arrives keeps its own).
  * @typedef {{
  *   started: boolean, exitCode: number | null, signal: string | null, timedOut: boolean, killed: boolean,
  *   text: string, cut: boolean, bytes: number, error: string | null,
@@ -25,6 +26,9 @@ import { locate, startArgs, windowsTreeKill } from './node-processes.mjs'
 
 const TREE_KILL_MS = 10_000
 const GRACE_MS = 5000
+
+/** What a program that keeps no output keeps. */
+const NO_OUTPUT = Object.freeze({ push: () => undefined, text: () => '', cut: () => false })
 
 /**
  * @param {LiveHost} [host]
@@ -70,7 +74,7 @@ const spawned = (request, { dir, host, start }) => {
 /** @param {LiveRequest} request @param {Live} live @returns {LiveProcess} */
 const running = (request, live) => {
   if (live.grouped) groupStarted(/** @type {number} */ (live.child.pid))
-  const output = createOutput(request.maxOutputBytes)
+  const output = request.maxOutputBytes === undefined ? NO_OUTPUT : createOutput(request.maxOutputBytes)
   const seen = { bytes: 0 }
   listen(live, request, { output, seen })
   const timer = setTimeout(() => end(live, { signal: 'SIGTERM', graceMs: 1000, timedOut: true }), request.timeoutMs)

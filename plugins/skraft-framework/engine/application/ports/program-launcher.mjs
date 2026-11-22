@@ -8,7 +8,8 @@
  * }} ProgramResult
  *   text: the output kept, stdout and stderr in the order they arrived; error: a fixed text, set only when it did not start.
  * @typedef {{ pid: number | null, done: Promise<ProgramResult>, kill: (signal?: string, graceMs?: number) => void }} Program
- * @typedef {{ command: string | string[], cwd: string, timeoutMs: number, maxOutputBytes: number, onData: (text: string) => void }} LaunchRequest
+ * @typedef {{ command: string | string[], cwd: string, timeoutMs: number, onData: (text: string) => void }} LaunchRequest
+ *   onData: every output of the program, as it arrives; the launcher keeps none of it (its result's text is empty).
  *   command: an argv array starts with no shell; a string runs through the machine's shell (`sh -c`;
  *   Git Bash, else PowerShell, under Windows). cwd: relative to the working copy, never leaving it.
  * @typedef {{ ok: true, argv: string[], shell: string | null, cwd: string, program: Program } | { ok: false, reason: string }} Launched
