@@ -83,9 +83,17 @@ Viennent ensuite les lentilles de la revue DELIVER : intégrité des tests, fron
 d'architecture, lisibilité à froid, `quality-gates` et, quand le changement en touche, fidélité des mocks et des
 contrats. La lentille `quality-gates` lit la trace et signale, par composant et par gate, une exécution
 manquante, en échec, pas sur le dernier commit ou démarrée sur un arbre sale (hors l'exécution de la ligne de commit) ;
-une gate déclarée `absent` avec une raison est acceptée, jamais `test`. Une reprise demandée par la revue repart par `deliver`. Après la revue, l'étape des visuels
-commite les captures de la dernière exécution e2e tracée de chaque front end (`gate('e2e', ...)`)
-au lieu de la lancer, puis viennent le `pr-writer` et la publication.
+une gate déclarée `absent` avec une raison est acceptée, jamais `test`. Une reprise demandée par la revue repart par `deliver`. Le software engineer lance la commande e2e
+d'un front end comme une gate, en dernier, sur son commit final. Après la revue, l'étape des
+visuels lit ce run tracé et les captures que liste son manifeste au lieu de le lancer : sur GitHub
+gh les joint à la pull request, sur Azure DevOps elles sont commitées sur la branche et liées à leur
+commit. Puis viennent le `pr-writer` et la publication.
+
+Les preuves QA du run, son plan de test, le résultat de chaque scénario et ses captures,
+appartiennent au moteur : il les rend à partir du journal et de la trace dans la pull request et
+`qa-report.md`. Un scénario n'est réussi que si son test d'acceptation est toujours celui de son
+commit red, qu'un green a livré son groupe et que toute la suite de son composant est passée sur le
+commit final ; ce qui manque n'est pas prouvé, et livré n'est pas déployé ([Joindre les preuves QA](../../how-to/attach-screenshots.md)).
 
 ### Pourquoi la mutation revient au développeur
 

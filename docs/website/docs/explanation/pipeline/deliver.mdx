@@ -80,9 +80,16 @@ Then come the DELIVER review's lenses: test integrity, architecture boundaries, 
 `quality-gates` and, when the change touches them, mock and contract fidelity. The `quality-gates` lens
 reads the trace and reports, per component and gate, a run missing, not passing, not on the final commit or started on a dirty tree
 (the commit line's run excepted); a gate declared `absent` with a reason is fine, never `test`. A rework the review asks for goes back
-through `deliver`. After the review, the visuals step commits the screenshots of the last traced
-end-to-end run of each front end (`gate('e2e', ...)`) instead of running it, then the `pr-writer`
-and the publication follow.
+through `deliver`. The software engineer runs a front end's e2e command as a gate, last, on its final commit. After
+the review, the visuals step reads that traced run and the screenshots its manifest lists instead
+of running it: on GitHub gh attaches them to the pull request, on Azure DevOps they are committed
+on the branch and linked at their commit. Then the `pr-writer` and the publication follow.
+
+The QA evidence of the run, its test plan, each scenario's outcome and its screenshots, belongs to
+the engine: it renders it from the journal and the trace into the pull request and
+`qa-report.md`. A scenario is passed only when its acceptance test is still its red commit's, a
+green delivered its group and the whole suite of its component passed on the final commit; what is
+missing is not proven, and delivered is not deployed ([Attach QA evidence](../../how-to/attach-screenshots.md)).
 
 ### Why mutation is the developer's
 

@@ -78,6 +78,11 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   is `.copilot-tracking/skraft-repl/<pid>.json`, outside any story's tracking folder.
 - `.repl/` of a working copy belongs to the project: the engine reads it, never writes it;
   `skraft init` ignores `.repl/node_modules/`.
+- A run's QA evidence (test plan, scenario outcomes, screenshots) belongs to the engine, rendered
+  from the journal and the trace; no agent writes a QA report.
+- On GitHub the engine attaches screenshots with `gh --attach`; on Azure DevOps it links
+  repository files at the commit; no other upload, gist, release asset or external service.
+- The engine's adapters start no child `node`.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
   fallback between them; an issue it cannot read refuses the run.

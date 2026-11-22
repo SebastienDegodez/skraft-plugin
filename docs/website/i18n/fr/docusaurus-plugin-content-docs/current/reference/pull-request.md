@@ -19,6 +19,8 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 | Ce qui change | titre | pr-writer | le texte ne correspond pas au changement |
 | Pourquoi | titre | pr-writer | le texte ne correspond pas à la story |
 | Décisions appliquées | titre | moteur | une décision ne correspond pas au code |
+| QA | titre | moteur | moins de scénarios ont réussi que la story n'en a |
+| Résultats des scénarios | repliée, compte les scénarios réussis | moteur | un scénario n'est pas prouvé |
 | Matrice de cohérence | repliée | moteur | jamais : information seule |
 | Tests | repliée | moteur | jamais : information seule |
 | Preuves RED | repliée, compte les commits red | moteur | un commit red est listé |
@@ -102,9 +104,25 @@ La description est écrite dans la langue de la story. Ce qui décide s'affiche 
 - **À lire pour** : voir ce que les lentilles ont trouvé et ce que le réfuteur a décidé.
 - **Agir quand** : une ligne est À corriger ou À trancher ; lisez une ligne Accepté avant de fusionner.
 
+### QA <!-- #qa -->
+
+- **Contient** : `QA : <réussis>/<total> scénarios réussis sur <sha> (run r<n>, <s> s).`, le run de chaque composant nommé quand il y en a plusieurs ; le chemin du plan de test ; *Livré n'est pas déployé*.
+- **Affichée** : sous son titre, aussi sur Azure DevOps quand le reste part dans les détails du run.
+- **Rédigée par** : le moteur, à partir du journal et de la trace signée de la livraison.
+- **À lire pour** : savoir d'un coup d'œil si chaque scénario est prouvé sur le commit que vous fusionnez.
+- **Agir quand** : le compte est en dessous des scénarios de la story.
+
+### Résultats des scénarios <!-- #scenario-outcomes -->
+
+- **Contient** : une ligne par scénario : numéro, titre, tags `@AC`, composant, red, green, le run final ou `non prouvé : <raison>`, si le log nomme son test, les thèmes de ses captures.
+- **Affichée** : repliée ; le résumé compte les scénarios réussis.
+- **Rédigée par** : le moteur : `passed` seulement quand le test d'acceptation est toujours celui du commit red, qu'un green a livré son groupe et que toute la suite de son composant est passée sur le commit final.
+- **À lire pour** : tracer chaque critère d'acceptation jusqu'au run qui le prouve.
+- **Agir quand** : une ligne n'est pas prouvée.
+
 ### Captures d'écran <!-- #screenshots -->
 
-- **Contient** : les captures claires et sombres d'un front end que le run a gardées ; voir [Joindre les captures d'un frontend](../how-to/attach-screenshots.md).
+- **Contient** : les captures claires et sombres d'un front end que le run a gardées ; voir [Joindre les preuves QA](../how-to/attach-screenshots.md).
 - **Affichée** : repliée ; les captures sombres sont repliées à leur tour.
 - **Rédigée par** : le moteur, à partir de ce qu'a consigné la dernière étape visuals.
 - **À lire pour** : juger les écrans sans lancer l'application.

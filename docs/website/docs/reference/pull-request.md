@@ -19,6 +19,8 @@ The description is written in the story's language. What decides shows under a h
 | What changes | heading | pr-writer | the text does not match the change |
 | Why | heading | pr-writer | the text does not match the story |
 | Decisions applied | heading | engine | a decision does not match the code |
+| QA | heading | engine | fewer scenarios passed than the story has |
+| Scenario outcomes | folded, counts the scenarios passed | engine | a scenario is not proven |
 | Consistency matrix | folded | engine | never: information only |
 | Tests | folded | engine | never: information only |
 | RED evidence | folded, counts the red commits | engine | a red commit is listed |
@@ -102,9 +104,25 @@ The description is written in the story's language. What decides shows under a h
 - **Read it to**: see what the reviewing lenses found and what the refuter decided.
 - **Act when**: a row is To fix or To decide; read an Accepted row before you merge.
 
+### QA <!-- #qa -->
+
+- **Holds**: `QA: <passed>/<total> scenarios passed on <sha> (run r<n>, <s> s).`, each component's run named when there are several; the test plan's path; *Delivered is not deployed*.
+- **Shown**: under its heading, also on Azure DevOps when the rest goes to the run details.
+- **Written by**: the engine, from the journal and the signed trace of the delivery.
+- **Read it to**: know at a glance whether every scenario is proven on the commit you merge.
+- **Act when**: the count is short of the story's scenarios.
+
+### Scenario outcomes <!-- #scenario-outcomes -->
+
+- **Holds**: one row per scenario: number, title, `@AC` tags, component, red, green, the final run or `not proven: <why>`, whether the log names its test, the themes of its screenshots.
+- **Shown**: folded; the summary counts the scenarios passed.
+- **Written by**: the engine: `passed` only when the acceptance test is still the red commit's, a green delivered its group and the whole suite of its component passed on the final commit.
+- **Read it to**: trace each acceptance criterion to the run that proves it.
+- **Act when**: a row is not proven.
+
 ### Screenshots <!-- #screenshots -->
 
-- **Holds**: the light and dark captures of a front end the run kept; see [Attach a front end's screenshots](../how-to/attach-screenshots.md).
+- **Holds**: the light and dark captures of a front end the run kept; see [Attach QA evidence](../how-to/attach-screenshots.md).
 - **Shown**: folded; the dark captures are folded again.
 - **Written by**: the engine, from what the last visuals step recorded.
 - **Read it to**: judge the screens without running the application.

@@ -1,19 +1,40 @@
 ---
-title: "Attach a front end's screenshots"
-description: "Declare the e2e command, add a Playwright reporter and let the run attach light and dark screenshots to its pull request."
+title: "Attach QA evidence"
+description: "The QA evidence a pull request carries (test plan, scenario outcomes, screenshots) and how a front end's screenshots get attached, on GitHub and Azure DevOps."
 persona: software-engineer
 ---
 
-# Attach a front end's screenshots
+# Attach QA evidence
 
-Have a run attach the screenshots of a front end's e2e tests to its pull request.
+Have a run's pull request carry its QA evidence: the test plan, each scenario's outcome and a front
+end's screenshots. The engine renders all three from the run's journal and the signed trace of
+the software engineer's runs; no agent writes a QA report.
 
-## Prerequisites
+## What the pull request carries
+
+- **QA**, under its heading: `QA: 14/14 scenarios passed on <sha> (run r12, 45 s).`, the test
+  plan's path, and *Delivered is not deployed*.
+- **Scenario outcomes**, folded: one row per scenario, `| # | Scenario | AC | Component | RED | Green | Final run | Named in log | Screenshot |`.
+  A scenario is `passed` only when its acceptance test is still its red commit's, a green commit
+  delivered its group, and the whole test suite of its component (the last traced `test` run under
+  it) passed on the final commit. Anything else is `not proven`, with why: missing is never
+  passed. *Named in log* says whether that run's log names the scenario's test (`S3_…`,
+  `test_S3_…`); *Screenshot* lists the themes of the screenshots titled after it (`S3 …`, or its title).
+- **Tests**, folded: the test plan, whole.
+- **Screenshots**, folded: what follows.
+
+On Azure DevOps, whose description takes 4,000 characters, the QA line stays in the description
+and the folded table goes to a `skraft · run details` thread. `qa-report.md`, in the tracking
+folder, shows the same QA line and table after each step.
+
+## Screenshots
+
+### Prerequisites
 
 - A run that publishes its pull request ([Publish a run's pull request](./publish-pull-request.md)).
 - A front end with Playwright tests: a `react` component, or any component with `commands.e2e`.
 
-## Steps
+### Steps
 
 skraft never starts the e2e command. The software engineer runs it through `skraft_repl` with
 `gate('e2e', …)` on its last commit, like the component's other gates; after the DELIVER review the

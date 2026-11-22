@@ -289,11 +289,11 @@ parts:
             purpose_en: "Consent, set up gh, let the run open its pull request or publish it with skraft publish, follow the issue."
           - id: attach-screenshots
             type: editorial
-            label_fr: "Joindre les captures"
-            label_en: "Attach screenshots"
+            label_fr: "Joindre les preuves QA"
+            label_en: "Attach QA evidence"
             doc: how-to/attach-screenshots
-            purpose_fr: "Declarer la commande e2e d'un frontend et laisser le run joindre ses captures claires et sombres a la pull request."
-            purpose_en: "Declare a front end's e2e command and let the run attach its light and dark screenshots to the pull request."
+            purpose_fr: "Lire le plan de test, le resultat des scenarios et les captures que la pull request porte, et faire joindre les captures d'un frontend, sur GitHub et Azure DevOps."
+            purpose_en: "Read the test plan, scenario outcomes and screenshots a pull request carries, and have a front end's screenshots attached, on GitHub and Azure DevOps."
       - id: review
         title_fr: "Revoir"
         title_en: "Review"

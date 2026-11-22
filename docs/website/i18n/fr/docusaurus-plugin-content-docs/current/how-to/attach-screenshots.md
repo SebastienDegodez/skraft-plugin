@@ -1,19 +1,41 @@
 ---
-title: "Joindre les captures d'un frontend"
-description: "Déclarer la commande e2e, ajouter un reporter Playwright et laisser le run joindre des captures claires et sombres à sa pull request."
+title: "Joindre les preuves QA"
+description: "Les preuves QA d'une pull request (plan de test, résultats des scénarios, captures) et comment les captures d'un frontend sont jointes (GitHub, Azure DevOps)."
 persona: software-engineer
 ---
 
-# Joindre les captures d'un frontend
+# Joindre les preuves QA
 
-Faites qu'un run joigne à sa pull request les captures des tests e2e d'un frontend.
+Faites que la pull request d'un run porte ses preuves QA : le plan de test, le résultat de chaque
+scénario et les captures d'un frontend. Le moteur rend les trois à partir du journal du run et de
+la trace signée des runs du software engineer ; aucun agent n'écrit de rapport QA.
 
-## Prérequis
+## Ce que porte la pull request
+
+- **QA**, sous son titre : `QA : 14/14 scénarios réussis sur <sha> (run r12, 45 s).`, le chemin
+  du plan de test, et *Livré n'est pas déployé*.
+- **Résultats des scénarios**, repliés : une ligne par scénario, `| # | Scénario | AC | Composant | RED | Green | Run final | Nommé dans le log | Capture |`.
+  Un scénario est `passed` seulement quand son test d'acceptation est toujours celui de son commit
+  red, qu'un commit green a livré son groupe, et que toute la suite de tests de son composant (le
+  dernier run `test` tracé sous lui) est passée sur le commit final. Tout autre cas est
+  `non prouvé`, avec la raison : ce qui manque n'est jamais réussi. *Nommé dans le log* dit si le
+  log de ce run nomme le test du scénario (`S3_…`, `test_S3_…`) ; *Capture* liste les thèmes des
+  captures titrées d'après lui (`S3 …`, ou son titre).
+- **Tests**, repliés : le plan de test, en entier.
+- **Captures d'écran**, repliées : voir la suite.
+
+Sur Azure DevOps, dont la description prend 4 000 caractères, la ligne QA reste dans la
+description et le tableau replié va dans un fil `skraft · détails du run`. `qa-report.md`, dans
+le dossier de suivi, montre la même ligne QA et le même tableau après chaque étape.
+
+## Captures d'écran
+
+### Prérequis
 
 - Un run qui publie sa pull request ([Publier la pull request d'un run](./publish-pull-request.md)).
 - Un frontend avec des tests Playwright : un composant `react`, ou tout composant avec `commands.e2e`.
 
-## Étapes
+### Étapes
 
 skraft ne lance jamais la commande e2e. Le software engineer la lance par `skraft_repl` avec
 `gate('e2e', …)` sur son dernier commit, comme les autres gates du composant ; après la revue
