@@ -106,6 +106,7 @@ Un noyau vit du premier appel d'une tentative jusqu'à la fermeture de la tentat
 | `repl-crashed` | le noyau s'est arrêté seul : ses variables sont perdues |
 | `repl-trace-failed` | en tête de chaque résultat dès qu'une ligne de la trace ou le journal d'un run n'a pas pu s'écrire : la trace est incomplète |
 | `repl-reset` | en tête du résultat d'un appel avec `reset: true` : le noyau a été arrêté et un neuf démarré, ses variables sont perdues |
+| `repl-fresh` | en tête du premier résultat après que le balayage ou la session a arrêté le noyau de la tentative : un neuf a démarré, ses variables sont perdues |
 | `repl-failed` | le noyau n'a pas pu démarrer ; le refus nomme le `logs/unexpected.log` du run, qui dit pourquoi |
 | `repl-unexpected` | skraft lui-même a échoué pendant l'appel ; le refus nomme le `logs/unexpected.log` du run, qui contient l'exception |
 

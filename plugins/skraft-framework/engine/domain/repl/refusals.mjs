@@ -10,6 +10,7 @@ export const REFUSALS = Object.freeze({
   'repl-held-elsewhere': 'another skraft MCP server holds the REPL of this attempt; use that session, or end it',
   'repl-restarted': 'the kernel was ended because a cell would not stop: its variables are gone, and the runs it had started were ended',
   'repl-reset': 'the kernel was ended on request and a fresh one started: its variables are gone, and the runs it had started were ended',
+  'repl-fresh': 'the kernel of this attempt was ended (unused for 15 minutes, its attempt over, or the session closing) and a fresh one started: its variables are gone',
   'repl-crashed': 'the kernel ended by itself: its variables are gone, and the runs it had started were ended',
   'repl-interrupted': 'the call was cancelled before its cell started; nothing ran',
   'repl-failed': 'skraft could not start the kernel of this attempt',

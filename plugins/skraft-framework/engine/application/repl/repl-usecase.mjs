@@ -15,9 +15,10 @@ import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-ru
  * @typedef {import('./repl-runs.mjs').Entry} Entry
  * @typedef {{ launched: boolean, cancelled: boolean }} Flight
  *   a call between its start and the start of its cell: a cancellation in that window is kept, so that the cell never runs.
- * @typedef {{ entry: Entry | null, reaped: boolean, flights?: Map<unknown, Flight>, starting?: Promise<unknown> }} ReplState
+ * @typedef {{ entry: Entry | null, reaped: boolean, flights?: Map<unknown, Flight>, starting?: Promise<unknown>, ended?: string }} ReplState
  *   flights: the calls in flight, by the id of their request; starting: the entry being looked
- *   up or started, which the next call waits for, so that two calls at once share one kernel.
+ *   up, started or ended, which the next change waits for, so that two calls at once share one kernel;
+ *   ended: the key of the last kernel ended, whose next call is told its variables are gone.
  * @typedef {{ ok: boolean, code: string | null, text: string }} ReplOutcome
  *   text: what the agent reads: the cell's result, or the refusal's code and fixed reason.
  */
@@ -38,11 +39,11 @@ export const createRepl = (deps, state) => Object.freeze({
   /** @param {{ code: string, id?: unknown, reset?: boolean }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
   call: (request) => call(deps, state, request),
   /** Ends the kernel of an attempt that is over or unused; the server calls it every half minute. */
-  sweep: () => sweep(deps, state),
+  sweep: () => serially(state, () => sweep(deps, state)),
   /** The request is cancelled: its awaits stop and the runs it started end. @param {unknown} [id] */
   interrupt: (id) => interrupt(state, id),
   /** The session closes: nothing is left running. */
-  close: () => retire(deps, state),
+  close: () => serially(state, () => retire(deps, state)),
 })
 
 /** An attempt of one working copy: the key a kernel is held under. @param {any} deps @param {{ slug: string, folder: string }} bound */
@@ -97,16 +98,28 @@ const inEntry = async (deps, state, bound, request) => {
  * @param {boolean} reset a fresh kernel, even when one serves the attempt
  * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
-const entryFor = (deps, state, bound, reset) => {
-  const found = (state.starting ?? Promise.resolve()).then(() => entryNow(deps, state, bound, reset))
-  state.starting = found.catch(() => undefined)
-  return found
+const entryFor = (deps, state, bound, reset) => serially(state, () => entryNow(deps, state, bound, reset))
+
+/**
+ * One change of the entry after the other: a start, the end the sweep or the session asks for.
+ * @template T @param {ReplState} state @param {() => Promise<T>} work @returns {Promise<T>}
+ */
+const serially = (state, work) => {
+  const done = (state.starting ?? Promise.resolve()).then(work)
+  state.starting = done.catch(() => undefined)
+  return done
 }
 
-/** What the next result says first of the kernel it runs in. @param {Entry | null} current @param {string} key @param {boolean} reset */
-const noticeOf = (current, key, reset) => {
+/**
+ * What the next result says first of the kernel it runs in: a reset, a kernel that died, or one
+ * the sweep or the session ended since this attempt's last call.
+ * @param {ReplState} state @param {string} key @param {boolean} reset
+ */
+const noticeOf = (state, key, reset) => {
   if (reset) return 'repl-reset'
-  return current !== null && current.key === key ? current.gone : null
+  const current = state.entry
+  if (current !== null) return current.key === key ? current.gone : null
+  return state.ended === key ? 'repl-fresh' : null
 }
 
 /**
@@ -120,7 +133,7 @@ const entryNow = async (deps, state, bound, reset) => {
   const key = keyOf(deps, bound)
   const current = state.entry
   if (!reset && current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
-  const notice = noticeOf(current, key, reset)
+  const notice = noticeOf(state, key, reset)
   await retire(deps, state)
   const started = await startEntry(deps, state, { ...bound, key })
   return started.ok ? { ok: true, entry: started.entry, notice } : started
@@ -189,12 +202,19 @@ const eventsOf = (deps, entry) => ({
   onGone: (why) => { entry.gone = `repl-${why}`; endRuns(entry, 'SIGKILL', 0) },
 })
 
+/** The entry in place, taken off the state and marked as ending; null when none. @param {ReplState} state @returns {Entry | null} */
+const detach = (state) => {
+  const entry = state.entry
+  if (entry === null) return null
+  Object.assign(state, { entry: null, ended: entry.key })
+  entry.retired = true
+  return entry
+}
+
 /** Ends the entry in place: its runs, its kernel, its lease. @param {any} deps @param {ReplState} state */
 const retire = async (deps, state) => {
-  const entry = state.entry
+  const entry = detach(state)
   if (entry === null) return
-  state.entry = null
-  entry.retired = true
   endRuns(entry, 'SIGKILL', 0)
   entry.kernel.stop()
   await settledWithin(deps, entry.pending, RETIRE_WAIT_MS)

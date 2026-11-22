@@ -156,6 +156,30 @@ test('two calls at once share one kernel: the second is told the first cell runs
   assert.equal(kernels.kernels[0].stopped, true)
 })
 
+test('a call that arrives while the session ends its kernel gets a fresh kernel, which holds the lease and the orphan record, and is told its variables are gone', async () => {
+  const kernels = new ScriptedKernelHost()
+  const orphans = new InMemoryOrphans()
+  const seen = []
+  const { host } = replRun({ kernels, orphans, calls: { 2: async (repl, one) => {
+    await repl.call({ code: '1' })
+    let release = () => undefined
+    orphans.slowForget = new Promise((resolve) => { release = resolve })
+    const closing = repl.close()
+    const calling = repl.call({ code: '2' })
+    await sleep(10)
+    release()
+    await closing
+    seen.push(await calling, one.deps.repl.locks.held(`${SLUG}/logs/runs/distill-1-1`), orphans.record)
+  } } })
+
+  await host.start()
+
+  assert.equal(kernels.kernels.length, 2)
+  assert.match(seen[0].text, /^repl-fresh: /)
+  assert.notEqual(seen[1], null, 'the lease of the fresh kernel is held')
+  assert.equal(seen[2]?.kernel?.pid, kernels.kernels[1].pid, 'the orphan record names the fresh kernel')
+})
+
 test('a run that finished while another cell went on is told at the start of the next result', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher()

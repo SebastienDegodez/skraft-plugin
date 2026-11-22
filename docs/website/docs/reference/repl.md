@@ -106,6 +106,7 @@ A kernel lives from the first call of an attempt until the attempt closes, anoth
 | `repl-crashed` | the kernel exited by itself: its variables are gone |
 | `repl-trace-failed` | heads every result once a line of the trace or a run's log could not be written: the trace is incomplete |
 | `repl-reset` | heads the result of a call with `reset: true`: the kernel was ended and a fresh one started, its variables are gone |
+| `repl-fresh` | heads the first result after the sweep or the session ended the attempt's kernel: a fresh one started, its variables are gone |
 | `repl-failed` | the kernel could not start; the refusal names the run's `logs/unexpected.log`, which holds why |
 | `repl-unexpected` | skraft itself failed during the call; the refusal names the run's `logs/unexpected.log`, which holds the exception |
 

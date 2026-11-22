@@ -134,8 +134,15 @@ export class InMemoryOrphans {
     this.forgotten = []
     this.reaps = 0
   }
-  async keep(entry) { this.kept.push(entry) }
-  async forget(serverPid) { this.forgotten.push(serverPid) }
+  /** The record of this server on disk: what the last keep wrote, null once forgotten. */
+  get record() { return this.current ?? null }
+  async keep(entry) { this.kept.push(entry); this.current = entry }
+  /** A test that sets `slowForget` to a promise holds each forget until it settles. */
+  async forget(serverPid) {
+    await this.slowForget
+    this.forgotten.push(serverPid)
+    this.current = null
+  }
   async reap() { this.reaps += 1; return 0 }
   track(pid) { return { pid, created: `started-${pid}` } }
   gone() { return this.holderGone }
