@@ -7,7 +7,8 @@ import { issueOf } from './commits.mjs'
  *   developer lists them, mutation left out. bdd: where its scenarios and their bindings live,
  *   relative to its root; empty when its tests are written without Gherkin.
  * @typedef {import('../config/skraft-config.mjs').BddPair} BddPair
- * @typedef {{ gate: string, line: string }} BriefGate
+ * @typedef {{ gate: string, line: string | null }} BriefGate
+ *   line: the gate's command; null when the component names none, which the agent declares absent.
  * @typedef {{
  *   agent: string, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
@@ -235,10 +236,13 @@ const gateLines = (tdd, components) => (GATED.includes(/** @type {string} */ (td
 /** What the engine requires of the runs of an attempt that delivers: for `cycle` only. @param {Brief['tdd']} tdd */
 const evidenceLine = (tdd) => (tdd === 'cycle' ? [EVIDENCE] : [])
 
-const EVIDENCE = "- Evidence: before the commit line, run the gates of each component you changed in one `skraft_repl` cell, with `gate(name, command, { cwd: <the component's root> })`, in this order: `build`, `format`, `lint`, `architecture`, `await` each before the next, never in parallel, and `absent(gate, component, reason)` for a gate with no command; the last of these cells ends with the commit line, `run(line, { gate: 'test', label: 'green' })`, the run of `test` that commits. Fix every gate failure before the commit line, then run the cell again; no `style` commit. Then, on that commit and a clean tree, run `coverage`, and `e2e` last when listed. The DELIVER review reports a gate of a component you changed with no passing traced run for that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
+const EVIDENCE = "- Evidence: before the commit line, run the gates of each component you changed in one `skraft_repl` cell, with `gate(name, command, { cwd: <the component's root> })`, in this order: `build`, `format`, `lint`, `architecture`, `await` each before the next, never in parallel, and for a gate whose line above says `no command`, its `absent(…)` call as that line gives it, never a skipped gate; the last of these cells ends with the commit line, `run(line, { gate: 'test', label: 'green' })`, the run of `test` that commits. Fix every gate failure before the commit line, then run the cell again; no `style` commit. Then, on that commit and a clean tree, run `coverage`, or its `absent(…)` call, and `e2e` last when listed. The DELIVER review reports a gate of a component you changed with no passing traced run for that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
 
-/** @param {BriefComponent} component */
-const gatesLine = ({ name, gates }) => (gates.length === 0 ? [] : [`${name}: ${gates.map(({ gate, line }) => `${gate}: ${line}`).join('; ')}`])
+/** One line per gate of a component: its command, or the exact call that declares it absent. @param {BriefComponent} component */
+const gatesLine = ({ name, gates }) => gates.map(({ gate, line }) => `${name}: ${gate}: ${line ?? absentCall(gate, name)}`)
+
+/** @param {string} gate @param {string} component kebab-case, as the configuration checks it */
+const absentCall = (gate, component) => `no command → absent('${gate}', '${component}', 'no command in skraft-config.json')`
 
 /** The outputs the previous attempt left empty, or the pass a human reopened. @param {Brief} brief */
 const missingLines = ({ missing, attempt, maxAttempts, visit }) => (missing.length > 0

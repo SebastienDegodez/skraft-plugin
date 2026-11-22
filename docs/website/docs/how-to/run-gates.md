@@ -46,13 +46,22 @@ second time. The command of each gate is the one `skraft-config.json` gives the 
 
 ## 2. Declare a gate absent
 
-A gate the project's documents name no command for is declared, with its reason:
+A gate the component names no command for in `skraft-config.json` is declared, with its reason. The
+DELIVER brief gives the exact call on the gate's line, for `build`, `format`, `lint`,
+`architecture` and `coverage`:
 
-```js
-absent('architecture', 'api', 'the project has no dependency rule to check')
+```text
+- api: coverage: no command → absent('coverage', 'api', 'no command in skraft-config.json')
 ```
 
-`test` is never absent. A gate declared absent needs no run.
+The engineer makes that call in its cell instead of skipping the gate:
+
+```js
+absent('coverage', 'api', 'no command in skraft-config.json')
+```
+
+`test` is never absent, and `e2e` is a gate only when the component names its command. A gate
+declared absent needs no run.
 
 ## 3. What the engine does with the trace
 

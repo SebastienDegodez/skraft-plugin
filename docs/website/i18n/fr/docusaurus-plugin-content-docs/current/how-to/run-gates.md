@@ -47,13 +47,22 @@ donne au composant.
 
 ## 2. Déclarer une gate absente
 
-Une gate dont les documents du projet ne nomment aucune commande se déclare, avec sa raison :
+Une gate dont le composant ne nomme aucune commande dans `skraft-config.json` se déclare, avec sa
+raison. Le brief de DELIVER donne l'appel exact sur la ligne de la gate, pour `build`, `format`,
+`lint`, `architecture` et `coverage` :
 
-```js
-absent('architecture', 'api', 'le projet n\'a aucune règle de dépendance à vérifier')
+```text
+- api: coverage: no command → absent('coverage', 'api', 'no command in skraft-config.json')
 ```
 
-`test` n'est jamais absente. Une gate déclarée absente n'a besoin d'aucune exécution.
+L'ingénieur fait cet appel dans sa cellule au lieu de sauter la gate :
+
+```js
+absent('coverage', 'api', 'no command in skraft-config.json')
+```
+
+`test` n'est jamais absente, et `e2e` n'est une gate que quand le composant nomme sa commande. Une
+gate déclarée absente n'a besoin d'aucune exécution.
 
 ## 3. Ce que le moteur fait de la trace
 

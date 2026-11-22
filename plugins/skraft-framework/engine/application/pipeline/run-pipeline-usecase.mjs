@@ -763,13 +763,13 @@ const briefStack = ({ config }, run, role) => ({
 })
 
 /**
- * A component as the brief tells it: its test command and its gate commands, in the order a developer runs them, each with the run's base in place of `{baseSha}`.
+ * A component as the brief tells it: its test command and its gates, in the order a developer runs them, each with its command and the run's base in place of `{baseSha}`, or none for a gate it names no command for.
  * @param {import('../../domain/config/skraft-config.mjs').Component} component @param {string | undefined} sha
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefComponent}
  */
 const briefComponent = (component, sha) => {
   const { name, root, stack, mocking, contractTesting, bddPaths, commands } = component
-  const gates = deliveredGatesOf(component).map((gate) => ({ gate, line: withBase(commands[gate], sha) }))
+  const gates = deliveredGatesOf(component).map((gate) => ({ gate, line: gate in commands ? withBase(commands[gate], sha) : null }))
   return { name, root, stack, mocking: mocking.strategy, contractTesting, bdd: bddPaths, test: testLine(commands.test, sha), gates }
 }
 

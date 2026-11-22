@@ -2,7 +2,12 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
-const EVIDENCE = "- Evidence: before the commit line, run the gates of each component you changed in one `skraft_repl` cell, with `gate(name, command, { cwd: <the component's root> })`, in this order: `build`, `format`, `lint`, `architecture`, `await` each before the next, never in parallel, and `absent(gate, component, reason)` for a gate with no command; the last of these cells ends with the commit line, `run(line, { gate: 'test', label: 'green' })`, the run of `test` that commits. Fix every gate failure before the commit line, then run the cell again; no `style` commit. Then, on that commit and a clean tree, run `coverage`, and `e2e` last when listed. The DELIVER review reports a gate of a component you changed with no passing traced run for that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
+const EVIDENCE = "- Evidence: before the commit line, run the gates of each component you changed in one `skraft_repl` cell, with `gate(name, command, { cwd: <the component's root> })`, in this order: `build`, `format`, `lint`, `architecture`, `await` each before the next, never in parallel, and for a gate whose line above says `no command`, its `absent(…)` call as that line gives it, never a skipped gate; the last of these cells ends with the commit line, `run(line, { gate: 'test', label: 'green' })`, the run of `test` that commits. Fix every gate failure before the commit line, then run the cell again; no `style` commit. Then, on that commit and a clean tree, run `coverage`, or its `absent(…)` call, and `e2e` last when listed. The DELIVER review reports a gate of a component you changed with no passing traced run for that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
+
+/** The brief line of a gate the component names no command for: the exact call the engineer makes. */
+const absentLine = (component, gate) => `- ${component}: ${gate}: no command → absent('${gate}', '${component}', 'no command in skraft-config.json')`
+/** The gate lines of the API component, which names a command for build and test only. */
+const API_GATES = ['- api: build: dotnet build', absentLine('api', 'format'), absentLine('api', 'lint'), '- api: test: dotnet test', absentLine('api', 'architecture'), absentLine('api', 'coverage')]
 
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
@@ -184,7 +189,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  in Windows PowerShell 5.1:',
     '  dotnet test; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(checkout): S1 <the rules of the story, as your implementation plan names them>" -m "Refs: #42" } }',
     '- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:',
-    '- api: build: dotnet build; test: dotnet test',
+    ...API_GATES,
     EVIDENCE,
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
@@ -437,7 +442,7 @@ test('a configuration that became invalid stops the run before anything is dispa
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
-test('the engineer works on every component, each with its test command when it has one and the gate commands it runs before its result, a front end\'s e2e command last among them and mutation left out, a path list left out being the whole root', async () => {
+test('the engineer works on every component, each with its test command when it has one and each gate it runs before its result with its command or, without one, the exact absent call that declares it, a front end\'s e2e command last among them and mutation left out, a path list left out being the whole root', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, bdd: false, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
   const host = scripted({ components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
@@ -446,14 +451,14 @@ test('the engineer works on every component, each with its test command when it 
   const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
-  assert.ok(deliver.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .\n${EVIDENCE}`), deliver)
+  assert.ok(deliver.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n${[...API_GATES, absentLine('web', 'build'), absentLine('web', 'format'), '- web: lint: npx eslint .', absentLine('web', 'architecture'), absentLine('web', 'coverage')].join('\n')}\n${EVIDENCE}`), deliver)
 
   const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test', mutation: 'npx stryker run' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
   const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
   assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
-  assert.ok(engineer.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n- api: build: dotnet build; test: dotnet test\n- web: e2e: npx playwright test\n${EVIDENCE}`), engineer)
+  assert.ok(engineer.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n${[...API_GATES, ...['build', 'format', 'lint', 'architecture', 'coverage'].map((gate) => absentLine('web', gate)), '- web: e2e: npx playwright test'].join('\n')}\n${EVIDENCE}`), engineer)
 })
 
 test('the test and gate commands the engineer is given have the run\'s base in place of {baseSha}', async () => {
@@ -462,5 +467,5 @@ test('the test and gate commands the engineer is given have the run\'s base in p
   await host.start()
 
   assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test --filter Since=root-0\n'))
-  assert.ok(host.agentRunner.dispatches[3].prompt.endsWith(`\n- api: test: dotnet test --filter Since=root-0\n${EVIDENCE}`), host.agentRunner.dispatches[3].prompt)
+  assert.ok(host.agentRunner.dispatches[3].prompt.endsWith(`\n- api: test: dotnet test --filter Since=root-0\n${absentLine('api', 'architecture')}\n${absentLine('api', 'coverage')}\n${EVIDENCE}`), host.agentRunner.dispatches[3].prompt)
 })
