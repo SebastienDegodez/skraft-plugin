@@ -66,9 +66,12 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   run as a session's main agent, may dispatch `refactoring-worker`, and that worker dispatches no
   one.
 - Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
-  (git diff per step), gates, review verdict, TDD commit order and kinds; no replay.
-- Besides the DELIVER gates, a project command runs only when an agent asks for it through
-  `skraft_repl`, which records each run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Only `infrastructure/process/` and
+  (git diff per step), the gate runs a DELIVER attempt's trace must hold, review verdict, TDD commit
+  order and kinds; no replay.
+- A project command runs only when an agent asks for it through `skraft_repl`, which records each
+  run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Agents keep `Bash`, but only the runs of
+  the REPL count as proof: the engine refuses a DELIVER attempt (`evidence`) that holds no passing
+  traced run of each gate, on its last commit, for each component the story changed. Only `infrastructure/process/` and
   `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`. The journal of the programs a killed MCP server left behind
   is `.copilot-tracking/skraft-repl/<pid>.json`, outside any story's tracking folder.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
