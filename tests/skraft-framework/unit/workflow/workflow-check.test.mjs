@@ -37,7 +37,7 @@ const DELIVER_CALL = node('deliver_review', 'call', {
   lenses: LENSES.deliver_review,
   fanOut: 'lenses',
   mandatory: true,
-  branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
+  branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'quality-gates': 'delivery', 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
   refutedBy: { id: 'refuter', mandatory: true },
   call: { workflow: 'review', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components', trace: 'trace' }, fanIn: 'verdict', mandatory: true },
 })
@@ -479,7 +479,7 @@ test('a review is a fan-out whose every branch runs one lens node into the same 
     {
       what: 'a trigger the engine does not know',
       dot: edit(BUILT_IN_WORKFLOW, ['lens="coverage"', 'lens="coverage", when="frontend"']),
-      errors: ['node distill_review_coverage: when="frontend" must be mock or contract'],
+      errors: ['node distill_review_coverage: when="frontend" must be mock or contract or delivery'],
     },
   ]
   for (const { what, dot, errors } of cases) {

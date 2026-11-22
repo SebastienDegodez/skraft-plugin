@@ -87,7 +87,7 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `publish` | `pull-request` ou `playwright-visuals` | ce que le nœud publie |
 | `when` (publication) | `frontend` | saute le nœud quand aucun composant n'est un front end |
 | `lens` | nom kebab-case | la lentille `<nom>` est l'agent `<nom>-lens` ; une fois au plus par revue |
-| `when` (lentille) | `mock` ou `contract` | voir [Lentilles conditionnelles](#conditional-lenses) |
+| `when` (lentille) | `mock`, `contract` ou `delivery` | voir [Lentilles conditionnelles](#conditional-lenses) |
 | `question` | `adr-ratification` ou `scenario-review` | voir [Phases](./phases.md#human-questions) |
 | `workflow` | nom de base kebab-case (`review`) | le workflow appelé |
 | `with_<entrée>` | `base`, `head`, `story`, `documents`, `components` ou `trace` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
@@ -195,7 +195,7 @@ distill_review -> deliver [label="APPROVED"]
 | Règle | Détail |
 | --- | --- |
 | Fan-out (`shape=component`) | aucun attribut propre ; chaque arête qui en part est une branche qui porte exactement un nœud lentille, et toutes les branches aboutissent au même réfuteur. Il ne prend aucune étiquette |
-| Nœud lentille (`shape=note`) | `lens="<nom>"` obligatoire, kebab-case, une fois au plus par revue ; `model="<famille>"` et `when="mock"` ou `when="contract"` facultatifs. Entré par une arête venue de son fan-out, il sort par une arête vers son réfuteur |
+| Nœud lentille (`shape=note`) | `lens="<nom>"` obligatoire, kebab-case, une fois au plus par revue ; `model="<famille>"` et `when="mock"`, `when="contract"` ou `when="delivery"` facultatifs. Entré par une arête venue de son fan-out, il sort par une arête vers son réfuteur |
 | Réfuteur (`shape=octagon`) | lance `finding-refuter` sur tous les findings des lentilles, de toute sévérité, sauf si une lentille bloque déjà la revue ; entré seulement par les nœuds lentille d'un même fan-out, il sort par une arête vers son fan-in. `mandatory` facultatif, rien d'autre : sa famille est le `refuter=` du fan-in |
 | Fan-in (`shape=tripleoctagon`) | entré seulement par son réfuteur ; `model=` (la famille de ses lentilles qui n'en nomment aucune) et `refuter=` (la famille de `finding-refuter`) facultatifs |
 | Ancien fan-in | un fan-in où entrent directement ses nœuds lentille, écrit avant le nœud réfuteur, est refusé : `node <fan-in>: its lens nodes lead straight to it, the form before the refuter node; add <refuter> [shape=octagon], lead <lens nodes> to <refuter> instead, and add <refuter> -> <fan-in>` (`<refuter>` vaut `refuter` dans un workflow appelé, `<fan-in>_refuter` ailleurs) |
@@ -233,7 +233,7 @@ digraph review {
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
   architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   cold_reader             [shape=note, lens="cold-reader"]
-  quality_gates           [shape=note, lens="quality-gates"]
+  quality_gates           [shape=note, lens="quality-gates", when="delivery"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
   refuter [shape=octagon, mandatory=true]
@@ -289,8 +289,9 @@ refuse le workflow, en nommant le nœud, l'agent et la skill.
 ## Lentilles conditionnelles {/* #conditional-lenses */}
 
 Un nœud lentille avec `when=` ne tourne que si un chemin changé ou une ligne que le patch ajoute
-ou garde correspond à son déclencheur ; sinon la revue tourne sans lui. Un nœud lentille sans
-`when` tourne toujours.
+ou garde correspond à son déclencheur ; sinon la revue tourne sans lui. Un nœud lentille avec
+`when="delivery"` ne tourne que dans la revue DELIVER d'un run, celle liée à la `trace` de la
+livraison, jamais sur une pull request. Un nœud lentille sans `when` tourne toujours.
 
 | `when` | Chemin | Ligne |
 | --- | --- | --- |

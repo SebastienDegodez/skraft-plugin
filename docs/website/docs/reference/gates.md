@@ -230,7 +230,7 @@ a pull request through `skraft review --pr`.
 | **Q3** | `quality-gates` | That run ended on the final commit of the change log. | blocker |
 | **Q4** | `quality-gates` | That run started on a clean tree; the commit line's `green` run is the one exception. | high |
 
-`quality-gates` reports nothing on a pull request reviewed outside a run: it has no trace.
+`quality-gates` runs only in a run's DELIVER review (`when="delivery"`), never on a pull request: a pull request has no trace.
 `mock-fidelity` runs only on changes that touch mocks (`when="mock"`), `contract-fidelity` only on
 changes that touch contracts (`when="contract"`)
 ([triggers](./workflow-dot.mdx#conditional-lenses)).

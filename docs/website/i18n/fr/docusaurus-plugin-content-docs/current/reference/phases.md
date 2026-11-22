@@ -225,7 +225,7 @@ termine avec `scenarios`. Pourquoi le walking skeleton parcourt S1 :
 | Nœud | Type | Rôle |
 | --- | --- | --- |
 | `deliver` | agent `software-engineer` | un seul passage par histoire : travaille chaque groupe du plan d'implémentation dans l'ordre du plan et commite un seul vert pour toute l'histoire (un deuxième est refusé, `green-split`) ; ce vert fait passer aussi le walking skeleton ; après le dernier, les passages que renvoie la revue, sur toute l'histoire. L'ingénieur lance chaque gate de chaque composant que l'histoire a modifié par `skraft_repl` ; le moteur journalise les exécutions tracées et la revue DELIVER les juge ([Gates](./gates.md#command-gates)) |
-| `deliver_review` | appel `workflow="review"` | lentilles `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
+| `deliver_review` | appel `workflow="review"` | lentilles `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates` (`when="delivery"`), `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | commite les captures de la dernière exécution e2e tracée (`gate('e2e', …)`) de chaque front end |
 
 | | |

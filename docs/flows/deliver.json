@@ -269,6 +269,7 @@
           "id": "quality_gates",
           "kind": "lens",
           "mono": "quality-gates",
+          "when": "delivery",
           "optional": true
         },
         {

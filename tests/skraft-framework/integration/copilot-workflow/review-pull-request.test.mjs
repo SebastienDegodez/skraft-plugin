@@ -28,7 +28,7 @@ test('the skraft-review workflow opens its REVIEW phase, runs the lenses in it t
   const outcome = await runSkraftReviewWorkflow(ctx, host)
 
   assert.deepEqual([outcome.status, outcome.reasons], ['NEEDS_REWORK', [`test-integrity F1 G9 blocker at ${TEST_FILE}:7: Assert.Equal(90m, total) became Assert.NotNull(total)`]])
-  assert.deepEqual(calls.map(({ agent }) => agent), ['skraft:test-integrity-lens', 'skraft:architecture-boundaries-lens', 'skraft:cold-reader-lens', 'skraft:quality-gates-lens', 'skraft:finding-refuter'])
+  assert.deepEqual(calls.map(({ agent }) => agent), ['skraft:test-integrity-lens', 'skraft:architecture-boundaries-lens', 'skraft:cold-reader-lens', 'skraft:finding-refuter'])
   assert.deepEqual(phases, ['REVIEW'])
   assert.equal(timeline[0], 'phase REVIEW')
   assert.equal(logs.at(-1), 'skraft review #12: NEEDS_REWORK: NEEDS_REWORK: 1 reason to address')

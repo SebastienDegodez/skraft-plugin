@@ -24,7 +24,7 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
     unpublished: null,
   })
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent }) => agent)), [
-    ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens'],
+    ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens'],
     ['finding-refuter'],
   ])
   const brief = host.prompt('test-integrity-lens')
@@ -36,7 +36,6 @@ test('a pull request of the .NET fixture that weakens an assertion needs rework:
   assert.equal(await host.reviews.read('pr-12', 'reviews/verdict-1/changes.patch'), `diff --git a/${TEST_FILE} b/${TEST_FILE}\n-        Assert.Equal(90, total);\n+        Assert.NotNull(total);\n`)
   assert.deepEqual(host.events().map(({ type, step, visit, outcome: recorded }) => [type, step, visit, recorded]), [
     ['step.started', 'verdict', 1, undefined],
-    ['review.lens', 'verdict', 1, undefined],
     ['review.lens', 'verdict', 1, undefined],
     ['review.lens', 'verdict', 1, undefined],
     ['review.lens', 'verdict', 1, undefined],

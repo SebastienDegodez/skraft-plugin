@@ -68,7 +68,8 @@ Options du nœud :
 - `model="<famille>"` choisit la famille de modèle de la lentille (une règle `assign.agents`
   l'emporte, voir [Choisir les modèles des agents](./choose-models.md)) ;
 - `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou
-  des contrats ([lentilles conditionnelles](../reference/workflow-dot.mdx#conditional-lenses)).
+  des contrats, `when="delivery"` que dans la revue DELIVER d'un run, jamais sur une pull request
+  ([lentilles conditionnelles](../reference/workflow-dot.mdx#conditional-lenses)).
 
 ## 4. Vérifier le workflow
 

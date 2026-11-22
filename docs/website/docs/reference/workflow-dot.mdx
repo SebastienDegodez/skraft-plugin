@@ -87,7 +87,7 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `publish` | `pull-request` or `playwright-visuals` | what the node publishes |
 | `when` (publication) | `frontend` | skips the node when no component is a front end |
 | `lens` | kebab-case name | the lens `<name>` is the agent `<name>-lens`; at most once per review |
-| `when` (lens) | `mock` or `contract` | see [Conditional lenses](#conditional-lenses) |
+| `when` (lens) | `mock`, `contract` or `delivery` | see [Conditional lenses](#conditional-lenses) |
 | `question` | `adr-ratification` or `scenario-review` | see [Phases](./phases.md#human-questions) |
 | `workflow` | kebab-case base name (`review`) | the called workflow |
 | `with_<input>` | `base`, `head`, `story`, `documents`, `components` or `trace` | binds the called workflow's input `<input>` to this value of the run |
@@ -194,7 +194,7 @@ distill_review -> deliver [label="APPROVED"]
 | Rule | Detail |
 | --- | --- |
 | Fan-out (`shape=component`) | no attribute of its own; every edge leaving it is a branch that holds exactly one lens node, and every branch ends in the same refuter. It takes no label |
-| Lens node (`shape=note`) | `lens="<name>"` required, kebab-case, at most once per review; `model="<family>"` and `when="mock"` or `when="contract"` optional. Entered by one edge from its fan-out, it leaves by one edge to its refuter |
+| Lens node (`shape=note`) | `lens="<name>"` required, kebab-case, at most once per review; `model="<family>"` and `when="mock"`, `when="contract"` or `when="delivery"` optional. Entered by one edge from its fan-out, it leaves by one edge to its refuter |
 | Refuter (`shape=octagon`) | runs `finding-refuter` on every finding of the lenses, of any severity, unless a lens already blocks the review; entered only by the lens nodes of one fan-out, it leaves by one edge to its fan-in. `mandatory` optional, nothing else: its family is the fan-in's `refuter=` |
 | Fan-in (`shape=tripleoctagon`) | entered only by its refuter; `model=` (the family of its lenses that name none) and `refuter=` (the family of `finding-refuter`) optional |
 | Former fan-in | a fan-in its lens nodes enter directly, as written before the refuter node, is refused: `node <fan-in>: its lens nodes lead straight to it, the form before the refuter node; add <refuter> [shape=octagon], lead <lens nodes> to <refuter> instead, and add <refuter> -> <fan-in>` (`<refuter>` is `refuter` in a called workflow, `<fan-in>_refuter` elsewhere) |
@@ -232,7 +232,7 @@ digraph review {
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
   architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   cold_reader             [shape=note, lens="cold-reader"]
-  quality_gates           [shape=note, lens="quality-gates"]
+  quality_gates           [shape=note, lens="quality-gates", when="delivery"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
   refuter [shape=octagon, mandatory=true]
@@ -287,7 +287,9 @@ agent and the skill.
 ## Conditional lenses {/* #conditional-lenses */}
 
 A lens node with `when=` runs only when a changed path or a line the patch adds or keeps matches
-its trigger; otherwise the review runs without it. A lens node without `when` always runs.
+its trigger; otherwise the review runs without it. A lens node with `when="delivery"` runs only in
+a run's DELIVER review, the one bound to the delivery's `trace`, never on a pull request. A lens
+node without `when` always runs.
 
 | `when` | Path | Line |
 | --- | --- | --- |

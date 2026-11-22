@@ -257,7 +257,7 @@ const prepareChanges = async (review) => {
  * @returns {Partial<Record<Scope, { paths: string[], patch: string }>>}
  */
 const scopesOf = (review, changes) => {
-  const used = new Set(['code', ...planLenses(review.step.node.branches, changes).map(({ scope }) => scope)])
+  const used = new Set(['code', ...planLenses(review.step.node.branches, { ...changes, delivery: delivers(review) }).map(({ scope }) => scope)])
   return Object.fromEntries(SCOPES.filter((scope) => used.has(scope)).map((scope) => [scope, scopedChanges(changes, scope)]))
 }
 
@@ -319,6 +319,9 @@ const componentsOf = ({ inputs }) => {
   const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(({ name, root, stack, mocking, contractTesting, bdd, gates }) => ({ name, root, stack, mocking, contractTesting, bdd, gates }))
   return `${JSON.stringify(described, null, 2)}\n`
 }
+
+/** Whether the review is a run's DELIVER review, the one bound to the delivery's trace. @param {Review} review */
+const delivers = ({ inputs }) => inputs.trace !== undefined
 
 /** The paths the tracking folder holds. @param {string[]} paths @param {Set<string>} present */
 const kept = (paths, present) => paths.filter((path) => present.has(path))
@@ -407,7 +410,7 @@ const copied = async (review, rules) => {
  * @param {Review} review @param {Prepared} prepared
  * @returns {Promise<PlannedLens[]>}
  */
-const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.branches, prepared).map(async (lens) => {
+const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.branches, { ...prepared, delivery: delivers(review) }).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const tracked = lens.scope === null ? prepared.inputs : { ...prepared.inputs, ...prepared.scoped[lens.scope].inputs }
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))

@@ -232,7 +232,7 @@ lentilles jugent une pull request par `skraft review --pr`.
 | **Q3** | `quality-gates` | Ce run s'est terminé sur le dernier commit du journal des changements. | blocker |
 | **Q4** | `quality-gates` | Ce run a démarré sur un arbre propre ; le run `green` de la ligne de commit est la seule exception. | high |
 
-`quality-gates` ne signale rien sur une pull request relue hors d'un run : elle n'a pas de trace.
+`quality-gates` ne tourne que dans la revue DELIVER d'un run (`when="delivery"`), jamais sur une pull request : une pull request n'a pas de trace.
 `mock-fidelity` ne tourne que sur des changements qui touchent des mocks (`when="mock"`),
 `contract-fidelity` que sur des changements qui touchent des contrats (`when="contract"`)
 ([déclencheurs](./workflow-dot.mdx#conditional-lenses)).

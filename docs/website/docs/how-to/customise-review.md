@@ -67,7 +67,8 @@ Node options:
 
 - `model="<family>"` chooses the lens's model family (an `assign.agents` rule wins, see
   [Choose the agents' models](./choose-models.md));
-- `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts
+- `when="mock"` or `when="contract"` runs it only when the changes touch mocks or contracts,
+  `when="delivery"` only in a run's DELIVER review, never on a pull request
   ([conditional lenses](../reference/workflow-dot.mdx#conditional-lenses)).
 
 ## 4. Check the workflow

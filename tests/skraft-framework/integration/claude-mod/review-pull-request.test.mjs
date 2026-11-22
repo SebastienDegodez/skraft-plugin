@@ -53,7 +53,7 @@ test('/skraft review 12 spawns the lenses together, then the refuter, and notifi
   const outcome = await mod.settled()
 
   assert.deepEqual([outcome.status, outcome.reasons], ['NEEDS_REWORK', [`test-integrity F1 G9 blocker at ${TEST_FILE}:7: Assert.Equal(90m, total) became Assert.NotNull(total)`]])
-  assert.deepEqual(mod.spawns.map(({ subagentType }) => subagentType), ['skraft:test-integrity-lens', 'skraft:architecture-boundaries-lens', 'skraft:cold-reader-lens', 'skraft:quality-gates-lens', 'skraft:finding-refuter'])
+  assert.deepEqual(mod.spawns.map(({ subagentType }) => subagentType), ['skraft:test-integrity-lens', 'skraft:architecture-boundaries-lens', 'skraft:cold-reader-lens', 'skraft:finding-refuter'])
   assert.deepEqual(mod.notes, ['skraft review #12: NEEDS_REWORK — NEEDS_REWORK: 1 reason to address'])
   assert.ok(mod.published.at(-1).log.includes('pr-12: review of pull request #12 (test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity) — reviewer · economy · haiku'), mod.published.at(-1).log.join('\n'))
   const events = readFileSync(join(repo.cwd, '.copilot-tracking', 'skraft-reviews', 'pr-12', 'events.jsonl'), 'utf8')

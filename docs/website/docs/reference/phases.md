@@ -225,7 +225,7 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 | Node | Kind | Role |
 | --- | --- | --- |
 | `deliver` | agent `software-engineer` | one dispatch per story: works each group of the implementation plan in plan order and commits one green for the whole story (a second one is refused, `green-split`); that green makes the walking skeleton pass too; after the last, the passes the review sends back, on the whole story. The engineer runs every gate of each component the story changed through `skraft_repl`; the engine journals the traced runs and the DELIVER review judges them ([Gates](./gates.md#command-gates)) |
-| `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
+| `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates` (`when="delivery"`), `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | commits the screenshots of the last traced e2e run (`gate('e2e', …)`) of each front end |
 
 | | |

@@ -17,7 +17,8 @@ import { FAMILY } from '../config/model-assignment.mjs'
  *   trace: each delivering step's trace of runs, verified or invalid with the code of what breaks it.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
- * @typedef {'mock' | 'contract'} TriggerName what a lens node's `when=` names
+ * @typedef {'mock' | 'contract' | 'delivery'} TriggerName what a lens node's `when=` names: delivery
+ *   runs the lens only in a run's DELIVER review, the one bound to the delivery's trace, never on a pull request
  * @typedef {string} Family a kebab-case word: economy, reviewer, gpt-codex…
  * @typedef {import('./changes.mjs').Scope} Scope
  * @typedef {{ name: string, model: Family | null }} LensSpec
@@ -68,7 +69,7 @@ const CONTRACTS = Object.freeze({
 const TRIGGERS = Object.freeze({ mock: MOCKS, contract: CONTRACTS })
 
 /** @type {readonly TriggerName[]} */
-export const TRIGGER_NAMES = Object.freeze(/** @type {TriggerName[]} */ (Object.keys(TRIGGERS)))
+export const TRIGGER_NAMES = Object.freeze(/** @type {TriggerName[]} */ ([...Object.keys(TRIGGERS), 'delivery']))
 
 /** The lenses that read less than everything. */
 const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[], blind?: boolean, scope?: Scope }>>} */ (/** @type {unknown} */ (Object.freeze({
@@ -96,15 +97,16 @@ const lensOf = (spec) => {
 }
 
 /**
- * The lenses of a review node that run on these changes: every lens without a trigger, and
- * each one whose trigger matches a changed path or a line the patch adds or keeps.
+ * The lenses of a review node that run on these changes: every lens without a trigger, each
+ * one whose trigger matches a changed path or a line the patch adds or keeps, and a delivery
+ * lens when the review reads a delivery's trace.
  * @param {Array<{ lens: string, when: TriggerName | null }>} branches the node's lenses in order, each with its trigger
- * @param {{ paths: string[], patch: string }} changes
+ * @param {{ paths: string[], patch: string, delivery: boolean }} changes delivery: the review is bound to a delivery's trace
  * @returns {Lens[]}
  */
-export const planLenses = (branches, { paths, patch }) => {
+export const planLenses = (branches, { paths, patch, delivery }) => {
   const lines = keptLines(patch)
-  return branches.filter(({ when }) => when === null || fires(TRIGGERS[when], paths, lines)).map(({ lens }) => lensOf(lens))
+  return branches.filter(({ when }) => when === null || (when === 'delivery' ? delivery : fires(TRIGGERS[when], paths, lines))).map(({ lens }) => lensOf(lens))
 }
 
 /** @param {Trigger} trigger @param {string[]} paths @param {string[]} lines */
