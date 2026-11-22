@@ -104,9 +104,9 @@ export const startKernel = (ipc, { libFolder = null, firstRid = 1 } = {}) => {
 const announce = async (kernel, folder) => {
   const root = folder === null ? null : dirname(dirname(folder))
   if (root !== null) kernel.server.context.require = projectRequire(root)
-  const library = folder === null ? { lib: {}, loaded: [], failed: [] } : await loadLibrary(folder)
+  const library = folder === null ? { lib: {}, loaded: [], failed: [], refused: [] } : await loadLibrary(folder)
   Object.assign(globalThis, { lib: Object.freeze(library.lib) })
-  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed, notInstalled: root !== null && notInstalled(root) } })
+  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed, refused: library.refused, notInstalled: root !== null && notInstalled(root) } })
 }
 
 /** What a cell prints, and what runs later print, goes to the server as `print`. @param {Kernel} kernel */

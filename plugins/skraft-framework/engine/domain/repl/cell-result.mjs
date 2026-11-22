@@ -32,12 +32,13 @@ const NOT_INSTALLED = 'lib: the packages of .repl/package.json are not installed
 /**
  * What the first result of a kernel says of the project's REPL library: the modules it loaded,
  * then each one it could not.
- * @param {{ loaded: string[], failed: string[], notInstalled?: boolean }} lib @returns {string[]}
+ * @param {{ loaded: string[], failed: string[], refused?: string[], notInstalled?: boolean }} lib @returns {string[]}
  */
-export const libraryLines = ({ loaded, failed, notInstalled = false }) => [
+export const libraryLines = ({ loaded, failed, refused = [], notInstalled = false }) => [
   ...(notInstalled ? [NOT_INSTALLED] : []),
   ...(loaded.length === 0 ? [] : [`lib: ${loaded.join(', ')}`]),
   ...failed.map((name) => `lib: ${name} could not be loaded (it threw, or took more than 10 seconds); the kernel goes on without it`),
+  ...refused.map((file) => `lib: ${file} is not loaded: the name of a module must be a JavaScript identifier`),
 ]
 
 /** @param {RunLine} run */

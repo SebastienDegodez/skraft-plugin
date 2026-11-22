@@ -57,17 +57,18 @@ test('a run\'s folder is traced relative to the working copy, with / between its
 
 test('the project\'s REPL library under .repl/lib is in every cell as lib.<name>, its modules may start runs, and one that throws on load leaves the kernel usable', BOUNDED, async (t) => {
   const answers = []
-  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: '[lib.greet.hello(), (await lib.greet.check()).exitCode, typeof lib.broken]' })) })
+  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: '[lib.greet.hello(), (await lib.greet.check()).exitCode, typeof lib.broken, typeof lib["my-tool"]]' })) })
   mkdirSync(join(root, '.repl', 'lib'), { recursive: true })
   writeFileSync(join(root, '.repl', 'lib', 'greet.mjs'), "export const hello = () => 'hello'\nexport const check = () => run([process.execPath, '-e', '0'], { label: 'from lib' })\n")
   writeFileSync(join(root, '.repl', 'lib', 'broken.mjs'), "throw new Error('broken on load')\n")
+  writeFileSync(join(root, '.repl', 'lib', 'my-tool.mjs'), "throw new Error('loaded')\n")
 
   await host.start()
 
   const lines = answers[0].text.split('\n')
-  assert.deepEqual(lines.slice(0, 2), ['lib: greet', 'lib: broken could not be loaded (it threw, or took more than 10 seconds); the kernel goes on without it'])
-  assert.match(lines[2], /^r1 exit 0 /)
-  assert.equal(lines[3], "=> [ 'hello', 0, 'undefined' ]")
+  assert.deepEqual(lines.slice(0, 3), ['lib: greet', 'lib: broken could not be loaded (it threw, or took more than 10 seconds); the kernel goes on without it', 'lib: my-tool.mjs is not loaded: the name of a module must be a JavaScript identifier'])
+  assert.match(lines[3], /^r1 exit 0 /)
+  assert.equal(lines[4], "=> [ 'hello', 0, 'undefined', 'undefined' ]")
 })
 
 test('require in a cell finds the packages of .repl first, then those of the working copy', BOUNDED, async (t) => {
