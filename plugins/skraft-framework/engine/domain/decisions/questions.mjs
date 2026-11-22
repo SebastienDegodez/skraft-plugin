@@ -108,7 +108,7 @@ export const CONFIGURATION_TEXT =
 // (tests/skraft-framework/unit/decisions/consent-versions.test.mjs pins them). The engine asks
 // none of them itself; it owns their wording so that a change to it carries a version with it.
 export const CONSENT_TEXT =
-  'May skraft publish the screenshots and videos of its runs in the pull request of the branch? They can show private data. ' +
+  'May skraft show the screenshots of its front end\'s e2e runs in the pull request of the branch (on GitHub gh attaches them to it; on Azure DevOps they are committed on the branch)? They can show private data. ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-config.json for every later run.'
 
 export const PUBLISH_CONSENT_TEXT =

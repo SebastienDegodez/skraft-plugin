@@ -176,7 +176,7 @@ holds.
 A run that publishes starts only once they are settled, so `skraft init` leaves them to you:
 
 ```json
-{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 1 } } }
+{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 2 } } }
 ```
 
 `pullRequest` lets a run push its branch, open its pull request and keep a comment on the issue;

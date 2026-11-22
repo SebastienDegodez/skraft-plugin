@@ -21,7 +21,7 @@ const silently = ({ bdd, ...component }) => component
 /** A run of a workflow that publishes, on the configuration the files give, with no consent pre-answered. */
 const starting = (options = {}) => scripted({ workflow: WORKFLOW, ...options }, (it) => [agent()(it)])
 
-const SETTLED = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 1 } }
+const SETTLED = { pullRequest: false, visuals: false, questionVersions: { pullRequest: 2, visuals: 2 } }
 
 test('a working copy whose publication consents nobody settled starts nothing, and says what to run instead of asking', async () => {
   const host = starting({ config: { publish: {} } })
@@ -108,6 +108,11 @@ test('an acceptance kept for an earlier text of its question is not settled: a r
 
   assert.equal((await outdated.start()).code, 'configuration-incomplete')
   assert.equal((await declined.start()).status, 'done')
+
+  const screenshots = (visuals, version) => starting({ components: [API, WEB], config: { publish: { ...SETTLED, visuals, questionVersions: { pullRequest: 2, visuals: version } } } })
+  assert.equal((await screenshots(true, 1).start()).reason, 'skraft is not initialised: run /skraft-init (publish.visuals answers an earlier question)', 'the screenshots consent of version 1 named videos, which no run publishes')
+  assert.equal((await screenshots(true, 2).start()).status, 'done')
+  assert.equal((await screenshots(false, 1).start()).status, 'done')
 })
 
 test('a settled configuration starts the first agent at once, with no question of any kind', async () => {

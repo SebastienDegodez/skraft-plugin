@@ -184,7 +184,7 @@ copie de travail.
 Un run qui publie ne démarre qu'une fois qu'ils sont réglés, et `skraft init` vous les laisse :
 
 ```json
-{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 1 } } }
+{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 2 } } }
 ```
 
 `pullRequest` autorise un run à pousser sa branche, ouvrir sa pull request et tenir un commentaire

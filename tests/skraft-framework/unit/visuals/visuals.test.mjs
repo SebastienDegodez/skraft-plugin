@@ -49,7 +49,7 @@ const CHECKOUT = Object.freeze([
 const visualsRun = ({ config = {}, exits = {}, screenshots = CHECKOUT, codeHost, web = WEB, components = [API, web], answers, traced = true } = {}) => {
   const host = scripted({
     workflow: WORKFLOW, components, codeHost, git: new InMemoryGit(), answers,
-    config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true }, ...config },
+    config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2, visuals: 2 }, visuals: true }, ...config },
   }, (it) => [agent({ trace: false, work: async () => { if (traced) { playwrightWrites(it.workspace, screenshots); await writeE2eTrace(it, { cwd: 'web', command: web.commands.e2e ?? 'npx playwright test', exitCode: exits[`web $ ${web.commands.e2e}`] ?? 0 }) } } })(it)])
   return host
 }
@@ -151,7 +151,7 @@ const visualsStep = (host) => {
 test('without the developer\'s consent the e2e run still runs, but no screenshot is copied or committed, and the pull request says why', async () => {
   for (const [visuals, why] of [[false, 'skraft-config.json sets publish.visuals to false']]) {
     const kiosk = { ...WEB, name: 'kiosk', root: 'kiosk', commands: { build: 'npm run build' } }
-    const host = visualsRun({ components: [API, WEB, kiosk], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, ...(visuals === null ? {} : { visuals }) } } })
+    const host = visualsRun({ components: [API, WEB, kiosk], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2, visuals: 2 }, ...(visuals === null ? {} : { visuals }) } } })
 
     assert.equal((await host.start(STORY)).status, 'done')
 
@@ -175,7 +175,7 @@ test('with no front end, the visuals node is skipped and runs nothing; without w
   assert.deepEqual(host.git.engineCommits, [])
   assert.equal(await screenshots(host), 'None recorded: this run took no screenshots (no visuals step, or no front end in skraft-config.json).')
 
-  const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), components: [API], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
+  const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), components: [API], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2, visuals: 2 }, visuals: true } } }, (it) => [agent()(it)])
   await always.start(STORY)
   assert.deepEqual(visualsStep(always), { outcome: 'not-recorded', next: 'publish', reason: 'no screenshot recorded: ' })
   assert.equal(await screenshots(always), 'None recorded: no component of skraft-config.json is a front end (stack react, or an e2e command).')
@@ -313,7 +313,7 @@ test('a French story\'s screenshots are told in French: each e2e run, the dark t
   assert.ok(lines.includes(`2 autres captures du thème clair de web dans \`${EVIDENCE}/web\``), lines.join('\n'))
   assert.ok(lines.includes(`1 autre capture du thème sombre de web dans \`${EVIDENCE}/web\``), lines.join('\n'))
 
-  const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), codeHost: new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE } }), components: [API], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 }, visuals: true } } }, (it) => [agent()(it)])
+  const always = scripted({ workflow: WORKFLOW.replace(', when="frontend"', ''), codeHost: new InMemoryCodeHost({ issues: { 42: FRENCH_ISSUE } }), components: [API], config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2, visuals: 2 }, visuals: true } } }, (it) => [agent()(it)])
   await always.start(FRENCH)
   assert.equal(await frenchShots(always), 'Aucune consignée : aucun composant de skraft-config.json n\'est un front end (stack react, ou une commande e2e).')
 })

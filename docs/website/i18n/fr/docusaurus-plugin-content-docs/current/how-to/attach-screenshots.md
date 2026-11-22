@@ -74,7 +74,7 @@ DELIVER, le nœud `visuals` lit ce run tracé et le seul manifeste qu'il laisse,
    ```
 
 4. Ajoutez `skraft-visuals/` au `.gitignore` du frontend.
-5. Écrivez `"visuals": true` sous `publish`, avec `"questionVersions": { "visuals": 1 }`, ou
+5. Écrivez `"visuals": true` sous `publish`, avec `"questionVersions": { "visuals": 2 }`, ou
    laissez `/skraft-init` vous le demander. Tant que ce n'est pas réglé, un run qui publierait des
    captures est refusé.
 

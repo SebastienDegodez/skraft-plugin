@@ -86,13 +86,14 @@ Ask each one in these words, which are the ones the answer is kept against:
 - `publish.pullRequest` — *May skraft push this branch and open or update its pull request when a
   run ends, and keep one comment on its story's issue up to date with the run's progress, time and
   cost?*
-- `publish.visuals` — *May skraft publish the screenshots and videos of its runs in the pull
-  request of the branch? They can show private data.*
+- `publish.visuals` — *May skraft show the screenshots of its front end's e2e runs in the pull
+  request of the branch (on GitHub gh attaches them to it; on Azure DevOps they are committed on
+  the branch)? They can show private data.*
 
 Ask `visuals` only when a component is a front end (a `react` stack, or an `e2e` command).
 
 Write each answer with the version of the question it answers, under `publish.questionVersions`:
-`pullRequest` is at version 2, `visuals` at version 1. An answer kept against an earlier version
+`pullRequest` is at version 2, `visuals` at version 2. An answer kept against an earlier version
 is not settled, and a run is refused until you ask again.
 
 A refusal is an answer: a run then publishes nothing and is not held up.

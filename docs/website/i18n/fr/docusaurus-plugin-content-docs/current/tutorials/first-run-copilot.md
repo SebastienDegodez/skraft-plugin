@@ -116,7 +116,7 @@ refusez les deux :
   "publish": {
     "pullRequest": false,
     "visuals": false,
-    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+    "questionVersions": { "pullRequest": 2, "visuals": 2 }
   },
   "components": [ … ]
 }

@@ -137,7 +137,7 @@ Docker or Podman runs`. Only `skraft-config.json` holds `infrastructure`, as eve
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
 | `pullRequest` | boolean | absent: a run that publishes is refused, `/skraft-init` asks for it | the run may push its branch, open or update its pull request and keep a progress comment on its story's issue |
-| `visuals` | boolean | absent: a run that publishes screenshots is refused, `/skraft-init` asks for it (only with a front end) | the run may publish a front end's screenshots and videos in the pull request |
+| `visuals` | boolean | absent: a run that publishes screenshots is refused, `/skraft-init` asks for it (only with a front end) | the run may show a front end's screenshots in the pull request (question version 2; an acceptance of version 1, which named videos, is asked again) |
 | `draft` | boolean | `true` | a pull request skraft opens is a draft |
 | `reviewComment` | boolean | absent: asked once per repository | `skraft review --pr --publish` may keep one comment on the pull request it reviews; written by hand in the team's file, it wins over each developer's answer, which the engine keeps in their `~/.skraft/config.json` (`reviewComments`) |
 | `questionVersions` | object | `1` per key | the version of the question's text each answer was given to (`visuals`, `pullRequest`, `reviewComment`, whole numbers from 1); an acceptance of an earlier version is not settled: the run is refused until `/skraft-init` asks again |

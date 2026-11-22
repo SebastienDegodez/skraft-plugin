@@ -140,7 +140,7 @@ Docker or Podman runs`. Seul `skraft-config.json` porte `infrastructure`, comme 
 | Clé | Type | Défaut | Effet |
 | --- | --- | --- | --- |
 | `pullRequest` | boolean | absent : un run qui publie est refusé, `/skraft-init` le demande | le run peut pousser sa branche, ouvrir ou mettre à jour sa pull request et tenir un commentaire de progression sur l'issue de sa story |
-| `visuals` | boolean | absent : un run qui publie des captures est refusé, `/skraft-init` le demande (seulement avec un front end) | le run peut publier les captures et vidéos d'un front end dans la pull request |
+| `visuals` | boolean | absent : un run qui publie des captures est refusé, `/skraft-init` le demande (seulement avec un front end) | le run peut montrer les captures d'un front end dans la pull request (version 2 de la question ; une acceptation de la version 1, qui nommait des vidéos, est redemandée) |
 | `draft` | boolean | `true` | une pull request ouverte par skraft est un brouillon |
 | `reviewComment` | boolean | absent : demandé une fois par dépôt | `skraft review --pr --publish` peut garder un commentaire sur la pull request revue ; écrit à la main dans le fichier de l'équipe, il l'emporte sur la réponse de chaque développeur, que le moteur garde dans son `~/.skraft/config.json` (`reviewComments`) |
 | `questionVersions` | object | `1` par clé | la version du texte de la question à laquelle chaque réponse a été donnée (`visuals`, `pullRequest`, `reviewComment`, entiers à partir de 1) ; une acceptation d'une version antérieure n'est pas réglée : le run est refusé jusqu'à ce que `/skraft-init` la repose |

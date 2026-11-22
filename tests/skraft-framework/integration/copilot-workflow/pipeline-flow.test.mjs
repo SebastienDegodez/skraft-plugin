@@ -79,7 +79,7 @@ test('the four phases run on a real repository: each agent commits its part, the
 })
 
 test('a front end\'s e2e run leaves its light and dark screenshots where Playwright wrote them, for gh to attach to the pull request', async (t) => {
-  const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true, questionVersions: { pullRequest: 2, visuals: 1 } } })
+  const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true, questionVersions: { pullRequest: 2, visuals: 2 } } })
   issueForge(t, cwd)
 
   const { outcome, events, asked } = await runOn(cwd, { args: { issue: 42, title: 'Pay by card' } })

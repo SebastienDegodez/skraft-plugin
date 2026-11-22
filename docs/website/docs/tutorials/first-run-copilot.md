@@ -115,7 +115,7 @@ answer them now, in `skraft-config.json`. This repository has no remote, so decl
   "publish": {
     "pullRequest": false,
     "visuals": false,
-    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+    "questionVersions": { "pullRequest": 2, "visuals": 2 }
   },
   "components": [ … ]
 }

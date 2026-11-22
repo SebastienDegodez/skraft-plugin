@@ -73,7 +73,7 @@ skraft never starts the e2e command. The software engineer runs it through `skra
    ```
 
 4. Add `skraft-visuals/` to the front end's `.gitignore`.
-5. Write `"visuals": true` under `publish`, with `"questionVersions": { "visuals": 1 }`, or let
+5. Write `"visuals": true` under `publish`, with `"questionVersions": { "visuals": 2 }`, or let
    `/skraft-init` ask you for it. Until it is settled, a run that would publish screenshots is
    refused.
 

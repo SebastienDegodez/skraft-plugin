@@ -56,7 +56,7 @@ export { HOSTS } from './model-assignment.mjs'
  *   configurationConfirmed: a person confirmed, once, that runs of this working copy start with
  *   its configuration; kept in the developer's own skraft-config.local.json only.
  * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, reviewComment: boolean | null, draft: boolean, questionVersions: Record<import('../decisions/consents.mjs').ConsentKey, number> }} Publish
- *   visuals: whether the run may publish screenshots and videos in the pull request; pullRequest:
+ *   visuals: whether the run may show a front end's screenshots in the pull request; pullRequest:
  *   whether it may push the branch, open or update its pull request and keep its progress on its
  *   story's issue; reviewComment: whether `skraft review --pr --publish` may keep one comment on the
  *   pull request it reviews; each null until the developer answers its consent question once.

@@ -176,7 +176,7 @@ démarre qu'une fois qu'ils sont réglés ; ce dépôt n'a pas de remote, donc r
   "publish": {
     "pullRequest": false,
     "visuals": false,
-    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+    "questionVersions": { "pullRequest": 2, "visuals": 2 }
   }
 ```
 

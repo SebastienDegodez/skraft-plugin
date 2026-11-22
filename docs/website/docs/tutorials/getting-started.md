@@ -174,7 +174,7 @@ they are settled; this repository has no remote, so decline both:
   "publish": {
     "pullRequest": false,
     "visuals": false,
-    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+    "questionVersions": { "pullRequest": 2, "visuals": 2 }
   }
 ```
 
