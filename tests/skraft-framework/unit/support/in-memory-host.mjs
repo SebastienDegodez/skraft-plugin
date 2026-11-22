@@ -12,6 +12,8 @@ export class InMemoryTracking {
     this.folder = folder
     /** @type {Map<string, string>} slug-relative path → text */
     this.files = new Map()
+    /** @type {Map<string, number>} how many times each file that already existed was written again whole */
+    this.rewrites = new Map()
     this.activeSlug = null
     /** The journal keys of the machine this working copy is on. */
     this.journalKeys = new InMemoryJournalKeys()
@@ -36,7 +38,15 @@ export class InMemoryTracking {
 
   // TrackingFiles
   async read(slug, rel) { return this.files.get(this.key(slug, rel)) ?? null }
-  async write(slug, rel, text) { this.files.set(this.key(slug, rel), text) }
+  async write(slug, rel, text) {
+    const key = this.key(slug, rel)
+    if (this.files.has(key)) this.rewrites.set(key, (this.rewrites.get(key) ?? 0) + 1)
+    this.files.set(key, text)
+  }
+  async appendText(slug, rel, text) {
+    const key = this.key(slug, rel)
+    this.files.set(key, `${this.files.get(key) ?? ''}${text}`)
+  }
   async clear(slug, folder) {
     const prefix = this.key(slug, `${folder}/`)
     for (const path of this.files.keys()) if (path.startsWith(prefix)) this.files.delete(path)

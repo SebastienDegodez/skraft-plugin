@@ -6,6 +6,7 @@ import { SLUG, pipelineRepository } from '../support/pipeline-repository.mjs'
 import { skraft } from '../support/workspace.mjs'
 import { toDeliveryAttempt } from './delivery-attempt.mjs'
 import { mcpHost } from './mcp-host.mjs'
+import { createOrphanJournal, processCreation } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/orphans.mjs'
 
 // A real server on a real repository: the pipeline is conducted to the attempt of its software
 // engineer, which is left open, and the REPL runs real programs for it.
@@ -24,8 +25,9 @@ test('skraft_repl is listed with a closed schema that takes the cell, even an em
   const missing = await host.call('skraft_repl', {})
   const numeric = await host.call('skraft_repl', { code: 1 })
 
-  assert.deepEqual([listed.inputSchema.required, listed.inputSchema.additionalProperties, Object.keys(listed.inputSchema.properties)], [['code'], false, ['code', 'workspace']])
-  assert.deepEqual([unknown.isError, textOf(unknown)], [true, 'skraft_repl takes only these arguments: code, workspace'])
+  assert.deepEqual([listed.inputSchema.required, listed.inputSchema.additionalProperties, Object.keys(listed.inputSchema.properties)], [['code'], false, ['code', 'reset', 'workspace']])
+  assert.match(listed.description, /await handle gives \{ exitCode, output, durationMs, head, log \} \(head: the HEAD of the repository holding cwd when the program ended\)/)
+  assert.deepEqual([unknown.isError, textOf(unknown)], [true, 'skraft_repl takes only these arguments: code, reset, workspace'])
   assert.equal(textOf(missing), 'skraft_repl needs the argument code')
   assert.equal(textOf(numeric), 'the argument code of skraft_repl must be a text of at most 200000 characters')
   await host.close()
@@ -59,6 +61,62 @@ test('in the attempt of the software engineer, a cell runs real programs, variab
   assert.equal(textOf(second), '=> 3')
   assert.equal(existsSync(join(cwd, '.copilot-tracking', 'skraft-repl')), true)
   await host.close()
+})
+
+test('two skraft_repl calls sent together share one kernel, the one the orphan journal names, and the second is told the first cell runs', BOUNDED, async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  await toDeliveryAttempt(cwd)
+  const host = mcpHost({ roots: [cwd] })
+  await host.initialize()
+  t.after(() => host.close())
+  const code = 'await new Promise((done) => setTimeout(done, 3000)); process.pid'
+
+  const [first, second] = await Promise.all([host.call('skraft_repl', { code }), host.call('skraft_repl', { code })])
+  const journal = JSON.parse(readFileSync(join(cwd, '.copilot-tracking', 'skraft-repl', `${process.pid}.json`), 'utf8'))
+
+  assert.deepEqual([first, second].map((one) => textOf(one).slice(0, 10)).sort(), [`=> ${journal.kernel.pid}`, "repl-busy:"].sort(), "one call ran the cell in the kernel the journal names, the other was told it runs")
+})
+
+test('skraft_status answers within a second while a run starts, even when the system takes seconds to give a process\'s start time', BOUNDED, async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  await toDeliveryAttempt(cwd)
+  const slowReader = { file: process.execPath, args: ['-e', 'setTimeout(() => console.log("slow start time"), 3000)'] }
+  const adapt = (adapters, directory) => ({ ...adapters, repl: { ...adapters.repl, orphans: createOrphanJournal({ folder: join(directory, '.copilot-tracking', 'skraft-repl'), creationOf: (pid) => processCreation(pid, process.platform, slowReader) }) } })
+  const host = mcpHost({ roots: [cwd], adapt })
+  await host.initialize()
+  t.after(() => host.close())
+  await host.call('skraft_repl', { code: '1' })
+
+  host.write(JSON.stringify({ jsonrpc: '2.0', id: 'starts-a-run', method: 'tools/call', params: { name: 'skraft_repl', arguments: { code: `globalThis.long = run([${NODE}, '-e', 'setTimeout(() => {}, 5000)']); 1` } } }))
+  const slowest = { took: 0, slug: null }
+  for (const until = Date.now() + 2500; Date.now() < until;) {
+    const asked = Date.now()
+    slowest.slug = JSON.parse(textOf(await host.call('skraft_status'))).slug
+    slowest.took = Math.max(slowest.took, Date.now() - asked)
+  }
+
+  assert.equal(slowest.slug, SLUG)
+  assert.ok(slowest.took < 1000, `skraft_status took ${slowest.took} ms`)
+})
+
+test('a reset during a cell that never yields answers within ten seconds from a fresh kernel, whose variables are new', BOUNDED, async (t) => {
+  const { cwd } = pipelineRepository(t)
+  await skraft(cwd, ['init', SLUG])
+  await toDeliveryAttempt(cwd)
+  const host = mcpHost({ roots: [cwd] })
+  await host.initialize()
+  t.after(() => host.close())
+  await host.call('skraft_repl', { code: 'globalThis.kept = 1' })
+  host.write(JSON.stringify({ jsonrpc: '2.0', id: 'spins', method: 'tools/call', params: { name: 'skraft_repl', arguments: { code: 'while (true) {}' } } }))
+  await new Promise((done) => setTimeout(done, 300))
+
+  const asked = Date.now()
+  const reset = await host.call('skraft_repl', { code: 'typeof kept', reset: true })
+
+  assert.ok(Date.now() - asked < 10_000)
+  assert.equal(textOf(reset), "repl-reset: the kernel was ended on request and a fresh one started: its variables are gone, and the runs it had started were ended\n=> 'undefined'")
 })
 
 test('skraft_status answers while a cell runs, and a cancellation of the request ends the cell and the program it started', BOUNDED, async (t) => {

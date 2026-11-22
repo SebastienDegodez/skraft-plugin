@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRepl } from '../../../../plugins/skraft-framework/engine/application/repl/repl-usecase.mjs'
 import { InMemoryRunLock } from '../support/in-memory-host.mjs'
-import { InMemoryOrphans, ScriptedKernelHost, ScriptedLauncher } from '../support/in-memory-repl.mjs'
+import { HasherDigests, InMemoryOrphans, ScriptedKernelHost, ScriptedLauncher } from '../support/in-memory-repl.mjs'
 import { agent, green, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
 
 const TRACE = `${SLUG}/logs/runs/deliver-1-1/runs.jsonl`
@@ -11,7 +11,7 @@ const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
 /** A delivery attempt whose software engineer works as `work` says, with the REPL scripted by the test. */
 const delivery = ({ work, kernels = new ScriptedKernelHost(), launcher = new ScriptedLauncher(), commits = true }) => {
   const host = scripted({}, (it) => [...nominal(it).map((behaviour, index) => (index !== 3 ? behaviour : agent({ trace: false, work: async (repos) => { await work(repl, host, repos); if (commits) green(SLUG, 'Checkout', '')(repos) } })(it))), () => ({ ok: false, unavailable: true, text: '' })])
-  host.deps.repl = { root: '/work', kernels, launcher, orphans: new InMemoryOrphans(), locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: 100, created: 'server-start' }, budgetMs: 40 }
+  host.deps.repl = { root: '/work', kernels, launcher, orphans: new InMemoryOrphans(), locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: 100, created: 'server-start' }, budgetMs: 40, digests: new HasherDigests(host.deps.hasher) }
   const repl = createRepl(host.deps, { entry: null, reaped: false })
   return { host, kernels, launcher }
 }
@@ -43,6 +43,32 @@ test('every run writes a line when it starts and a line when it ends, with what 
   assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`), 'Failed: 1\n')
   assert.equal(ended.sha256, await host.deps.hasher.sha256('Failed: 1\n'))
   assert.equal(traced(host).length, 2)
+  assert.equal(host.tracking.rewrites.get(TRACE) ?? 0, 0, 'each line is appended: the trace is never written again whole')
+})
+
+test('a trace line that cannot be written is told at the head of each next result, naming the run\'s unexpected.log and never the exception', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('gate', async ({ run }) => { await run('npm test', { gate: 'test' }) })
+  const answers = []
+  const { host } = delivery({ kernels, launcher: new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } }), work: async (repl, one) => {
+    const tracking = one.tracking
+    one.deps.files = {
+      read: (slug, path) => tracking.read(slug, path), write: (slug, path, text) => tracking.write(slug, path, text), location: (slug, path) => tracking.location(slug, path),
+      appendText: async (slug, path, text) => {
+        if (path.endsWith('runs.jsonl')) throw new Error('EACCES: permission denied, open /secret/runs.jsonl')
+        return tracking.appendText(slug, path, text)
+      },
+    }
+    answers.push(await repl.call({ code: 'gate' }), await repl.call({ code: '1' }))
+    one.deps.files = tracking
+  } })
+
+  await host.start()
+
+  const notice = `repl-trace-failed: a line of the trace of this attempt could not be written, so the trace is incomplete; the error is in /work/.copilot-tracking/skraft-plans/${SLUG}/logs/unexpected.log`
+  assert.deepEqual(answers.map(({ text }) => text.split('\n')[0]), [notice, notice])
+  assert.equal(answers.some(({ text }) => text.includes('EACCES')), false)
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /EACCES/)
 })
 
 test('each line carries the signature of the run\'s journal key, and a line edited afterwards no longer does', async () => {
@@ -101,6 +127,24 @@ test('the awaited handle gives the HEAD the run ended on, the very value its lin
   const ended = traced(host).find(({ type }) => type === 'run')
   assert.notEqual(ended.headAfter, ended.headBefore)
   assert.equal(awaited.head, ended.headAfter)
+})
+
+test('a run of a fresh kernel that takes the id of an earlier kernel\'s run starts its log empty, and its hash is the one of its own output', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('test', async ({ run }) => { await run('npm test') })
+  kernels.script.set('lint', async ({ run }) => { await run('npm run lint') })
+  const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0, text: 'first\n' }, 'npm run lint': { exitCode: 0, text: 'second\n' } } })
+  const { host } = delivery({ kernels, launcher, work: async (repl) => {
+    await repl.call({ code: 'test' })
+    kernels.kernels[0].die('crashed')
+    await repl.call({ code: 'lint' })
+  } })
+
+  await host.start()
+
+  const ended = traced(host).filter(({ type }) => type === 'run')
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`), 'second\n')
+  assert.equal(ended.at(-1).sha256, await host.deps.hasher.sha256('second\n'))
 })
 
 test('a run refused before it started, and a program that could not start, are lines too, with started false', async () => {

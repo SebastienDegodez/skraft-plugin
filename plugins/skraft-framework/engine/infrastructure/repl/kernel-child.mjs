@@ -1,9 +1,14 @@
 import repl from 'node:repl'
 import { Console } from 'node:console'
 import { PassThrough, Writable } from 'node:stream'
+import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { inspect } from 'node:util'
 import { createOutput } from '../process/output-cut.mjs'
+import { refusalOfKill } from '../../domain/repl/refusals.mjs'
+import { createPrintWindow } from './print-window.mjs'
+import { loadLibrary } from './repl-library.mjs'
+import { notInstalled, projectRequire } from './repl-require.mjs'
 
 /**
  * The process behind one `skraft_repl` attempt: a `node:repl` server on streams of its own, whose
@@ -12,14 +17,15 @@ import { createOutput } from '../process/output-cut.mjs'
  * Variables persist from one cell to the next; top-level await works (through the REPL's own
  * eval, which is behaviour rather than documented API: the pin test in kernel.test.mjs watches it).
  *
- * To the server: ready, run, kill, absent, print, cell-done. From it: cell, chunk, exit, interrupt.
+ * To the server: alive, ready (with what it loaded of the project's REPL library), run, kill, absent,
+ * print, cell-done. From it: cell, chunk, exit, interrupt.
  * Standard output and error of this process go nowhere: only IPC carries data.
  *
  * @typedef {{ send: (message: object) => void, on: (event: string, listener: (...args: any[]) => void) => unknown }} Ipc
  * @typedef {{
  *   ipc: Ipc, handles: Map<number, Handle>, nextRun: number,
  *   cell: { id: number, done: (outcome: { value: string | null, error: string | null }) => void } | null,
- *   prompted: (() => void) | null, server: any,
+ *   prompted: (() => void) | null, server: any, printing?: ReturnType<typeof createPrintWindow>,
  * }} Kernel
  */
 
@@ -38,6 +44,8 @@ class Handle {
     this.buffer = createOutput(BUFFER_BYTES)
     /** @type {Record<string, unknown> | null} */
     this.result = null
+    /** @type {string | undefined} what output() gives once the output is let go */
+    this.forgotten = undefined
     this.cell = kernel.cell?.id ?? null
     this.done = new Promise((resolve, reject) => Object.assign(this, { settle: resolve, fail: reject }))
     this.done.catch(() => undefined)
@@ -48,13 +56,24 @@ class Handle {
   /** @param {number} [lines] */
   tail(lines = 50) { return this.output().replace(/\n$/, '').split('\n').slice(-lines).join('\n') }
 
-  output() { return this.buffer.text() }
+  output() { return this.forgotten ?? this.buffer.text() }
+
+  /** Its output is let go; the handle names the log that holds it. */
+  forget() {
+    if (this.forgotten !== undefined || this.result === null) return
+    this.forgotten = `[the output of r${this.id} is no longer kept in the kernel: it is in ${this.result.log}]`
+    this.result.output = this.forgotten
+    this.buffer = createOutput(0)
+  }
 
   poll() { return this.result }
 
-  /** @param {string} [signal] @param {number} [grace] seconds before SIGKILL */
+  /** @param {string} [signal] @param {number} [grace] seconds before SIGKILL @returns {string | undefined} why it is refused; the server refuses it too */
   kill(signal = 'SIGTERM', grace = 5) {
+    const refusal = refusalOfKill(signal, grace)
+    if (refusal !== null) return refusal
     if (this.running) this.kernel.ipc.send({ t: 'kill', rid: this.id, signal, grace })
+    return undefined
   }
 
   /** @param {(value: unknown) => unknown} resolve @param {(error: unknown) => unknown} reject */
@@ -63,23 +82,57 @@ class Handle {
 
 /**
  * Starts the kernel on an IPC channel (the child's `process`, or a test's double).
- * @param {Ipc} ipc @returns {Kernel}
+ * @param {Ipc} ipc @param {{ libFolder?: string | null }} [options] libFolder: the working copy's absolute .repl/lib folder @returns {Kernel}
  */
-export const startKernel = (ipc) => {
+export const startKernel = (ipc, { libFolder = null } = {}) => {
   /** @type {Kernel} */
-  const kernel = { ipc, handles: new Map(), nextRun: 1, cell: null, prompted: null, server: null }
+  const kernel = /** @type {Kernel} */ ({ ipc, handles: new Map(), nextRun: 1, cell: null, prompted: null, server: null })
   routeConsole(kernel)
   kernel.server = replServer(kernel)
   defineApi(kernel)
   ipc.on('message', (/** @type {any} */ message) => onMessage(kernel, message))
-  ipc.send({ t: 'ready' })
+  ipc.send({ t: 'alive' })
+  void announce(kernel, libFolder)
   return kernel
+}
+
+/**
+ * The project's REPL library is loaded, then given to the cells as `lib`; the server hears what
+ * was loaded with `ready`.
+ * @param {Kernel} kernel @param {string | null} folder
+ */
+const announce = async (kernel, folder) => {
+  const root = folder === null ? null : dirname(dirname(folder))
+  if (root !== null) kernel.server.context.require = projectRequire(root)
+  const library = folder === null ? { lib: {}, loaded: [], failed: [] } : await loadLibrary(folder)
+  Object.assign(globalThis, { lib: Object.freeze(library.lib) })
+  kernel.ipc.send({ t: 'ready', lib: { loaded: library.loaded, failed: library.failed, notInstalled: root !== null && notInstalled(root) } })
 }
 
 /** What a cell prints, and what runs later print, goes to the server as `print`. @param {Kernel} kernel */
 const routeConsole = (kernel) => {
-  const sink = new Writable({ write: (chunk, _encoding, next) => { kernel.ipc.send({ t: 'print', cell: kernel.cell?.id ?? null, text: String(chunk) }); next() } })
+  kernel.printing = createPrintWindow((cell, text) => kernel.ipc.send({ t: 'print', cell, text }))
+  const sink = new Writable({ write: (chunk, _encoding, next) => { kernel.printing?.write(kernel.cell?.id ?? null, Buffer.from(chunk)); next() } })
   globalThis.console = new Console({ stdout: sink, stderr: sink })
+}
+
+/**
+ * What a cell writes to the process's own stdout and stderr, which go nowhere, is printed as
+ * console.log is. Only the kernel's own process does this, never a test that imports it.
+ * @param {Kernel} kernel
+ */
+const routeStdio = (kernel) => {
+  for (const stream of [process.stdout, process.stderr]) {
+    stream.write = (/** @type {any} */ chunk, /** @type {any} */ encoding, /** @type {any} */ done) => written(kernel, { chunk, encoding, done })
+  }
+}
+
+/** @param {Kernel} kernel @param {{ chunk: any, encoding: any, done: any }} write */
+const written = (kernel, { chunk, encoding, done }) => {
+  kernel.printing?.write(kernel.cell?.id ?? null, Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), typeof encoding === 'string' ? encoding : 'utf8'))
+  const callback = typeof encoding === 'function' ? encoding : done
+  if (typeof callback === 'function') queueMicrotask(callback)
+  return true
 }
 
 /**
@@ -108,8 +161,18 @@ const startRun = (kernel, command, options) => {
   const handle = new Handle(kernel, kernel.nextRun, command)
   kernel.nextRun += 1
   kernel.handles.set(handle.id, handle)
-  kernel.ipc.send({ t: 'run', rid: handle.id, cell: handle.cell, command, cwd: options.cwd ?? '.', timeout: options.timeout ?? DEFAULT_TIMEOUT_S, gate: options.gate ?? null, label: options.label ?? null })
+  const given = isOptions(options) ? options : {}
+  kernel.ipc.send({ t: 'run', rid: handle.id, cell: handle.cell, command, cwd: given.cwd ?? '.', timeout: given.timeout ?? DEFAULT_TIMEOUT_S, gate: given.gate ?? null, label: given.label ?? null, options: optionNames(options) })
   return handle
+}
+
+/** @param {unknown} options @returns {options is Record<string, unknown>} */
+const isOptions = (options) => typeof options === 'object' && options !== null && !Array.isArray(options)
+
+/** The names of the options a cell gave, for the server to refuse one it does not know; options that are no object name none run() takes. @param {unknown} options */
+const optionNames = (options) => {
+  if (options === undefined) return []
+  return isOptions(options) ? Object.keys(options) : ['(not an object)']
 }
 
 /** @param {Kernel} kernel @param {any} message */
@@ -122,15 +185,24 @@ const onMessage = (kernel, message) => {
 const HANDLERS = {
   cell: (kernel, { id, code }) => { void evaluate(kernel, id, code) },
   chunk: (kernel, { rid, text }) => kernel.handles.get(rid)?.buffer.push(Buffer.from(text, 'utf8')),
-  exit: (kernel, { rid, result }) => finish(kernel.handles.get(rid), result),
+  exit: (kernel, { rid, result }) => finish(kernel, kernel.handles.get(rid), result),
   interrupt: (kernel) => interrupt(kernel),
 }
 
-/** @param {Handle | undefined} handle @param {Record<string, unknown>} result */
-const finish = (handle, result) => {
+/** @param {Kernel} kernel @param {Handle | undefined} handle @param {Record<string, unknown>} result */
+const finish = (kernel, handle, result) => {
   if (handle === undefined || handle.result !== null) return
   handle.result = { ...result, output: handle.output() }
   handle.settle(handle.result)
+  forgetOld(kernel)
+}
+
+/** The kernel keeps the output of its last runs only; an older handle names its log. */
+const KEPT_HANDLES = 50
+
+/** @param {Kernel} kernel */
+const forgetOld = (kernel) => {
+  for (const handle of kernel.handles.values()) if (handle.id <= kernel.nextRun - 1 - KEPT_HANDLES && handle.result !== null) handle.forget()
 }
 
 /** The awaits of the cell on a run stop waiting. @param {Kernel} kernel */
@@ -145,6 +217,7 @@ const evaluate = async (kernel, id, code) => {
     kernel.prompted = () => done({ value: null, error: errorText(kernel.server.lastError) })
     kernel.server.eval(`${code}\n`, kernel.server.context, 'cell', (/** @type {any} */ error, /** @type {unknown} */ value) => done(settled(error, value)))
   })
+  kernel.printing?.close()
   kernel.cell = null
   kernel.prompted = null
   kernel.ipc.send({ t: 'cell-done', id, ...outcome })
@@ -164,7 +237,8 @@ const FRAMEWORK_FRAME = /kernel-child\.mjs|\(node:|node:internal|node:vm|node:re
 
 // Started by the MCP server with `fork`; imported by the tests, which hand it a channel of their own.
 if (process.send !== undefined && process.argv[1] === fileURLToPath(import.meta.url)) {
-  const kernel = startKernel(process)
+  const kernel = startKernel(process, { libFolder: process.argv[2] ?? null })
+  routeStdio(kernel)
   process.on('disconnect', () => process.exit(0))
   for (const event of ['uncaughtException', 'unhandledRejection']) process.on(event, (error) => kernel.ipc.send({ t: 'print', cell: null, text: `${errorText(error)}\n` }))
 }

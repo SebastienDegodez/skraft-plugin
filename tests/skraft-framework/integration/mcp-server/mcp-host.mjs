@@ -32,13 +32,13 @@ const inbox = () => {
  * Starts `skraft mcp` in this process.
  * @param {{
  *   roots?: string[] | null, answersRoots?: boolean, workingDirectory?: string | null, patienceMs?: number,
- *   client?: string | null, pluginFolder?: string,
+ *   client?: string | null, pluginFolder?: string, adapt?: (adapters: any, directory: string) => any,
  * }} options roots: the folders the host shares, null for a host without roots; client: the name
  *   the host gives at the handshake, VS Code's unless told, null for none; answersRoots:
  *   false for a host that never answers `roots/list`; workingDirectory: the folder the host
- *   started the server in, null for the plugin's own; pluginFolder: the plugin's folder, the real one unless told
+ *   started the server in, null for the plugin's own; pluginFolder: the plugin's folder, the real one unless told; adapt: what the test changes of the real adapters of a folder
  */
-export const mcpHost = ({ roots = null, answersRoots = true, workingDirectory = null, patienceMs, client = 'Visual Studio Code', pluginFolder = PLUGIN_ROOT } = {}) => {
+export const mcpHost = ({ roots = null, answersRoots = true, workingDirectory = null, patienceMs, client = 'Visual Studio Code', pluginFolder = PLUGIN_ROOT, adapt = (adapters) => adapters } = {}) => {
   const lines = inbox()
   /** @type {any[]} */ const received = []
   /** @type {string[]} */ const log = []
@@ -52,7 +52,10 @@ export const mcpHost = ({ roots = null, answersRoots = true, workingDirectory = 
   const services = {
     ...inProcessServices(workingDirectory ?? 'not-a-repository'),
     lines: () => lines.iterator,
-    at: (/** @type {string} */ directory) => inProcessServices(directory, { confirm: async () => { throw new Error('a tool asked for a confirmation') } }),
+    at: (/** @type {string} */ directory) => {
+      const real = inProcessServices(directory, { confirm: async () => { throw new Error('a tool asked for a confirmation') } })
+      return { ...real, adapters: (agentHost) => adapt(real.adapters(agentHost), directory) }
+    },
     workingDirectory: () => workingDirectory,
     pluginFolder: () => pluginFolder,
     isWorkingCopy: async (/** @type {string} */ directory) =>

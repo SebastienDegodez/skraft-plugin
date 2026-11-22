@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createNodeKernelHost } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/node-kernel.mjs'
 import { createLiveProcesses } from '../../../../plugins/skraft-framework/engine/infrastructure/process/live-processes.mjs'
+import { fileURLToPath } from 'node:url'
 import { tempFolder } from '../support/workspace.mjs'
 
 // A kernel the test fails to end would hold the test run: each test has a time limit.
@@ -68,6 +69,16 @@ test('a cell that throws, awaits a rejection, names nothing it declared or is cu
   assert.equal(incomplete.error, 'SyntaxError: the cell is incomplete')
 })
 
+test('a top-level const declared a second time fails with the error the result explains', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  await cell(kernel, 'const unit = 1')
+  const again = await cell(kernel, 'const unit = 2')
+
+  assert.equal(again.status, 'error')
+  assert.match(again.error, /^SyntaxError: Identifier 'unit' has already been declared/)
+})
+
 test('what a cell prints comes back with it, and what a later run prints arrives with the next cell', BOUNDED, async (t) => {
   const { kernel } = await openKernel(t)
 
@@ -104,9 +115,9 @@ test('a run that is killed through its handle ends with the signal it was killed
   const { kernel, seen } = await openKernel(t)
 
   await cell(kernel, "const long = run(['" + process.execPath.replaceAll('\\', '\\\\') + "', '-e', 'setInterval(() => {}, 1000)'])")
-  const ended = await cell(kernel, 'await new Promise((r) => setTimeout(r, 300)); long.kill("SIGTERM", 1); const r = await long; [r.killed, r.timedOut, long.running]')
+  const ended = await cell(kernel, 'await new Promise((r) => setTimeout(r, 300)); const refused = long.kill("SIGHUP"); long.kill("SIGTERM", 1); const r = await long; [r.killed, r.timedOut, long.running, refused]')
 
-  assert.equal(ended.value, '[ true, false, false ]')
+  assert.equal(ended.value, "[\n  true,\n  false,\n  false,\n  'kill() takes SIGTERM, SIGINT or SIGKILL and a grace of 0 to 30 whole seconds'\n]")
   assert.deepEqual(seen.killed, [1])
 })
 
@@ -159,6 +170,66 @@ test('an interrupt of a cell that never yields restarts the kernel, which report
 
   assert.equal(outcome.status, 'restarted')
   assert.deepEqual(seen.gone, ['restarted'])
+})
+
+test('a kernel that never says it is ready is refused within ten seconds, and a kernel runs with a command line of its own, not the server\'s', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+  const events = { onRun: () => undefined, onKill: () => undefined, onAbsent: () => undefined, onGone: () => undefined }
+  const asked = Date.now()
+
+  const started = await Promise.race([
+    createNodeKernelHost({ entry: fileURLToPath(new URL('./fixtures/never-ready.mjs', import.meta.url)) }).start(events, tempFolder(t)).then(() => 'ready', () => 'refused'),
+    new Promise((done) => setTimeout(() => done('still waiting'), 12_000)),
+  ])
+  const flags = await cell(kernel, 'process.execArgv')
+
+  assert.equal(started, 'refused')
+  assert.ok(Date.now() - asked >= 9_000)
+  assert.equal(flags.value, "[ '--max-old-space-size=2048' ]")
+})
+
+test('a kernel that is stopped ends with every process its cells started by themselves', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+  const started = await cell(kernel, "require('node:child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' }).pid")
+  const pid = Number(started.value)
+  t.after(() => { try { process.kill(pid, 'SIGKILL') } catch { /* gone */ } })
+
+  kernel.stop()
+  let alive = true
+  for (let tries = 0; tries < 50 && alive; tries += 1) {
+    await new Promise((done) => setTimeout(done, 100))
+    try { process.kill(pid, 0) } catch { alive = false }
+  }
+
+  assert.ok(Number.isInteger(pid) && pid > 0, started.error ?? started.value)
+  assert.equal(alive, false)
+})
+
+test('the kernel keeps the output of its last 50 runs; an older handle names the log that holds its output', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const kept = await cell(kernel, "const hs = []; for (let i = 0; i < 51; i += 1) { const h = run(['" + process.execPath.replaceAll('\\', '\\\\') + "', '-e', 'console.log(1)']); hs.push(h); await h }; [hs[0].output(), (await hs[0]).output, hs[50].output()]")
+
+  assert.equal(kept.value, "[\n  '[the output of r1 is no longer kept in the kernel: it is in 1.log]',\n  '[the output of r1 is no longer kept in the kernel: it is in 1.log]',\n  '1\\n'\n]")
+})
+
+test('what a cell writes to process.stdout and process.stderr comes back with it', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const written = await cell(kernel, "process.stdout.write('out\\n'); process.stderr.write('err\\n'); 1")
+
+  assert.equal(written.printed, 'out\nerr\n')
+})
+
+test('what a cell prints past 1 MiB comes back as its first and last half megabytes around a marker', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const noisy = await cell(kernel, "const line = 'x'.repeat(1023); console.log('first'); for (let i = 0; i < 8192; i += 1) console.log(line); console.log('last')")
+
+  assert.ok(Buffer.byteLength(noisy.printed) <= 1_048_576 + 200, `${Buffer.byteLength(noisy.printed)} bytes`)
+  assert.ok(noisy.printed.startsWith('first\n'))
+  assert.ok(noisy.printed.endsWith('\nlast\n'))
+  assert.match(noisy.printed, /\n… the cell printed more than 1 MiB: its first and last 512 KiB are kept …\n/)
 })
 
 test('a kernel that exits by itself reports it crashed with the cell it was running', BOUNDED, async (t) => {

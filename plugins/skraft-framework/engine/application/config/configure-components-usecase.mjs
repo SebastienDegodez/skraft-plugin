@@ -2,7 +2,7 @@ import { CONFIG_FILE, isAbsolutePath, writeConfig } from '../../domain/config/sk
 import { normalizeRelative } from '../../domain/config/relative-path.mjs'
 import { newComponents } from './detected-components.mjs'
 import { loadConfig } from './bases.mjs'
-import { ignoreLocalConfig } from './local-config.mjs'
+import { ignoreLocalConfig, ignoreReplPackages } from './local-config.mjs'
 
 /**
  * @typedef {import('../ports/workspace.mjs').Workspace} Workspace
@@ -16,7 +16,8 @@ import { ignoreLocalConfig } from './local-config.mjs'
  * ConfigureComponents — `skraft init` without a slug: one component per project found in the
  * working copy and in the neighbour folders named, written to `skraft-config.json`. Components
  * already listed, and every other key of the file, stay as the developer wrote them. No command is written.
- * The working copy's `.gitignore` lists `skraft-config.local.json`, the developer's own layer.
+ * The working copy's `.gitignore` lists `skraft-config.local.json`, the developer's own layer, and
+ * `/.repl/node_modules/`, the packages of the project's REPL library.
  * @param {{ workspace: Workspace, userSettings: import('../ports/user-settings.mjs').UserSettings }} deps
  */
 export const createConfigureComponents = (deps) => Object.freeze({
@@ -39,6 +40,7 @@ const configure = async (deps, { workingCopyName, folders = [] }) => {
   const starts = ['.', ...folders.map(normalizeRelative)]
   const added = await newComponents(workspace, starts, reading.config.components, { workingCopyName })
   await ignoreLocalConfig(workspace)
+  await ignoreReplPackages(workspace)
   return writeAdded(workspace, reading.raw, added)
 }
 

@@ -309,22 +309,23 @@ test('init keeps every component and key the developer wrote, and adds only the 
   assert.deepEqual([again.ok, again.reason], [true, 'skraft-config.json already lists every project found (3 components)'])
 })
 
-test('init lists the developer\'s skraft-config.local.json in .gitignore once, creating the file or adding a line to it', async () => {
+test('init lists the developer\'s skraft-config.local.json and the packages of .repl in .gitignore once, creating the file or adding a line to it', async () => {
+  const REPL = '/.repl/node_modules/'
   const created = await configure({ 'Payment.sln': '' })
   const appended = await configure({ 'Payment.sln': '', '.gitignore': 'bin/\nobj/' })
-  const kept = await configure({ 'Payment.sln': '', '.gitignore': 'bin/\r\n  /skraft-config.local.json\r\n' })
+  const kept = await configure({ 'Payment.sln': '', '.gitignore': `bin/\r\n  /skraft-config.local.json\r\n${REPL}\r\n` })
 
-  assert.equal(await created.workspace.read('.gitignore'), 'skraft-config.local.json\n')
-  assert.equal(await appended.workspace.read('.gitignore'), 'bin/\nobj/\nskraft-config.local.json\n')
-  assert.equal(await kept.workspace.read('.gitignore'), 'bin/\r\n  /skraft-config.local.json\r\n')
+  assert.equal(await created.workspace.read('.gitignore'), `skraft-config.local.json\n${REPL}\n`)
+  assert.equal(await appended.workspace.read('.gitignore'), `bin/\nobj/\nskraft-config.local.json\n${REPL}\n`)
+  assert.equal(await kept.workspace.read('.gitignore'), `bin/\r\n  /skraft-config.local.json\r\n${REPL}\r\n`)
   await createConfigureComponents({ workspace: created.workspace, userSettings: new InMemoryUserSettings() }).configure({ workingCopyName: 'x' })
-  assert.equal(await created.workspace.read('.gitignore'), 'skraft-config.local.json\n')
+  assert.equal(await created.workspace.read('.gitignore'), `skraft-config.local.json\n${REPL}\n`)
   const empty = await configure({ 'Payment.sln': '', '.gitignore': '' })
-  assert.equal(await empty.workspace.read('.gitignore'), 'skraft-config.local.json\n')
+  assert.equal(await empty.workspace.read('.gitignore'), `skraft-config.local.json\n${REPL}\n`)
   const ended = await configure({ 'Payment.sln': '', '.gitignore': 'bin/\n' })
-  assert.equal(await ended.workspace.read('.gitignore'), 'bin/\nskraft-config.local.json\n')
-  const listedFirst = await configure({ 'Payment.sln': '', '.gitignore': 'skraft-config.local.json\nbin/\n' })
-  assert.equal(await listedFirst.workspace.read('.gitignore'), 'skraft-config.local.json\nbin/\n')
+  assert.equal(await ended.workspace.read('.gitignore'), `bin/\nskraft-config.local.json\n${REPL}\n`)
+  const listedFirst = await configure({ 'Payment.sln': '', '.gitignore': 'skraft-config.local.json\n.repl/node_modules/\nbin/\n' })
+  assert.equal(await listedFirst.workspace.read('.gitignore'), 'skraft-config.local.json\n.repl/node_modules/\nbin/\n')
 })
 
 test('an invalid skraft-config.json is reported and left untouched', async () => {

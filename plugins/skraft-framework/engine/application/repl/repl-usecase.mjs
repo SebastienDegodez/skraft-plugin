@@ -1,9 +1,10 @@
-import { composeCell } from '../../domain/repl/cell-result.mjs'
+import { composeCell, libraryLines } from '../../domain/repl/cell-result.mjs'
 import { refusalText } from '../../domain/repl/refusals.mjs'
 import { signingKeyOf } from '../evidence/run-trace-store.mjs'
-import { traceAbsent } from './repl-trace.mjs'
-import { bindAttempt, releaseLease, takeLease } from './repl-attempt.mjs'
-import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
+import { closeLostRuns, traceAbsent } from './repl-trace.mjs'
+import { keepUnexpected } from './repl-unexpected.mjs'
+import { bindAttempt, releaseLease, renewLease, takeLease } from './repl-attempt.mjs'
+import { endRuns, killRun, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 
 /**
  * The REPL of an agent's attempt, `skraft_repl`: a JavaScript kernel, one per attempt, whose cells
@@ -14,7 +15,9 @@ import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
  * @typedef {import('./repl-runs.mjs').Entry} Entry
  * @typedef {{ launched: boolean, cancelled: boolean }} Flight
  *   a call between its start and the start of its cell: a cancellation in that window is kept, so that the cell never runs.
- * @typedef {{ entry: Entry | null, reaped: boolean, flight?: Flight | null }} ReplState
+ * @typedef {{ entry: Entry | null, reaped: boolean, flights?: Map<unknown, Flight>, starting?: Promise<unknown> }} ReplState
+ *   flights: the calls in flight, by the id of their request; starting: the entry being looked
+ *   up or started, which the next call waits for, so that two calls at once share one kernel.
  * @typedef {{ ok: boolean, code: string | null, text: string }} ReplOutcome
  *   text: what the agent reads: the cell's result, or the refusal's code and fixed reason.
  */
@@ -23,17 +26,21 @@ import { endRuns, liveRuns, recordProcesses, serveRun } from './repl-runs.mjs'
 const DEFAULT_BUDGET_MS = 90_000
 /** How long an attempt's kernel may stay unused, with no run alive, before it is ended. */
 const IDLE_MS = 15 * 60 * 1000
+/** How long ending a kernel waits for its runs to be over. */
+const RETIRE_WAIT_MS = 10_000
+/** How long a cell may run: the longest run, 7200 s, and a minute more. */
+const CELL_MS = 7_260_000
 
 /**
  * @param {any} deps @param {ReplState} state
  */
 export const createRepl = (deps, state) => Object.freeze({
-  /** @param {{ code: string }} request @returns {Promise<ReplOutcome>} */
+  /** @param {{ code: string, id?: unknown, reset?: boolean }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
   call: (request) => call(deps, state, request),
   /** Ends the kernel of an attempt that is over or unused; the server calls it every half minute. */
   sweep: () => sweep(deps, state),
-  /** The request in flight is cancelled: its awaits stop and the runs it started end. */
-  interrupt: () => interrupt(state),
+  /** The request is cancelled: its awaits stop and the runs it started end. @param {unknown} [id] */
+  interrupt: (id) => interrupt(state, id),
   /** The session closes: nothing is left running. */
   close: () => retire(deps, state),
 })
@@ -41,39 +48,79 @@ export const createRepl = (deps, state) => Object.freeze({
 /** An attempt of one working copy: the key a kernel is held under. @param {any} deps @param {{ slug: string, folder: string }} bound */
 const keyOf = (deps, { slug, folder }) => `${deps.repl.root}|${slug}/${folder}`
 
-/** @param {string} code @returns {ReplOutcome} */
-const refused = (code) => ({ ok: false, code, text: refusalText(code) })
+/** @param {string} code @param {string | null} [evidence] the file that holds the exception @returns {ReplOutcome} */
+const refused = (code, evidence = null) => ({ ok: false, code, text: refusalText(code, evidence) })
 
-/** @param {any} deps @param {ReplState} state @param {{ code: string }} request @returns {Promise<ReplOutcome>} */
-const call = async (deps, state, { code }) => {
-  state.flight ??= { launched: false, cancelled: false }
+/**
+ * The flight of a request: the one the server opened when the request arrived, else a new one.
+ * @param {ReplState} state @param {unknown} id @returns {Flight}
+ */
+export const openFlight = (state, id) => {
+  state.flights ??= new Map()
+  const flight = state.flights.get(id) ?? { launched: false, cancelled: false }
+  state.flights.set(id, flight)
+  return flight
+}
+
+/** @param {any} deps @param {ReplState} state @param {{ code: string, id?: unknown, reset?: boolean }} request @returns {Promise<ReplOutcome>} */
+const call = async (deps, state, { code, id, reset = false }) => {
+  const flight = openFlight(state, id)
   try {
-    return await inAttempt(deps, state, code)
+    return await inAttempt(deps, state, { code, flight, reset })
   } finally {
-    state.flight = null
+    state.flights?.delete(id)
   }
 }
 
-/** @param {any} deps @param {ReplState} state @param {string} code @returns {Promise<ReplOutcome>} */
-const inAttempt = async (deps, state, code) => {
+/** @param {any} deps @param {ReplState} state @param {{ code: string, flight: Flight, reset: boolean }} request @returns {Promise<ReplOutcome>} */
+const inAttempt = async (deps, state, request) => {
   const bound = await bindAttempt(deps)
   if (!bound.ok) return refused(bound.code)
-  const held = await entryFor(deps, state, bound)
-  if (!held.ok) return refused(held.code)
-  return evaluate(deps, state, held.entry, code, held.notice)
+  try {
+    return await inEntry(deps, state, bound, request)
+  } catch (error) {
+    return refused('repl-unexpected', await keepUnexpected(deps, bound.slug, error))
+  }
+}
+
+/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {{ code: string, flight: Flight, reset: boolean }} request @returns {Promise<ReplOutcome>} */
+const inEntry = async (deps, state, bound, request) => {
+  const held = await entryFor(deps, state, bound, request.reset)
+  if (!held.ok) return refused(held.code, held.evidence ?? null)
+  return evaluate(deps, held.entry, request, held.notice)
+}
+
+/**
+ * The entry of the attempt, one call after the other: a call that arrives while another starts
+ * the kernel waits for it and shares it.
+ * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
+ * @param {boolean} reset a fresh kernel, even when one serves the attempt
+ * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
+ */
+const entryFor = (deps, state, bound, reset) => {
+  const found = (state.starting ?? Promise.resolve()).then(() => entryNow(deps, state, bound, reset))
+  state.starting = found.catch(() => undefined)
+  return found
+}
+
+/** What the next result says first of the kernel it runs in. @param {Entry | null} current @param {string} key @param {boolean} reset */
+const noticeOf = (current, key, reset) => {
+  if (reset) return 'repl-reset'
+  return current !== null && current.key === key ? current.gone : null
 }
 
 /**
  * The entry of the attempt: the one in place, or a kernel started now, once the lease on the
  * attempt is held. A call of another attempt ends the kernel of the earlier one.
  * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
- * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string }>}
+ * @param {boolean} reset a fresh kernel, even when one serves the attempt
+ * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
-const entryFor = async (deps, state, bound) => {
+const entryNow = async (deps, state, bound, reset) => {
   const key = keyOf(deps, bound)
   const current = state.entry
-  if (current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
-  const notice = current !== null && current.key === key ? current.gone : null
+  if (!reset && current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
+  const notice = noticeOf(current, key, reset)
   await retire(deps, state)
   const started = await startEntry(deps, state, { ...bound, key })
   return started.ok ? { ok: true, entry: started.entry, notice } : started
@@ -84,17 +131,25 @@ const startEntry = async (deps, state, bound) => {
   await reapOnce(deps, state)
   const lease = await takeLease(deps, bound)
   if (lease === null) return notStarted('repl-held-elsewhere')
-  const entry = /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set(), signingKey: await signingKeyOf(deps, bound.events), chain: Promise.resolve() })
-  if (!(await startKernel(deps, entry))) {
-    await releaseLease(deps, bound, lease)
-    return notStarted('repl-failed')
-  }
+  const entry = await newEntry(deps, bound, lease)
+  const failure = await startKernel(deps, entry)
+  if (failure !== null) return kernelFailed(deps, bound, { lease, error: failure.error })
+  entry.told = await firstLines(deps, entry)
   state.entry = entry
   return { ok: /** @type {const} */ (true), entry }
 }
 
-/** @param {string} code */
-const notStarted = (code) => ({ ok: /** @type {const} */ (false), code })
+/** @param {any} deps @param {{ slug: string, folder: string, key: string, events: any[] }} bound @param {string} lease @returns {Promise<Entry>} */
+const newEntry = async (deps, bound, lease) => /** @type {Entry} */ ({ ...bound, lease, runs: new Map(), cells: 0, lastUsed: deps.clock.now().getTime(), gone: null, pending: new Set(), signingKey: await signingKeyOf(deps, bound.events), chain: Promise.resolve() })
+
+/** The kernel did not start: the lease is given back and the run's unexpected.log holds why. @param {any} deps @param {{ slug: string, folder: string }} bound @param {{ lease: string, error: unknown }} failure */
+const kernelFailed = async (deps, bound, { lease, error }) => {
+  await releaseLease(deps, bound, lease)
+  return notStarted('repl-failed', await keepUnexpected(deps, bound.slug, error))
+}
+
+/** @param {string} code @param {string | null} [evidence] */
+const notStarted = (code, evidence = null) => ({ ok: /** @type {const} */ (false), code, evidence })
 
 /** A server starting its first kernel ends what a server killed before it left running. @param {any} deps @param {ReplState} state */
 const reapOnce = async (deps, state) => {
@@ -103,14 +158,18 @@ const reapOnce = async (deps, state) => {
   await deps.repl.orphans.reap()
 }
 
-/** @param {any} deps @param {Entry} entry @returns {Promise<boolean>} whether the kernel started */
+/**
+ * @param {any} deps @param {Entry} entry @returns {Promise<{ error: unknown } | null>} null when the kernel started;
+ *   a kernel started and not recorded is ended
+ */
 const startKernel = async (deps, entry) => {
   try {
     entry.kernel = await deps.repl.kernels.start(eventsOf(deps, entry), deps.repl.root)
     await recordProcesses(deps, entry)
-    return true
-  } catch {
-    return false
+    return null
+  } catch (error) {
+    entry.kernel?.stop()
+    return { error }
   }
 }
 
@@ -123,7 +182,7 @@ const track = (entry, work) => {
 /** What the kernel asks of this server. @param {any} deps @param {Entry} entry @returns {import('../ports/kernel-host.mjs').KernelEvents} */
 const eventsOf = (deps, entry) => ({
   onRun: (request) => track(entry, serveRun(deps, entry, request)),
-  onKill: (rid, signal, graceSeconds) => entry.runs.get(rid)?.program?.kill(signal, graceSeconds * 1000),
+  onKill: (rid, signal, graceSeconds) => killRun(entry, { rid, signal, graceSeconds }),
   onAbsent: (notice) => { track(entry, traceAbsent(deps, entry, notice)) },
   onGone: (why) => { entry.gone = `repl-${why}`; endRuns(entry, 'SIGKILL', 0) },
 })
@@ -133,24 +192,47 @@ const retire = async (deps, state) => {
   const entry = state.entry
   if (entry === null) return
   state.entry = null
+  entry.retired = true
   endRuns(entry, 'SIGKILL', 0)
   entry.kernel.stop()
-  await Promise.allSettled([...entry.pending])
+  await settledWithin(deps, entry.pending, RETIRE_WAIT_MS)
+  await entry.recording
   await deps.repl.orphans.forget(deps.repl.server.pid)
   await releaseLease(deps, entry, entry.lease)
 }
 
-/** @param {any} deps @param {ReplState} state @param {Entry} entry @param {string} code @param {string | null} notice @returns {Promise<ReplOutcome>} */
-const evaluate = async (deps, state, entry, code, notice) => {
-  if (state.flight?.cancelled === true) return refused('repl-interrupted')
-  if (state.flight != null) state.flight.launched = true
-  entry.lastUsed = deps.clock.now().getTime()
+/**
+ * The runs in flight are awaited until they are over or the time is spent: a program that does
+ * not close after its SIGKILL never holds the end of the kernel.
+ * @param {any} deps @param {Set<Promise<void>>} pending @param {number} ms
+ */
+const settledWithin = (deps, pending, ms) => new Promise((resolve) => {
+  const stop = deps.timer.every(ms, () => { stop(); resolve(undefined) })
+  void Promise.allSettled([...pending]).then(() => { stop(); resolve(undefined) })
+})
+
+/** @param {any} deps @param {Entry} entry @param {{ code: string, flight: Flight, reset: boolean }} request @param {string | null} notice @returns {Promise<ReplOutcome>} */
+const evaluate = async (deps, entry, { code, flight }, notice) => {
+  if (flight.cancelled) return refused('repl-interrupted')
+  flight.launched = true
+  const startedAt = (entry.lastUsed = deps.clock.now().getTime())
   const budget = deps.repl.budgetMs ?? DEFAULT_BUDGET_MS
   const waiting = code.trim() === ''
   const outcome = waiting ? await entry.kernel.wait(budget) : await entry.kernel.evaluate(code, budget)
   if (outcome.status === 'busy') return refused('repl-busy')
   if (!waiting) entry.cells += 1
+  entry.cellSince = cellSince(entry, outcome, waiting ? null : startedAt)
   return present(deps, entry, outcome, notice)
+}
+
+/**
+ * Since when the cell in flight runs: the start of a cell still running, kept across the waits
+ * for it; null once it has ended.
+ * @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {number | null} startedAt null when the call waited
+ */
+const cellSince = (entry, outcome, startedAt) => {
+  if (outcome.status !== 'running') return null
+  return startedAt ?? entry.cellSince ?? null
 }
 
 /** @param {any} deps @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {string | null} notice @returns {Promise<ReplOutcome>} */
@@ -159,8 +241,37 @@ const present = async (deps, entry, outcome, notice) => {
   const { text, cut } = composeCell(partsOf(entry, outcome, cellLog))
   if (cut) await deps.files.write(entry.slug, cellLog, outcome.printed)
   const lost = ['restarted', 'crashed'].includes(outcome.status) ? `repl-${outcome.status}` : null
-  const heading = [lost ?? notice].filter((code) => code !== null).map(refusalText)
-  return { ok: lost === null, code: lost, text: [...heading, text].join('\n') }
+  const heading = [lost ?? notice].filter((code) => code !== null).map((code) => refusalText(code))
+  const lines = [...(await traceNotice(deps, entry)), ...heading, ...toldOnce(entry), text]
+  return { ok: lost === null, code: lost, text: lines.join('\n') }
+}
+
+/**
+ * What a kernel just started tells first: what it loaded of the project's REPL library, and the
+ * runs a gone server left open in the attempt, closed now as lost.
+ * @param {any} deps @param {Entry} entry @returns {Promise<string[]>}
+ */
+const firstLines = async (deps, entry) => {
+  const lost = await closeLostRuns(deps, entry)
+  return [...libraryLines(entry.kernel.lib ?? { loaded: [], failed: [] }), ...lost.map((run) => `r${run} lost with the server that started it`)]
+}
+
+/** What the first result of a kernel tells, once. @param {Entry} entry */
+const toldOnce = (entry) => {
+  const told = entry.told ?? []
+  entry.told = []
+  return told
+}
+
+/**
+ * Once a line of the trace or a log could not be written, every result says so first; the error
+ * goes to the run's unexpected.log, which the notice names.
+ * @param {any} deps @param {Entry} entry @returns {Promise<string[]>}
+ */
+const traceNotice = async (deps, entry) => {
+  if (entry.traceError === undefined) return []
+  entry.traceFailed ??= await keepUnexpected(deps, entry.slug, entry.traceError)
+  return [refusalText('repl-trace-failed', entry.traceFailed)]
 }
 
 /** @param {Entry} entry @param {import('../ports/kernel-host.mjs').CellOutcome} outcome @param {string} cellLog */
@@ -173,10 +284,10 @@ const partsOf = (entry, outcome, cellLog) => {
   return { finished, runs, printed: `${outcome.printed}${still}`, value: outcome.value, error: outcome.error, status: outcome.status, cellLog }
 }
 
-/** @param {ReplState} state */
-export const interrupt = (state) => {
-  const flight = state.flight
-  if (flight != null && !flight.launched) flight.cancelled = true
+/** A request not launched yet never launches its cell; a launched one interrupts it. @param {ReplState} state @param {unknown} [id] */
+export const interrupt = (state, id) => {
+  const flight = state.flights?.get(id)
+  if (flight !== undefined && !flight.launched) flight.cancelled = true
   else interruptCell(state)
 }
 
@@ -194,6 +305,28 @@ const sweep = async (deps, state) => {
   if (entry === null) return
   const bound = await bindAttempt(deps)
   const open = bound.ok && keyOf(deps, bound) === entry.key
-  const idle = deps.clock.now().getTime() - entry.lastUsed > IDLE_MS && liveRuns(entry).length === 0
-  if (!open || idle) await retire(deps, state)
+  if (!open || isIdle(deps, entry)) return retire(deps, state)
+  endOverdueCell(deps, state, entry)
+  await renew(deps, state, entry)
+}
+
+/** Unused for 15 minutes, with no cell in flight and no run alive. @param {any} deps @param {Entry} entry */
+const isIdle = (deps, entry) => deps.clock.now().getTime() - entry.lastUsed > IDLE_MS && entry.cellSince == null && liveRuns(entry).length === 0
+
+/**
+ * A cell that has run past its limit is interrupted; the kernel ends it if it still runs three
+ * seconds later, and the next call is told the kernel was restarted.
+ * @param {any} deps @param {ReplState} state @param {Entry} entry
+ */
+const endOverdueCell = (deps, state, entry) => {
+  if (entry.cellSince == null || deps.clock.now().getTime() - entry.cellSince <= CELL_MS) return
+  entry.cellSince = null
+  interruptCell(state)
+}
+
+/** The lease of a kernel kept is renewed; one another server took over ends the kernel. @param {any} deps @param {ReplState} state @param {Entry} entry */
+const renew = async (deps, state, entry) => {
+  const renewed = await renewLease(deps, entry, entry.lease)
+  if (renewed === null) return retire(deps, state)
+  entry.lease = renewed
 }

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { logMatches, readTrace } from '../../../../plugins/skraft-framework/engine/application/evidence/run-trace-store.mjs'
 import { SLUG, pipelineRepository } from '../support/pipeline-repository.mjs'
@@ -44,6 +44,24 @@ test('a run is traced with the HEAD of the repository before and after it, a cle
   assert.equal(log, 'seen\n')
   assert.equal(ended.sha256, createHash('sha256').update(log).digest('hex'))
   assert.equal(await logMatches(inProcessServices(cwd).adapters(), { slug: SLUG }, ended), true)
+})
+
+test('a run\'s log is written as it runs, and the hash its line holds is the one of the whole log', BOUNDED, async (t) => {
+  const { cwd, host } = await attemptWithRepl(t)
+  const log = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, FOLDER, '1.log')
+
+  await host.call('skraft_repl', { code: `globalThis.slow = run([${NODE}, '-e', 'console.log("first"); setTimeout(() => console.log("last"), 1500)'])` })
+  let early = ''
+  for (let tries = 0; tries < 50 && early === ''; tries += 1) {
+    await new Promise((done) => setTimeout(done, 20))
+    early = existsSync(log) ? readFileSync(log, 'utf8') : ''
+  }
+  await host.call('skraft_repl', { code: 'await slow; 1' })
+
+  const [, ended] = (await readBack(cwd)).records
+  assert.equal(early, 'first\n')
+  assert.equal(readFileSync(log, 'utf8'), 'first\nlast\n')
+  assert.equal(ended.sha256, createHash('sha256').update('first\nlast\n').digest('hex'))
 })
 
 test('a file written after a run was traced is refused: a line edited, a line added without the key and a log rewritten each show', BOUNDED, async (t) => {

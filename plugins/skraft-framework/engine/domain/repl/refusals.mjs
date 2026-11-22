@@ -9,13 +9,18 @@ export const REFUSALS = Object.freeze({
   'repl-busy': 'a cell of this attempt is still running: call skraft_repl with empty code to wait for it, or wait for the cancellation',
   'repl-held-elsewhere': 'another skraft MCP server holds the REPL of this attempt; use that session, or end it',
   'repl-restarted': 'the kernel was ended because a cell would not stop: its variables are gone, and the runs it had started were ended',
+  'repl-reset': 'the kernel was ended on request and a fresh one started: its variables are gone, and the runs it had started were ended',
   'repl-crashed': 'the kernel ended by itself: its variables are gone, and the runs it had started were ended',
   'repl-interrupted': 'the call was cancelled before its cell started; nothing ran',
-  'repl-failed': 'skraft could not start the kernel of this attempt; unexpected.log of the run holds what happened',
+  'repl-failed': 'skraft could not start the kernel of this attempt',
+  'repl-trace-failed': 'a line of the trace of this attempt could not be written, so the trace is incomplete',
+  'repl-unexpected': 'the call stopped on an unexpected error of skraft; what was left of it did not run',
 })
 
-/** @param {string} code */
-export const refusalText = (code) => `${code}: ${REFUSALS[code]}`
+/**
+ * @param {string} code @param {string | null} [evidence] the file that holds the exception, when there is one
+ */
+export const refusalText = (code, evidence = null) => `${code}: ${REFUSALS[code]}${evidence === null ? '' : `; the error is in ${evidence}`}`
 
 /** Why a run a cell asked for does not start, by what is wrong with it. */
 export const RUN_REFUSALS = Object.freeze({
@@ -23,4 +28,17 @@ export const RUN_REFUSALS = Object.freeze({
   cwd: 'run() takes a cwd that is a non-empty text',
   timeout: 'run() takes a timeout of 1 to 7200 seconds',
   option: 'run() takes a gate and a label that are non-empty texts',
+  unknown: 'run() takes only these options: cwd, timeout, gate, label',
+  many: 'run() runs at most 8 programs of an attempt at once: await or kill one first',
 })
+
+/** The signals a cell may end its run with, and the longest grace before SIGKILL, in seconds. */
+export const KILL_SIGNALS = Object.freeze(['SIGTERM', 'SIGINT', 'SIGKILL'])
+export const MAX_GRACE_S = 30
+export const KILL_REFUSAL = 'kill() takes SIGTERM, SIGINT or SIGKILL and a grace of 0 to 30 whole seconds'
+
+/** @param {unknown} signal @param {unknown} grace seconds @returns {string | null} why the kill is refused, null when it is not */
+export const refusalOfKill = (signal, grace) => {
+  const bounded = Number.isInteger(grace) && /** @type {number} */ (grace) >= 0 && /** @type {number} */ (grace) <= MAX_GRACE_S
+  return KILL_SIGNALS.includes(/** @type {string} */ (signal)) && bounded ? null : KILL_REFUSAL
+}

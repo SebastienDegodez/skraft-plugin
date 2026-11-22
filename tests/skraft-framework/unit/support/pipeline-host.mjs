@@ -161,8 +161,9 @@ export const agent = ({ result = { status: 'done', summary: 'done' }, fill = tru
   }
   if (result !== null) await host.tracking.write(host.slug, step.result, typeof result === 'string' ? result : JSON.stringify(result))
   await (work ?? scenarioWork(host, step, exemption))(host)
-  if (step.agent === 'software-engineer' && trace !== false) await writeDeliveryTrace(host, step, trace)
-  if (plansScenarios(step) && trace !== false) await writeRedTrace(host, step)
+  const traced = trace === false || host.tracking.files.has(`${host.slug}/logs/runs/${step.step}-${step.visit}-${step.attempt}/runs.jsonl`)
+  if (step.agent === 'software-engineer' && !traced) await writeDeliveryTrace(host, step, trace)
+  if (plansScenarios(step) && !traced) await writeRedTrace(host, step)
   return answer
 }
 

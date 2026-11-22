@@ -1,8 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createRepl } from '../../../../plugins/skraft-framework/engine/application/repl/repl-usecase.mjs'
+import { createRunDigests } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/run-digests.mjs'
 import { createProgramLauncher } from '../../../../plugins/skraft-framework/engine/infrastructure/process/program-launcher.mjs'
 import { createNodeKernelHost } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/node-kernel.mjs'
 import { createOrphanJournal, processCreation } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/orphans.mjs'
@@ -14,13 +15,14 @@ import { tempFolder } from '../support/workspace.mjs'
 // process, real programs started in a real folder, the real orphan journal.
 const BOUNDED = { timeout: 60_000 }
 const NODE = JSON.stringify(process.execPath)
+const SERVER_CREATED = await processCreation(process.pid)
 
 const realRun = (t, call) => {
   const root = tempFolder(t)
   mkdirSync(join(root, 'api'))
   const orphans = createOrphanJournal({ folder: join(root, '.copilot-tracking', 'skraft-repl') })
   const host = scripted({}, (it) => nominal(it).map((behaviour, index) => (index === 3 ? agent({ work: async (repos) => { await call(repl, root); green(SLUG, 'Checkout', '')(repos) } })(it) : behaviour)))
-  host.deps.repl = { root, kernels: createNodeKernelHost(), launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: processCreation(process.pid) }, budgetMs: 30_000 }
+  host.deps.repl = { root, kernels: createNodeKernelHost(), launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: SERVER_CREATED }, budgetMs: 30_000, digests: createRunDigests() }
   const repl = createRepl(host.deps, { entry: null, reaped: false })
   t.after(() => repl.close())
   return { host, repl, root, orphans }
@@ -39,6 +41,70 @@ test('a software engineer runs real programs through the REPL: an argv array and
   assert.match(lines[0], /^r1 exit 1 \(\d+\.\d s\) .* - logs\/runs\/deliver-1-1\/1\.log$/)
   assert.match(lines[1], /^r2 exit 0 \(\d+\.\d s\) echo linted - logs\/runs\/deliver-1-1\/2\.log$/)
   assert.equal(lines[2], "=> [ 1, '3 passed', 0, 'linted' ]")
+})
+
+test('a run\'s folder is traced relative to the working copy, with / between its parts, however the cell named it', BOUNDED, async (t) => {
+  const { host } = realRun(t, async (repl, root) => {
+    mkdirSync(join(root, 'api', 'src'))
+    await repl.call({ code: `await run([process.execPath, '-e', '0'], { cwd: ${JSON.stringify(join(root, 'api'))} }); await run([process.execPath, '-e', '0'], { cwd: 'api/./src/' })` })
+  })
+
+  await host.start()
+
+  const trace = host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
+  assert.deepEqual(trace.filter(({ type }) => type === 'run').map(({ cwd }) => cwd), ['api', 'api/src'])
+})
+
+test('the project\'s REPL library under .repl/lib is in every cell as lib.<name>, its modules may start runs, and one that throws on load leaves the kernel usable', BOUNDED, async (t) => {
+  const answers = []
+  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: '[lib.greet.hello(), (await lib.greet.check()).exitCode, typeof lib.broken]' })) })
+  mkdirSync(join(root, '.repl', 'lib'), { recursive: true })
+  writeFileSync(join(root, '.repl', 'lib', 'greet.mjs'), "export const hello = () => 'hello'\nexport const check = () => run([process.execPath, '-e', '0'], { label: 'from lib' })\n")
+  writeFileSync(join(root, '.repl', 'lib', 'broken.mjs'), "throw new Error('broken on load')\n")
+
+  await host.start()
+
+  const lines = answers[0].text.split('\n')
+  assert.deepEqual(lines.slice(0, 2), ['lib: greet', 'lib: broken could not be loaded (it threw, or took more than 10 seconds); the kernel goes on without it'])
+  assert.match(lines[2], /^r1 exit 0 /)
+  assert.equal(lines[3], "=> [ 'hello', 0, 'undefined' ]")
+})
+
+test('require in a cell finds the packages of .repl first, then those of the working copy', BOUNDED, async (t) => {
+  const answers = []
+  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: "[require('fake-dep').name, require('root-dep').name, require('node:path').sep.length]" })) })
+  for (const [folder, name] of [[join(root, '.repl', 'node_modules', 'fake-dep'), 'from .repl'], [join(root, 'node_modules', 'root-dep'), 'from the working copy']]) {
+    mkdirSync(folder, { recursive: true })
+    writeFileSync(join(folder, 'index.js'), `module.exports = { name: ${JSON.stringify(name)} }\n`)
+  }
+  writeFileSync(join(root, '.repl', 'package.json'), JSON.stringify({ private: true, dependencies: { 'fake-dep': '1.0.0' } }))
+
+  await host.start()
+
+  assert.equal(answers[0].text, "=> [ 'from .repl', 'from the working copy', 1 ]")
+})
+
+test('a .repl/package.json with dependencies and no .repl/node_modules is told at the first result', BOUNDED, async (t) => {
+  const answers = []
+  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: '1' })) })
+  mkdirSync(join(root, '.repl'))
+  writeFileSync(join(root, '.repl', 'package.json'), JSON.stringify({ private: true, dependencies: { 'fake-dep': '1.0.0' } }))
+
+  await host.start()
+
+  assert.equal(answers[0].text, 'lib: the packages of .repl/package.json are not installed: run npm ci --prefix .repl in the working copy\n=> 1')
+})
+
+test('a cell that prints 8 MiB leaves a cell log of 1 MiB at most, its first and last lines kept', BOUNDED, async (t) => {
+  const { host } = realRun(t, async (repl) => {
+    await repl.call({ code: "const line = 'x'.repeat(1023); console.log('first'); for (let i = 0; i < 8192; i += 1) console.log(line); console.log('last')" })
+  })
+
+  await host.start()
+
+  const log = host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/cell-1.log`)
+  assert.ok(Buffer.byteLength(log) <= 1_048_576 + 200, `${Buffer.byteLength(log)} bytes`)
+  assert.deepEqual([log.startsWith('first\n'), log.endsWith('\nlast\n')], [true, true])
 })
 
 test('a program started in a folder outside the working copy is not started, and the cell reads why', BOUNDED, async (t) => {

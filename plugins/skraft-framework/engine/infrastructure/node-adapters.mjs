@@ -20,6 +20,7 @@ import { createNodeCommandRunner, createNodeExecutables } from './process/node-p
 import { createCopilotSdkLocator } from './copilot/copilot-sdk-locator.mjs'
 import { createProgramLauncher } from './process/program-launcher.mjs'
 import { createNodeKernelHost } from './repl/node-kernel.mjs'
+import { createRunDigests } from './repl/run-digests.mjs'
 import { createOrphanJournal, processCreation } from './repl/orphans.mjs'
 
 /**
@@ -103,13 +104,22 @@ const programs = (cwd, env, signal) => {
   }
 }
 
-/** This server's own start time, read once: the system is asked once per process, not at each call. @type {{ created: string | null } | null} */
-let serverStart = null
+/**
+ * This server's own start time, asked of the system once per process, while the server goes on;
+ * null until the system has answered, or when it cannot.
+ * @type {{ created: string | null, asked: boolean }}
+ */
+const serverStart = { created: null, asked: false }
 
 /** @returns {{ pid: number, created: string | null }} */
 const thisServer = () => {
-  serverStart ??= { created: processCreation(process.pid) }
-  return { pid: process.pid, ...serverStart }
+  if (!serverStart.asked) askServerStart()
+  return { pid: process.pid, created: serverStart.created }
+}
+
+const askServerStart = () => {
+  serverStart.asked = true
+  void processCreation(process.pid).then((created) => { serverStart.created = created })
 }
 
 /**
@@ -122,6 +132,7 @@ const replAdapters = (cwd, env) => Object.freeze({
   root: cwd,
   kernels: createNodeKernelHost(),
   launcher: createProgramLauncher({ root: cwd, env }),
+  digests: createRunDigests(),
   orphans: createOrphanJournal({ folder: join(cwd, '.copilot-tracking', 'skraft-repl') }),
   locks: createNodeRunLock({ root: cwd }),
   get server() { return thisServer() },

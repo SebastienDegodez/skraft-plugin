@@ -27,14 +27,34 @@ const endOf = (run) => {
 /** One line per run: its id, how it stands, how long it took, its command and its log. @param {RunLine} run */
 export const runLine = (run) => `r${run.id} ${endOf(run)} (${seconds(run.durationMs)}) ${shown(run.command)} - ${run.log}`
 
+const NOT_INSTALLED = 'lib: the packages of .repl/package.json are not installed: run npm ci --prefix .repl in the working copy'
+
+/**
+ * What the first result of a kernel says of the project's REPL library: the modules it loaded,
+ * then each one it could not.
+ * @param {{ loaded: string[], failed: string[], notInstalled?: boolean }} lib @returns {string[]}
+ */
+export const libraryLines = ({ loaded, failed, notInstalled = false }) => [
+  ...(notInstalled ? [NOT_INSTALLED] : []),
+  ...(loaded.length === 0 ? [] : [`lib: ${loaded.join(', ')}`]),
+  ...failed.map((name) => `lib: ${name} could not be loaded (it threw, or took more than 10 seconds); the kernel goes on without it`),
+]
+
 /** @param {RunLine} run */
 const doneLine = (run) => `[run-done r${run.id} ${endOf(run)} in ${seconds(run.durationMs)}: ${shown(run.command)}]`
 
 /** The trailing value or the error of the cell. @param {CellParts} parts @returns {string[]} */
 const closing = ({ value, error, status }) => {
-  if (error !== null) return [`${status === 'interrupted' ? 'interrupted' : 'error'}: ${error}`]
+  if (error !== null) return [`${status === 'interrupted' ? 'interrupted' : 'error'}: ${error}`, ...hintOf(error)]
   return value === null ? [] : [`=> ${value}`]
 }
+
+/** Node's error for a top-level const or let declared again (measured on Node 22). */
+const REDECLARED = /^SyntaxError: Identifier '[^']+' has already been declared/
+const REDECLARED_HINT = 'hint: a top-level const or let lives as long as the kernel: assign it again without const or let, use another name, or call skraft_repl with reset: true for a fresh kernel'
+
+/** @param {string} error @returns {string[]} */
+const hintOf = (error) => (REDECLARED.test(error) ? [REDECLARED_HINT] : [])
 
 /**
  * The text kept of an output past the room it has: its first and last halves around a marker.

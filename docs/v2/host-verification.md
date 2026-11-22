@@ -32,6 +32,11 @@ Non mesuré, faute de pouvoir le faire ici sans session interactive ni autre hô
 - Windows : choix du shell (Git Bash, puis `pwsh`, puis `powershell`), arrêt de l'arbre par `taskkill`, heure de création d'un processus par PowerShell. Écrits, jamais lancés.
 - Les notifications de progression d'une cellule longue (`progressToken`) : non branchées.
 
+| Comportement | Hôte | Verdict | Où |
+| --- | --- | --- | --- |
+| `reset: true` sans annulation : un agent sort d'une cellule bloquée sur un hôte qui n'envoie jamais `notifications/cancelled` | Claude Code, Copilot CLI, VS Code | not measured ; testé sur hôte simulé (`while (true) {}` arrêté en moins de 10 s) | `application/repl/repl-usecase.mjs` (`reset`) |
+| `.repl/lib` sous Windows : chargement des modules par `pathToFileURL`, `require` depuis `.repl/`, arrêt de l'arbre du noyau par `taskkill /T /F` | Windows | not measured ; écrit, testé sous macOS seulement | `infrastructure/repl/repl-library.mjs`, `repl-require.mjs`, `node-kernel.mjs` |
+
 ### #566 — périmètre des preuves existantes
 
 Les mesures du 2026-11-12 ci-dessous sont historiques : le jugement `unforeseen` est désormais

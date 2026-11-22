@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { windowsTreeKill } from '../process/node-processes.mjs'
@@ -12,21 +12,39 @@ import { windowsTreeKill } from '../process/node-processes.mjs'
  * @typedef {{ pid: number, created: string | null }} Tracked
  *   created: the system's start time of the process, null when it cannot be read.
  * @typedef {{ server: Tracked, kernel: Tracked | null, runs: Tracked[] }} Entry
- * @typedef {{ platform?: NodeJS.Platform, creationOf?: (pid: number) => string | null, kill?: (pid: number) => void }} OrphanHost
+ * @typedef {{ platform?: NodeJS.Platform, creationOf?: (pid: number) => Promise<string | null> | string | null, exists?: (pid: number) => boolean, kill?: (pid: number) => void }} OrphanHost
+ *   creationOf: null when the start time cannot be read; exists: false only when the system says no process runs under the pid.
+ * @typedef {Required<Pick<OrphanHost, 'creationOf' | 'exists' | 'kill'>>} ReapHost
  */
 
 /**
- * The system's start time of a process, null when none runs under that pid or it cannot be read.
- * @param {number} pid @param {NodeJS.Platform} platform @returns {string | null}
+ * The program that prints the system's start time of a process.
+ * @param {number} pid @param {NodeJS.Platform} platform @returns {{ file: string, args: string[] }}
  */
-export const processCreation = (pid, platform = process.platform) => {
-  const [file, args] = platform === 'win32'
-    ? ['powershell', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid}).StartTime.ToFileTimeUtc()`]]
-    : ['ps', ['-o', 'lstart=', '-p', String(pid)]]
-  const found = spawnSync(file, args, { encoding: 'utf8', windowsHide: true, timeout: 10_000 })
-  const text = found.status === 0 ? String(found.stdout).trim() : ''
-  return text === '' ? null : text
-}
+export const creationReader = (pid, platform) => (platform === 'win32'
+  ? { file: 'powershell', args: ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid}).StartTime.ToFileTimeUtc()`] }
+  : { file: 'ps', args: ['-o', 'lstart=', '-p', String(pid)] })
+
+/** How long the system may take to give a start time. */
+const CREATION_TIMEOUT_MS = 10_000
+
+/**
+ * The system's start time of a process, null when none runs under that pid or it cannot be read.
+ * The program runs while this server goes on: it never holds the server's other calls.
+ * @param {number} pid @param {NodeJS.Platform} platform @param {{ file: string, args: string[] }} [reader]
+ * @returns {Promise<string | null>}
+ */
+export const processCreation = (pid, platform = process.platform, { file, args } = creationReader(pid, platform)) => new Promise((resolve) => {
+  const child = spawn(file, args, { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true, timeout: CREATION_TIMEOUT_MS })
+  /** @type {Buffer[]} */
+  const out = []
+  child.stdout.on('data', (/** @type {Buffer} */ chunk) => out.push(chunk))
+  child.once('error', () => resolve(null))
+  child.once('close', (code) => resolve(creationText(code, Buffer.concat(out).toString('utf8'))))
+})
+
+/** @param {number | null} code @param {string} text */
+const creationText = (code, text) => (code === 0 && text.trim() !== '' ? text.trim() : null)
 
 /**
  * Ends a process and everything it started: its process group under POSIX, its tree under Windows.
@@ -50,18 +68,18 @@ const sigkill = (target) => {
 /**
  * @param {{ folder: string } & OrphanHost} options folder: the absolute folder the entries are written in
  */
-export const createOrphanJournal = ({ folder, platform = process.platform, creationOf = (pid) => processCreation(pid, platform), kill = (pid) => killTree(pid, platform) }) => {
+export const createOrphanJournal = ({ folder, platform = process.platform, creationOf = (pid) => processCreation(pid, platform), exists = processExists, kill = (pid) => killTree(pid, platform) }) => {
   return Object.freeze({
     /** @param {Entry} entry */
     keep: (entry) => keepEntry(folder, entry),
     /** @param {number} serverPid */
     forget: (serverPid) => rm(join(folder, `${serverPid}.json`), { force: true }),
-    /** The process under a pid, with its start time, as `keep` records it. @param {number} pid @returns {Tracked} */
-    track: (pid) => ({ pid, created: creationOf(pid) }),
+    /** The process under a pid, with its start time, as `keep` records it. @param {number} pid @returns {Promise<Tracked>} */
+    track: async (pid) => ({ pid, created: await creationOf(pid) }),
     /** Whether the process recorded is certainly gone. @param {Tracked} tracked */
-    gone: (tracked) => isGone(tracked, { creationOf }),
+    gone: (tracked) => isGone(tracked, { creationOf, exists }),
     /** Ends what the servers that are gone left running; returns how many processes it ended. */
-    reap: () => reap(folder, { creationOf, kill }),
+    reap: () => reap(folder, { creationOf, exists, kill }),
   })
 }
 
@@ -71,7 +89,7 @@ const keepEntry = async (folder, entry) => {
   await writeFile(join(folder, `${entry.server.pid}.json`), JSON.stringify(entry), 'utf8')
 }
 
-/** @param {string} folder @param {Required<Pick<OrphanHost, 'creationOf' | 'kill'>>} host @returns {Promise<number>} */
+/** @param {string} folder @param {ReapHost} host @returns {Promise<number>} */
 const reap = async (folder, host) => {
   let ended = 0
   for (const name of await names(folder)) ended += await reapEntry(join(folder, name), host)
@@ -81,18 +99,25 @@ const reap = async (folder, host) => {
 /** @param {string} folder @returns {Promise<string[]>} */
 const names = (folder) => readdir(folder).then((all) => all.filter((name) => name.endsWith('.json')), () => [])
 
-/** @param {string} path @param {Required<Pick<OrphanHost, 'creationOf' | 'kill'>>} host @returns {Promise<number>} */
+/** @param {string} path @param {ReapHost} host @returns {Promise<number>} */
 const reapEntry = async (path, host) => {
   const entry = await readEntry(path)
   if (entry === null) {
     await rm(path, { force: true })
     return 0
   }
-  if (!isGone(entry.server, host)) return 0
-  const left = [entry.kernel, ...entry.runs].filter((one) => one !== null && isSame(one, host))
-  for (const one of left) host.kill(/** @type {Tracked} */ (one).pid)
+  if (!(await isGone(entry.server, host))) return 0
+  const left = await stillRunning([entry.kernel, ...entry.runs], host)
+  for (const one of left) host.kill(one.pid)
   await rm(path, { force: true })
   return left.length
+}
+
+/** The recorded processes that are still the very ones recorded. @param {Array<Tracked | null>} recorded @param {ReapHost} host @returns {Promise<Tracked[]>} */
+const stillRunning = async (recorded, host) => {
+  const present = /** @type {Tracked[]} */ (recorded.filter((one) => one !== null))
+  const same = await Promise.all(present.map((one) => isSame(one, host)))
+  return present.filter((_, index) => same[index])
 }
 
 /** @param {string} path @returns {Promise<Entry | null>} */
@@ -107,16 +132,32 @@ const readEntry = async (path) => {
 
 /**
  * Whether the very process recorded runs: its start time is the recorded one.
- * @param {Tracked} tracked @param {Pick<OrphanHost, 'creationOf'>} host
+ * @param {Tracked} tracked @param {ReapHost} host
  */
-const isSame = ({ pid, created }, host) => created !== null && /** @type {(pid: number) => string | null} */ (host.creationOf)(pid) === created
+const isSame = async ({ pid, created }, host) => created !== null && host.exists(pid) && (await host.creationOf(pid)) === created
 
 /**
- * Whether the process recorded is certainly gone: none runs under its pid, or one that started
- * at another time. A start time that was never readable never proves it.
- * @param {Tracked} tracked @param {Pick<OrphanHost, 'creationOf'>} host
+ * Whether the process recorded is certainly gone: the system says none runs under its pid, or
+ * one that started at another time runs there. A start time that cannot be read, now or when it
+ * was recorded, never proves it.
+ * @param {Tracked} tracked @param {Pick<OrphanHost, 'creationOf' | 'exists'>} host
  */
-const isGone = ({ pid, created }, host) => {
-  const now = /** @type {(pid: number) => string | null} */ (host.creationOf)(pid)
-  return now === null || (created !== null && now !== created)
+const isGone = async ({ pid, created }, host) => {
+  if (!(/** @type {(pid: number) => boolean} */ (host.exists)(pid))) return true
+  const now = created === null ? null : await /** @type {(pid: number) => Promise<string | null>} */ (host.creationOf)(pid)
+  return now !== null && now !== created
+}
+
+/**
+ * Whether a process runs under the pid, as the system answers a signal 0: ESRCH alone says none
+ * does; a refusal (EPERM) says one runs that this user may not signal.
+ * @param {number} pid
+ */
+export const processExists = (pid) => {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return /** @type {NodeJS.ErrnoException} */ (error).code !== 'ESRCH'
+  }
 }
