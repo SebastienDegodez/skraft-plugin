@@ -78,9 +78,12 @@ test('the engineer is told every group, the acceptance tests it never changes, t
     '- root-1 "test(checkout): acceptance tests S1–S3": tests/Integration/WalkingSkeletonTests.cs, tests/Acceptance/S1AcceptanceTests.cs, tests/Acceptance/S2AcceptanceTests.cs, tests/Acceptance/S3AcceptanceTests.cs',
     '- The walking skeleton passes in that commit, with every acceptance test and the whole suite.',
     "- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit nothing until every acceptance test and the whole suite pass; change another component than the groups' own only where a group needs it, in the same commit. The pass ends when that one commit is made, or on a blocker.",
-    '- Commit once, in bash (never PowerShell), naming each file you changed:',
+    '- Commit once, naming each file you changed; in sh or PowerShell 7:',
     '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1–S3 <the rules of the story, as your implementation plan names them>" -m "Refs: #42"',
+    '  in Windows PowerShell 5.1:',
+    '  dotnet test; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(checkout): S1–S3 <the rules of the story, as your implementation plan names them>" -m "Refs: #42" } }',
   ].join('\n')), deliver)
+  assert.doesNotMatch(deliver, /never PowerShell/)
   assert.doesNotMatch(deliver, /Commit each TDD cycle|walking skeleton root-/)
   const plan = promptOf(host, `skraft ${SLUG} · distill · attempt 1`)
   assert.ok(plan.includes(`- Run the acceptance tests once, sending the whole output to ${TRACKING}/logs/distill-1-red.log, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`), plan)
@@ -328,7 +331,8 @@ test('the exact green of the story names its scenarios and runs the whole test c
 
   const deliver = promptOf(host, `skraft ${SLUG} · deliver · attempt 1`)
   assert.ok(deliver.includes(`\n- 1 of 2 — S1 "${LONG}" (component api, tags @walking-skeleton @happy-path)\n- 2 of 2 — S2 "Customer gets a receipt" (component api)\n`), deliver)
-  assert.ok(deliver.includes('\n  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1–S2 <the rules of the story, as your implementation plan names them>"\n'), deliver)
+  const commit = 'git commit -s -m "feat(checkout): S1–S2 <the rules of the story, as your implementation plan names them>"'
+  assert.ok(deliver.includes(`\n  dotnet test && git add <each file you changed> && ${commit}\n  in Windows PowerShell 5.1:\n  dotnet test; if ($?) { git add <each file you changed>; if ($?) { ${commit} } }\n`), deliver)
   assert.ok(!deliver.includes('filter'), deliver)
 })
 

@@ -143,12 +143,16 @@ const SCENARIO_WORK = Object.freeze({
 
 /**
  * The commits a pass makes: the red, never chained to the test command, whose output tells a
- * failing assertion from a build error; the green, once, chained in bash to the tests of every component of the story.
+ * failing assertion from a build error; the green, once, chained to the tests of every component of the story, in sh or
+ * PowerShell 7 and in Windows PowerShell 5.1, which has no `&&`.
  * @type {Readonly<Record<BriefScenario['kind'], (scenario: BriefScenario, story: { slug: string, issue: number | null }) => string[]>>}
  */
 const SCENARIO_COMMIT = Object.freeze({
   plan: ({ redLog }, story) => [`- Run the acceptance tests once, sending the whole output to ${redLog}, and read it: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`, `  ${commitCommand('test', 'acceptance tests S1–S<n>, n the last scenario of your test plan', story)}`],
-  delivery: ({ groups }, story) => ['- Commit once, in bash (never PowerShell), naming each file you changed:', `  ${greenLine(groups, story)}`],
+  delivery: ({ groups }, story) => [
+    '- Commit once, naming each file you changed; in sh or PowerShell 7:', `  ${chained(greenSteps(groups, story))}`,
+    '  in Windows PowerShell 5.1:', `  ${chainedIn51(greenSteps(groups, story))}`,
+  ],
   rework: () => [],
 })
 
@@ -160,10 +164,16 @@ const deliveryLabel = (groups) => {
 }
 
 /** The test command of each component the groups touch, once. @param {BriefGroup[]} groups */
-const testsOf = (groups) => [...new Set(groups.map(({ test }) => test ?? '<the test command>'))].join(' && ')
+const testsOf = (groups) => [...new Set(groups.map(({ test }) => test ?? '<the test command>'))]
 
-/** @param {BriefGroup[]} groups @param {{ slug: string, issue: number | null }} story */
-const greenLine = (groups, story) => `${testsOf(groups)} && git add <each file you changed> && ${commitCommand('feat', `${deliveryLabel(groups)} <the rules of the story, as your implementation plan names them>`, story)}`
+/** The commands of the green, each run only once the one before passed. @param {BriefGroup[]} groups @param {{ slug: string, issue: number | null }} story */
+const greenSteps = (groups, story) => [...testsOf(groups), 'git add <each file you changed>', commitCommand('feat', `${deliveryLabel(groups)} <the rules of the story, as your implementation plan names them>`, story)]
+
+/** Commands chained with `&&`, as sh and PowerShell 7 run them. @param {string[]} steps */
+const chained = (steps) => steps.join(' && ')
+
+/** Commands chained on `$?`, as Windows PowerShell 5.1 runs them. @param {string[]} steps */
+const chainedIn51 = ([first, ...rest]) => `${first}${rest.map((step) => `; if ($?) { ${step}`).join('')}${' }'.repeat(rest.length)}`
 
 /**
  * The exact `git commit` of the red or of the green: the story's issue as the last line of
