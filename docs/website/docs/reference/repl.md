@@ -6,7 +6,7 @@ persona: software-engineer
 
 # The REPL of an attempt: `skraft_repl`
 
-`skraft_repl` is an [MCP tool](./mcp-server.md) that gives the agent of an open attempt a persistent JavaScript (node) REPL. The agent runs its project commands there (build, format, lint, test, architecture, coverage, end to end), and the engine writes down what each program did. Those recorded runs are the proof of a delivery; a command the agent runs in `Bash` leaves no record and proves nothing.
+`skraft_repl` is an [MCP tool](./mcp-server.md) that gives the agent of an open attempt a persistent JavaScript (node) REPL. The agent runs its project commands there (build, format, lint, test, architecture, coverage, end to end), and the engine writes down what each program did. The engine requires none of those runs yet: the trace is a record, which a later change will check.
 
 Why the engine records the runs instead of reading what an agent says of them: [Architecture](../explanation/architecture.md).
 

@@ -6,7 +6,7 @@ persona: software-engineer
 
 # Le REPL d'une tentative : `skraft_repl`
 
-`skraft_repl` est un [outil MCP](./mcp-server.md) qui donne à l'agent d'une tentative ouverte un REPL JavaScript (node) persistant. L'agent y lance les commandes de son projet (build, format, lint, test, architecture, couverture, bout en bout), et le moteur note ce que chaque programme a fait. Ces runs enregistrés sont la preuve d'une livraison ; une commande lancée dans `Bash` ne laisse aucune trace et ne prouve rien.
+`skraft_repl` est un [outil MCP](./mcp-server.md) qui donne à l'agent d'une tentative ouverte un REPL JavaScript (node) persistant. L'agent y lance les commandes de son projet (build, format, lint, test, architecture, couverture, bout en bout), et le moteur note ce que chaque programme a fait. Le moteur n'exige encore aucun de ces runs : la trace est un enregistrement, qu'un changement ultérieur vérifiera.
 
 Pourquoi le moteur enregistre les runs au lieu de lire ce qu'un agent en dit : [Architecture](../explanation/architecture.md).
 

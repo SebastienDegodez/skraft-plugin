@@ -68,8 +68,7 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
 - Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
   (git diff per step), gates, review verdict, TDD commit order and kinds; no replay.
 - Besides the DELIVER gates, a project command runs only when an agent asks for it through
-  `skraft_repl`, which records each run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Agents
-  keep `Bash`, but only the runs of the REPL are a record. Only `infrastructure/process/` and
+  `skraft_repl`, which records each run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. Only `infrastructure/process/` and
   `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no

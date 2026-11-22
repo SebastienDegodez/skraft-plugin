@@ -99,8 +99,7 @@ step. Never build a class no active scenario requires.
   `lint`) and the whole suite run once each, before that one commit, the suite in the command
   that commits; never a confirmation re-run, never a separate build when the test run compiles.
 - **Where commands run.** Every test, build, format and lint command runs through `skraft_repl`
-  (`run(command, { cwd })`, `gate(name, command, { cwd })`), never in `Bash`: only its runs are
-  recorded. Chain the `git add` and the `git commit` of a commit in one `run` string, so the commit
+  (`run(command, { cwd })`, `gate(name, command, { cwd })`). Chain the `git add` and the `git commit` of a commit in one `run` string, so the commit
   is one cell.
 - **Short output.** Run tests at their quietest verbosity, failures only; read a full output only
   to understand a failure.
