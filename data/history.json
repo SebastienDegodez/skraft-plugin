@@ -6159,33 +6159,6 @@
   "agents": {
     "software-engineer": [
       {
-        "id": "45007119843:agent:software-engineer:2026-11-22T09:26:52.751Z",
-        "timestamp": "2026-11-22T09:26:52.751Z",
-        "commit": "42edcaf41ae29906e9500845585295f0537f7546",
-        "run": "45007119843",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/45007119843",
-        "runner": "vally-agent",
-        "model": "gpt-5.6-luna",
-        "judgeModel": "none",
-        "state": "flaky",
-        "reason": "conforms on 14 of 15 trial(s); every scenario at or above 2/3 (threshold 1)",
-        "descriptorSha": "7cf0e52806ba8e8f442659044cde1507c38a7e10a726ec876820c5591e9e1e3a",
-        "netWin": 0.8666666666666667,
-        "trialCount": 15,
-        "meanScore": 0.983,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "45022999338:agent:software-engineer:2026-11-22T12:39:30.769Z",
         "timestamp": "2026-11-22T12:39:30.769Z",
         "commit": "5cf16ca59404ccfd5bfcba32c76f96bfb6b62e77",
@@ -6416,6 +6389,33 @@
         "netWin": 0.7333333333333333,
         "trialCount": 15,
         "meanScore": 0.967,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "45078994736:agent:software-engineer:2026-11-22T22:44:57.830Z",
+        "timestamp": "2026-11-22T22:44:57.830Z",
+        "commit": "e8b101396adc61694f37f3969f659c04dbb20ab0",
+        "run": "45078994736",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/45078994736",
+        "runner": "vally-agent",
+        "model": "gpt-5.6-luna",
+        "judgeModel": "none",
+        "state": "pass",
+        "reason": "conforms on every trial (15/15 at or above 1)",
+        "descriptorSha": "f94d40a383bf7adaa658f62ac463480dff2943ceb6fdfe8c6e21bf5f087ecbb4",
+        "netWin": 1,
+        "trialCount": 15,
+        "meanScore": 1,
         "confidenceInterval": {
           "low": null,
           "high": null

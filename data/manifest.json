@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-22T22:03:46.380Z",
+  "generated": "2026-11-22T22:45:44.957Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -10974,394 +10974,199 @@
       "mtime": 1795368364773.8748
     },
     {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 0)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run0.jsonl",
+      "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795385022091.463
+      "mtime": 1795387541405.0283
     },
     {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 1)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run1.jsonl",
+      "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run1",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 1)",
+      "url": "sessions/pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run1.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795385022167.506
+      "mtime": 1795387541393.0283
     },
     {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 2)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run2.jsonl",
+      "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run2",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 2)",
+      "url": "sessions/pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run2.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795385022167.506
+      "mtime": 1795387541419.0283
     },
     {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 3)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run3.jsonl",
+      "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run3",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 3)",
+      "url": "sessions/pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run3.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795385022168.506
+      "mtime": 1795387541420.0283
     },
     {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4",
-      "name": "skraft-init / Claim no gate the repository cannot run (baseline, run 4)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--baseline--run4.jsonl",
+      "id": "pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run4",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 4)",
+      "url": "sessions/pr/647/commit-convention/finish-the-approved-customer-guide-issue--main--run4.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "claim-no-gate-the-repository-cannot-run",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
         "pr-647"
       ],
-      "mtime": 1795385022243.9722
+      "mtime": 1795387541421.0283
     },
     {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 0)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run0.jsonl",
+      "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795385022243.9722
+      "mtime": 1795387541430.0283
     },
     {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 1)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run1.jsonl",
+      "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 1)",
+      "url": "sessions/pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run1.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795385022243.9722
+      "mtime": 1795387541431.0283
     },
     {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 2)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run2.jsonl",
+      "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 2)",
+      "url": "sessions/pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run2.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795385022319.7966
+      "mtime": 1795387541433.0283
     },
     {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 3)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run3.jsonl",
+      "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 3)",
+      "url": "sessions/pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run3.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795385022319.7966
+      "mtime": 1795387541431.0283
     },
     {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4",
-      "name": "skraft-init / Invent no value for a choice not yet made (baseline, run 4)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--baseline--run4.jsonl",
+      "id": "pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 4)",
+      "url": "sessions/pr/647/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run4.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "invent-no-value-for-a-choice-not-yet-made",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-647"
       ],
-      "mtime": 1795385022319.7966
+      "mtime": 1795387541440.0283
     },
     {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run0",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 0)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run0.jsonl",
+      "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795385022397.1033
+      "mtime": 1795387541447.1633
     },
     {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run1",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 1)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run1.jsonl",
+      "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 1)",
+      "url": "sessions/pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run1.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795385022398.508
+      "mtime": 1795387541448.0283
     },
     {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run2",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 2)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run2.jsonl",
+      "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 2)",
+      "url": "sessions/pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run2.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795385022398.508
+      "mtime": 1795387541448.0283
     },
     {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run3",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 3)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run3.jsonl",
+      "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 3)",
+      "url": "sessions/pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run3.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795385022398.508
+      "mtime": 1795387541448.0283
     },
     {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run4",
-      "name": "skraft-init / Record a practice only where it applies (baseline, run 4)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--baseline--run4.jsonl",
+      "id": "pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 4)",
+      "url": "sessions/pr/647/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run4.jsonl",
       "tags": [
         "pr",
-        "skraft-init",
-        "baseline",
-        "record-a-practice-only-where-it-applies",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
         "pr-647"
       ],
-      "mtime": 1795385022398.508
-    },
-    {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 0)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-647"
-      ],
-      "mtime": 1795385022549.8708
-    },
-    {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 1)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-647"
-      ],
-      "mtime": 1795385022549.8708
-    },
-    {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 2)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-647"
-      ],
-      "mtime": 1795385022549.8708
-    },
-    {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 3)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-647"
-      ],
-      "mtime": 1795385022549.8708
-    },
-    {
-      "id": "pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4",
-      "name": "skraft-init / Claim no gate the repository cannot run (skilled, run 4)",
-      "url": "sessions/pr/647/skraft-init/claim-no-gate-the-repository-cannot-run--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "claim-no-gate-the-repository-cannot-run",
-        "pr-647"
-      ],
-      "mtime": 1795385022549.8708
-    },
-    {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 0)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-647"
-      ],
-      "mtime": 1795385022549.8708
-    },
-    {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 1)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
-    },
-    {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 2)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-647"
-      ],
-      "mtime": 1795385022627.6636
-    },
-    {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 3)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
-    },
-    {
-      "id": "pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4",
-      "name": "skraft-init / Invent no value for a choice not yet made (skilled, run 4)",
-      "url": "sessions/pr/647/skraft-init/invent-no-value-for-a-choice-not-yet-made--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "invent-no-value-for-a-choice-not-yet-made",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
-    },
-    {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run0",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 0)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run0.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
-    },
-    {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run1",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 1)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run1.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
-    },
-    {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run2",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 2)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run2.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
-    },
-    {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run3",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 3)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run3.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
-    },
-    {
-      "id": "pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run4",
-      "name": "skraft-init / Record a practice only where it applies (skilled, run 4)",
-      "url": "sessions/pr/647/skraft-init/record-a-practice-only-where-it-applies--skilled--run4.jsonl",
-      "tags": [
-        "pr",
-        "skraft-init",
-        "skilled",
-        "record-a-practice-only-where-it-applies",
-        "pr-647"
-      ],
-      "mtime": 1795385022628.992
+      "mtime": 1795387541449.0283
     }
   ]
 }
