@@ -197,7 +197,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '  `| # | Scenario | Component | Tags |`, one row per scenario, S1, S2, …, each in the component where its test lives.',
     '  S1 is the scenario the walking skeleton walks, tagged `@walking-skeleton`, in a back-end component; a story with no new entry point writes instead',
     '  `Walking skeleton exemption: library`, `refactoring` or `docs-only` under the table, and tags no scenario `@walking-skeleton`.',
-    '- Groups: in your implementation plan, the table `| Group | Scenarios | Rule | … |`, one row per green DELIVER commits, in its order:',
+    '- Groups: in your implementation plan, the table `| Group | Scenarios | Rule | … |`, one row per group DELIVER works, in its order:',
     '  the scenarios one rule of the story makes pass together (`S1, S2` or `S3–S5`), every scenario once, S1 in group 1.',
     '- Write the failing walking skeleton, a plain test with no Gherkin in the integration tests of S1\'s component: it enters by the real entry point,',
     '  crosses the chain the production wiring builds, asserts the response\'s status, its shape and one value S1 names, and no other rule.',
