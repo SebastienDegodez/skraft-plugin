@@ -121,14 +121,14 @@ sa frontière de cas d'usage, sa couche et son type de doublure, puis commite le
 rouge avec, dans le même commit, le test d'acceptation rouge de chaque scénario et le squelette qu'ils appellent.
 Le walking skeleton parcourt S1 : un test simple, la plus fine tranche qui traverse toutes les
 couches, du vrai point d'entrée jusqu'à une vraie base, et prouve que le câblage existe
-([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). Le moteur l'exige, dans un composant
-back, sauf si la story se déclare exemptée ; la lentille `boundary-enforcement` vérifie qu'il
+([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). La lentille `boundary-enforcement`
+vérifie qu'il existe dans un composant back, sauf si la story se déclare exemptée, et qu'il
 parcourt ce vrai chemin (G8). Le test d'acceptation de chaque scénario, S1 compris, garde le cas
 d'usage et le pilote en process, avec les gateways internes en mémoire
 ([politique d'infrastructure](../reference/skraft-config.md#infrastructure)). Voir
 [Walking Skeleton](./deep-dive/walking-skeleton.md).
 
-**En DELIVER, une gate le vérifie à chaque passage.** `architecture` est l'une des six gates que l'ingénieur logiciel lance par `skraft_repl`, et le moteur exige son exécution tracée. Sa commande, déclarée par composant dans
+**En DELIVER, une gate le vérifie à chaque passage.** `architecture` est l'une des six gates que l'ingénieur logiciel lance par `skraft_repl`, et la lentille `quality-gates` de la revue juge son exécution tracée. Sa commande, déclarée par composant dans
 `skraft-config.json`, lance les tests d'architecture du projet : un filtre `ArchitectureTests`
 en .NET, `import-linter` en Python, un script `architecture-gate.mjs` en TypeScript, selon le
 skill `quality-gates-<stack>` du composant. En revue, la lentille `architecture-boundaries`,

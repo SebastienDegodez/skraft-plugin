@@ -15,7 +15,7 @@ Où chaque revue se place dans le pipeline : [Phases](./phases.md).
 
 | Sorte | Identifiants | Qui la juge | Où |
 | --- | --- | --- | --- |
-| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | l'ingénieur logiciel la lance par `skraft_repl` ; le moteur contrôle la trace signée | DELIVER, à la soumission de la tentative |
+| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | l'ingénieur logiciel la lance par `skraft_repl` ; le moteur journalise la trace signée et la lentille `quality-gates` la juge | DELIVER, dans la revue |
 | Critère de revue | `G<n>`, et `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | une lentille, puis le moteur (DESIGN, DISTILL, DELIVER) ou `review-verdict.mjs` (DISCOVER, DISCUSS) | revues de chaque phase |
 | Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G11 (`testability#layout`) (DISTILL) ; G9 (`test-integrity#patch`) | le moteur, sans lentille | après la tentative de l'architecte ; après la tentative du concepteur d'acceptation ; dans le patch d'une revue |
 
@@ -28,7 +28,7 @@ l'identifiant dans le champ `gate` de chaque finding.
 Les gates sont les commandes d'un composant dont le nom est l'un des six ci-dessous, dans
 `skraft-config.json`. Le moteur n'en lance aucune : dans DELIVER, l'ingénieur logiciel lance
 chacune par l'outil MCP `skraft_repl` (`gate(name, command, { cwd })`, voir [Le REPL](./repl.md)),
-et le moteur lit la trace signée de ces exécutions à la soumission de la tentative.
+et le moteur journalise la trace signée de ces exécutions et la remet à la revue DELIVER, qui la juge.
 
 | Gate | Ce qu'elle prouve |
 | --- | --- |
@@ -46,9 +46,8 @@ et le moteur lit la trace signée de ces exécutions à la soumission de la tent
 | Qui lance | l'ingénieur logiciel, par `skraft_repl`, dans chaque composant que l'histoire a modifié |
 | Gate absente | une gate dont les documents du projet ne nomment aucune commande se déclare par `absent(gate, component, reason)` ; `test` n'est jamais absente |
 | Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signée ; un dossier par tentative |
-| Contrôle | à la soumission de la tentative, pour chaque composant que l'histoire a modifié, la dernière exécution de chaque gate sous son dossier est sortie avec 0, a démarré sur un arbre propre (hors l'exécution de la ligne de commit) et s'est terminée sur le dernier commit ; ou la gate a été déclarée absente |
-| Refus | le code d'échec `evidence`, une ligne fixe par gate, sans sortie ni commande ; des exécutions ouvertes, une trace non signée ou modifiée et une clé manquante refusent aussi la tentative |
-| Journal | `evidence.checked` avec `runs: [{ run, gate, cwd, log, sha256 }]` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
+| Jugement | la lentille `quality-gates` de la revue DELIVER (ci-dessous) ; le moteur ne refuse aucune tentative pour une exécution |
+| Journal | `evidence.checked` avec `runs: [{ run, gate, cwd, log, sha256 }]`, seulement quand la trace se lit jusqu'à ses signatures ; le run rouge du concepteur porte `red: true` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
 | Rapport | le tableau « Preuves de qualité » de la pull request, du commentaire d'issue et de `qa-report.md` (Gate, Dossier, Exécution, Preuve), la ligne du panneau Claude Code `Preuves de qualité : build exécution 1, test exécution 4` et la ligne du canvas Copilot |
 | Seuils | aucun n'est configurable ; le seuil de mutation (80 sur le cœur, 80 sur la frontière) est un nombre en lecture seule de la vue de configuration |
 
@@ -163,19 +162,20 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 
 | ID | Lentille | Critère | Sévérité |
 | --- | --- | --- | --- |
-| **G1** | `coverage` | Chaque critère d'acceptation a au moins un scénario ; aucun scénario sans critère source ; chaque valeur métier d'un scénario égale celle de son critère. | blocker |
+| **G1** | `coverage` | Chaque critère d'acceptation a son propre scénario ; aucun scénario ne tient deux critères ; aucun scénario sans critère source ; chaque valeur métier d'un scénario égale celle de son critère. | blocker |
 | **G2** | `coverage` | Chaque règle métier a ses cas limites et ses cas négatifs ou d'erreur, tirés des exemples de la story ; un mapping Gherkin ou un exemple écrit dans un document DESIGN n'est pas un exemple de la story, et une variante qu'une règle antérieure décide déjà n'ajoute aucune frontière ; un cas d'entrée technique n'est jamais demandé. | high |
 | **G3** | `business-alignment` | Chaque terme des étapes Given/When/Then vient du vocabulaire métier de la story ; aucun nom de classe, de méthode ni de framework. | high |
 | **G4** | `business-alignment` | Aucune étape ne porte un détail d'implémentation (verbe ou code HTTP, terme ORM ou base de données, `Repository`, `Service`, `Handler`, `Controller`, `UseCase`, cas d'entrée technique). | blocker |
 | **B1** | `business-alignment` | Chaque scénario exprime un résultat que la story demande ; aucun ne décrit un comportement qu'elle ne demande pas. | high |
 | **G5** | `testability` | Chaque étape est sans ambiguïté et implémentable seule. | high |
-| **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
+| **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation ; son tableau de groupes nomme chaque scénario du plan de test une fois, aucun qu'il ne liste pas, S1 dans le groupe 1 ; deux lignes du plan de test ne partagent pas un titre. | high |
 | **G11** | `testability` | Chaque test vit là où sa sorte le place : le walking skeleton, un test simple sans Gherkin, à l'emplacement des tests d'intégration de son composant (Java : une classe `*IT`), en entrant par le vrai point d'entrée ; le test d'acceptation de chaque scénario, S1 compris, le binding de son Gherkin, à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : une classe `*Test` sous le `src/test` d'un module, ou un module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`), en entrant par le cas d'usage. | blocker |
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
 | **T2** | `testability` | Le patch porte le walking skeleton (sauf si l'histoire est exemptée) et le test d'acceptation de chaque scénario, chaque nom commençant par le numéro de son scénario ; un scénario sans test, ou un test sauté, est un finding. Chaque valeur d'entrée et attendue de chaque test d'acceptation égale le `.feature` mot pour mot ; le walking skeleton affirme le statut, la forme et une valeur que nomme S1, et aucune valeur absente du `.feature`. | blocker |
 | **T3** | `testability` | Le walking skeleton et le test d'acceptation du scénario en cours existent et chacun échoue sur une assertion, pas sur une erreur de compilation, d'import ou de mise en place ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type, avec, pour le walking skeleton, le point d'entrée, les ports et les adaptateurs de sa chaîne câblés dans la composition root. | blocker |
+| **T4** | `testability` | Gherkin bien formé : chaque `.feature` que cite le plan de test existe sous un dossier que nomme le `bdd` de son composant ; chaque scénario dit Given, When et Then ; les `Examples` d'un plan remplissent chaque variable ; deux scénarios d'un fichier ne partagent pas un titre ; mots-clés en anglais. | blocker |
 | **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise un cas d'usage Application que nomme le modèle d'événements (une de ses Commands ou Queries) ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
-| **G8** | `boundary-enforcement` | L'histoire a un walking skeleton qui parcourt S1, tagué `@walking-skeleton`, dans un composant back : un test simple sans Gherkin qui pilote le vrai point d'entrée à travers le cas d'usage jusqu'aux vraies gateways internes, S1 gardant à côté son propre test d'acceptation ; ou l'exemption déclarée (`library`, `refactoring`, `docs-only`) tient. | blocker |
+| **G8** | `boundary-enforcement` | L'histoire a un walking skeleton qui parcourt S1, tagué `@walking-skeleton`, dans un composant back : un test simple sans Gherkin qui pilote le vrai point d'entrée à travers le cas d'usage jusqu'aux vraies gateways internes, S1 gardant à côté son propre test d'acceptation ; ou l'exemption déclarée (`library`, `refactoring`, `docs-only`) tient et les changements de l'histoire la confirment ; S1 seul est tagué `@walking-skeleton`. | blocker |
 | **E1** | `boundary-enforcement` | Le test d'acceptation de chaque scénario, S1 compris, ne pilote que son cas d'usage ; le walking skeleton ne pilote que le vrai point d'entrée. Ni l'un ni l'autre n'appelle ni n'affirme sur un élément interne du domaine, un repository ou une classe d'infrastructure. Construire les vrais collaborateurs du cas d'usage pour les passer à son constructeur, ou l'hôte de test et les conteneurs du walking skeleton, est du câblage, pas un finding. | blocker |
 | **E2** | `boundary-enforcement` | Les doublures ne remplacent que des dépendances du bord extérieur, jamais un objet du domaine ni le cas d'usage ; le squelette de DISTILL est le vrai module. | high |
 
@@ -191,13 +191,12 @@ sous le `src/test` d'un module une classe `*IT` (Failsafe) est d'intégration et
 (Surefire `*Test`, Cucumber) unitaire, et accepte aussi les modules `<context>-unit-test(s)` et
 `<context>-integration-test(s)` ; toute autre stack `unit/` et `integration/` sous le chemin des tests.
 
-**Contrôle du moteur.** Les scénarios que DELIVER construit : après chaque tentative du passage
-du plan, le moteur lit le tableau `## Scenarios` du plan de test (`scenarios`) : identifiants dans
-l'ordre, un titre chacun, un composant de `skraft-config.json`, S1 seul tagué `@walking-skeleton`
-dans un composant qui n'est pas `react`, ou une exemption `library`, `refactoring` ou `docs-only`
-et aucun tag ([règles et messages](./phases.md#scenarios)). G8 reste à la lentille : le walking
-skeleton parcourt-il le vrai chemin, S1 a-t-il en plus son propre test d'acceptation, une
-exemption déclarée tient-elle.
+**Le tableau des scénarios.** Après chaque tentative du passage du plan, le moteur lit le tableau `## Scenarios`
+du plan de test et ne le refuse (`scenarios`) que s'il ne peut pas le lire : pas de tableau, lignes non
+numérotées S1, S2… dans l'ordre, une ligne sans titre, une ligne dont le composant n'est pas dans `skraft-config.json`
+([règles et messages](./phases.md#scenarios)). Le tag walking skeleton, l'exemption, les titres en double et le
+tableau de groupes sont à juger par les lentilles (G8, G6) ; la couverture des critères d'acceptation (G1) et la forme du
+Gherkin (T4) leur reviennent aussi : le moteur ne contrôle ni l'une ni l'autre.
 
 La revue tourne une fois, après le passage : les tests portent le walking skeleton et le test
 d'acceptation de chaque scénario (T2, T3). Le moteur ne lance aucun de ces tests : la revue lit les tests, le squelette et le log du lancement
@@ -206,7 +205,7 @@ revus par ces lentilles ; la revue DELIVER les lit.
 
 ## DELIVER <!-- #deliver -->
 
-DELIVER passe par les exécutions tracées de gates de l'ingénieur logiciel, puis par l'appel `deliver_review` du workflow `review`.
+DELIVER passe par les exécutions tracées de gates de l'ingénieur logiciel, puis par l'appel `deliver_review` du workflow `review`, dont la lentille `quality-gates` lit ces exécutions.
 Les mêmes
 lentilles jugent une pull request par `skraft review --pr`.
 
@@ -227,7 +226,12 @@ lentilles jugent une pull request par `skraft review --pr`.
 | **K3** | `contract-fidelity` | Une vérification fournisseur Microcks vérifie son résultat. | blocker |
 | **K4** | `contract-fidelity` | Le test d'intégration vérifie le contrat de la réponse. | high |
 | **K5** | `contract-fidelity` | Aucun appel réel vers l'aval ne fuit. | blocker |
+| **Q1** | `quality-gates` | Chaque gate d'un composant touché a une ligne de run dans la trace, ou une ligne `absent` avec une raison (jamais pour `test`) ; un démarrage sans run et un run perdu ne sont pas un run. | blocker |
+| **Q2** | `quality-gates` | Le dernier run de la gate a réussi : ni tué, ni expiré, sortie 0. | blocker |
+| **Q3** | `quality-gates` | Ce run s'est terminé sur le dernier commit du journal des changements. | blocker |
+| **Q4** | `quality-gates` | Ce run a démarré sur un arbre propre ; le run `green` de la ligne de commit est la seule exception. | high |
 
+`quality-gates` ne signale rien sur une pull request relue hors d'un run : elle n'a pas de trace.
 `mock-fidelity` ne tourne que sur des changements qui touchent des mocks (`when="mock"`),
 `contract-fidelity` que sur des changements qui touchent des contrats (`when="contract"`)
 ([déclencheurs](./workflow-dot.mdx#conditional-lenses)).

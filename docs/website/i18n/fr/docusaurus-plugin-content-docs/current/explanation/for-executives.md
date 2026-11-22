@@ -71,8 +71,8 @@ ordre du moteur.
 
 Le même moteur tourne dans Claude Code (par un mod), dans GitHub Copilot CLI (par un
 workflow dynamique) et dans VS Code (par le SDK Copilot, ou par une boucle de repli conduite
-par l'agent quand le SDK manque). Les commandes passent sans shell, avec la même forme sous sh
-et PowerShell. Les tests du moteur tournent sous Windows, macOS et Linux.
+par l'agent quand le SDK manque). Les commandes passent par `skraft_repl` sous `sh` (Git Bash ou
+PowerShell sous Windows). Les tests du moteur tournent sous Windows, macOS et Linux.
 
 ### Une traçabilité auditable
 

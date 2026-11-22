@@ -142,24 +142,24 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | Node | Kind | Role |
 | --- | --- | --- |
 | `distill` | agent `acceptance-designer` | one pass: every scenario of the story, the test plan with its `## Scenarios` table, the implementation plan with its `| Group | Scenarios |` table, the failing [walking skeleton](../explanation/deep-dive/walking-skeleton.md), the failing acceptance test of every scenario and the skeleton they call |
-| `distill_review` | review | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; runs once, after the pass |
+| `distill_review` | review | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; they judge the criteria, the form of the Gherkin, the walking-skeleton tag and the groups; runs once, after the pass |
 | `scenario_review` | question `scenario-review` | a human reads the scenarios, their groups and the red of their tests (or the exemption) before DELIVER builds them |
 
 | | |
 | --- | --- |
 | Inputs | stories, DESIGN documents (in the tracking folder and under `docs/`) |
 | Declared output | `details/{date}/test-plan-{slug}.md` |
-| Other outputs | `details/{date}/impl-plan-{story}.md`, its `| Group | Scenarios | Rule | … |` table naming every scenario once, S1 in group 1 (no table: one scenario per group); the `.feature` of the component's own folder (`bdd`), as `{bounded-context}/{feature}.feature` (Gherkin scenarios, keywords in English); in the components: the failing walking skeleton (integration-test place, `tests` paths), the failing acceptance test of every scenario, its name starting with the scenario's number (unit-test place, `tests` paths), and the skeleton they call (`src` paths) |
+| Other outputs | `details/{date}/impl-plan-{story}.md`, its `| Group | Scenarios | Rule | … |` table (no table: one scenario per group); the `.feature` of the component's own folder (`bdd`), as `{bounded-context}/{feature}.feature` (Gherkin scenarios, keywords in English); in the components: the failing walking skeleton (integration-test place, `tests` paths), the failing acceptance test of every scenario, its name starting with the scenario's number (unit-test place, `tests` paths), and the skeleton they call (`src` paths) |
 | Brief | the exact `git commit` of the red, the instruction to run the acceptance tests once through `skraft_repl` with the label `red`, and the effective [infrastructure policy](./skraft-config.md#infrastructure) of each component |
 | Allowed writes | the tracking folder, the features folders the components' `bdd` names, each component's `src` and `tests` paths, and the files at those components' roots |
 | Commits | `red` mode, one per pass: `test(<story>): acceptance tests S1–S<n>`, the walking skeleton, every acceptance test, the skeleton they call and the `.feature` of their components together, in the components the scenarios name only, no `feat`, `fix` or `refactor` (a story exempt of a walking skeleton commits its acceptance tests alone) ([Commits](./gates.md#commits)); no test is run by the engine; a change to scenarios alone, outside the components' `src` and `tests` paths, in a `docs(<story>): …` commit; a change left uncommitted is refused (`uncommitted`) |
-| Engine checks | a pass with no red committed, nor any from an earlier pass (`the story has no failing acceptance tests committed: …`); the groups of the implementation plan (`scenarios`: a scenario in no group or in two, one the test plan does not list, S1 out of group 1); where added test files sit (`testability#layout`, G11); the `## Scenarios` table of the test plan ([below](#scenarios), `scenarios`). A component that decided neither way about `bdd` refuses the run before its first agent |
+| Engine checks | a pass with no red committed, nor any from an earlier pass (`the story has no failing acceptance tests committed: …`); a group of the implementation plan that names no scenario (`scenarios`); where added test files sit (`testability#layout`, G11); the `## Scenarios` table of the test plan, read and refused only when unreadable ([below](#scenarios), `scenarios`). Not checked by the engine: acceptance criteria against scenarios (G1) and the form of the Gherkin (T4), which the lenses judge. A component that decided neither way about `bdd` refuses the run before its first agent |
 
 | Lens | Gates |
 | --- | --- |
 | `coverage` | G1, G2 |
 | `business-alignment` | G3, G4, B1 |
-| `testability` | G5, G6, G11, T1, T2, T3 |
+| `testability` | G5, G6, G11, T1, T2, T3, T4 |
 | `boundary-enforcement` | G7, G8, E1, E2 |
 
 | Edge | Label | `max_visits` |
@@ -190,15 +190,15 @@ Walking skeleton exemption: none
 
 | Rule | Refused with |
 | --- | --- |
-| no `## Scenarios` heading followed by a table with the columns `#`, `Scenario`, `Component`, `Tags` | `<plan> lists no scenario: write …` |
+| a `## Scenarios` heading followed by a table with the columns `#`, `Scenario`, `Component`, `Tags` | `<plan> lists no scenario: write …` |
 | ids `S1`, `S2`, … in row order | `<plan>: row <n> is not S<n>; number the scenarios S1, S2, … in the order DELIVER builds them` |
-| a title on each row, never twice | `<plan>: S<n> has no title`; `<plan>: two scenarios are titled "<title>"` |
+| a title on each row | `<plan>: S<n> has no title` |
 | `Component`: a component name of `skraft-config.json` | `<plan>: S<n> names component "<c>", which is none of <components>` |
-| exemption `none` (default when the line is absent): S1, and S1 only, tagged `@walking-skeleton` | `<plan>: tag S1, and S1 only, @walking-skeleton, or declare "Walking skeleton exemption: library \| refactoring \| docs-only"` |
-| the walking skeleton in a component that is not `react` | `<plan>: the walking skeleton S1 runs in a back-end component; <c> is a react front end` |
-| exemption `library`, `refactoring` or `docs-only`: no scenario tagged `@walking-skeleton` | `<plan>: the story declares its walking skeleton exempt (<exemption>), and S<n> carries @walking-skeleton` |
-| any other exemption | `<plan>: walking skeleton exemption "<value>" must be none, library, refactoring, docs-only` |
-| `docs-only`: no commit of the story changes a component's `src` paths | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <file>, source of <component>; remove the exemption and tag S1 @walking-skeleton` |
+
+The engine reads nothing more of the table. Whether S1 alone is tagged `@walking-skeleton`, whether the
+walking skeleton sits in a back-end component, whether an exemption (`library`, `refactoring`, `docs-only`) is valid and
+borne out by the story's commits, and whether two rows share a title are judged by the `boundary-enforcement` (G8) and
+`testability` (G6) lenses.
 
 The implementation plan beside it (`impl-plan-…` for `test-plan-…`) groups the scenarios DELIVER
 makes pass, in its order, under any heading; the table gives the order of work, and the story takes one green commit:
@@ -210,12 +210,9 @@ makes pass, in its order, under any heading; the table gives the order of work, 
 | 2 | S3–S5 | expired cards |
 ```
 
-| Rule | Refused with |
-| --- | --- |
-| a group names at least one scenario | `<plan>: group <g> names no scenario` |
-| every scenario of the test plan in exactly one group | `<plan>: S<n> is in no group`; `<plan>: S<n> is in more than one group` |
-| only scenarios of the test plan | `<plan>: S<n> is no scenario of the test plan` |
-| S1 in the first group | `<plan>: S1 is in the first group, the one the walking skeleton walks` |
+The engine reads the table for DELIVER's order of work and refuses it only when a group names no scenario
+(`<plan>: group <g> names no scenario`). That every scenario sits in exactly one group, none the test plan does not list,
+S1 in the first group, is the `testability` lens's (G6).
 
 A plan with no table holding the `Group` and `Scenarios` columns works one scenario per group.
 
@@ -227,15 +224,15 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 
 | Node | Kind | Role |
 | --- | --- | --- |
-| `deliver` | agent `software-engineer` | one dispatch per story: works each group of the implementation plan in plan order and commits one green for the whole story (a second one is refused, `green-split`); that green makes the walking skeleton pass too; after the last, the passes the review sends back, on the whole story. The engineer runs every gate of each component the story changed through `skraft_repl`; the engine checks the traced runs at the submission of the attempt ([Gates](./gates.md#command-gates)) |
-| `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
+| `deliver` | agent `software-engineer` | one dispatch per story: works each group of the implementation plan in plan order and commits one green for the whole story (a second one is refused, `green-split`); that green makes the walking skeleton pass too; after the last, the passes the review sends back, on the whole story. The engineer runs every gate of each component the story changed through `skraft_repl`; the engine journals the traced runs and the DELIVER review judges them ([Gates](./gates.md#command-gates)) |
+| `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | commits the screenshots of the last traced e2e run (`gate('e2e', …)`) of each front end |
 
 | | |
 | --- | --- |
 | Brief | the groups, in the order the engineer works them (`- <g> of <G> — S1 "<title>" (component <c>, tags …); …`); the commit of the acceptance tests DISTILL committed, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one, or one failing on a build or setup error: it stops `blocked`, naming it); one commit line, exactly: `<the test command of each component> && git add <each file you changed> && git commit -s -m "feat(<story>): S1–S<n> <the rules of the story>" -m "Refs: #<issue>"`. A pass the review sent back lists no group: only the acceptance tests it never changes, and the commit rules of the cycle |
 | Declared output | `changes/{date}/change-log.md` |
-| Evidence | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` and the logs of the traced runs; the journal's `evidence.checked` ([Gates](./gates.md#command-gates)); `visuals/<component>/e2e-<n>.log` |
+| Evidence | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` and the logs of the traced runs, handed to the review; the journal's `evidence.checked` ([Gates](./gates.md#command-gates)); `visuals/<component>/e2e-<n>.log` |
 | Allowed writes | the tracking folder, each component's `src` and `tests` paths, and the files at their roots; a change outside it is refused |
 | Commits | `deliver`, the story's pass: one `feat(<story>): …` (or `fix`) for the whole story, whatever its subject names, chained to the test command as the brief writes it, for sh or PowerShell 7 and for Windows PowerShell 5.1; a second one is refused (`green-split`); no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths; the engine runs no test ([Commits](./gates.md#commits)). `deliver` sent back by the review: each cycle one `feat` or `fix` holding its test and its code, no `test(<story>): …` commit of its own (`test-apart`, `green-without-test`), `refactor` allowed. A DELIVER journal of an earlier V2 alpha, one dispatch per group, is not resumed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
 | Mutation | none: neither the pipeline nor the engine runs mutation; it is a recipe of the developer's session ([Run mutation](../how-to/run-mutation.md)) |
@@ -245,6 +242,7 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 | `test-integrity` | G7, G9; plus the G9 findings the engine reads in the patch (`test-integrity#patch`) |
 | `architecture-boundaries` | G4, G5, G10 |
 | `cold-reader` | G11 |
+| `quality-gates` | Q1, Q2, Q3, Q4 |
 | `mock-fidelity` | M1, M2, M3, M4 |
 | `contract-fidelity` | K1, K2, K3, K4, K5 |
 

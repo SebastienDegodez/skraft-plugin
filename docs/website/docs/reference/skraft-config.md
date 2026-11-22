@@ -270,37 +270,23 @@ otherwise.
 
 ## Command lines <!-- #command-lines -->
 
-A `commands` line runs **with no shell**, from the component's root. The same line therefore
-behaves the same way under sh, PowerShell and cmd.
+A `commands` line is the developer's: the engine holds no command line of any stack, and a line written
+here is the one that runs. The software engineer runs it from the component's root through
+`skraft_repl`, `run(string)` under `sh -c` (on Windows, Git Bash when it is installed, else `pwsh` or
+`powershell`; the shell is named in the trace). A line may therefore chain steps (`a && b`) or set
+variables the way that shell does; write it so it works in the shells your team uses.
 
 | Rule | Detail |
 | --- | --- |
-| Splitting | on blanks; the first word is the program |
-| Quotes | `"…"` and `'…'` keep blanks inside one argument; no escape character |
-| `{baseSha}` | replaced, before splitting, with the base SHA of the component's repository |
-| Shell syntax | a word written with no quotes that contains <code>&#124;</code>, `&`, `;`, `<` or `>` is refused |
-| Variables | a `NAME=value` before the program is refused: no shell sets it |
-| Nothing interpreted | no variable, wildcard or redirection: each word goes to the program as is |
-| Program | looked up on the PATH (and PATHEXT under Windows); a path with `/` or `\` starts from the component's root |
-| Windows | a `.cmd` or `.bat` (npm, npx, gradlew.bat) goes through cmd.exe, arguments escaped |
-
-Messages refusing a line (prefixed with `command "<line>"` in a gate, with `"<line>"` in the
-doctor):
-
-| Case | Message |
-| --- | --- |
-| shell syntax | `uses shell syntax (<word>); put the steps in a script and call the script` |
-| variables before the program | `sets <NAME>, … before its program, which no shell reads; put the variables and the command in a script and call the script` |
-| unclosed quote | `has an unclosed <quote> quote` |
-| `{baseSha}` with no base | `uses {baseSha} but the run has no base for this repository` |
-
-To chain steps (`a && b`) or set variables (`TESTCONTAINERS_RYUK_DISABLED=true mvn test`), write them in a script of the repository and call the script.
+| `{baseSha}` | replaced, in the brief an agent reads, by the base SHA of the component's repository |
+| Non-empty | an empty line is refused: `<label>: command <name> must be a non-empty command line` |
+| Program | looked up on the PATH of the shell; a program that does not start fails its run in the REPL |
 
 ## Gates <!-- #gates -->
 
 A **gate** is a command whose name is one of the six names below. The engine runs none: the
-software engineer runs each one through `skraft_repl` in DELIVER, and the engine checks the traced
-runs ([Gates](./gates.md#command-gates)).
+software engineer runs each one through `skraft_repl` in DELIVER, and the DELIVER review's
+`quality-gates` lens judges the traced runs ([Gates](./gates.md#command-gates)).
 
 | Name |
 | --- |
@@ -357,9 +343,9 @@ any failing test.
 ## Failure classes <!-- #failure-classes -->
 
 The engine starts no project command, so it classifies none. A run of `skraft_repl` records its exit
-code, its commit and its log in the signed trace of the attempt ([The REPL](./repl.md)), and the engine
-judges the traced runs at the submission of the attempt: a gate whose last run did not exit 0 is
-refused with the failure code `evidence` ([Gates](./gates.md#command-gates)).
+code, its commit and its log in the signed trace of the attempt ([The REPL](./repl.md)). The engine
+refuses no attempt for them: the `quality-gates` lens reports a gate whose last run did not exit 0
+([Gates](./gates.md#command-gates)).
 
 ## Changed components <!-- #changed-components -->
 

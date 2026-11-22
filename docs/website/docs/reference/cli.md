@@ -190,7 +190,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | one entry per step (neither `start` nor `exit`) in workflow order; `what` = the agent, lenses, question or publication; `state` = `pending`, `open` or `done`; `outcome` = what the last attempt recorded, `null` while an attempt is open; `costUsd` = the step's cost, `null` when none |
 | `graph.edges` | `[{ from, to, label, taken }]` | the edges between those steps; `taken` = how many times the run took it |
 | `reviews` | `[{ step, visit, verdict, lenses: [{ lens, verdict, findings }] }]` | the last pass of each review step; `verdict` = `approved`, `needs-rework` or `blocked`, `null` until the pass is recorded; `findings` = how many findings the lens gave |
-| `evidence` | `[{ gate, folder, run, log }]` | the traced runs of `skraft_repl` the last delivery attempt that held its evidence stands on, in the order they ran (the `evidence.checked` event); `[]` before one did |
+| `evidence` | `[{ gate, folder, run, log }]` | the traced runs of `skraft_repl` the last delivery attempt journaled, in the order they ran (the `evidence.checked` event); `[]` before one did |
 
 What each status means:
 [Tracking folder and journal](./run-journal.md). Code 1 only

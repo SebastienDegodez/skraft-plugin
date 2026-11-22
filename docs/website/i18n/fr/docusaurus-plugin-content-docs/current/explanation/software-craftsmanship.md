@@ -64,8 +64,8 @@ Le skill `skraft-quality-bar` est l'unique endroit où un seuil est écrit : 80 
 mutation sur Domain et Application comme sur API et Infrastructure, jugés à part, et 100 % de
 couverture de lignes sur Domain et Application. Il n'y a ni niveau « conseil », ni dérogation, ni réglage par dépôt ;
 la configuration `skraft-config.json` choisit les **commandes** des gates, jamais leurs seuils.
-Dans DELIVER, le moteur refuse une tentative qui ne contient pas une exécution tracée réussie de
-chaque gate (`evidence`), quelle que soit la copie du workflow.
+Dans DELIVER, l'ingénieur lance chaque gate par `skraft_repl` et la lentille `quality-gates` de la
+revue juge les exécutions tracées.
 
 C'est la réponse de skraft à l'idée de Mancuso : la qualité n'est pas une variable
 d'ajustement. Le détail des gates est dans la [référence des gates](../reference/gates.md).
@@ -76,10 +76,9 @@ Le craft avance par petits incréments qui marchent. Dans skraft, cela prend deu
 
 - **Le walking skeleton.** Chaque story s'ouvre sur un test simple qui parcourt son premier
   scénario, S1, à travers un composant back de son vrai point d'entrée jusqu'à une vraie base, et
-  n'affirme que le câblage ; S1 garde son propre test d'acceptation par le cas d'usage. Le moteur
-  refuse un plan de test qui ne tague pas S1 `@walking-skeleton` ni ne déclare pourquoi la story
-  n'en a pas besoin, et la lentille `boundary-enforcement` vérifie que le walking skeleton
-  parcourt ce vrai chemin (son G8). Voir
+  n'affirme que le câblage ; S1 garde son propre test d'acceptation par le cas d'usage. La lentille
+  `boundary-enforcement` juge que S1 est taguée `@walking-skeleton` (ou que la story déclare pourquoi elle
+  n'en a pas besoin) et que le walking skeleton parcourt ce vrai chemin (son G8). Voir
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
 - **Le rouge de chaque scénario, puis un seul vert pour l'histoire.** En DISTILL, l'`acceptance-designer`
   commite le test d'acceptation en échec de chaque scénario, le walking skeleton et le squelette

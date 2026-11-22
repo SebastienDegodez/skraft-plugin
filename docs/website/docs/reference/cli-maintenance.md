@@ -209,7 +209,7 @@ Checks, in order:
 | `forge` | the forge a run uses can be reached from here (on `github`: a remote, `gh` installed and signed in to its host; on `azure-devops`: a remote naming an organization, project and repository, `az` with its `azure-devops` extension installed and signed in to that organization); otherwise a warning, never a failure | warning: `<forge>, named in the configuration: <reason>` or `<forge>, deduced from the Git remote: <reason>`; reasons: `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository`, `az, the Azure CLI, is not installed`, `skraft runs az under Windows only from the Azure CLI installer (MSI or winget), …`, `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops`, `az is not signed in to the Azure DevOps organization <organization URL>, …` |
 | `<component>` | the root is a folder | `root <root> is not a folder` (its commands are not checked) |
 | `<component>` | at least one gate command | `no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json; run /skraft-init` |
-| `<component>/<command>` | the line splits | `"<line>" <reason>`; when it passes, `ok <component>/<command>: <line> (parsed)` |
+| `<component>/<command>` | always `ok`: the line is listed as written | `ok <component>/<command>: <line> (listed; skraft_repl starts it, never skraft)` |
 | `<component>` (after its commands) | every mocking and contract testing skill the component asks for exists in the plugin or the working copy (`.claude/skills/`, `.github/skills/`); otherwise a warning | warning: `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
 | `infrastructure` (after the components) | `ok`: one line per row of each component's [infrastructure policy](./skraft-config.md#infrastructure) | `<component> (<stack>) <row>: <mechanism> (targeted), <mechanism> (walking skeleton) — <tool>; source plugin` (`source skraft-config.json` for an override, `source skraft-config.json (mocking.strategy)` for a mocking strategy other than the stack's default; `(e2e)` for a `react` row) |
 | `vscode` | always `ok` | names the VS Code driver: `Copilot SDK <version> (<path>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, or `no Copilot SDK under <folder>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |
@@ -223,14 +223,14 @@ A component's commands are checked gates first (in gate order), then `e2e`. The 
 ```
 ok    node: Node v22.…
 ok    forge: github, deduced from the Git remote
-FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
+ok    web/test: npm run test:ci (listed; skraft_repl starts it, never skraft)
 models on claude-code:
   step      agent                type   family      tier      model   effort  source (family/model/effort)
   research  solution-researcher  phase  researcher  economy   haiku   -       agent/tier/host
   …
 models on copilot:
   …
-skraft doctor: 1 checks failed
+skraft doctor: every check passed
 ```
 
 Once the configuration and the workflow read, one table per host lists each agent the workflow dispatches (a review node's lenses, then its refuter as it checks the node's strongest lens): family, tier, model (a list tried in order), effort, and where each comes from; `-` where the host decides.

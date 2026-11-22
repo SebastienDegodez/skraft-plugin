@@ -162,9 +162,10 @@ the computation: [Gates](../reference/gates.md#review-run).
 ## The checks live in the code
 
 What an agent could forget, the engine checks: the phase order, computed from the workflow graph;
-the expected outputs, pre-created then checked; the journal's integrity; the traced gate runs of a DELIVER attempt; what
+the expected outputs, pre-created then checked; the journal's integrity; what
 each step may write, through a git diff; the red and green TDD commits; the ADR lifecycle; the
-review verdict. Each of these checks is tested without a host, and behaves the same everywhere.
+review verdict. What judgement alone can settle goes to the review lenses: the criteria and the
+form of the Gherkin in DISTILL, the traced gate runs in DELIVER (the `quality-gates` lens). Each of these checks is tested without a host, and behaves the same everywhere.
 Why they left the v1 hooks: [Guardrails](./guardrails.md). How
 the workflow that carries them is read and copied:
 [DOT workflow](../reference/workflow-dot.mdx).

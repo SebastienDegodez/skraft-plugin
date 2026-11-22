@@ -218,7 +218,7 @@ DELIVER makes pass and the commit of the acceptance tests. Open the test plan un
 choose **APPROVED** in the chat.
 
 The run then goes on without you: one pass of the software engineer, one green commit for all the groups of
-scenarios, in plan order; then the engine checks the traced gate runs, the DELIVER review, and the pull request
+scenarios, in plan order; then the DELIVER review, which reads the traced gate runs, and the pull request
 description. The `/workflows` log ends like this:
 
 ![skraft-pipeline workflow log: phase PUBLISH, pr-writer, the pull request not opened as publish.pullRequest is false, PUBLISH closed, then checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)

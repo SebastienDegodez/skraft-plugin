@@ -38,7 +38,7 @@ ports rend cette première traversée possible sans figer l'infrastructure.
 
 Chaque story commence par lui, boucle externe de son TDD en double boucle. En DISTILL, le plan de
 test liste les scénarios dans l'ordre où DELIVER les construit ; S1, tagué `@walking-skeleton`, est
-le scénario que parcourt le walking skeleton, dans un composant back. Le moteur refuse un plan qui
+le scénario que parcourt le walking skeleton, dans un composant back. La lentille `boundary-enforcement` (G8) juge un plan qui
 tague un autre scénario, n'en tague aucun, ou place S1 dans un front React.
 
 Le walking skeleton est un test simple, sans Gherkin, à la place des tests d'intégration du
@@ -97,9 +97,8 @@ démarrer un ; le run attend.
 Toute story n'ouvre pas un nouveau chemin. Celle qui n'ajoute aucun point d'entrée déclare
 pourquoi sous le tableau : `library` (une pure librairie), `refactoring` (aucune nouvelle
 interface publique) ou `docs-only` (configuration ou documents seulement). Une exemption retire
-le walking skeleton seul, jamais le test d'acceptation de S1. Le moteur vérifie la
-dernière contre le diff : une story `docs-only` dont les commits changent la source d'un
-composant est refusée.
+le walking skeleton seul, jamais le test d'acceptation de S1. La lentille `boundary-enforcement` vérifie l'exemption contre les changements de la story : une story `docs-only` dont les commits changent la source d'un
+composant ne tient pas.
 
 ## Pièges & anti-patterns
 
@@ -113,8 +112,7 @@ composant est refusée.
   scénario double le test d'acceptation de S1 sur le chemin lent, et celui qui le remplace laisse
   le Gherkin de S1 ne tourner nulle part.
 - **Une exemption de confort** : déclarer `library` ou `refactoring` pour sauter le squelette. Le
-  moteur ne vérifie que `docs-only` contre le diff ; l'humain qui lit les scénarios est là pour
-  les autres.
+  lentille juge l'exemption d'après les changements de la story ; l'humain qui lit les scénarios y veille aussi.
 
 ## Sources
 

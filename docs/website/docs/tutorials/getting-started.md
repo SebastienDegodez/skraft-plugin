@@ -154,7 +154,7 @@ engineer runs the ones you write, so give `web` its test command, the script of 
       "commands": { "test": "npm test" }
 ```
 
-A command is started without a shell, from the component's root. The second is Gherkin: it detects
+A command is run from the component's root. The second is Gherkin: it detects
 the folders a runner reads when a project has them, and this one has none, so say that the tests
 are written without it:
 
@@ -304,8 +304,8 @@ first, uncommitted, then one commit for the story, `feat(checkout): S1–S2 <the
 walking skeleton pass together; a second green commit is refused (`green-split`).
 
 The engineer runs the component's gates through `skraft_repl` (the commit line is the `test` run),
-the engine checks their signed trace, then the DELIVER review (test-integrity,
-architecture-boundaries, cold-reader) runs. The pane ticks `deliver` and `deliver_review`.
+the engine journals their signed trace, then the DELIVER review (test-integrity,
+architecture-boundaries, cold-reader, quality-gates) runs. The pane ticks `deliver` and `deliver_review`.
 
 ## 9. PUBLISH <!-- #9-publish -->
 

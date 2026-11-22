@@ -232,6 +232,7 @@ digraph review {
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
   architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   cold_reader             [shape=note, lens="cold-reader"]
+  quality_gates           [shape=note, lens="quality-gates"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
   refuter [shape=octagon, mandatory=true]
@@ -241,6 +242,7 @@ digraph review {
   lenses -> test_integrity -> refuter
   lenses -> architecture_boundaries -> refuter
   lenses -> cold_reader -> refuter
+  lenses -> quality_gates -> refuter
   lenses -> mock_fidelity -> refuter
   lenses -> contract_fidelity -> refuter
   refuter -> verdict
@@ -262,6 +264,7 @@ review of `pipeline.skraft.dot`, and `review` called by it). The files sit in
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents of the phase, patch, changed paths |
 | `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths, `components.json` |
 | `cold-reader` | patch and changed paths only, without the ADRs nor the [durable documentation](./run-journal.md#durable-docs): no story, no feature scope, no context |
+| `quality-gates` | documents of the phase, among them the trace `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, the change log, `components.json` |
 | `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
 | `fitness` | everything above, the patch and changed paths narrowed to any `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` folder (`design.patch`, `design-files.txt`) |
 | `business-alignment` | everything above, the patch and changed paths narrowed to the `.feature` files, wherever their component keeps them (`features.patch`, `features-files.txt`) |

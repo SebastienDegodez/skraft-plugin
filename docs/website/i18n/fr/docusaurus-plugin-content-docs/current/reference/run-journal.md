@@ -1,536 +1,141 @@
 ---
 title: "Dossier de suivi et journal"
-description: "Dossier de suivi, artefacts par phase, sorties sous docs/, pipeline actif, journal chaîné et signé events.jsonl et ses événements, questions, statuts et codes."
+description: "Dossier de suivi, .active-slug, journal chaîné et signé events.jsonl, questions posées par un run, statuts et codes."
 persona: software-engineer
 ---
 
 # Dossier de suivi et journal
 
-Tout ce que sait un run tient dans un dossier du dépôt et un journal chaîné, d'où le moteur recalcule l'état à chaque lecture sans rien stocker d'autre.
-
-Pourquoi un journal d'événements plutôt qu'un fichier d'état, et ce que la reprise y gagne :
-[Le journal d'événements](../explanation/event-journal.md).
+Tout ce que sait un run tient dans un dossier du dépôt et un journal chaîné ; le moteur recalcule l'état depuis le journal à chaque lecture et ne stocke rien d'autre. Pourquoi un journal plutôt qu'un fichier d'état : [Le journal d'événements](../explanation/event-journal.md), qui détaille aussi la chaîne, la signature et la reprise.
 
 ## Arborescence <!-- #layout -->
 
-Le dossier de suivi vit **dans la copie de travail qui lance le run** :
+Le dossier de suivi vit dans la copie de travail qui lance le run. Un **slug** (kebab-case) nomme un pipeline et un dossier.
 
 ```
 .copilot-tracking/skraft-plans/
-├── .active-slug                                   pipeline actif de la copie de travail
+├── .active-slug                      le pipeline actif de la copie de travail
 └── <slug>/
-    ├── .lock                                      bail de la session qui conduit le run
-    ├── events.jsonl                               journal chaîné et signé
-    ├── run-report.md, qa-report.md, WORKFLOW.md   rapports recalculés après chaque étape
-    ├── pull-request.md, issue-progress.md         description de la pull request, commentaire de l'issue
-    ├── plans/<AAAA-MM-JJ>/                         issue de la story, stories DISCUSS
-    ├── research/<AAAA-MM-JJ>/<slug>-research.md   document de recherche
-    ├── details/<AAAA-MM-JJ>/                       documents de DESIGN, DISTILL, PUBLISH
-    ├── changes/<AAAA-MM-JJ>/change-log.md         journal des changements de DELIVER
-    ├── results/
-    │   ├── <nœud>-<visite>-<tentative>.json       résultat qu'un agent écrit pour une tentative
-    │   ├── <nœud>-<visite>-<tentative>.documents.json   le dossier de suivi tel que cette tentative l'a trouvé
-    │   └── loop/                                  briefs, réponses et pending.json de la boucle next / record
-    ├── reviews/<nœud>-<visite>/                   ce que lisent les lentilles d'une passe de revue
-    │   ├── changes.patch                          changements depuis la base du run
-    │   ├── changed-files.txt                      chemins que ces changements touchent
-    │   ├── code.patch, code-files.txt             les mêmes pour une lentille aveugle, sans docs/adr ni la documentation durable
-    │   ├── design.patch, design-files.txt         les mêmes pour `fitness` : les documents de conception seulement (écrits quand la revue a cette lentille)
-    │   ├── features.patch, features-files.txt     les mêmes pour `business-alignment` : les `.feature` seulement, là où leur composant les garde (écrits quand la revue a cette lentille)
-    │   ├── context.md                             story, règles du projet, qui a écrit quel document
-    │   ├── components.json                        stack, stratégie de mocking, contract testing
-    │   └── verdict.yaml                           le verdict de la passe, écrit par le moteur
-    ├── logs/                                      ce que les commandes ont affiché
-    │   ├── runs/<step>-<visit>-<attempt>/         les exécutions tracées d'une tentative : runs.jsonl (signé) et un log par exécution
-    │   ├── commit-<nœud>.log                      ce que Git a affiché en refusant un commit du moteur
-    │   └── …                                      ce qu'affichent les commandes que lance un agent
-    ├── .tmp/                                      les fichiers temporaires des agents
-    └── visuals/<composant>/e2e-<n>.log            dernière exécution e2e tracée de chaque front end, telle que la publication des captures l'a commitée
+    ├── .lock                         bail de la session qui conduit le run
+    ├── events.jsonl                  journal chaîné et signé
+    ├── run-report.md, qa-report.md, WORKFLOW.md, pull-request.md, issue-progress.md
+    ├── plans/<date>/                 l'issue de la story, les stories DISCUSS
+    ├── research/<date>/<slug>-research.md
+    ├── details/<date>/               documents DESIGN, DISTILL et PUBLISH (plan de test, plan d'implémentation, prose)
+    ├── changes/<date>/change-log.md  journal des changements DELIVER
+    ├── results/                      ce qu'un agent a écrit pour une tentative, briefs et réponses de la boucle
+    ├── reviews/<node>-<visit>/       ce que les lentilles d'une passe de revue ont lu, et verdict.yaml
+    ├── logs/                         ce que les commandes ont affiché ; logs/runs/<step>-<visit>-<attempt>/ garde les runs tracés
+    ├── visuals/<component>/          le dernier run e2e de chaque front
+    └── .tmp/                         les fichiers temporaires des agents
 ```
 
-`results/` et `reviews/` appartiennent au moteur : ce ne sont pas des documents du run, et une
-revue ne les donne jamais à une lentille comme tels. `logs/` et `.tmp/` gardent ce que les
-commandes ont affiché ou laissé derrière elles : ce ne sont jamais des documents d'une phase, et
-ni une lentille ni une revue ne les reçoit.
-
-`verdict.yaml` est écrit à la fin de chaque passe de revue, chaque texte entre guillemets doubles ;
-à côté, `snapshot.json` garde ce que contenait chaque fichier revu par la passe, auquel la passe
-suivante se compare ([re-revue incrémentale](./gates.md#incremental)) :
-
-```yaml
-status: "NEEDS_REWORK"          # APPROVED | NEEDS_REWORK | BLOCKED
-code: null                      # lens-inconclusive quand BLOCKED
-summary: "NEEDS_REWORK: 1 reason to address"
-findings:                       # les findings retenus, tous ceux que le réfuteur n'a pas réfutés : blocker, high et medium d'abord, puis low
-  - lens: "consistency"
-    id: "F2"
-    gate: "G1"
-    severity: "high"
-    location: "docs/adr/adr-001-card-payment.md:3"
-    description: "two contexts own payments"
-    suggestion: null
-    severityReason: "billing and checkout would both write a payment"
-    drift: "structural"         # label | classification | structural
-    occurrences: "docs/adr/adr-001-card-payment.md:3, docs/architecture/context-map.md:12"
-notes: []                       # les findings nouveaux sur une ligne inchangée depuis la passe `since`, mêmes clés
-refutations:                    # chaque vérification de cette passe
-  - lens: "consistency"
-    finding: "F1"
-    verdict: "refuted"          # confirmed | refuted | unverifiable
-    reason: "docs/adr/adr-001-card-payment.md:3 names Acme Pay"
-    dissent: true               # seulement quand la lentille était seule (Dissent Rule)
-    # carried: 1                 # seulement quand reporté de la réfutation de cette passe
-reused:                         # les lentilles reprises de la passe précédente
-  - lens: "fitness"
-```
-
-Le **slug** est le nom kebab-case d'un pipeline (`checkout-by-card`). Un slug = un pipeline =
-un dossier.
-
-## Artefacts par phase <!-- #artifacts -->
-
-Les documents d'une phase vont dans un sous-dossier daté `AAAA-MM-JJ`, ou sous `docs/` du dépôt
-pour la [documentation durable](#durable-docs) ; le moteur donne à l'agent le chemin de chaque
-sortie attendue, et la pré-crée quand elle a un gabarit. Détail par
-phase : [Phases](./phases.md).
-
-| Phase | Artefact | Chemin |
-| --- | --- | --- |
-| DISCOVER (skraft-backlog) | rapport de triage, proposition de sprint | `research/{date}/triage-{date}.md`, `research/{date}/sprint-proposal.md` |
-| DISCUSS (skraft-backlog) | stories, brouillons de critères d'acceptation | `plans/{date}/stories-{milestone}.md`, `plans/{date}/ac-draft-{story}.md` |
-| RESEARCH | document de recherche | `research/{date}/{slug}-research.md` |
-| DESIGN | matrice de cohérence, plan de supersession | `details/{date}/consistency-matrix-{slug}.md`, `supersession-plan-{story}.md` ; `details/{date}/structural-scan.json` (écrit par le moteur) |
-| DESIGN | context map, conception tactique, modèle d'événements (dans le dépôt, hors du dossier de suivi) | `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md`, `docs/domain/event-model/{bounded-context}.md` |
-| DESIGN | ADR (dans le dépôt, hors du dossier de suivi) | `docs/adr/adr-{nnn}-{sujet}.md`, `docs/adr/decisions-index.md`, `docs/adr/supersessions.md` |
-| DISTILL | plan de test, plan d'implémentation | `details/{date}/test-plan-{slug}.md`, `details/{date}/impl-plan-{story}.md` |
-| DISTILL | scénarios Gherkin, non exécutables (dans le dépôt, hors du dossier de suivi) | `{dossier features}/{bounded-context}/{feature}.feature` |
-| DELIVER | journal des changements | `changes/{date}/change-log.md` |
-| DELIVER | les exécutions de gates tracées de chaque tentative ; sortie des exécutions e2e | `logs/runs/{step}-{visit}-{attempt}/runs.jsonl` et ses logs ; `visuals/{composant}/e2e-{n}.log` |
-| PUBLISH | prose et description de la pull request | `details/{date}/pull-request-prose-{slug}.md`, `pull-request.md` ([sections](./pull-request.md#description)) |
-| revues DESIGN, DISTILL, DELIVER | entrées des lentilles et verdict écrit par le moteur | `reviews/{nœud}-{visite}/` |
-| tout le run | journal, rapports recalculés après chaque étape | `events.jsonl`, `run-report.md` ([sections](#run-report)), `qa-report.md`, `WORKFLOW.md`, `issue-progress.md` ([lignes](./issue-comments.md#progress)) |
-| tout le run | ce qu'ont affiché le lancement des tests d'acceptation par le designer, les commits refusés et les commandes des agents ; fichiers temporaires des agents | `logs/` ([Logs](#logs)), `.tmp/` |
-
-Les lentilles n'écrivent aucun fichier : elles rendent des findings, et le moteur écrit
-`reviews/{nœud}-{visite}/verdict.yaml`.
+`results/`, `reviews/`, `logs/` et `.tmp/` ne sont jamais des documents d'une phase : aucune lentille ne les reçoit. Les documents que chaque phase écrit sont listés dans [Phases](./phases.md). Les lentilles n'écrivent aucun fichier : elles rendent des constats, et le moteur écrit `reviews/<node>-<visit>/verdict.yaml` (`status` `APPROVED`, `NEEDS_REWORK` ou `BLOCKED`, les constats qui comptent, les réfutations, les lentilles reprises) à côté d'un `snapshot.json` que la passe suivante compare ([revue incrémentale](./gates.md#incremental)).
 
 ## Documentation durable <!-- #durable-docs -->
 
-Certains documents d'un run sont la documentation du dépôt, pas celle du run. La phase qui les
-produit les écrit sous `docs/` dans la copie de travail, sur la branche de la story : la pull
-request les montre, et les runs suivants les relisent.
+Certains documents appartiennent au dépôt, pas au run. La phase les écrit sous `docs/` sur la branche de la story : la pull request les montre et les runs suivants les relisent.
 
-| Document | Phase | Chemin dans le dépôt |
+| Document | Phase | Chemin |
 | --- | --- | --- |
-| context map : bounded contexts, classe de sous-domaine, relations entre contextes | DESIGN | `docs/architecture/context-map.md`, un seul fichier complété story après story |
-| conception tactique : agrégats, entités, objets valeur, événements de domaine, repositories | DESIGN | `docs/architecture/{bounded-context}.md` |
-| modèle d'événements : commandes, requêtes, événements de domaine, modèles de lecture, tranches | DESIGN | `docs/domain/event-model/{bounded-context}.md` |
-| ADR, index des décisions, registre des supersessions | DESIGN | `docs/adr/` |
+| carte des contextes, conception tactique | DESIGN | `docs/architecture/context-map.md`, `docs/architecture/{bounded-context}.md` |
+| modèle d'événements | DESIGN | `docs/domain/event-model/{bounded-context}.md` |
+| ADR, index des décisions, registre des remplacements | DESIGN | `docs/adr/` |
 | scénarios Gherkin, non exécutables | DISTILL | `{dossier features}/{bounded-context}/{feature}.feature` |
 
-Restent dans le dossier de suivi : le document de recherche,
-`supersession-plan-{story}.md`, `consistency-matrix-{slug}.md`, `test-plan-{slug}.md`,
-`impl-plan-{story}.md`, le journal des changements, la prose de
-la pull request, le journal et ses rapports.
-
-| Règle | Détail |
-| --- | --- |
-| Lecture | consigne aux agents : RESEARCH et DESIGN lisent `docs/` avant toute autre chose ; le moteur ne le contrôle pas |
-| Déjà couvert | quand `docs/` couvre déjà la story, la phase le dit dans sa sortie déclarée (le document de recherche, la matrice de cohérence), cite les fichiers de `docs/` et passe à la suite. Le moteur ne contrôle que la matrice : sa ligne `docs-relied-on:` doit lister au moins un fichier de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, ou un `.feature` là où son composant le garde, et chaque fichier listé doit exister dans la copie de travail. Les citations du document de recherche sont contrôlées aussi, par les traces RESEARCH (`research-records`) |
-| Mise à jour | consigne aux agents : une phase complète un fichier existant de `docs/` et ne le réécrit pas ; le moteur ne le contrôle pas |
-| ADR | un ADR publié n'est jamais édité ; un nouvel ADR peut le remplacer ([Ce qui n'est jamais réécrit](#append-only)) |
-| Écriture permise | DESIGN : `docs/adr/`, `docs/architecture/`, `docs/domain/event-model/` ; DISTILL : les dossiers features que nomme le `bdd` des composants ([Phases](./phases.md)) |
-| Lentille aveugle | `cold-reader` ne lit ni ces fichiers ni les ADR : ils sont retirés de `code.patch` et de `code-files.txt` |
-
-## Ce qui n'est jamais réécrit <!-- #append-only -->
-
-| Élément | Règle |
-| --- | --- |
-| `events.jsonl` | on n'y fait qu'ajouter des lignes ; une ligne modifiée casse la chaîne ou la signature, ce que le moteur voit à la lecture suivante |
-| état du run | recalculé depuis le journal à chaque lecture ; aucun fichier d'état n'est écrit |
-| ADR pas encore sur la branche de base | corrigé sur place, reste `Proposed` ; aucun historique de brouillons ([ADR non publiés](#unpublished-adrs)) |
-| ADR publié | seules ses lignes de statut et de remplacement changent, jamais supprimé ; le nouvel ADR porte `**Supersedes:** ADR-MMM` et une ligne est ajoutée à `docs/adr/supersessions.md`, que le moteur vérifie à la fin de chaque tentative de DESIGN |
+Le document de recherche, la matrice de cohérence, le plan de remplacement, le plan de test, le plan d'implémentation, le journal des changements, la prose de la pull request, le journal et les rapports restent dans le dossier de suivi. RESEARCH et DESIGN lisent `docs/` d'abord et complètent un fichier plutôt que le réécrire (consignes aux agents, pas des contrôles). Le moteur contrôle la ligne `docs-relied-on:` de la matrice de cohérence (au moins un fichier existant de `docs/adr`, `docs/architecture`, `docs/domain/event-model` ou `docs/features`, ou un `.feature`) et le périmètre d'écriture de chaque phase. `cold-reader` ne lit ni les ADR ni ces fichiers. Les lignes de `events.jsonl` ne sont qu'ajoutées ; un ADR publié n'est jamais modifié, un nouvel ADR le remplace.
 
 ## `.active-slug` <!-- #active-slug -->
 
-| Règle | Détail |
-| --- | --- |
-| Contenu | le slug suivi d'un saut de ligne, écrit par `skraft init <slug>` (et par Init dans le mod et le workflow) |
-| Lecture | blancs retirés ; un contenu qui n'est pas kebab-case vaut « aucun pipeline actif » |
-| Obligatoire | toute commande qui agit sur un run lit ce fichier ; le moteur ne devine jamais un slug |
-| Portée | une copie de travail ; un worktree Git a donc le sien |
+Le slug et un saut de ligne, écrits par `skraft init <slug>`. Les blancs sont retirés ; un contenu qui n'est pas en kebab-case signifie aucun pipeline actif. Toute commande qui agit sur un run le lit et le moteur ne devine jamais un slug. Il est propre à une copie de travail : un worktree Git a le sien.
 
 ## `events.jsonl` <!-- #events-jsonl -->
 
-Un objet JSON par ligne, en UTF-8. Les lignes vides sont ignorées ; `\n` et `\r\n` sont
-acceptés. Chaque événement porte trois champs communs :
+Un objet JSON par ligne. Chaque événement porte `type`, `at` (ISO-8601 UTC) et `prev`, le SHA-256 hexadécimal minuscule de la ligne précédente (`null` sur la première). Chaque ligne se termine par `sig`, le HMAC de la ligne sans ce champ sous la clé du run ; la première ligne nomme la clé par `keyId`, gardée dans `~/.skraft/journal-keys/<keyId>.key` sur la machine qui a lancé le run.
 
-| Champ | Contenu |
-| --- | --- |
-| `type` | type de l'événement (tableau ci-dessous) |
-| `at` | instant ISO-8601 en UTC |
-| `prev` | SHA-256 en hexadécimal minuscule de la ligne précédente (ses octets UTF-8, sans le saut de ligne) ; `null` sur la première ligne |
+- **Contrôle de la chaîne.** À chaque ouverture du journal, le moteur contrôle chaque ligne. La première rupture donne `journal-tampered` : `journal tampered: events.jsonl line N <détail> ; restore the file or start a new slug` (pas du JSON, n'ouvre pas la chaîne, ne s'enchaîne pas à la ligne N-1, ne nomme aucune clé, n'est pas signée, ne porte pas la signature de la clé du run).
+- **Sans la clé** sur cette machine, sans dossier personnel, ou pour un journal écrit avant la signature : `journal-unverifiable`. `skraft journal adopt` écrit une ligne `journal.adopted` (`keyId`, `previousKeyId`, `unverified`) qui nomme une nouvelle clé ; les lignes précédentes restent non vérifiées.
+- **Écritures concurrentes.** Avant chaque ajout, le moteur relit le journal ; si une autre écriture est arrivée, il s'arrête avec `journal-changed`.
 
-```mermaid
-flowchart LR
-    L1["ligne 1<br/>run.started<br/>prev: null"] -->|sha256| L2["ligne 2<br/>step.started<br/>prev: h1"]
-    L2 -->|sha256| L3["ligne 3<br/>step.recorded<br/>prev: h2"]
-    L3 -->|sha256| L4["ligne 4<br/>phase.closed<br/>prev: h3"]
-    L4 -->|sha256| L5["ligne 5<br/>run.finished<br/>prev: h4"]
-```
-
-**Contrôle de la chaîne.** À chaque ouverture, le moteur vérifie toutes les lignes. La
-première rupture donne `journal-tampered` avec ce message :
-`journal tampered: events.jsonl line N <détail>; restore the file or start a new slug`.
-
-| `<détail>` | Cause |
-| --- | --- |
-| `is not JSON` | la ligne n'est pas un objet JSON |
-| `does not open the chain` | la ligne 1 a un `prev` non nul |
-| `does not chain to line N-1` | `prev` n'est pas l'empreinte de la ligne précédente |
-
-
-**Signature.** Chaque ligne finit par un champ `"sig"` : le HMAC de la ligne sans ce champ, sous
-la clé du run. La première ligne nomme cette clé par `keyId` ; la clé est gardée dans
-`~/.skraft/journal-keys/<keyId>.key` de la machine qui a démarré le run. Une ligne
-`journal.adopted`, écrite par `skraft journal adopt`, nomme une nouvelle clé sous laquelle les
-lignes suivantes sont signées ; les lignes d'avant restent non vérifiées.
-
-| `<détail>` (suite) | Cause |
-| --- | --- |
-| `names no signing key` | la première ligne ne nomme aucune clé |
-| `is not signed` | la ligne ne porte pas de `sig` |
-| `does not carry the signature of the run's key` | `sig` n'est pas le HMAC de la ligne sous la clé du run |
-| `is an adoption that does not follow the lines before it` | une ligne `journal.adopted` qui ne suit pas les lignes d'avant |
-
-Sans la clé sur cette machine, ou pour un journal écrit avant la signature : code
-`journal-unverifiable` (`journal unverifiable: the key that signed events.jsonl is not in
-~/.skraft/journal-keys on this machine …`) ; `skraft journal adopt` l'adopte. Sans dossier
-personnel (`HOME`, `USERPROFILE`) : `journal-unverifiable`, `journal unverifiable: the
-environment names no home folder …`.
-
-**Écritures concurrentes.** Avant chaque ajout, le moteur relit le journal. Si une autre
-écriture est arrivée depuis l'ouverture, il s'arrête avec `journal-changed` :
-`<slug>: another run wrote events.jsonl meanwhile; run again once it stops`.
-
-Sous Copilot CLI, l'onglet **Journal** du canvas `skraft-pipeline` lit ce fichier
-([Hôtes](./hosts.md#canvas)) :
-
-![Canvas skraft-pipeline, onglet Journal : la chaîne de hachage intacte, 62 lignes chaînées chacune à la précédente et signées ; puis chaque étape avec sa phase, son passage et son résultat, et la décision humaine adr-1 RATIFIED par host-confirmed](/img/screenshots/shared/pipeline-canvas-journal.png)
-
-## Événements <!-- #events -->
-
-| `type` | Écrit par | Champs |
+| `type` | Écrit par | Champs principaux |
 | --- | --- | --- |
-| `run.started` | Init, au premier init du slug | `slug` ; `story` (`{ issue, title }` ou `null`) ; `workflow` (`skraft`) ; `base` (liste, voir ci-dessous) |
-| `step.started` | le pipeline, avant de lancer un agent | `step` (`research`) ; `phase` (`RESEARCH`) ; `agent` (`solution-researcher`) ; `attempt` (1, 2…) ; `outputs` (chemins attendus, relatifs au dossier du slug) ; `missing` (chemins manquants à la tentative précédente, vide à la première ; à la première tentative d'un passage que la consigne d'un humain a rouvert, ceux que la tentative bloquée a laissés manquants) ; `assignment` : ce sur quoi l'agent tourne — `family`, `tier`, `source` (`agent`, `workflow`, `type`, `default`, `escalation`, `host`) et, par hôte, `model` (liste ou null), `effort` (ou null) et la `source` de chacun ; une tentative reprise tourne de nouveau dessus, quoi que dise la configuration depuis ; `host` (`claude-code`, `copilot`) : l'hôte qui lance l'agent, dont il prend le `model` et l'`effort` (sans modèle : l'hôte choisit). Le log de `/workflows`, la vue Observe (`agents`) et `run-report.md` (`## Agents`) montrent pour chaque agent sa famille, son palier, son modèle sur cet hôte (ou `model chosen by the host`) et son niveau, puis le modèle sur lequel l'hôte dit l'avoir lancé une fois qu'il a répondu. Sur un nœud question, `question` (le type de question) à la place d'`agent`. |
-| `step.recorded` | le pipeline, après l'agent | `step` ; `attempt` ; `outcome` (`outputs-complete` ou `missing-outputs` ; sur un nœud question `answered`, ou `skipped` quand aucun humain n'était nécessaire, avec `answer` ; `aborted`, code `environment`, après un `ABORT`) ; `missing` ; `durationMs` ; `cost` (absent quand l'hôte n'en rend pas) ; `model` (le modèle de l'agent, null pour celui de la session ; absent sur une reprise qui ne l'a pas lancé) ; `ceiling` sur une étape d'où aucune arête ne repart : le nœud vers lequel mène l'arête à son `max_visits` (`loop-ceiling`), celui que relance la consigne d'un humain, `null` quand aucune arête ne repart. Sur le nœud qui écrit les scénarios de l'histoire et sur celui qui les livre, une fois réussi : au passage du premier nœud, `scenarios` (chacun `{ index, title, component, tags }`), `exemption`, `oracles` (un par scénario, `{ scenario, sha, subject, component, files, command }` : le rouge unique qui porte chaque test d'acceptation, et la commande de son composant, `test` ou `e2e`) et `skeleton`, ce même rouge (`null` pour une histoire exemptée de walking skeleton) ; à un passage du nœud de livraison, `green` (`{ others }`, les autres composants que son vert a changés, absent s'il n'y en a pas) |
-| `question.asked` | le pipeline, quand il pose une question à un humain | `key` (`adr-1`, `design-1`), le nœud qui pose la question puis son rang parmi celles de ce nœud dans le run ; `kind` (`adr-ratification`, `scenario-review`, `environment`, `blocked`, `review-ceiling`) ; `text` ; `options` ; `refusals` ; `header` ; `step` ; `visit` ; `subjects` (les ADR à ratifier, les fichiers du commit du walking skeleton puis du commit du test d'acceptation de S1, vide sinon) ; sur une question `environment`, `incident` : `{ owner, log }`, `owner` la cause (`environment` ou `config`), `log` le chemin absolu du fichier qui garde ce qu'a affiché la commande en échec, `null` quand aucune n'a écrit de log |
-| `question.answered` | la boîte de dialogue de l'hôte, ou `skraft decide` | `key` ; `answer` (pour une question `blocked` ou `review-ceiling`, la consigne de l'humain telle qu'il l'a écrite, sur une ligne, ou `STOP`, ou `ACCEPT` pour une question `review-ceiling`) ; `reason` (`null` sans raison) ; `by` (`host`, `decide`, `host-confirmed` ou `cli-tty`) |
-| `phase.closed` | le pipeline | `phase` |
-| `run.finished` | le pipeline | `status` (`completed` quand la dernière phase est close, `blocked` quand le run s'arrête) ; `code` (avec `blocked`) ; `reason` (`<PHASE> closed` avec `completed`) |
-| `run.stopped` | le pipeline, quand l'agent ne démarre pas ou s'arrête | `code` (`agent-unavailable`, `agent-failed` ou `interrupted`, une commande qu'une personne a arrêtée par Ctrl-C) ; `reason`. Jamais écrit quand la machine ne peut pas exécuter une étape : le moteur pose alors la question `environment` |
-| `review.lens` | un nœud de revue, une fois par lentille, et une fois par passe pour chaque contrôle du moteur qui trouve quelque chose | `step` ; `visit` ; `lens` (`consistency` ; `test-integrity#patch` pour les findings G9 du moteur, `testability#layout` pour ses findings G11, sans `fingerprint`) ; `agent` (`consistency-lens`) ; `model` (le modèle sur lequel elle a tourné, `claude-haiku-5.5` ; null pour celui de la session) ; `fingerprint` (empreinte des entrées de la lentille) ; `verdict` (`pass`, `fail` ou `inconclusive`) ; `findings` (`{ id, gate, severity, location, description, suggestion, severityReason, drift, occurrences }`, `gate` étant l'identifiant de la table de la lentille : `G7`, `M2`…, `occurrences` une liste de `chemin:ligne` ; les findings propres au moteur n'ont ni `severityReason`, ni `drift`, ni `occurrences`) ; `cost` (absent s'il est inconnu) ; `reused` (`true` quand le résultat est repris de la passe précédente : mêmes entrées, rien trouvé) ; `cleanedLines` (les lignes de la réponse dont la clé a été nettoyée avant lecture, [clés de la réponse](gates.md#lens-answer) ; absent s'il n'y en a aucune) |
-| `review.refuted` | un nœud de revue, une fois par finding, de toute sévérité, vérifié par `finding-refuter` ; les findings de plusieurs lentilles à une même ligne, vérifiés en un appel, en donnent un chacun avec son propre verdict, son `cost` sur le premier | `step` ; `visit` ; `lens` ; `finding` (son id) ; `verdict` (`confirmed`, `refuted` ou `unverifiable`) ; `reason` ; `dissent` (`true` quand la lentille du finding était seule à renvoyer le travail, et que le réfuteur l'a jugé avec toutes les entrées de la revue) ; `carried` (à une passe suivante, la passe dont il reporte la réfutation d'un finding au même endroit, sans interroger le réfuteur : sa `reason`, son `assignment` et son `model` sont ceux de cette réfutation, pas de `cost`) ; `model` ; `cost` |
-| `review.noted` | un nœud de revue, à partir de sa deuxième passe, une fois par finding, de toute sévérité, nouveau sur une ligne que la passe précédente a lue avec le même texte ([re-revue incrémentale](./gates.md#incremental)) : une note, non vérifiée par le réfuteur | `step` ; `visit` ; `lens` ; `finding` (son id) ; `since` (la passe précédente) |
-| `review.cost` | un nœud de revue, une fois par lot que l'hôte chiffre d'un bloc (le mod Claude Code) | `step` ; `visit` ; `cost` |
-| `commits.checked` | le pipeline, après une tentative d'une étape d'agent qui a fait des commits | `step` ; `visit` ; `attempt` ; `commits`, chacun `{ repository, sha, subject, kind, verdict }` : `kind` (`red`, `green`, `refactor`, `other`, `invalid`), `verdict` (`ok`, `not-conventional`, `issue-reference-missing`, `issue-closed`, `issue-not-in-story`, `outside-tdd`, `green-without-red`, `green-without-test`, `test-apart`, `no-component`, `oracle-split`, `oracle-component`, `oracle-without-test`, `code-in-oracle`, `test-in-scenario`, `refactor-in-scenario`, `green-out-of-order`, `green-beyond-groups`, `oracle-touched` ; [Commits](./gates.md#commits)). Le moteur ne lance aucune commande pour vérifier un commit : un journal écrit avant porte les champs `replay`, `judge` et `settled`, ignorés |
-| `evidence.checked` | le pipeline, après une tentative DELIVER qui tient sa preuve | `step` ; `visit` ; `attempt` ; `runs`, chacun `{ run, gate, cwd, log, sha256 }` : les exécutions tracées de [`skraft_repl`](./repl.md) sur lesquelles la tentative s'appuie, par identifiant, gate, dossier du composant, chemin du log et hash du log, jamais leur sortie ([Preuves des gates](#gate-evidence)) |
-| `visuals.recorded` | le nœud `playwright-visuals` | `step` ; `visit` ; les captures de chaque front end |
-| `publish.requested` | `skraft publish` | `by` (`skraft publish`) ; `consent` (`publish.pullRequest` au moment de la commande) |
-| `pull-request.opened` | le nœud `publish` ou `skraft publish` | `number` ; `url` ; `base` ; `head` ; `draft` ; `bodyHash` |
-| `pull-request.updated` | le nœud `publish` ou `skraft publish` | `number` ; `url` ; `bodyHash` |
-| `pull-request.details-kept` | le nœud `publish` ou `skraft publish`, une fois la pull request ouverte, mise à jour ou à jour | `number` ; `part` ; `parts` ; `url` du commentaire ; `bodyHash` de la partie |
-| `pull-request.details-skipped` | idem, quand une partie n'a pas pu être gardée | `number` ; `part` ; `parts` ; `reason` |
-| `issue.commented`, `issue.comment-skipped` | le run, à chaque transition qu'il rapporte sur l'issue de la story | `issue` ; `kind` ; `phase` ; `step` ; `event` ; `url` (commenté) ou `reason` (sauté) |
-| `lease.reclaimed` | le pipeline ou une revue de pull request, avant son fait suivant, quand la session a dépassé le délai de son bail (la machine a dormi) et l'a repris intact | `renewed` (dernier renouvellement avant la pause) ; `gapMs` |
-| `journal.adopted` | `skraft journal adopt` | `keyId` (la nouvelle clé) ; `previousKeyId` ; `unverified` (nombre de lignes d'avant non vérifiées) |
+| `run.started` | init | `slug`, `story`, `workflow`, `base` (`{ component, root, repository, ref, source, sha }` chacune) |
+| `step.started` | le pipeline, avant un agent | `step`, `phase`, `agent`, `attempt`, `outputs`, `missing`, `assignment`, `host` ; `sentBy` quand l'étape est renvoyée |
+| `step.recorded` | le pipeline, après l'agent | `step`, `attempt`, `outcome`, `missing`, `failures`, `durationMs`, `cost`, `model`, `documents` ; sur les nœuds DISTILL et DELIVER, les scénarios et leurs oracles |
+| `question.asked`, `question.answered` | le pipeline, `skraft decide` | `key`, `kind`, `text`, `options` ; `answer`, `reason`, `by` (`host`, `decide`, `host-confirmed`, `cli-tty`) |
+| `phase.closed`, `run.finished`, `run.stopped` | le pipeline | `phase` ; `status`, `code`, `reason` |
+| `review.lens`, `review.refuted`, `review.noted`, `review.cost` | un nœud de revue | `lens`, `verdict`, `findings`, `fingerprint` ; le verdict du réfuteur par constat |
+| `commits.checked` | après une tentative qui a fait des commits | `commits`, chacun `{ repository, sha, subject, kind, verdict }` |
+| `evidence.checked` | après une tentative DELIVER dont la trace se lit jusqu'à ses signatures | `runs`, chacun `{ run, gate, cwd, log, sha256 }` ; `red: true` pour le run rouge du concepteur ([Preuves qualité](#gate-evidence)) |
+| `visuals.recorded` | `playwright-visuals` | les captures de chaque front |
+| `publish.requested`, `pull-request.opened`, `pull-request.updated`, `pull-request.details-kept`, `pull-request.details-skipped` | `skraft publish`, le nœud `publish` | `number`, `url`, `bodyHash`, `part` |
+| `issue.commented`, `issue.comment-skipped` | le run | `issue`, `kind`, `url` ou `reason` |
+| `lease.reclaimed`, `journal.adopted` | le pipeline, `skraft journal adopt` | `renewed`, `gapMs` ; `keyId`, `unverified` |
 
-Chaque entrée de `run.started.base` : `{ component, root, repository, ref, source, sha }`.
-`component` vaut `null` pour la copie de travail ; `ref` est la ref réellement utilisée
-(`main` ou `origin/main`) ; `source` vaut `flag`, `component`, `config` ou `default`. Règle de
-calcul : [skraft-config.json](./skraft-config.md).
-
-Le coût vient de l'hôte : le mod Claude Code journalise l'écart de coût de la session en
-USD ; le workflow Copilot n'en rend pas (Copilot compte en crédits, pas en USD). Cet écart
-comprend tout ce qui s'est échangé dans la session pendant que l'agent tournait : le panneau et
-le rapport l'affichent donc comme approximatif (`~$0.42`), avec une note.
-
-Le `step.started` d'un nœud de revue porte `lenses` au lieu d'`agent`, `assignments` (l'affectation de chaque agent lentille) et `refuter` (celle du réfutateur, par palier d'escalade : `standard`, `frontier`), que rejoue une revue reprise, et `host` ; chaque `review.lens` et `review.refuted` porte l'`assignment` sur laquelle il a tourné ; son `step.recorded` a
-un `outcome` `approved`, `needs-rework` ou `blocked` (`code` `lens-inconclusive` quand une
-lentille a répondu `inconclusive` : le run pose
-la question `blocked` sur le nœud de revue ; `reason` nomme chacune
-de ces lentilles et ce qu'elle a noté), `failures` (les findings retenus, que le brief suivant
-de l'agent de la phase liste), `findings` sur une revue `needs-rework` (les mêmes findings avec
-leur contexte, chacun `{ lens, id, gate, severity, location, description, suggestion,
-severityReason, drift, occurrences }` : ce que montre la question `review-ceiling` ou `blocked`
-quand la revue atteint son plafond, et ce que listent le rapport du run et la pull request une
-fois acceptés) et `cost` (ses lentilles, ses vérifications et ses lots de cette passe, reprise comprise). Une étape où le run a été renvoyé, par une revue ou le refus d'un humain, porte
-`sentBy` (`review` ou `ask`) sur son `step.started` ; une étape que rien n'a renvoyée n'en a pas.
-La consigne d'un humain à une question `blocked` ouvre le passage suivant du nœud avec `sentBy`
-`ask`, la consigne dans `instruction`, ce que le blocage a laissé (les `failures` de son étape)
-pour `feedback` et, après les tentatives refusées d'un agent, les sorties qu'elles ont laissées
-manquantes dans `missing` ; le `step.started` d'un nœud de revue les porte aussi, et chaque
-lentille de ce passage lit l'`instruction`.
-Le `step.recorded` d'un agent liste dans `documents` les fichiers du dossier de suivi que sa
-tentative a créés ou modifiés (hors fichiers du moteur), et pour le solution architect le
-`details/<date>/structural-scan.json` que le moteur a écrit avant la tentative ; une revue donne ces documents à chaque
-lentille, par phase, et écrit `reviews/<nœud>-<visite>/context.md` : la story, les fichiers de
-règles du projet trouvés (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`,
-`.github/copilot-instructions.md`, `docs/adr/decisions-index.md`) et quel agent a écrit quel document.
+Le `verdict` d'un commit est exactement l'un de `ok`, `not-conventional`, `issue-reference-missing`, `issue-closed`, `issue-not-in-story`, `outside-tdd`, `green-without-red`, `green-without-test`, `test-apart`, `no-component`, `oracle-split`, `oracle-component`, `oracle-without-test`, `code-in-oracle`, `test-in-scenario`, `refactor-in-scenario`, `green-split`, `oracle-touched` ([Commits](./gates.md#commits)).
 
 ## Questions à un humain <!-- #human-questions -->
 
-Une question est posée une fois et journalisée (`question.asked`) ; sa réponse est
-journalisée (`question.answered`), puis appliquée. Sans réponse, le run **attend** (fail
-closed) : rien de plus n'est journalisé, et relancer le run repose la même question, avec la
-même clé, sans relancer d'agent. Un run interrompu à n'importe quel point de décision reprend
-de la même façon.
+Une question est journalisée quand elle est posée et quand elle reçoit sa réponse. Sans réponse le run attend, et un nouveau démarrage pose la même question avec la même clé.
 
-| Question | Clé | Posée quand | Réponse appliquée |
-| --- | --- | --- | --- |
-| `adr-ratification` | `<nœud>-<n>` (`adr-1`) | un ADR `docs/adr/adr-NNN-*.md` est `Proposed` ; aucun : `step.recorded` `skipped`, raison `no Proposed ADR to ratify` | `RATIFIED` : chaque ADR passe en `Accepted` (`status: Accepted`, `ratified_by: "human AAAA-MM-JJ"`, la ligne `**Status:**`, sa ligne dans `docs/adr/decisions-index.md` s'il existe), commités seuls en `docs(adr): ratify ADR-001, ADR-002`. `REJECTED` : DESIGN repasse avec la raison |
-| `scenario-review` | `<nœud>-<n>` (`scenario_review-1`) | la revue de DISTILL a approuvé ; le texte nomme chaque scénario dans l'ordre (S1 marqué walking skeleton), le commit et les fichiers du walking skeleton (ou l'exemption que déclare l'histoire) et le commit et les fichiers du test d'acceptation de S1 | `APPROVED` : `deliver` fait passer S1, puis les scénarios suivent un à un. `REVISE` : DISTILL tourne à nouveau avec les corrections de l'humain pour retour |
-| `environment` | `<nœud>-<n>`, le nœud qui ne peut pas tourner (`adr-1`) | une étape ne peut pas tourner sur cette machine, ou avec ce que lui donne `skraft-config.json` ([causes](#environment-question)) | `RETRY` : la même étape est revérifiée ou relancée là où elle s'est arrêtée, sans consommer de tentative, son agent seulement si ses sorties manquaient encore ; `ABORT` : run bloqué |
-| `blocked` | `<nœud>-<n>`, le nœud qu'une consigne relance (`design-1`) | un agent a répondu `blocked`, ou a été refusé de la même façon à deux tentatives de suite d'un passage ou à sa dernière tentative (le nœud de l'agent), une boucle a atteint son `max_visits` (le nœud vers lequel revient l'arête plafonnée ; pour une revue, seulement tant qu'il reste un finding blocker ou high), une lentille a répondu `inconclusive` (le nœud de revue) | une consigne : le même run entre dans ce nœud sur un nouveau passage, à la tentative 1 avec tout son `max_attempts`, la consigne dans `instruction`, ce que le blocage a laissé pour `feedback` et les sorties qu'un agent refusé a laissées manquantes dans `missing` (`sentBy` `ask`), et aucune arête vers ce nœud ne compte plus comme empruntée ; `STOP` : `run.finished` `blocked` avec le code et la raison du blocage, rien d'autre |
-| `review-ceiling` | `<nœud>-<n>`, le producteur vers lequel revient la revue (`design-1`) | la boucle d'une revue vers son producteur a atteint son `max_visits` et il ne reste que des findings medium et low | `ACCEPT` : le run continue par l'arête `APPROVED` de la revue (en fermant sa phase quand cette arête en sort), et le rapport du run et la pull request listent les findings acceptés ; une consigne : comme pour `blocked` ; `STOP` : `run.finished` `blocked`, code `loop-ceiling` |
-
-Les questions `blocked`, `review-ceiling` et `environment` finissent par la ligne
-`The run so far (commits, refusals, incidents): <chemin absolu de run-report.md>`
-([Rapport du run](#run-report)).
+| Question | Posée quand | Réponses |
+| --- | --- | --- |
+| `adr-ratification` | un ADR est `Proposed` | `RATIFIED` passe chacun à `Accepted` et commite seul ; `REJECTED` relance DESIGN |
+| `scenario-review` | la revue DISTILL a approuvé | `APPROVED` lance DELIVER ; `REVISE` relance DISTILL avec les corrections |
+| `environment` | une étape ne peut pas tourner sur cette machine ([ci-dessous](#environment-question)) | `RETRY` ou `ABORT` |
+| `blocked` | un agent est bloqué ou refusé deux fois de la même façon, une boucle a atteint son `max_visits`, une lentille a répondu `inconclusive` | une instruction relance le nœud sur une nouvelle passe ; `STOP` termine le run |
+| `review-ceiling` | une boucle de revue a atteint son plafond avec des constats moyens et bas seulement | `ACCEPT`, une instruction, ou `STOP` |
 
 ### La question `environment` <!-- #environment-question -->
 
-Elle se lit :
-
-```text
-<node> cannot run on this machine: <reason>.
-Cause: <cause>.
-Output: <chemin absolu du log>
-Fix it, then RETRY: <node> runs again where it stopped, using no new attempt; or ABORT: the run ends.
-The run so far (commits, refusals, incidents): <chemin absolu de run-report.md>
-```
-
-La ligne `Output:` n'est là que quand une commande a écrit dans un log : le
-`logs/commit-<nœud>.log` ([Logs](#logs)). `Cause:` nomme qui corrige ;
-`question.asked` la porte dans `incident.owner`.
-
-| `owner` | `Cause:` | Posée quand |
-| --- | --- | --- |
-| `environment` | `the machine: a program, a service, a permission or a Git hook it lacks or refuses` | Git échoue ; `docs/adr` existe mais ne peut pas être listé (`docs/adr cannot be listed: Git or the file system refused to read it`, texte fixe qui ne reprend jamais celui de l'erreur ; la ratification n'est alors jamais sautée) ; Git refuse un commit que fait le moteur (un hook, une identité absente, un verrou) : le commit d'un agent sans shell, le commit de ratification |
-
-Une question `environment` ne renvoie rien à un agent et ne consomme aucune de ses tentatives.
-L'étape reste ouverte ; `RETRY` la relance là où elle s'est arrêtée. Le même échec après un `RETRY` pose une nouvelle
-question (`adr-2`). Après un `RETRY` donné dans une boîte de dialogue de l'hôte, le moteur relit
-`skraft-config.json` ; s'il est invalide, le run s'arrête avec `config-invalid` avant de lancer
-quoi que ce soit, sans rien journaliser : une fois le fichier corrigé, relancer le run reprend
-l'étape ouverte.
+Elle nomme le nœud, la raison, la cause (`environment` : un programme, un service, une permission ou un hook Git que la machine n'a pas ou refuse, ou `config`), le log et le chemin de `run-report.md`. Elle ne renvoie rien à un agent et n'use aucune tentative ; `RETRY` relance l'étape là où elle s'est arrêtée.
 
 ## ADR non publiés <!-- #unpublished-adrs -->
 
-Un ADR est **publié** quand la base du run contient le fichier. Après chaque tentative
-d'agent, chaque ADR modifié par la tentative et non publié doit :
-
-- avoir le statut `Proposed` (seul le moteur pose `Accepted` ; modifier un ADR ratifié dans ce
-  run, c'est le remettre en `Proposed`, et sa ratification est redemandée) ;
-- ne porter aucun champ d'en-tête `amended_by`, `amended_in_place` ou `superseded_by` ;
-- n'avoir aucune section d'historique (`## Historique`, `## History`, `## Erratum`, `## Amendments`, `## Changelog`, `## Revisions`, à toute profondeur de titre) ;
-- ne nommer aucune version, tag d'image, digest ni version de paquet dans le corps (`3.1.4`, `node:20-alpine`, `react-router@6` ; une majeure écrite `v1`, une adresse ou une date n'en est pas) : nommer la technologie ou la capacité qu'elle apporte ;
-- ne citer aucun fichier de code dans le corps ni le `decision` (une citation `#file:`, un chemin terminé par une extension de fichier comme `src/Domain/Order.cs`, une citation de ligne comme `Order.cs:9`) : nommer le composant, le code bouge ; une citation de ligne n'est jamais lue comme une version, un nom pointé seul (`System.IO`, `Node.js`) et une URL ne sont pas des fichiers ;
-- ne citer aucun critère d'acceptation par son identifiant (`AC-3`, `AC 3`, `AC3`) ni aucun ticket (`#123`, `AB#123`, une URL d'issue, de pull request ou de work item) dans le corps ni le `decision` : l'ADR se lit seul, la story reste dans `decisions-index.md` ; les mots « critères d'acceptation » sans numéro, `C#`, la ligne de titre et les lignes `**Supersedes:**` et `**Amends:**` ne sont pas lus comme des citations ;
-- ne citer aucun autre ADR dans le corps ni le `decision`, ni `ADR-NNN` (seul ou en lien markdown) ni un chemin de `docs/adr/` : tout ADR peut être remplacé, une référence devient donc périmée. Le seul `ADR-NNN` qu'un ADR nomme est son propre numéro (titre, en-tête) et l'ADR qu'il remplace, sur sa ligne `**Supersedes:**` ou `**Amends:**` et son champ d'en-tête `supersedes:` ou `amends:`. Un manquement se lit `<path> cites ADR-012 outside its Supersedes/Amends line: an ADR names only the ADR it replaces; any other ADR may be superseded` ;
-- porter un en-tête `decision` d'une seule phrase ;
-- ne pas `supersedes` ni `amends` un autre ADR non publié, que le lien soit dans l'en-tête ou
-  sur une ligne `**Supersedes:** ADR-MMM` : modifier celui-ci sur place.
-
-Tout ADR modifié par la tentative, publié ou non, porte un statut du jeu fermé : `Proposed`, `Accepted`, `Rejected`, `Deprecated`, `Superseded` ou `Superseded by ADR-NNN`, entier et en anglais, dans son en-tête et sa ligne `**Status:**` (`Superseded (partial)` est refusé : un remplacement partiel est un nouvel ADR qui amende l'ancien).
-
-**ADR publiés.** Un ADR de la base ne change que ses lignes `status`, `superseded_by` et `**Status:**`, comparées au texte de la base ; tout autre changement, ou sa suppression, est refusé. Son statut suit son cycle de vie : un ADR `Accepted` ne devient que `Superseded by ADR-NNN` (l'en-tête peut dire `Superseded`) ou `Deprecated` ; un ADR `Rejected`, `Deprecated` ou `Superseded` garde son statut ; tout autre passage (`Accepted` → `Proposed`, `Accepted` → `Rejected`) est refusé. Son corps n'est jamais contrôlé pour ses citations : un ADR publié ne peut pas changer. Un ADR publié se remplace ou s'amende toujours de la manière habituelle. Un manquement
-refuse la tentative avec le code d'échec `adr-lifecycle` et une ligne par manquement, par
-exemple `docs/adr/adr-002-x.md supersedes ADR-001, which is not on the default branch yet:
-edit docs/adr/adr-001-y.md in place instead`. L'agent recommence avec ces lignes.
+Un ADR est publié quand la base du run contient le fichier. Après chaque tentative, un ADR non publié qu'elle a modifié doit être `Proposed`, ne porter ni `amended_by`, ni `amended_in_place`, ni `superseded_by`, aucune section d'historique, aucune version ni épinglage, aucun fichier de code, aucun identifiant de critère d'acceptation ou de ticket et aucun autre ADR, avoir un `decision` d'une phrase, et ne pas remplacer ni amender un autre ADR non publié. Un ADR publié ne change que ses lignes de statut et de remplacement, selon son cycle de vie. Une infraction fait échouer la tentative avec `adr-lifecycle` et une ligne par infraction.
 
 ## Document de recherche <!-- #research-document -->
 
-| Règle | Détail |
-| --- | --- |
-| Chemin | `<slug>/research/<AAAA-MM-JJ>/<slug>-research.md` ; la date est le jour UTC de la première tentative, réutilisée par la relance |
-| Pré-création | avant la tentative, le moteur l'écrit depuis le template `research.template.md` du plugin s'il n'existe pas |
-| Rempli | le fichier existe, n'est pas vide, diffère du template et ne contient plus aucun `{{…}}` |
-| Relance | non rempli : tentative suivante, avec la liste des chemins manquants, jusqu'à `max_attempts` (3 par défaut) |
-| Blocage | non rempli après la dernière tentative, ou de la même façon à deux tentatives de suite : la question `blocked` ; une consigne relance le chercheur sur un nouveau passage avec les chemins manquants, `STOP` : `run.finished` `blocked`, code `missing-outputs` |
-| Reprise | une tentative ouverte dont les sorties sont déjà remplies est enregistrée sans relancer l'agent |
+`research/<date>/<slug>-research.md`, écrit depuis le modèle du plugin avant la tentative. Il est rempli quand il existe, diffère du modèle et ne contient plus de `{{…}}`. Non rempli : la tentative suivante, jusqu'à `max_attempts` (3), puis la question `blocked`.
 
-## Preuves des gates <!-- #gate-evidence -->
+## Preuves qualité <!-- #gate-evidence -->
 
-Le moteur ne lance aucune gate. L'ingénieur logiciel lance chacune par [`skraft_repl`](./repl.md), qui
-écrit la trace d'une tentative sous `logs/runs/<step>-<visit>-<attempt>/` : un `runs.jsonl` signé et un
-log par exécution. À la soumission de la tentative, le moteur lit cette trace et la contrôle selon les
-règles de [Gates](./gates.md#command-gates). Une tentative refusée échoue avec le code `evidence` : une
-ligne fixe par gate, sans sortie, sans commande, sans texte d'exception.
-
-Quand la tentative tient, le journal enregistre `evidence.checked` :
-
-```json
-{ "type": "evidence.checked", "step": "deliver", "visit": 1, "attempt": 1,
-  "runs": [ { "run": 1, "gate": "build", "cwd": "api", "log": "logs/runs/deliver-1-1/build-1.log", "sha256": "…" } ] }
-```
-
-Les rapports le lisent : le tableau « Preuves de qualité » de la pull request, du commentaire d'issue et
-de `qa-report.md` (Gate, Dossier, Exécution, Preuve), la ligne du panneau Claude Code et la ligne du
-canvas Copilot. Une gate déclarée absente n'a ni exécution ni ligne.
+Le moteur ne lance aucun gate et ne refuse aucune tentative pour l'un d'eux. L'ingénieur logiciel lance chaque gate par [`skraft_repl`](./repl.md), qui écrit une trace signée `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` et un log par run. Le moteur journalise `evidence.checked` (les runs de la tentative dont la trace se lit jusqu'à ses signatures, jamais leur sortie) et remet la trace à la revue DELIVER ; sa lentille `quality-gates` la juge ([Gates](./gates.md)). Le tableau de la pull request, le commentaire d'issue et `qa-report.md` lisent les runs journalisés.
 
 ## Logs <!-- #logs -->
 
-Ce qu'une commande a affiché va dans un fichier de `logs/` ; le journal, un résultat et une
-question nomment ce fichier, sans jamais recopier ce qu'il contient.
-
-| Fichier | Écrit quand | Contenu |
-| --- | --- | --- |
-| `logs/commit-<nœud>.log` | Git refuse un commit que fait le moteur (un hook, une identité absente, un verrou) : le commit pour un agent sans shell, le commit de ratification des ADR | `$ git commit (<nœud>)`, `result: git commit failed: exit N`, puis `--- output` et ce que Git a affiché |
-| tout autre fichier de `logs/` | un agent lance une commande | ce que la commande a affiché |
-
-```
-$ <commande lancée>
-cwd: <racine du composant>
-commit: <sha>
-exit: <code de sortie, ou pourquoi elle n'a pas démarré>
---- stdout
-<sortie standard>
---- stderr
-<sortie d'erreur>
-```
-
-Un commit refusé ne garde que sa raison
-fixe dans le journal et dans la question `environment` (`git commit failed: exit N` pour le
-commit de ratification), jamais ce que Git a affiché ; la ligne `Output:` de la question nomme
-`logs/commit-<nœud>.log`.
-
-Le brief de chaque agent dit : envoyer ce qu'affichent les commandes lancées dans des fichiers
-sous `<run>/logs/`, garder ses fichiers temporaires sous `<run>/.tmp/`, ne rien écrire sous
-`/tmp` ni hors de la copie de travail.
+Ce qu'une commande a affiché va dans un fichier de `logs/` ; le journal, un résultat et une question nomment le fichier sans jamais copier son contenu. `logs/commit-<node>.log` garde ce que Git a affiché quand il a refusé un commit du moteur. Les agents envoient la sortie de leurs commandes dans `<run>/logs/` et leurs fichiers temporaires dans `<run>/.tmp/`.
 
 ## Rapport du run <!-- #run-report -->
 
-Le moteur réécrit `run-report.md` depuis le journal après chaque étape : la ligne de statut, la
-table des étapes (`Step`, `Phase`, `Visits`, `Attempts`, `Retries`, `Time`, `Cost`, `Outcome`) et
-les totaux, que [`skraft report`](./cli.md) affiche aussi, puis ces sections, chacune seulement
-quand elle a des lignes, puis le début du run.
-
-| Section | Colonnes ou lignes | Contenu |
-| --- | --- | --- |
-| `## Waiting on` | `Question <key>, on <node>:`, le texte de la question cité, puis ``Answer with `skraft decide <key> <answers>`.`` | la question qu'attend le run : la dernière posée sans réponse |
-| `## Commits` | `Step`, `Commit`, `Subject`, `Kind`, `Verdict` | chaque commit que le run a vérifié (`commits.checked`), par son sha court, avec le verdict de sa dernière vérification |
-| `## Refusals` | `Step`, `Times`, `First failure` | les échecs renvoyés à un agent : une ligne par nœud, combien de fois une tentative de ce nœud a échoué (`step.recorded` `failed` ou `fail`), ce qu'a dit la première |
-| `## Incidents` | `Question`, `Step`, `Cause`, `Output`, `Answer` | chaque question `environment` : sa clé, son nœud, son `incident.owner`, son log (`-` sans log), sa réponse (`waiting` tant qu'elle n'en a pas) |
-| `## Agents` | `Step`, `Agent`, `Family`, `Tier`, `Host`, `Model`, `Effort` | ce sur quoi chaque agent a tourné |
-| `## Human answers` | `Question`, `Step`, `Answer`, `By` | chaque réponse qu'un humain a donnée |
-| `## Accepted findings` | | les findings qu'un humain a acceptés au plafond d'une revue |
-| `## Forge writes` | | chaque écriture sur la forge, avec son résultat |
-| `## Pre-checks` | `Step`, `Answered at`, `Status`, `Anomalies`, `Cause` | chaque précontrôle qu'un agent a lancé dans sa tentative (`prechecks` de `step.recorded`), dans l'ordre du journal ; `Cause` porte chaque anomalie rendue, `-` s'il n'en a rendu aucune |
-
-```markdown
-## Waiting on
-
-Question adr-1, on adr:
-
-> adr cannot run on this machine: git is not installed or not on the PATH.
-> Cause: the machine: a program, a service, a permission or a Git hook it lacks or refuses.
-> Output: <dossier de suivi>/logs/commit-adr.log
-> Fix it, then RETRY: adr runs again where it stopped, using no new attempt; or ABORT: the run ends.
-> The run so far (commits, refusals, incidents): <dossier de suivi>/run-report.md
-
-Answer with `skraft decide adr-1 RETRY|ABORT`.
-
-## Incidents
-
-| Question | Step | Cause | Output | Answer |
-| --- | --- | --- | --- | --- |
-| adr-1 | adr | environment | <dossier de suivi>/logs/commit-adr.log | waiting |
-```
+Le moteur réécrit `run-report.md` depuis le journal après chaque étape : la ligne de statut, le tableau des étapes (visites, tentatives, reprises, durée, coût, résultat), puis, chacune seulement si elle a des lignes, `## Waiting on`, `## Commits`, `## Refusals`, `## Incidents`, `## Agents`, `## Human answers`, `## Accepted findings`, `## Forge writes` et `## Pre-checks`. [`skraft report`](./cli.md) l'affiche.
 
 ## Statuts et codes <!-- #statuses-and-codes -->
 
-Les commandes, le mod et le workflow rendent un **statut** et, en cas d'arrêt, un **code** :
-`refused` (rien n'a été fait), `blocked` (le run ne peut pas avancer), `waiting` (le run
-attend la réponse d'un humain), `done`.
+Les commandes, le mod et le workflow rendent un **statut** (`refused` : rien n'a été fait ; `blocked` : le run ne peut pas avancer ; `waiting` : une réponse humaine est nécessaire ; `done`) et, quand ils s'arrêtent, un **code**.
 
-| Statut | Code | Quand | Message type | Action |
-| --- | --- | --- | --- | --- |
-| `refused` | `invalid-slug` | slug pas en kebab-case | `slug must be kebab-case, got "<slug>"` | choisir un slug kebab-case |
-| `refused` | `invalid-base` | `--base` n'est pas une ref git | `--base must be a git ref: text with no blank that does not start with -` (la valeur n'est jamais reprise) | passer une ref sans blanc ni `-` initial |
-| `refused` | `config-invalid` | `skraft-config.json` invalide | `skraft-config.json is invalid: <toutes les erreurs>` | corriger chaque erreur listée |
-| `refused` | `configuration-incomplete` | un consentement que les publications du run demandent est sans réponse, ou répond à une version antérieure de sa question | `skraft is not initialised: run /skraft-init (<publish.clé is unanswered\|publish.clé answers an earlier question>, …)` | lancer `/skraft-init` |
-| `refused` | `forge-unreachable` | le run ouvrirait une pull request sur une forge que cette machine ne joint pas | `<pourquoi la forge est injoignable>. Fix it, then start the run again.` | installer la ligne de commande de la forge, ou s'y connecter |
-| `refused` | `bdd-unbound` | le `bdd` d'un composant nomme un runner dont les définitions de pas sont dans un dossier que la copie de travail n'a pas | `<composant>: <runner> reads its step definitions in <dossier>, which is no folder of the working copy. Fix it, then start the run again.` | créer le dossier, ou corriger le chemin avec `/skraft-init` |
-| `refused` | `base-unresolved` | pas de merge-base avec la ref dans un dépôt | `… has no merge base with <ref>; set baseBranch in skraft-config.json or pass --base <ref>` | régler `baseBranch` ou passer `--base` |
-| `refused` | `source-control-unavailable` | Git ne se lance pas alors que la config liste des composants | `<erreur>; the components of skraft-config.json need Git for their base` | installer Git, le mettre dans le PATH |
-| `refused` | `no-active-pipeline` | pas de `.active-slug` valide | `no active pipeline in this working copy (.copilot-tracking/skraft-plans/.active-slug); start one with an explicit slug` | `skraft init <slug>` ou `/skraft <slug>` |
-| `refused` | `slug-mismatch` | l'appel nomme un autre slug que le pipeline actif | `the active pipeline of this working copy is <actif>, not <demandé>; switch with an explicit init` | init explicite du slug voulu |
-| `refused` | `not-initialised` | le slug actif n'a pas de journal | `<slug> has no journal (events.jsonl); start it with an explicit init` | init explicite du slug |
-| `refused` | `pipeline-locked` | une autre session conduit le pipeline (`.lock` renouvelé depuis moins de 2 min) | `<slug> is driven by another session (started …, last seen …); let it finish or stop it, or run again after … if that session is gone` | attendre la fin de l'autre session, ou son expiration |
-| `refused` | `lock-unavailable` | la session ne peut pas écrire `.lock` | `<slug>: this session cannot write the pipeline's lock file (.copilot-tracking/skraft-plans/<slug>/.lock); …` | rendre le dossier de suivi inscriptible |
-| `refused` | `journal-unverifiable` | cette machine ne peut pas vérifier la signature du journal | `journal unverifiable: …` | restaurer la clé, ou `skraft journal adopt` |
-| `blocked` | `lock-lost` | une autre session a repris le bail en cours de run, ou cette session n'a pas pu l'écrire ; un bail dont la session a dépassé le délai sans que personne n'y touche (la machine a dormi) est repris à la place, `lease.reclaimed` | `<slug>: this session no longer holds the pipeline's lease …; this run stops here and writes nothing more` | relancer quand l'autre session a fini |
-| `blocked` | `journal-tampered` | chaîne cassée | `journal tampered: events.jsonl line N …; restore the file or start a new slug` | restaurer le fichier ou démarrer un nouveau slug |
-| `blocked` | `journal-changed` | un autre run écrit pendant celui-ci | `<slug>: another run wrote events.jsonl meanwhile; run again once it stops` | attendre la fin de l'autre run, relancer |
-| `blocked` | `missing-outputs` | sorties absentes après la dernière tentative | `solution-researcher still failed after 3 attempts: missing outputs: <chemins>` | une reprise rend le même blocage ; corriger la cause et démarrer un nouveau slug |
-| `blocked` | `design-records` | les traces DESIGN de l'architecte échouent encore après sa dernière tentative : une matrice de cohérence dont `consistency-gate` ne vaut pas `PASS` (G10 ; une matrice absente arrête sur `missing-outputs`), un ADR nommé `*-rejected.md`, `*-accepted.md`, `*-deprecated.md` ou `*-superseded.md` (G14), une ligne `**Supersedes:**` sans sa ligne dans `docs/adr/supersessions.md` (G2, G12), un ADR sans sa ligne dans `docs/adr/decisions-index.md` | `solution-architect still failed after 3 attempts: <chaque trace en faute>` | écrire la trace, puis démarrer un nouveau slug |
-| `blocked` | `research-records` | les citations du chercheur échouent encore après sa dernière tentative : un chemin de la copie de travail que le document de recherche cite et qui n'est pas un fichier lisible, ou une plage `chemin:ligne` ou `chemin:ligne-ligne` au-delà de la fin du fichier qu'elle nomme (une plage sur un chemin absent est signalée une seule fois, comme chemin absent ; un chemin cité plusieurs fois est signalé une seule fois) | `solution-researcher still failed after 3 attempts: <chaque citation en faute>` | corriger la citation, puis démarrer un nouveau slug |
-| `blocked` | `scenarios` | le tableau `## Scenarios` du plan de test échoue encore après la dernière tentative du concepteur d'acceptation, ou une histoire déclarée `docs-only` change la source d'un composant ([règles](./phases.md#scenarios)) | `<agent> still failed after 3 attempts: <chaque ligne en faute>` | corriger le tableau, puis démarrer un nouveau slug |
-| `blocked` | `agent-blocked` | l'agent a répondu `blocked`, et un humain a répondu `STOP` à la question `blocked` | `<agent> is blocked: <résumé>` | définitif : une nouvelle exécution du slug reste bloquée |
-| `blocked` | `agent-unavailable` | l'hôte ne peut pas lancer l'agent | Claude Code : `skraft:solution-researcher could not be started: …` ; Copilot : `agent "solution-researcher" is not available in this Copilot session (agents: …); install or enable the skraft plugin, or pass agentIds` | installer ou activer le plugin, puis reprendre ; la tentative n'est pas consommée |
-| `blocked` | `interrupted` | une personne a interrompu une commande du run (sortie 130, ou `0xC000013A` sous Windows) | `<step>: was interrupted by a person (exit <code>); run the pipeline again to go on` | reprendre : l'étape reste ouverte et repart ; aucune tentative d'agent n'est consommée |
-| `blocked` | `agent-failed` | une personne arrête l'agent avant qu'il finisse et ses sorties manquent ; un agent qui s'arrête de lui-même est un incident imprévu, posé comme la question `unforeseen` (`waiting`, `unforeseen`) | `<agent> stopped without finishing: <erreur>` | reprendre : l'étape reste ouverte et la même tentative est relancée |
-| `blocked` | `review-rejected` | une revue répond `NEEDS_REWORK` et son nœud n'a pas d'arête `NEEDS_REWORK` | `<nœud> asked for rework and the workflow has no NEEDS_REWORK edge out of it; <findings>` | corriger les findings dans un nouveau slug, ou ajouter l'arête au workflow |
-| `blocked` | `lens-inconclusive` | une lentille a répondu `inconclusive` | `<lentille>: inconclusive: <notes>`, une par lentille, séparées par `; ` | posée d'abord comme question `blocked` ; après `STOP`, définitif : un nouveau lancement du slug reste bloqué |
-| `blocked` | `loop-ceiling` | un refus ou un échec ferait passer une arête au-delà de son `max_visits`, et un humain a répondu `STOP` à la question `blocked` ou `review-ceiling` | `<from> -> <to> was already taken N times, its max_visits` | définitif : un nouveau lancement du slug reste bloqué |
-| `blocked` | `evidence` | la tentative de l'ingénieur logiciel manque des exécutions de gates tracées que le moteur exige, après sa dernière tentative ou de la même façon à deux tentatives de suite, et un humain a répondu `STOP` à la question `blocked` ; une ligne fixe par gate, sans sortie ni commande ([Gates](./gates.md#command-gates)) | `software-engineer still failed after 3 attempts: <une ligne par gate>` | relancer les gates par `skraft_repl`, puis démarrer un nouveau slug |
-| `blocked` | `node-retired` | un run en cours pointe sur un nœud que le moteur a retiré (`gates`, `mutation`, `mutation_gates`, `kill_proposal`, `kill_mutants`, ou une étape qui lançait des gates) | `the node X was retired: skraft runs no gate and no mutation any more ...` | recommencer l'histoire avec le workflow du plugin |
-| `blocked` | `environment` | un humain a répondu `ABORT` | `aborted by a human: <question>` | corriger la machine, démarrer un nouveau slug |
-| `waiting` | `adr-ratification`, `scenario-review`, `environment` | une question est sans réponse | `<question> Answer with skraft decide <clé> <A>\|<B>`, plus ` (a refusal with its reason)` quand la question a un refus | répondre par `skraft decide`, `/skraft decide` ou `skraft_decide` |
-| `waiting` | `blocked` | un agent a répondu `blocked`, une boucle a atteint son `max_visits` ou une lentille a répondu `inconclusive`, et personne n'a encore répondu à la question `blocked` | `<question> Answer with skraft decide <clé> "<instruction>"\|STOP.` | répondre par une consigne, qui relance le nœud dans le même run, ou par `STOP` |
-| `done` | — | la dernière phase du workflow est close | `<PHASE> closed` (`PUBLISH closed` avec le workflow du plugin) | — |
-
-Une étape d'agent qui s'arrête sur ses tentatives refusées garde le code de la dernière
-(`missing-outputs`, `design-records`…). Sa raison commence par `<agent> still failed after N attempts`
-ou `<agent> failed the same way on attempts N and M` (les mêmes `missing` et `failures`, comparés
-tels qu'écrits, à ses deux dernières tentatives de la visite), puis liste les échecs.
-
-## Statuts de `skraft status` <!-- #status-values -->
-
-| Statut | Condition | `reason` |
+| Statut | Code | Quand |
 | --- | --- | --- |
-| `idle` | pas de pipeline actif | message de `no-active-pipeline` |
-| `not-initialised` | le slug actif n'a aucun événement | `<slug> has no journal (events.jsonl)` |
-| `tampered` | la chaîne est cassée (code de sortie 1) | message de `journal-tampered` |
-| `running` | journal ouvert, run ni fini ni arrêté ; c'est aussi le statut juste après `skraft init <slug>`, avant que l'hôte ne lance quoi que ce soit | vide |
-| `waiting` | une question posée et sans réponse | texte de la question |
-| `done` | `run.finished` avec un statut autre que `blocked` | raison de `run.finished` |
-| `blocked` | `run.finished` `blocked`, ou dernier événement `run.stopped` | raison de l'événement |
+| `refused` | `invalid-slug`, `invalid-base`, `invalid-args` | le slug n'est pas en kebab-case, `--base` n'est pas une réf Git, des arguments inconnus |
+| `refused` | `config-invalid`, `configuration-incomplete`, `bdd-unbound` | `skraft-config.json` est invalide, un consentement n'a pas de réponse, un runner `bdd` lit un dossier qui n'existe pas |
+| `refused` | `forge-unreachable`, `base-unresolved`, `source-control-unavailable` | la forge, la base de fusion ou Git est injoignable |
+| `refused` | `no-active-pipeline`, `slug-mismatch`, `not-initialised` | pas de `.active-slug` valide, un autre slug demandé, pas de journal |
+| `refused` | `pipeline-locked`, `lock-unavailable`, `journal-unverifiable` | une autre session conduit le run, `.lock` ne s'écrit pas, la signature ne peut pas être vérifiée |
+| `blocked` | `lock-lost`, `journal-tampered`, `journal-changed` | le bail a été repris, la chaîne est rompue, un autre run a écrit entre-temps |
+| `blocked` | `missing-outputs`, `invalid-result`, `design-records`, `research-records` | sorties manquantes, résultat illisible, enregistrements DESIGN ou de recherche en échec, et un humain a répondu `STOP` |
+| `blocked` | `scenarios` | le tableau `## Scenarios` du plan de test est illisible ([règles](./phases.md#scenarios)) |
+| `blocked` | `write-scope`, `uncommitted`, `adr-lifecycle`, `pull-request-prose` | la tentative a écrit hors de son périmètre, laissé des fichiers non commités, enfreint les règles des ADR, ou la prose est refusée |
+| `blocked` | `commit-convention`, `tdd` | un verdict de commit ci-dessus n'est pas `ok` |
+| `blocked` | `agent-blocked`, `agent-unavailable`, `agent-failed`, `interrupted` | l'agent a répondu `blocked`, ne démarre pas, s'est arrêté, ou une personne a fait Ctrl-C |
+| `blocked` | `review-rejected`, `lens-inconclusive`, `loop-ceiling` | la revue n'a pas d'arête `NEEDS_REWORK`, une lentille a été non concluante, une arête a dépassé son `max_visits` |
+| `blocked` | `node-retired`, `workflow-changed`, `workflow-invalid`, `environment` | un nœud que le moteur a retiré, un workflow modifié, un workflow invalide, un humain a répondu `ABORT` |
+| `waiting` | le type de la question | une question n'a pas de réponse : `skraft decide <key> <réponse>` |
+| `done` | — | la dernière phase est close |
 
-Un `step.started` ou un `phase.closed` écrit après un `run.finished` rouvre le run.
+Un agent refusé de la même façon sur deux tentatives de suite, ou sur sa dernière tentative, pose la question `blocked` ; après `STOP` le run garde le code du dernier refus.
 
-## Pièges & anti-patterns
-
-- **Corriger `events.jsonl` à la main** : la chaîne casse et le run est `tampered`. Démarrez
-  un nouveau slug.
-- **Deviner le slug** : un hôte ou un agent ne choisit jamais le slug ; seul un init explicite
-  change `.active-slug`.
-- **Lancer deux runs sur le même slug** : le second s'arrête en `journal-changed`.
-- **Passer soi-même un ADR en `Accepted` pendant un run** : la tentative est refusée
-  (`adr-lifecycle`). Ratifiez-le en répondant à la question.
+`skraft status` ajoute `idle` (aucun pipeline actif), `tampered` (la chaîne est rompue), `running` et `waiting` ; un `step.started` écrit après un `run.finished` rouvre le run.
 
 ## Voir aussi <!-- #see-also -->
 
-- [Phases](./phases.md)
-- [Hôtes](./hosts.md)
-- [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx)
-- [Lancer les gates et lire leurs preuves](../how-to/run-gates.md)
-- [La ligne de commande skraft](./cli.md)
-- [skraft-config.json](./skraft-config.md)
-- [Le journal d'événements (chaîné)](../explanation/event-journal.md)
-- [Garde-fous : zéro hook, contrôles dans le moteur](../explanation/guardrails.md)
-
-Termes à connaître : **slug**, **journal**, **pipeline actif**, **gate** — voir le
-[glossaire](./glossary.md).
+[Phases](./phases.md), [Hôtes](./hosts.md), [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx), [Lancer les gates](../how-to/run-gates.md), [La ligne de commande skraft](./cli.md), [skraft-config.json](./skraft-config.md), [Le journal d'événements](../explanation/event-journal.md), [glossaire](./glossary.md).

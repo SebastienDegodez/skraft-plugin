@@ -15,7 +15,7 @@ Where each review sits in the pipeline: [Phases](./phases.md).
 
 | Kind | Ids | Who judges it | Where |
 | --- | --- | --- | --- |
-| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | the software engineer runs it through `skraft_repl`; the engine checks the signed trace | DELIVER, at the submission of the attempt |
+| Command gate | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | the software engineer runs it through `skraft_repl`; the engine journals the signed trace and the `quality-gates` lens judges it | DELIVER, in the review |
 | Review criterion | `G<n>`, and `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | a lens, then the engine (DESIGN, DISTILL, DELIVER) or `review-verdict.mjs` (DISCOVER, DISCUSS) | each phase's reviews |
 | Engine check tied to a criterion | G2, G10, G12, G14 (DESIGN); G11 (`testability#layout`) (DISTILL); G9 (`test-integrity#patch`) | the engine, without a lens | after the architect's attempt; after the acceptance designer's attempt; in a review's patch |
 
@@ -27,7 +27,7 @@ its agent descriptor, is the source; a lens puts the id in the `gate` field of e
 The gates are a component's commands whose name is one of the six below, in
 `skraft-config.json`. The engine runs none of them: in DELIVER the software engineer runs each one
 through the MCP tool `skraft_repl` (`gate(name, command, { cwd })`, see [The REPL](./repl.md)), and
-the engine reads the signed trace of those runs when the attempt is submitted.
+the engine journals the signed trace of those runs and hands it to the DELIVER review, which judges it.
 
 | Gate | What it proves |
 | --- | --- |
@@ -45,9 +45,8 @@ the engine reads the signed trace of those runs when the attempt is submitted.
 | Who runs | the software engineer, through `skraft_repl`, in each component the story changed |
 | Absent gate | a gate the project's documents name no command for is declared with `absent(gate, component, reason)`; `test` is never absent |
 | Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signed; one folder per attempt |
-| Check | at the submission of the attempt, for each component the story changed, the last run of each gate under its folder exited 0, started on a clean tree (the commit line's run excepted) and ended on the final commit; or the gate was declared absent |
-| Refusal | the failure code `evidence`, one fixed line per gate, with no output and no command; open runs, an unsigned or edited trace and a missing key refuse the attempt too |
-| Journal | `evidence.checked` with `runs: [{ run, gate, cwd, log, sha256 }]` ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
+| Judgement | the `quality-gates` lens of the DELIVER review (below); the engine refuses no attempt for a run |
+| Journal | `evidence.checked` with `runs: [{ run, gate, cwd, log, sha256 }]`, only when the trace reads through its signatures; the designer's run labelled `red` carries `red: true` ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
 | Report | the "Quality evidence" table of the pull request, the issue comment and `qa-report.md` (Gate, Folder, Run, Evidence), the Claude Code pane row `Quality evidence: build run 1, test run 4` and the Copilot canvas line |
 | Thresholds | none is configurable; the mutation bar (80 on the core, 80 on the boundary) is a read-only number of the configuration view |
 
@@ -162,19 +161,20 @@ The `distill_review` review: 4 lenses, verdict computed by the engine.
 
 | ID | Lens | Criterion | Severity |
 | --- | --- | --- | --- |
-| **G1** | `coverage` | Every acceptance criterion has at least one scenario; no scenario lacks a source criterion; every business value in a scenario equals its criterion's. | blocker |
+| **G1** | `coverage` | Every acceptance criterion has its own scenario; no scenario holds two criteria; no scenario lacks a source criterion; every business value in a scenario equals its criterion's. | blocker |
 | **G2** | `coverage` | Every business rule has its boundary conditions and negative or error cases from the story's examples; a Gherkin mapping or example written in a DESIGN document is no story example, and a variant an earlier rule already decides adds no boundary; a technical input case is never asked for. | high |
 | **G3** | `business-alignment` | Every term in Given/When/Then steps comes from the story's domain vocabulary; no class, method or framework name. | high |
 | **G4** | `business-alignment` | No step carries an implementation detail (HTTP verb or status, ORM or database term, `Repository`, `Service`, `Handler`, `Controller`, `UseCase`, technical input case). | blocker |
 | **B1** | `business-alignment` | Every scenario expresses an outcome the story asks for; none describes behaviour it does not ask for. | high |
 | **G5** | `testability` | Every step is unambiguous and implementable on its own. | high |
-| **G6** | `testability` | Every scenario has an entry in the implementation plan. | high |
+| **G6** | `testability` | Every scenario has an entry in the implementation plan; its group table names each scenario of the test plan once, none the table does not list, S1 in group 1; no two rows of the test plan share a title. | high |
 | **G11** | `testability` | Each test lives where its kind puts it: the walking skeleton, a plain test with no Gherkin, in its component's integration-test place (Java: an `*IT` class), entering through the real entry point; the acceptance test of every scenario, S1 included, the binding of its Gherkin, in its language's unit-test place (.NET: the `<Context>.UnitTest`, `<Context>.UnitTests` or `<Context>.Tests` project; Java: a `*Test` class under a module's `src/test`, or a `-unit-test(s)` module; Python, TypeScript, JavaScript, React: `<test path>/unit/`), entering through the use case. | blocker |
 | **T1** | `testability` | Each scenario and test checks one behaviour through an observable outcome and depends on no time, order or randomness it does not fix. | high |
 | **T2** | `testability` | The patch holds the walking skeleton (unless the story is exempt) and the acceptance test of every scenario, each name starting with its scenario's number; a scenario with no test, or a skipped test, is a finding. Every input and expected value each acceptance test holds equals the `.feature` verbatim; the walking skeleton asserts the status, the shape and one value S1 names, and no value the `.feature` lacks. | blocker |
 | **T3** | `testability` | The walking skeleton and the acceptance test of the scenario in progress exist and each fails on an assertion, not on a compile, import or setup error; the patch's production code is a skeleton whose signatures answer the empty value of their type, with, for the walking skeleton, the entry point, ports and adapters of its chain wired in the composition root. | blocker |
+| **T4** | `testability` | Well-formed Gherkin: every `.feature` the test plan cites exists under a folder its component's `bdd` names; each scenario says Given, When and Then; an outline's `Examples` fill every placeholder; no two scenarios of a file share a title; keywords in English. | blocker |
 | **G7** | `boundary-enforcement` | Every scenario in the test plan targets an Application use case the event model names (one of its Commands or Queries); an implementation-plan step that writes no scenario's acceptance test (an API or HTTP test of a later circle) is out of its scope. | blocker |
-| **G8** | `boundary-enforcement` | The story has a walking skeleton walking S1, tagged `@walking-skeleton`, in a back-end component: a plain test with no Gherkin that drives the real entry point through the use case to the real internal gateways, S1 keeping its own acceptance test beside it; or the declared exemption (`library`, `refactoring`, `docs-only`) holds. | blocker |
+| **G8** | `boundary-enforcement` | The story has a walking skeleton walking S1, tagged `@walking-skeleton`, in a back-end component: a plain test with no Gherkin that drives the real entry point through the use case to the real internal gateways, S1 keeping its own acceptance test beside it; or the declared exemption (`library`, `refactoring`, `docs-only`) holds and the story's changes bear it out; S1 alone is tagged `@walking-skeleton`. | blocker |
 | **E1** | `boundary-enforcement` | The acceptance test of every scenario, S1 included, drives only its use case; the walking skeleton drives only the real entry point. Neither calls or asserts on a domain internal, a repository or an infrastructure class. Constructing the use case's real collaborators to hand them to its constructor, or the walking skeleton's test host and containers, is wiring, not a finding. | blocker |
 | **E2** | `boundary-enforcement` | Test doubles replace only outer-edge dependencies, never a domain object or the use case; DISTILL's skeleton is the real module. | high |
 
@@ -189,12 +189,12 @@ under a module's `src/test` a `*IT` class (Failsafe) is integration and any othe
 `*Test`, Cucumber) unit, and accepts `<context>-unit-test(s)` and `<context>-integration-test(s)`
 modules too; any other stack `unit/` and `integration/` under the test path.
 
-**Engine check.** The scenarios DELIVER builds: after each attempt of the plan pass, the engine
-reads the `## Scenarios` table of the test plan (`scenarios`): ids in order, one title each, a
-component of `skraft-config.json`, S1 alone tagged `@walking-skeleton` in a component that is not
-`react`, or an exemption `library`, `refactoring` or `docs-only` and no tag
-([rules and messages](./phases.md#scenarios)). G8 stays the lens's: whether the walking skeleton
-runs the real path, S1 has its own acceptance test besides, and a declared exemption holds.
+**The scenarios table.** After each attempt of the plan pass, the engine reads the `## Scenarios`
+table of the test plan and refuses it (`scenarios`) only when it cannot read it: no table, rows not
+numbered S1, S2… in order, a row with no title, a row naming no component of `skraft-config.json`
+([rules and messages](./phases.md#scenarios)). The walking-skeleton tag, the exemption, duplicate
+titles and the group table are the lenses' to judge (G8, G6); acceptance-criteria coverage (G1) and
+the form of the Gherkin (T4) are the lenses' too: the engine checks neither.
 
 The review runs once, after the pass: the tests hold the walking skeleton and the acceptance test
 of every scenario (T2, T3). The engine runs none of these tests: the review reads the tests, the skeleton and the designer's
@@ -203,7 +203,7 @@ these lenses; the DELIVER review reads them.
 
 ## DELIVER <!-- #deliver -->
 
-DELIVER goes through the software engineer's traced gate runs, then the `deliver_review` call of the `review` workflow.
+DELIVER goes through the software engineer's traced gate runs, then the `deliver_review` call of the `review` workflow, whose `quality-gates` lens reads those runs.
 The same lenses judge
 a pull request through `skraft review --pr`.
 
@@ -224,7 +224,12 @@ a pull request through `skraft review --pr`.
 | **K3** | `contract-fidelity` | A Microcks provider verification asserts its result. | blocker |
 | **K4** | `contract-fidelity` | The integration test asserts the response contract. | high |
 | **K5** | `contract-fidelity` | No real downstream call leaks. | blocker |
+| **Q1** | `quality-gates` | Each gate of a touched component has a run line in the trace, or an `absent` line with a reason (never for `test`); a start with no run and a lost run are no run. | blocker |
+| **Q2** | `quality-gates` | The last run of the gate passed: not killed, not timed out, exit 0. | blocker |
+| **Q3** | `quality-gates` | That run ended on the final commit of the change log. | blocker |
+| **Q4** | `quality-gates` | That run started on a clean tree; the commit line's `green` run is the one exception. | high |
 
+`quality-gates` reports nothing on a pull request reviewed outside a run: it has no trace.
 `mock-fidelity` runs only on changes that touch mocks (`when="mock"`), `contract-fidelity` only on
 changes that touch contracts (`when="contract"`)
 ([triggers](./workflow-dot.mdx#conditional-lenses)).

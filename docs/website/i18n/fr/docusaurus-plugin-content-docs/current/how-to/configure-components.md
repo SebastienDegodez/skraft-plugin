@@ -59,11 +59,11 @@ n'en remplit aucune. Écrivez la ligne :
   "commands": { "build": "npm run build", "lint": "npm run lint", "test": "npm run test:ci" } }
 ```
 
-Écrivez une commande pour un lancement **sans shell**, depuis la racine du composant :
+Écrivez une commande que l'ingénieur logiciel lance depuis la racine du composant par `skraft_repl`, sous `sh`
+(sous Windows, Git Bash quand il est installé, sinon PowerShell) :
 
-- découpée sur les blancs ; `"…"` ou `'…'` gardent les blancs dans un argument ;
-- sans `|`, `&`, `;`, `<`, `>` hors guillemets : pour enchaîner des étapes, appelez un script
-  (`npm run test:ci`, `node scripts/ci-test.mjs`) ;
+- une seule ligne, écrite pour marcher dans les shells de votre équipe ; pour enchaîner beaucoup d'étapes, un script
+  (`npm run test:ci`, `node scripts/ci-test.mjs`) garde la ligne courte ;
 - `npm`, `npx`, `gradlew.bat` s'écrivent pareil sous Windows ;
 - un programme démarre tel qu'écrit : `python` reste `python`, écrivez donc `.venv/bin/python` (ou
   `.venv/Scripts/python.exe` : barres obliques, une barre inverse est un échappement invalide en
@@ -199,17 +199,16 @@ antérieure n'est pas réglée. Sans elles, un run est refusé avant son premier
 $ skraft doctor
 ```
 
-Le doctor ne lance aucune de vos commandes : il vérifie Node, le fichier, la forge, la racine de
-chaque composant, au moins une gate par composant et que chaque commande se découpe, et liste les
-commandes de chaque composant. Il ne cherche jamais un programme sur le PATH.
+Le doctor ne lance aucune de vos commandes : il vérifie Node, le fichier, la forge et la racine de
+chaque composant, et liste les commandes de chaque composant telles que vous les avez écrites. Il ne cherche jamais un programme sur le PATH.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    forge: github, deduced from the Git remote
-ok    api/build: dotnet build --nologo (parsed)
-FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
-skraft doctor: 1 checks failed
+ok    api/build: dotnet build --nologo (listed; skraft_repl starts it, never skraft)
+ok    web/test: npm run test:ci (listed; skraft_repl starts it, never skraft)
+skraft doctor: every check passed
 ```
 
 Corrigez chaque `FAIL`, puis relancez `skraft doctor`.

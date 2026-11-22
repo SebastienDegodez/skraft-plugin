@@ -59,8 +59,8 @@ The `skraft-quality-bar` skill is the only place a threshold is written: 80 % mu
 Domain and Application and on API and Infrastructure, judged apart, and 100 % line coverage on
 Domain and Application. There is
 no "advisory" level, no waiver and no per-repository setting; `skraft-config.json` chooses the
-gates' **commands**, never their thresholds. In DELIVER, the engine refuses an attempt that holds
-no passing traced run of each gate (`evidence`), whatever the workflow copy.
+gates' **commands**, never their thresholds. In DELIVER, the engineer
+runs each gate through `skraft_repl` and the `quality-gates` lens of the review judges the traced runs.
 
 This is skraft's answer to Mancuso's point: quality is not an adjustment variable. The details of
 each gate are in the [gates reference](../reference/gates.md).
@@ -71,9 +71,9 @@ Craftsmanship moves in small increments that work. In skraft, this takes two for
 
 - **The walking skeleton.** Every story opens on a plain test that walks its first scenario, S1,
   across a back-end component from its real entry point to a real database, and asserts the wiring
-  only; S1 keeps its own acceptance test through the use case. The engine refuses a test plan that
-  does not tag S1 `@walking-skeleton` or declare why the story needs none, and the
-  `boundary-enforcement` lens checks that the walking skeleton runs that real path (its G8). See
+  only; S1 keeps its own acceptance test through the use case. The
+  `boundary-enforcement` lens judges that S1 is tagged `@walking-skeleton` (or that the story declares why it needs none)
+  and that the walking skeleton runs that real path (its G8). See
   [Walking Skeleton](./deep-dive/walking-skeleton.md).
 - **Every scenario's red, then one green for the story.** In DISTILL, the `acceptance-designer` commits
   the failing acceptance test of every scenario, the walking skeleton and the skeleton they call

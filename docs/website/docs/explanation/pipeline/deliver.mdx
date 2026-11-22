@@ -22,7 +22,7 @@ tests, then to the code ([Freeman & Pryce, 2009](../../reference/citations.mdx#c
 inner red → green → refactor loop without committing it, then commits once, when every group
 passes: a `feat(…)` chained to the test command, `<test> && git add <files> && git commit …`.
 
-The engine runs no test. It checks the git history and the traced runs of the attempt: one red commit of every acceptance
+The engine runs no test. It checks the git history: one red commit of every acceptance
 test, then one green commit, whatever its subject names, none touching the acceptance tests; a second
 one is refused (`green-split`). The implementation plan's group table is the order of work, not a count of commits. The command that commits a green is chained to the test
 command, so the commit exists only when the tests pass; DISTILL's review and the DELIVER review
@@ -33,7 +33,7 @@ becomes a fact in the git history, not a promise.
 
 S1 and S2 enter red, beside the red walking skeleton. DELIVER completes the chain from the
 ordering endpoint to the database, implements payment and loyalty crediting and turns S1 and the
-walking skeleton green, and S2, the unavailable drink, with them, in one commit. The engineer's traced gate runs are checked, the review reads the code, and the code goes into a pull request. Whether
+walking skeleton green, and S2, the unavailable drink, with them, in one commit. The engineer's traced gate runs are read by the review, which also reads the code, and the code goes into a pull request. Whether
 the tests genuinely protect the loyalty rule, the developer's own **mutation** run shows.
 :::
 
@@ -61,7 +61,7 @@ Three rules keep that single commit honest:
 
 Once the green is committed, the engineer runs the remaining gates and submits the attempt. A run whose journal
 holds the earlier per-group DELIVER dispatches of a V2 alpha is not resumed: start it again. A pass the review sends back works on
-the whole story, as in v1: each cycle is one `feat` or `fix` commit holding its test and its code,
+the whole story: each cycle is one `feat` or `fix` commit holding its test and its code,
 once green, and no `test` commit of its own.
 
 ## The order: traced gates, then review
@@ -72,14 +72,14 @@ The engine runs no gate. The software engineer runs every gate (`build`, `format
 `architecture`, `coverage`) of each component the story changed through the MCP tool `skraft_repl`
 (`gate(name, command, { cwd })`, see [The REPL](../../reference/repl.md)); the run of the commit
 line is the `test` run, and a gate the project's documents name no command for is declared with
-`absent`. At the submission of the attempt the engine reads the signed trace: for each component the
-story changed, the last run of each gate exited 0, started on a clean tree (the commit line's run
-excepted) and ended on the final commit, or the gate was declared absent. Anything else refuses the
-attempt with the failure code `evidence`, one fixed line per gate; when the trace holds, the journal
-records `evidence.checked` ([Gates](../../reference/gates.md#command-gates)).
+`absent`. The engine refuses no attempt for these runs. It journals
+`evidence.checked` for the runs whose trace reads through its signatures and hands the trace to the DELIVER
+review ([Gates](../../reference/gates.md#command-gates)).
 
-Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading, and,
-when the change touches them, mock and contract fidelity. A rework the review asks for goes back
+Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading,
+`quality-gates` and, when the change touches them, mock and contract fidelity. The `quality-gates` lens
+reads the trace and reports, per component and gate, a run missing, not passing, not on the final commit or started on a dirty tree
+(the commit line's run excepted); a gate declared `absent` with a reason is fine, never `test`. A rework the review asks for goes back
 through `deliver`. After the review, the visuals step commits the screenshots of the last traced
 end-to-end run of each front end (`gate('e2e', ...)`) instead of running it, then the `pr-writer`
 and the publication follow.

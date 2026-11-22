@@ -60,7 +60,7 @@ neither skipped nor run against a double instead.
 ## Every scenario at once, worked by group
 
 The test plan lists the scenarios in a `## Scenarios` table, S1 to SN, in the order DELIVER builds
-them, each in the one component where its test lives. S1, tagged `@walking-skeleton`, is the
+them, each in the one component where its test lives. The engine only reads that table: it refuses it when it cannot (no table, rows not numbered S1, S2… in order, a row with no title or no component of the configuration), and leaves the rest to the lenses. S1, tagged `@walking-skeleton`, is the
 scenario the walking skeleton walks: a plain test, with no Gherkin, that crosses a back-end
 component from its real entry point to a real database and asserts the wiring only. S1 keeps its
 own acceptance test, the binding of its Gherkin, through the use case like every scenario. A story
@@ -118,11 +118,11 @@ readable by the business, and the technical cases stay tested.
 
 ## Four views on the contract
 
-Four lenses review the pass, once: **coverage** (each criterion has its scenario, with its edge
-cases), **business alignment** (no implementation detail in a step), **testability** (each step
+Four lenses review the pass, once: **coverage** (each criterion has its own scenario, none merged, none orphan, with its edge
+cases: G1), **business alignment** (no implementation detail in a step), **testability** (each step
 can be implemented, the reds are the right ones, the tests hold the walking skeleton and the
-acceptance test of every scenario), and **boundaries** (the walking skeleton walks S1 from the real entry
-point, each acceptance test drives only the use case). The engine computes the verdict; a
+acceptance test of every scenario, and the Gherkin is well formed: T4), and **boundaries** (the walking skeleton walks S1 from the real entry
+point, each acceptance test drives only the use case). The lenses judge the criteria, the form of the Gherkin, the walking-skeleton tag and any exemption; the engine computes the verdict; a
 `NEEDS_REWORK` sends the acceptance-designer back with the findings that stand. Its brief gives the
 path of `acceptance-review-criteria`, the gates these lenses judge by: it checks its outputs
 against every one before it writes its result.

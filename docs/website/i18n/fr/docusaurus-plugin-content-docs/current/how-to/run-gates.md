@@ -1,15 +1,15 @@
 ---
 title: "Lancer les gates et lire leurs preuves"
-description: "Comment l'ingénieur lance chaque gate par skraft_repl, en déclare une absente, et ce que le moteur contrôle et refuse à la soumission d'une tentative."
+description: "Comment l'ingénieur lance chaque gate par skraft_repl, en déclare une absente, et comment lire les constats de la lentille quality-gates."
 persona: software-engineer
 ---
 
 # Lancer les gates et lire leurs preuves
 
 Le moteur ne lance aucune gate. Dans DELIVER, l'ingénieur logiciel lance toutes les gates de chaque
-composant que l'histoire a modifié par l'outil MCP `skraft_repl`, et le moteur lit la trace signée de
-ces exécutions à la soumission de la tentative. Cette page montre ce que cela demande à l'ingénieur
-et comment lire un refus.
+composant que l'histoire a modifié par l'outil MCP `skraft_repl`, et la lentille `quality-gates` de la revue
+DELIVER lit la trace signée de ces exécutions. Cette page montre ce que cela demande à l'ingénieur
+et comment lire les constats de la lentille.
 
 ## Prérequis
 
@@ -46,31 +46,28 @@ absent('architecture', 'api', 'le projet n\'a aucune règle de dépendance à v�
 
 `test` n'est jamais absente. Une gate déclarée absente n'a besoin d'aucune exécution.
 
-## 3. Ce que le moteur contrôle
+## 3. Ce que le moteur fait de la trace
 
-À la soumission de la tentative, le moteur lit `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`. Pour
-chaque composant que l'histoire a modifié, il tient chaque gate à la même règle : la dernière
-exécution de la gate sous le dossier du composant est sortie avec 0, a démarré sur un arbre propre
-(hors l'exécution de la ligne de commit) et s'est terminée sur le dernier commit ; ou la gate a été
-déclarée absente. Des exécutions ouvertes, une trace non signée ou modifiée et une clé manquante
-refusent aussi la tentative. Quand la règle tient, le journal enregistre `evidence.checked` avec les
-exécutions sur lesquelles elle s'appuie, et les rapports les montrent sous « Preuves de qualité »
-([Gates](../reference/gates.md#command-gates)).
+Le moteur ne refuse aucune tentative pour ces exécutions. Il lit
+`logs/runs/<step>-<visit>-<attempt>/runs.jsonl` et, quand la trace se lit jusqu'à ses signatures,
+journalise `evidence.checked` avec les exécutions de la tentative. Il remet la trace à la revue DELIVER.
+Les rapports montrent les exécutions sous « Preuves de qualité » ([Gates](../reference/gates.md#command-gates)).
 
-## 4. Lire un refus `evidence`
+## 4. Lire les constats de `quality-gates`
 
-Une tentative refusée échoue avec le code `evidence`, une ligne fixe par gate, sans sortie ni
-commande. L'ingénieur relance la gate par le REPL, sur un arbre propre, puis commite ; le log de chaque
+La lentille signale, par composant touché et par gate, une exécution qu'elle ne peut pas accepter.
+L'ingénieur relance la gate par le REPL, sur un arbre propre, puis commite ; le log de chaque
 exécution est sous `logs/runs/<step>-<visit>-<attempt>/`.
 
-| Cause derrière une ligne | Ce que fait l'ingénieur |
+| Constat | Ce que fait l'ingénieur |
 | --- | --- |
-| la gate n'a jamais tourné dans ce composant | la lancer avec `gate(name, command, { cwd })` |
-| sa dernière exécution est sortie non nulle | corriger le code ou le test d'après le log de l'exécution, relancer |
-| elle a démarré sur un arbre modifié | commiter ou annuler le changement, relancer |
-| elle s'est terminée sur un commit antérieur au dernier | relancer après le dernier commit |
-| une exécution est restée ouverte | l'attendre, ou relancer la gate |
-| la trace n'est pas signée ou a été modifiée | recommencer la tentative ; une trace ne se répare jamais à la main |
+| une exécution manque : pas de ligne de run, un démarrage sans run, un run perdu | lancer la gate avec `gate(name, command, { cwd })` |
+| une exécution n'a pas réussi : tuée, délai dépassé, sortie non nulle | corriger le code ou le test d'après le log de l'exécution, relancer |
+| la dernière exécution n'est pas sur le dernier commit | relancer après le dernier commit |
+| elle a démarré sur un arbre modifié (hors l'exécution de la ligne de commit) | commiter ou annuler le changement, relancer |
+
+Une gate déclarée `absent` avec une raison est acceptée, jamais `test`. Sur une pull request relue hors
+d'un run, la lentille n'a pas de trace et passe.
 
 ## Dépannage
 

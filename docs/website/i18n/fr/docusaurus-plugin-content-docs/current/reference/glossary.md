@@ -94,7 +94,7 @@ Un défaut qu'une lentille signale : la gate concernée, une sévérité (`block
 ## G
 
 **Gate (porte de qualité)**
-Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`) qui prouve la qualité. Le moteur n'en lance aucune : dans DELIVER, l'ingénieur logiciel lance chacune par `skraft_repl`, et le moteur contrôle la trace signée de sa tentative (`evidence`, `evidence.checked`). Une gate dont le projet ne nomme aucune commande se déclare `absent` ; `test` ne l'est jamais. `mutation` revient au développeur : une recette de sa session.
+Une commande nommée d'un composant (`build`, `format`, `lint`, `test`, `architecture`, `coverage`) qui prouve la qualité. Le moteur n'en lance aucune : dans DELIVER, l'ingénieur logiciel lance chacune par `skraft_repl`, le moteur journalise la trace signée de sa tentative (`evidence.checked`) et la lentille `quality-gates` de la revue DELIVER la juge. Une gate dont le projet ne nomme aucune commande se déclare `absent` ; `test` ne l'est jamais. `mutation` revient au développeur : une recette de sa session.
 → Voir [Gates](./gates.md#command-gates) ; les critères de revue des lentilles : [Gates](./gates.md)
 
 **Gherkin**
@@ -124,7 +124,7 @@ Fichier du dossier de suivi où le moteur écrit un événement par ligne, chaqu
 Vocabulaire partagé entre développeurs et experts métier, utilisé aussi bien dans les conversations que dans le code. Concept central du DDD.
 
 **Lentille (reviewer lens)**
-Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé en lecture seule `<nom>-lens`. Le pilote d'hôte lance les lentilles d'un nœud de revue et le moteur calcule le verdict à partir de leurs findings. Lentilles livrées avec le plugin : DESIGN `consistency`, `architecture-compliance`, `fitness` ; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity`, `contract-fidelity` (`quality-gates` est retirée en V2 : le moteur lance les gates lui-même).
+Dans SKRAFT, un point de vue spécialisé de la revue adverse, porté par un agent isolé en lecture seule `<nom>-lens`. Le pilote d'hôte lance les lentilles d'un nœud de revue et le moteur calcule le verdict à partir de leurs findings. Lentilles livrées avec le plugin : DESIGN `consistency`, `architecture-compliance`, `fitness` ; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement` ; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates`, `mock-fidelity`, `contract-fidelity`.
 → Voir [Lentilles](pathname:///dashboard/)
 
 ## M
@@ -137,7 +137,7 @@ Outil qui simule les API dont dépend un composant, à partir de leurs contrats 
 Priorisation en *Must*, *Should*, *Could*, *Won't* utilisée par le triage et la carte des stories.
 
 **Moteur**
-Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, preuves des exécutions de gates), le même sur tous les hôtes.
+Le code de SKRAFT qui décide de chaque étape du pipeline (ordre, sorties attendues, relances, journal des exécutions de gates), le même sur tous les hôtes.
 → Voir [Moteur](../explanation/architecture.md)
 
 **Mutant survivant**

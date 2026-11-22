@@ -56,11 +56,11 @@ fills none. Write the line:
   "commands": { "build": "npm run build", "lint": "npm run lint", "test": "npm run test:ci" } }
 ```
 
-Write a command to be started **without a shell**, from the component's root:
+Write a command the software engineer runs from the component's root through `skraft_repl`, under `sh`
+(on Windows, Git Bash when it is installed, else PowerShell):
 
-- split on blanks; `"…"` or `'…'` keep blanks inside one argument;
-- no `|`, `&`, `;`, `<`, `>` outside quotes: to chain steps, call a script (`npm run test:ci`,
-  `node scripts/ci-test.mjs`);
+- it is one line, written so it works in the shells your team uses; to chain many steps, a script
+  (`npm run test:ci`, `node scripts/ci-test.mjs`) keeps the line short;
 - `npm`, `npx`, `gradlew.bat` are written the same way on Windows;
 - a program starts as written: `python` stays `python`, so write `.venv/bin/python` (or
   `.venv/Scripts/python.exe`: forward slashes, a backslash is an invalid escape in JSON) when the
@@ -191,17 +191,16 @@ Without them a run is refused before its first agent, with
 $ skraft doctor
 ```
 
-The doctor starts none of your commands: it checks Node, the file, the forge, each component's
-root, at least one gate per component and that each command parses, and lists each component's
-commands. It never looks a program up on the PATH.
+The doctor starts none of your commands: it checks Node, the file, the forge and each component's
+root, and lists each component's commands as you wrote them. It never looks a program up on the PATH.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    forge: github, deduced from the Git remote
-ok    api/build: dotnet build --nologo (parsed)
-FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
-skraft doctor: 1 checks failed
+ok    api/build: dotnet build --nologo (listed; skraft_repl starts it, never skraft)
+ok    web/test: npm run test:ci (listed; skraft_repl starts it, never skraft)
+skraft doctor: every check passed
 ```
 
 Fix each `FAIL`, then run `skraft doctor` again.

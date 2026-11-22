@@ -62,7 +62,7 @@ qu'on en démarre un. L'étape n'est ni sautée ni jouée contre une doublure à
 ## Tous les scénarios d'un coup, travaillés par groupe
 
 Le plan de test liste les scénarios dans un tableau `## Scenarios`, de S1 à SN, dans l'ordre où
-DELIVER les construit, chacun dans le seul composant où vit son test. S1, tagué
+DELIVER les construit, chacun dans le seul composant où vit son test. Le moteur ne fait que lire ce tableau : il le refuse quand il ne peut pas (pas de tableau, lignes non numérotées S1, S2… dans l'ordre, une ligne sans titre ou sans composant de la configuration) et laisse le reste aux lentilles. S1, tagué
 `@walking-skeleton`, est le scénario que parcourt le walking skeleton : un test simple, sans
 Gherkin, qui traverse un composant back de son vrai point d'entrée jusqu'à une vraie base et
 n'affirme que le câblage. S1 garde son propre test d'acceptation, le binding de son Gherkin, par
@@ -129,12 +129,12 @@ restent testés.
 ## Quatre regards sur le contrat
 
 Quatre lentilles relisent le passage, une fois : la **couverture** (chaque critère a son
-scénario, avec ses cas limites), l'**alignement métier** (aucun détail d'implémentation dans une
+propre scénario, aucun fusionné, aucun orphelin, avec ses cas limites : G1), l'**alignement métier** (aucun détail d'implémentation dans une
 étape), la **testabilité** (chaque étape est implémentable, les rouges sont les bons, les tests
-portent le walking skeleton et le test d'acceptation de chaque scénario), et les **frontières**
+portent le walking skeleton et le test d'acceptation de chaque scénario, et le Gherkin est bien formé : T4), et les **frontières**
 (le walking skeleton parcourt S1 depuis le vrai point d'entrée, chaque test d'acceptation ne
 pilote que le cas d'usage).
-Le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings
+Les lentilles jugent les critères, la forme du Gherkin, le tag walking skeleton et l'éventuelle exemption ; le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings
 retenus. Son brief donne le chemin d'`acceptance-review-criteria`, les gates selon lesquels ces
 lentilles jugent : il vérifie ses sorties contre chacun avant d'écrire son résultat.
 

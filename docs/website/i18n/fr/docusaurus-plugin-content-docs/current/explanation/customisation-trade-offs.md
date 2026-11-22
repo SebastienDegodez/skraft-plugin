@@ -31,9 +31,8 @@ Ce qui ne se règle pas, et pourquoi :
   80 % de mutants détectés sur le cœur métier comme ailleurs restent les mêmes pour toutes les équipes.
 - **Les contrôles du moteur** (journal chaîné, droits d'écriture, sorties attendues, ordre et
   types des commits). Ce ne sont pas des nœuds du workflow : aucune copie ne peut les retirer.
-- **Les preuves de gates de DELIVER et les revues.** Le moteur refuse une tentative DELIVER qui ne
-  contient pas une exécution tracée réussie de chaque gate (`evidence`) : aucune copie du workflow
-  ne retire ce contrôle. Les fan-in des revues, l'appel `deliver_review` et les lentilles
+- **Les revues de DELIVER.** Le moteur ne refuse aucune tentative DELIVER pour ses exécutions de gates :
+  la lentille `quality-gates` de la revue DELIVER lit leur trace et signale une exécution manquante, en échec ou périmée. Les fan-in des revues, l'appel `deliver_review` et les lentilles
   `test-integrity` et `architecture-boundaries` sont obligatoires : aucune raison ne les retire.
 
 Le moteur rend donc certains contournements impossibles, et les autres visibles. Ce qu'il ne
@@ -43,12 +42,12 @@ peut pas voir, c'est une commande qui tourne et ne prouve rien.
 
 | Ce que vous faites | Ce qui disparaît | Le signe à surveiller |
 | --- | --- | --- |
-| Retirer une gate d'un composant (`architecture`, `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans le tableau « Preuves de qualité » de la pull request ni dans `evidence.checked` |
+| Retirer une gate d'un composant (`architecture`, `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans le tableau « Preuves de qualité » de la pull request ni dans `evidence.checked`, et la lentille `quality-gates` n'a rien à juger pour elle |
 | Retirer une revue, l'appel à `review`, ou sa lentille `test-integrity` ou `architecture-boundaries` | Rien : le moteur refuse le workflow | `… this node is mandatory and cannot be removed` dans `skraft workflow check` |
 | Ne jamais lancer votre propre mutation testing | La preuve que les tests attraperaient une erreur | Rien dans le run : le pipeline ne lance aucune mutation, seuls vos propres rapports le montrent |
 | Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un filtre qui exclut presque tout) | Toute la gate : elle passe à chaque fois | Une exécution tracée réussie dont le log ne montre aucun test lancé |
 | Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service | Des tests verts, puis une panne à l'intégration |
-| Laisser un composant sans gate | Toute preuve sur ce composant ; le moteur le signale en échec `environment` | La gate manque dans « Preuves de qualité », sauf si l'ingénieur l'a déclarée absente |
+| Laisser un composant sans gate | Toute preuve sur ce composant ; la lentille `quality-gates` signale l'exécution manquante | La gate manque dans « Preuves de qualité », sauf si l'ingénieur l'a déclarée absente avec une raison |
 | Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé | Un composant dont le code a changé est absent de « Preuves de qualité » |
 | Retirer le nœud question `adr` | La ratification humaine des ADR, qui restent `Proposed` | `skraft workflow diff` montre le nœud disparu |
 | Retirer le nœud question `scenario_review` | La lecture par un humain des scénarios, du walking skeleton et du test d'acceptation de S1 avant que DELIVER ne les construise | `skraft workflow diff` montre le nœud disparu |

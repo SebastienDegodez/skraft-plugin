@@ -144,7 +144,7 @@ Le `software-engineer` rend S1 vert en **Outside-In TDD** : tests unitaires d'ab
 code, puis un commit vert : le test d'acceptation de S1 et le walking
 skeleton y passent tous deux. DISTILL écrit ensuite le test en échec de S2, et
 l'ingénieur le rend vert de la même façon. L'ingénieur lance les gates (build, tests, architecture,
-couverture) par `skraft_repl` et le moteur contrôle leurs exécutions tracées, puis la revue DELIVER relit le code. Que les tests attraperaient une erreur dans la
+couverture) par `skraft_repl` et le moteur journalise leurs exécutions tracées, puis la revue DELIVER relit le code et ces exécutions. Que les tests attraperaient une erreur dans la
 règle de fidélité, la **mutation** que lance le développeur le montre, à part du pipeline.
 
 - **Ce qui entre :** le walking skeleton rouge + le test d'acceptation rouge de S1 + le plan.

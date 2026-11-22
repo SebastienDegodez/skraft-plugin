@@ -22,7 +22,7 @@ unitaires, puis vers le code ([Freeman & Pryce, 2009](../../reference/citations.
 tourne la boucle interne rouge → vert → refactor sans la commiter, puis commite une seule fois, quand
 tous les groupes passent : un `feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
 
-Le moteur ne lance aucun test. Il vérifie l'historique git et les exécutions tracées de la tentative : un commit rouge de chaque test
+Le moteur ne lance aucun test. Il vérifie l'historique git : un commit rouge de chaque test
 d'acceptation, puis un seul commit vert, quoi que nomme son sujet, ne touchant pas aux tests d'acceptation ; un
 deuxième est refusé (`green-split`). Le tableau de groupes du plan d'implémentation est l'ordre de travail, non un nombre de commits. La commande qui commite un vert est
 enchaînée à la commande de test : le commit n'existe que si les tests passent ; la revue DISTILL et
@@ -34,7 +34,7 @@ promesse.
 
 S1 et S2 entrent, rouges, à côté du walking skeleton rouge. DELIVER complète la chaîne du point
 d'entrée de commande jusqu'à la base, implémente le paiement et l'attribution des points et fait
-passer S1 et le walking skeleton au vert, et S2, la boisson indisponible, avec eux, en un seul commit. Les exécutions tracées de gates de l'ingénieur sont contrôlées, la revue relit le code, et le code part en pull
+passer S1 et le walking skeleton au vert, et S2, la boisson indisponible, avec eux, en un seul commit. Les exécutions tracées de gates de l'ingénieur sont lues par la revue, qui relit aussi le code, et le code part en pull
 request. Que les tests protègent réellement la règle de fidélité, la **mutation** que lance le
 développeur l'atteste.
 :::
@@ -64,7 +64,7 @@ Trois règles gardent ce commit unique honnête :
 
 Une fois le vert commité, l'ingénieur lance les gates restantes et soumet la tentative. Un run dont le journal
 contient les dispatches DELIVER par groupe d'une alpha V2 antérieure n'est pas repris : relancez-le. Un passage que renvoie la
-revue travaille sur toute la story, comme en v1 : chaque cycle est un commit `feat` ou `fix` qui
+revue travaille sur toute la story : chaque cycle est un commit `feat` ou `fix` qui
 porte son test et son code, une fois vert, sans commit `test` à part.
 
 ## L'ordre : gates tracées, puis revue
@@ -75,16 +75,15 @@ Le moteur ne lance aucune gate. L'ingénieur logiciel lance chaque gate (`build`
 `test`, `architecture`, `coverage`) de chaque composant que l'histoire a modifié par l'outil MCP
 `skraft_repl` (`gate(name, command, { cwd })`, voir [Le REPL](../../reference/repl.md)) ;
 l'exécution de la ligne de commit est l'exécution `test`, et une gate dont les documents du projet
-ne nomment aucune commande se déclare avec `absent`. À la soumission de la tentative, le moteur lit
-la trace signée : pour chaque composant que l'histoire a modifié, la dernière exécution de chaque
-gate est sortie avec 0, a démarré sur un arbre propre (hors l'exécution de la ligne de commit) et
-s'est terminée sur le dernier commit, ou la gate a été déclarée absente. Sinon la tentative est
-refusée avec le code d'échec `evidence`, une ligne fixe par gate ; quand la trace tient, le journal
-enregistre `evidence.checked` ([Gates](../../reference/gates.md#command-gates)).
+ne nomment aucune commande se déclare avec `absent`. Le moteur ne refuse aucune tentative pour ces exécutions. Il journalise
+`evidence.checked` pour les exécutions dont la trace se lit jusqu'à ses signatures et remet la trace à la revue DELIVER
+([Gates](../../reference/gates.md#command-gates)).
 
 Viennent ensuite les lentilles de la revue DELIVER : intégrité des tests, frontières
-d'architecture, lisibilité à froid, et, quand le changement en touche, fidélité des mocks et des
-contrats. Une reprise demandée par la revue repart par `deliver`. Après la revue, l'étape des visuels
+d'architecture, lisibilité à froid, `quality-gates` et, quand le changement en touche, fidélité des mocks et des
+contrats. La lentille `quality-gates` lit la trace et signale, par composant et par gate, une exécution
+manquante, en échec, pas sur le dernier commit ou démarrée sur un arbre sale (hors l'exécution de la ligne de commit) ;
+une gate déclarée `absent` avec une raison est acceptée, jamais `test`. Une reprise demandée par la revue repart par `deliver`. Après la revue, l'étape des visuels
 commite les captures de la dernière exécution e2e tracée de chaque front end (`gate('e2e', ...)`)
 au lieu de la lancer, puis viennent le `pr-writer` et la publication.
 

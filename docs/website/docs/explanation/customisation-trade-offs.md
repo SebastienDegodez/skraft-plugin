@@ -31,8 +31,8 @@ What cannot be tuned, and why:
   80 % of mutants detected on the business core and elsewhere stays the same for every team.
 - **The engine's checks** (chained journal, write scope, expected outputs, order and kinds of commits).
   They are not workflow nodes: no copy can remove them.
-- **DELIVER's gate evidence and reviews.** The engine refuses a DELIVER attempt that holds no
-  passing traced run of each gate (`evidence`): no workflow copy removes that check. The review
+- **DELIVER's reviews.** The engine refuses no DELIVER attempt for its gate runs: the
+  `quality-gates` lens of the DELIVER review reads their trace and reports a missing, failing or stale run. The review
   fan-ins, the `deliver_review` call and the `test-integrity` and `architecture-boundaries` lenses
   are mandatory: no reason removes them.
 
@@ -43,12 +43,12 @@ command that runs and proves nothing.
 
 | What you do | What disappears | The sign to watch |
 | --- | --- | --- |
-| Remove a gate from a component (`architecture`, `coverage`) | The matching proof: no more dependency check, no more coverage | The gate no longer shows in the `Quality evidence` table of the pull request nor in `evidence.checked` |
+| Remove a gate from a component (`architecture`, `coverage`) | The matching proof: no more dependency check, no more coverage | The gate no longer shows in the `Quality evidence` table of the pull request nor in `evidence.checked`, and the `quality-gates` lens has nothing to judge for it |
 | Remove a review, the call to `review`, or its `test-integrity` or `architecture-boundaries` lens | Nothing: the engine refuses the workflow | `… this node is mandatory and cannot be removed` from `skraft workflow check` |
 | Never run your own mutation testing | The proof that the tests would catch a mistake | Nothing in the run: the pipeline runs no mutation, so only your own reports show it |
 | Replace a command with one that tests nothing (`"test": "node -e 0"`, a filter that excludes almost everything) | The whole gate: it passes every time | A traced run that passes whose log shows no test run |
 | Switch a component to `inprocess` with no contract test | The guarantee that your mocks still look like the real service | Green tests, then a failure at integration |
-| Leave a component with no gate | Any proof about that component; the engine reports it as an `environment` failure | The gate is missing from `Quality evidence` unless the engineer declared it absent |
+| Leave a component with no gate | Any proof about that component; the `quality-gates` lens reports the run missing | The gate is missing from `Quality evidence` unless the engineer declared it absent with a reason |
 | Set `--base` or `baseBranch` to a ref that is too recent | Changed files fall outside the compared range | A component whose code changed is not in `Quality evidence` |
 | Remove the `adr` ask node | Human ratification of the ADRs, which stay `Proposed` | `skraft workflow diff` shows the node gone |
 | Remove the `scenario_review` ask node | A human's reading of the scenarios, the walking skeleton and S1's acceptance test before DELIVER builds them | `skraft workflow diff` shows the node gone |

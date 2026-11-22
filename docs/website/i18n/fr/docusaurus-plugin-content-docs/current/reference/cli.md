@@ -190,7 +190,7 @@ Ratify the Proposed ADRs docs/adr/adr-001-card-provider.md? RATIFIED marks them 
 | `graph.nodes` | `[{ id, kind, phase, what, state, outcome, visits, attempts, retries, durationMs, costUsd }]` | une entrée par étape (ni `start` ni `exit`) dans l'ordre du workflow ; `what` = l'agent, les lentilles, la question ou la publication ; `state` = `pending`, `open` ou `done` ; `outcome` = ce que la dernière tentative a enregistré, `null` tant qu'une tentative est ouverte ; `costUsd` = coût de l'étape, `null` si aucun |
 | `graph.edges` | `[{ from, to, label, taken }]` | les arêtes entre ces étapes ; `taken` = nombre de fois où le run l'a prise |
 | `reviews` | `[{ step, visit, verdict, lenses: [{ lens, verdict, findings }] }]` | dernier passage de chaque étape de revue ; `verdict` = `approved`, `needs-rework` ou `blocked`, `null` tant que le passage n'est pas enregistré ; `findings` = nombre de constats de la lentille |
-| `evidence` | `[{ gate, folder, run, log }]` | les exécutions tracées de `skraft_repl` sur lesquelles s'appuie la dernière tentative de livraison qui a tenu ses preuves, dans l'ordre où elles ont tourné (l'événement `evidence.checked`) ; `[]` tant qu'aucune ne les a tenues |
+| `evidence` | `[{ gate, folder, run, log }]` | les exécutions tracées de `skraft_repl` que la dernière tentative de livraison a journalisées, dans l'ordre où elles ont tourné (l'événement `evidence.checked`) ; `[]` tant qu'aucune ne l'a fait |
 
 Signification de chaque statut :
 [Dossier de suivi et journal](./run-journal.md). Code 1

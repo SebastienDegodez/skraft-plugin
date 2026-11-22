@@ -130,7 +130,7 @@ Valide, `skraft workflow check` affiche `<fichier> is valid: phases RESEARCH, DE
 ## Attributs retirés {/* #retired-attributes */}
 
 skraft ne lance plus ni gate ni mutation : l'ingénieur logiciel lance chaque gate par `skraft_repl`, et
-le moteur contrôle les exécutions tracées de sa tentative ([Gates](./gates.md#command-gates)). Un
+la revue DELIVER lit les exécutions tracées de sa tentative ([Gates](./gates.md#command-gates)). Un
 workflow de dépôt éjecté plus tôt qui contient encore un nœud gate ou l'un de ces attributs est
 refusé, un message par attribut :
 
@@ -233,6 +233,7 @@ digraph review {
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
   architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   cold_reader             [shape=note, lens="cold-reader"]
+  quality_gates           [shape=note, lens="quality-gates"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
   refuter [shape=octagon, mandatory=true]
@@ -242,6 +243,7 @@ digraph review {
   lenses -> test_integrity -> refuter
   lenses -> architecture_boundaries -> refuter
   lenses -> cold_reader -> refuter
+  lenses -> quality_gates -> refuter
   lenses -> mock_fidelity -> refuter
   lenses -> contract_fidelity -> refuter
   refuter -> verdict
@@ -263,6 +265,7 @@ run (chaque revue de `pipeline.skraft.dot`, et `review` appelé par lui). Les fi
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents de la phase, patch, chemins changés |
 | `architecture-boundaries` | documents de la story et des autres phases, patch, chemins changés, `components.json` |
 | `cold-reader` | patch et chemins changés seulement, sans les ADR ni la [documentation durable](./run-journal.md#durable-docs) : ni story, ni périmètre, ni contexte |
+| `quality-gates` | documents de la phase, dont la trace `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, le journal des changements, `components.json` |
 | `mock-fidelity`, `contract-fidelity` | patch, chemins changés, `components.json` |
 | `fitness` | tout ce qui précède, patch et chemins changés limités à tout dossier `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` (`design.patch`, `design-files.txt`) |
 | `business-alignment` | tout ce qui précède, patch et chemins changés limités aux `.feature`, là où leur composant les garde (`features.patch`, `features-files.txt`) |

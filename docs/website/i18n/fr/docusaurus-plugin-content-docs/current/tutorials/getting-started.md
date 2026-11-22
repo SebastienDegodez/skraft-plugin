@@ -156,7 +156,7 @@ script de `web/package.json` :
       "commands": { "test": "npm test" }
 ```
 
-Une commande démarre sans shell, depuis la racine du composant. La deuxième est le Gherkin :
+Une commande est lancée depuis la racine du composant. La deuxième est le Gherkin :
 il détecte les dossiers qu'un runner lit quand un projet en a, et celui-ci n'en a pas, donc dites
 que ses tests s'écrivent sans :
 
@@ -306,8 +306,8 @@ enchaîné à `npm test`, si bien que le commit n'existe que si les tests passen
 passer ensemble le test de S1, celui de S2 et le walking skeleton ; un deuxième commit vert est refusé (`green-split`).
 
 L'ingénieur lance les gates du composant par `skraft_repl` (la ligne de commit est l'exécution `test`),
-le moteur contrôle leur trace signée, puis la revue DELIVER (test-integrity,
-architecture-boundaries, cold-reader) tourne. Le panneau coche `deliver` et `deliver_review`.
+le moteur journalise leur trace signée, puis la revue DELIVER (test-integrity,
+architecture-boundaries, cold-reader, quality-gates) tourne. Le panneau coche `deliver` et `deliver_review`.
 
 ## 9. PUBLISH <!-- #9-publish -->
 

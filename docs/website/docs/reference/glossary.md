@@ -80,7 +80,7 @@ An eight-item checklist a story must pass before entering engineering: problem, 
 ## E
 
 **Engine**
-The SKRAFT code that decides every pipeline step (order, expected outputs, retries, the evidence of the gate runs), the same on every host.
+The SKRAFT code that decides every pipeline step (order, expected outputs, retries, the journal of the gate runs), the same on every host.
 → See [Engine](../explanation/architecture.md)
 
 **Environment question**
@@ -106,7 +106,7 @@ A defect a lens reports: the gate concerned, a severity (`blocker`, `high`, `med
 ## G
 
 **Gate (quality gate)**
-A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`) that proves quality. The engine runs none: in DELIVER the software engineer runs each one through `skraft_repl`, and the engine checks the signed trace of its attempt (`evidence`, `evidence.checked`). A gate the project names no command for is declared `absent`; `test` never is. `mutation` is the developer's: a recipe of their session.
+A named command of a component (`build`, `format`, `lint`, `test`, `architecture`, `coverage`) that proves quality. The engine runs none: in DELIVER the software engineer runs each one through `skraft_repl`, the engine journals the signed trace of its attempt (`evidence.checked`) and the DELIVER review's `quality-gates` lens judges it. A gate the project names no command for is declared `absent`; `test` never is. `mutation` is the developer's: a recipe of their session.
 → See [Gates](./gates.md#command-gates); the lenses' review criteria: [Gates](./gates.md)
 
 **Gherkin**
@@ -141,7 +141,7 @@ Tracking-folder file where the engine writes one event per line, each line carry
 ## L
 
 **Lens (reviewer lens)**
-In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isolated, read-only agent `<name>-lens`. The host driver starts the lenses of a review node and the engine computes the verdict from their findings. Lenses shipped with the plugin: DESIGN `consistency`, `architecture-compliance`, `fitness`; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity`, `contract-fidelity` (`quality-gates` is retired in V2: the engine runs the gates itself).
+In SKRAFT, a specialised viewpoint of the adversarial review, carried by an isolated, read-only agent `<name>-lens`. The host driver starts the lenses of a review node and the engine computes the verdict from their findings. Lenses shipped with the plugin: DESIGN `consistency`, `architecture-compliance`, `fitness`; DISTILL `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; DELIVER `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates`, `mock-fidelity`, `contract-fidelity`.
 → See [Lenses](pathname:///dashboard/)
 
 ## M

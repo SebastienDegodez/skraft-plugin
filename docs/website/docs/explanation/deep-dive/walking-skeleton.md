@@ -35,7 +35,7 @@ this first traversal possible without freezing the infrastructure.
 
 Every story starts with one, as the outer loop of its double-loop TDD. In DISTILL, the test plan
 lists the scenarios in the order DELIVER builds them; S1, tagged `@walking-skeleton`, is the
-scenario the walking skeleton walks, in a back-end component. The engine refuses a plan that tags
+scenario the walking skeleton walks, in a back-end component. The `boundary-enforcement` lens (G8) judges a plan that tags
 another scenario, tags none, or puts S1 in a React front end.
 
 The walking skeleton is a plain test, with no Gherkin, in the component's integration-test place:
@@ -92,8 +92,8 @@ and the run waits.
 Not every story opens a new path. One that adds no entry point declares why under the table:
 `library` (a pure library), `refactoring` (no new public interface) or `docs-only`
 (configuration or documents only). An exemption removes the walking skeleton only, never S1's
-acceptance test. The engine checks the last one against the diff: a `docs-only` story whose
-commits change a component's source is refused.
+acceptance test. The `boundary-enforcement` lens checks the exemption against the story's changes: a `docs-only` story whose
+commits change a component's source does not hold.
 
 ## Pitfalls & anti-patterns
 
@@ -106,8 +106,7 @@ commits change a component's source is refused.
   doubles S1's acceptance test on the slow path, and one replacing it leaves S1's Gherkin run
   nowhere.
 - **An exemption of convenience**: declaring `library` or `refactoring` to skip the skeleton. The
-  engine checks only `docs-only` against the diff; the human who reads the scenarios is there for
-  the others.
+  lens judges the exemption from the story's changes; the human who reads the scenarios is there too.
 
 ## Sources
 

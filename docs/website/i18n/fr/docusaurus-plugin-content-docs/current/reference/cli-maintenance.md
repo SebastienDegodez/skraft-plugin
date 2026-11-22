@@ -218,7 +218,7 @@ Contrôles, dans l'ordre :
 | `forge` | la forge du run est joignable d'ici (sur `github` : un remote, `gh` installé et connecté à son hôte ; sur `azure-devops` : un remote qui nomme organisation, projet et dépôt, `az` avec son extension `azure-devops` installé et connecté à cette organisation) ; sinon un avertissement, jamais un échec | avertissement : `<forge>, named in the configuration: <reason>` ou `<forge>, deduced from the Git remote: <reason>` ; raisons : `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository`, `az, the Azure CLI, is not installed`, `skraft runs az under Windows only from the Azure CLI installer (MSI or winget), …`, `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops`, `az is not signed in to the Azure DevOps organization <URL de l'organisation>, …` |
 | `<composant>` | la racine est un dossier | `root <racine> is not a folder` (ses commandes ne sont pas contrôlées) |
 | `<composant>` | au moins une commande de gate | `no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json; run /skraft-init` |
-| `<composant>/<commande>` | la ligne se découpe | `"<ligne>" <raison>` ; quand elle passe, `ok <composant>/<commande>: <ligne> (parsed)` |
+| `<composant>/<commande>` | toujours `ok` : la ligne est listée telle qu'écrite | `ok <composant>/<commande>: <ligne> (listed; skraft_repl starts it, never skraft)` |
 | `<composant>` (après ses commandes) | chaque skill de mocking et de contract testing que demande le composant existe dans le plugin ou la copie de travail (`.claude/skills/`, `.github/skills/`) ; sinon un avertissement | avertissement : `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
 | `infrastructure` (après les composants) | `ok` : une ligne par rangée de la [politique d'infrastructure](./skraft-config.md#infrastructure) de chaque composant | `<composant> (<stack>) <rangée>: <mécanisme> (targeted), <mécanisme> (walking skeleton) — <outil>; source plugin` (`source skraft-config.json` pour une surcharge, `source skraft-config.json (mocking.strategy)` pour une stratégie de mocking autre que celle par défaut de la stack ; `(e2e)` pour une rangée `react`) |
 | `vscode` | toujours `ok` | nomme le pilote VS Code : `Copilot SDK <version> (<chemin>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, ou `no Copilot SDK under <dossier>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |
@@ -234,14 +234,14 @@ est invalide, absente ou vide.
 ```
 ok    node: Node v22.…
 ok    forge: github, deduced from the Git remote
-FAIL  web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script
+ok    web/test: npm run test:ci (listed; skraft_repl starts it, never skraft)
 models on claude-code:
   step      agent                type   family      tier      model   effort  source (family/model/effort)
   research  solution-researcher  phase  researcher  economy   haiku   -       agent/tier/host
   …
 models on copilot:
   …
-skraft doctor: 1 checks failed
+skraft doctor: every check passed
 ```
 
 Une fois la configuration et le workflow lus, un tableau par hôte liste chaque agent que lance le workflow (les lentilles d'un nœud de revue, puis son réfutateur tel qu'il vérifie la lentille la plus forte du nœud) : famille, palier, modèle (une liste essayée dans l'ordre), niveau de réflexion, et la source de chacun ; `-` là où l'hôte décide.

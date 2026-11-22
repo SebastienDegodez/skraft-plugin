@@ -275,39 +275,24 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 
 ## Lignes de commande <!-- #command-lines -->
 
-Une ligne de `commands` est lancée **sans shell**, depuis la racine du composant. La même
-ligne se comporte donc de la même façon sous sh, PowerShell et cmd.
+Une ligne de `commands` est celle du développeur : le moteur ne porte aucune ligne de commande d'aucune
+stack, et une ligne écrite ici est celle qui tourne. L'ingénieur logiciel la lance depuis la racine du
+composant par `skraft_repl`, `run(string)` sous `sh -c` (sous Windows, Git Bash quand il est installé, sinon
+`pwsh` ou `powershell` ; le shell est nommé dans la trace). Une ligne peut donc enchaîner des étapes
+(`a && b`) ou poser des variables comme ce shell le fait ; écrivez-la pour qu'elle marche dans les
+shells de votre équipe.
 
 | Règle | Détail |
 | --- | --- |
-| Découpage | sur les blancs ; le premier mot est le programme |
-| Guillemets | `"…"` et `'…'` gardent les blancs dans un seul argument ; pas de caractère d'échappement |
-| `{baseSha}` | remplacé, avant le découpage, par le SHA de la base du dépôt du composant |
-| Syntaxe shell | un mot écrit sans guillemets qui contient <code>&#124;</code>, `&`, `;`, `<` ou `>` est refusé |
-| Variables | un `NOM=valeur` avant le programme est refusé : aucun shell ne le pose |
-| Rien d'interprété | pas de variable, de joker ni de redirection : chaque mot part tel quel au programme |
-| Programme | cherché dans le PATH (et PATHEXT sous Windows) ; un chemin avec `/` ou `\` part de la racine du composant |
-| Windows | un `.cmd` ou `.bat` (npm, npx, gradlew.bat) passe par cmd.exe, arguments échappés |
-
-Messages de refus d'une ligne (précédés de `command "<ligne>"` dans une gate, de
-`"<ligne>"` dans le doctor) :
-
-| Cas | Message |
-| --- | --- |
-| syntaxe shell | `uses shell syntax (<mot>); put the steps in a script and call the script` |
-| variables avant le programme | `sets <NOM>, … before its program, which no shell reads; put the variables and the command in a script and call the script` |
-| guillemet non fermé | `has an unclosed <guillemet> quote` |
-| `{baseSha}` sans base | `uses {baseSha} but the run has no base for this repository` |
-
-Pour enchaîner des étapes (`a && b`) ou poser des variables
-(`TESTCONTAINERS_RYUK_DISABLED=true mvn test`), écrivez-les dans un script du dépôt et appelez le
-script.
+| `{baseSha}` | remplacé, dans le brief qu'un agent lit, par le SHA de la base du dépôt du composant |
+| Non vide | une ligne vide est refusée : `<label>: command <name> must be a non-empty command line` |
+| Programme | cherché dans le PATH du shell ; un programme qui ne démarre pas fait échouer son exécution dans le REPL |
 
 ## Gates <!-- #gates -->
 
 Une **gate** est une commande dont le nom est l'un des six noms ci-dessous. Le moteur n'en lance
-aucune : l'ingénieur logiciel lance chacune par `skraft_repl` dans DELIVER, et le moteur contrôle les
-exécutions tracées ([Gates](./gates.md#command-gates)).
+aucune : l'ingénieur logiciel lance chacune par `skraft_repl` dans DELIVER, et la lentille `quality-gates` de la revue DELIVER
+juge les exécutions tracées ([Gates](./gates.md#command-gates)).
 
 | Nom |
 | --- |
@@ -366,9 +351,9 @@ conteneur ne répond, comme tout test en échec.
 
 Le moteur ne lance aucune commande du projet, il n'en classe donc aucune. Une exécution de
 `skraft_repl` enregistre son code de sortie, son commit et son log dans la trace signée de la
-tentative ([Le REPL](./repl.md)), et le moteur juge les exécutions tracées à la soumission de la
-tentative : une gate dont la dernière exécution n'est pas sortie avec 0 est refusée avec le code
-d'échec `evidence` ([Gates](./gates.md#command-gates)).
+tentative ([Le REPL](./repl.md)). Le moteur ne refuse aucune tentative pour elles : la lentille
+`quality-gates` signale une gate dont la dernière exécution n'est pas sortie avec 0
+([Gates](./gates.md#command-gates)).
 
 ## Composants modifiés <!-- #changed-components -->
 

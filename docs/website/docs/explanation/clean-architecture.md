@@ -120,14 +120,13 @@ use-case boundary, its layer and its double type, then commits in one red commit
 skeleton and the acceptance test of every scenario with the skeleton they call. The walking
 skeleton walks S1: a plain test, the thinnest slice that crosses every layer, from the real entry
 point to a real database, and proves the wiring exists
-([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). The engine requires it,
-in a back-end component, unless the story declares itself exempt; the `boundary-enforcement` lens
-checks that it runs that real path (G8). Every scenario's acceptance test, S1's included, keeps
+([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). The `boundary-enforcement` lens
+checks that it exists in a back-end component, unless the story declares itself exempt, and that it runs that real path (G8). Every scenario's acceptance test, S1's included, keeps
 the use case and drives it in process, with internal gateways in
 memory ([infrastructure policy](../reference/skraft-config.md#infrastructure)). See
 [Walking Skeleton](./deep-dive/walking-skeleton.md).
 
-**In DELIVER, a gate checks it on every pass.** `architecture` is one of the six gates the software engineer runs through `skraft_repl`, and the engine requires its traced run. Its command, declared per component in
+**In DELIVER, a gate checks it on every pass.** `architecture` is one of the six gates the software engineer runs through `skraft_repl`, and the `quality-gates` lens of the review judges its traced run. Its command, declared per component in
 `skraft-config.json`, runs the project's architecture tests: an `ArchitectureTests` filter in
 .NET, `import-linter` in Python, an `architecture-gate.mjs` script in TypeScript, according to the
 component's `quality-gates-<stack>` skill. In review, the `architecture-boundaries` lens,

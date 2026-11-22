@@ -169,8 +169,8 @@ le calcul : [Gates](../reference/gates.md#review-run).
 
 Ce qu'un agent pourrait oublier, le moteur le vérifie : l'ordre des phases, calculé depuis le
 graphe du workflow ; les sorties attendues, pré-créées puis vérifiées ; l'intégrité du journal ;
-les exécutions tracées de gates d'une tentative DELIVER ; ce que chaque étape a le droit d'écrire, par un diff git ; les commits
-rouges et verts du TDD ; le cycle de vie des ADR ; le verdict des revues. Chacun de ces
+ce que chaque étape a le droit d'écrire, par un diff git ; les commits
+rouges et verts du TDD ; le cycle de vie des ADR ; le verdict des revues. Ce que seul un jugement tranche va aux lentilles de revue : les critères et la forme du Gherkin en DISTILL, les exécutions tracées des gates en DELIVER (la lentille `quality-gates`). Chacun de ces
 contrôles est testé sans hôte, et se comporte pareil partout. Pourquoi ils ont quitté les hooks
 de la v1 : [Garde-fous](./guardrails.md). Comment le workflow
 qui les porte se lit et se copie : [Workflow DOT](../reference/workflow-dot.mdx).

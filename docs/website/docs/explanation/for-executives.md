@@ -68,8 +68,8 @@ driver** (the part of SKRAFT specific to each tool) spawns agents, on the engine
 
 The same engine runs in Claude Code (through a mod), in GitHub Copilot CLI (through a
 dynamic workflow) and in VS Code (through the Copilot SDK, or an agent-driven fallback loop
-when the SDK is missing). Commands run without a shell, with the same form under sh and
-PowerShell. The engine's tests run on Windows, macOS and Linux.
+when the SDK is missing). Commands run through `skraft_repl` under `sh` (Git Bash or PowerShell on
+Windows). The engine's tests run on Windows, macOS and Linux.
 
 ### Auditable traceability
 
