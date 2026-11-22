@@ -16,6 +16,13 @@ const KERNEL_CHILD = fileURLToPath(new URL('./kernel-child.mjs', import.meta.url
 
 /** How long a cell may keep running after an interrupt before the kernel is ended. */
 const INTERRUPT_GRACE_MS = 3000
+/** How long the kernel may take to say it is ready. */
+const READY_MS = 10_000
+/**
+ * The kernel's Node flags, fixed: never the server's own (a test runner's, an inspector's), and a
+ * heap of 2 GiB at most, past which the kernel exits and the call answers repl-crashed.
+ */
+const KERNEL_FLAGS = Object.freeze(['--max-old-space-size=2048'])
 
 /**
  * The kernel as a child process started with `fork`, its standard streams closed and IPC on a
@@ -29,14 +36,22 @@ export const createNodeKernelHost = ({ entry = KERNEL_CHILD } = {}) => Object.fr
 
 /** @param {string} entry @param {KernelEvents} events @param {string} cwd @returns {Promise<Kernel>} */
 const start = (entry, events, cwd) => new Promise((resolve, reject) => {
-  const child = fork(entry, [], { cwd, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
+  const child = fork(entry, [], { cwd, execArgv: [...KERNEL_FLAGS], stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
   /** @type {State} */
   const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null }
+  const late = setTimeout(() => notReady(state, reject), READY_MS)
   child.once('error', reject)
   child.once('exit', () => reject(new Error('the kernel exited before it was ready')))
-  child.on('message', (/** @type {any} */ message) => route(state, message, () => resolve(kernelOf(state))))
+  child.on('message', (/** @type {any} */ message) => route(state, message, () => { clearTimeout(late); resolve(kernelOf(state)) }))
   child.on('exit', () => crashed(state))
 })
+
+/** A kernel that did not say it is ready in time is ended. @param {State} state @param {(error: Error) => void} reject */
+const notReady = (state, reject) => {
+  state.stopped = true
+  state.child.kill('SIGKILL')
+  reject(new Error('the kernel was not ready within ten seconds'))
+}
 
 /** @param {State} state @param {any} message @param {() => void} ready */
 const route = (state, message, ready) => {

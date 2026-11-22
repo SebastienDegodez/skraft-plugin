@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createNodeKernelHost } from '../../../../plugins/skraft-framework/engine/infrastructure/repl/node-kernel.mjs'
 import { createLiveProcesses } from '../../../../plugins/skraft-framework/engine/infrastructure/process/live-processes.mjs'
+import { fileURLToPath } from 'node:url'
 import { tempFolder } from '../support/workspace.mjs'
 
 // A kernel the test fails to end would hold the test run: each test has a time limit.
@@ -159,6 +160,22 @@ test('an interrupt of a cell that never yields restarts the kernel, which report
 
   assert.equal(outcome.status, 'restarted')
   assert.deepEqual(seen.gone, ['restarted'])
+})
+
+test('a kernel that never says it is ready is refused within ten seconds, and a kernel runs with a command line of its own, not the server\'s', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+  const events = { onRun: () => undefined, onKill: () => undefined, onAbsent: () => undefined, onGone: () => undefined }
+  const asked = Date.now()
+
+  const started = await Promise.race([
+    createNodeKernelHost({ entry: fileURLToPath(new URL('./fixtures/never-ready.mjs', import.meta.url)) }).start(events, tempFolder(t)).then(() => 'ready', () => 'refused'),
+    new Promise((done) => setTimeout(() => done('still waiting'), 12_000)),
+  ])
+  const flags = await cell(kernel, 'process.execArgv')
+
+  assert.equal(started, 'refused')
+  assert.ok(Date.now() - asked >= 9_000)
+  assert.equal(flags.value, "[ '--max-old-space-size=2048' ]")
 })
 
 test('a kernel that exits by itself reports it crashed with the cell it was running', BOUNDED, async (t) => {

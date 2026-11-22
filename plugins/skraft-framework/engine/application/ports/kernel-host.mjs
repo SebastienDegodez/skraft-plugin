@@ -32,6 +32,6 @@
  *   already in flight; interrupt: stops the awaits of the cell in flight, and ends the kernel when
  *   the cell still does not end; chunk, exited: what a run the server started writes and how it ended.
  * @typedef {{ start: (events: KernelEvents, cwd: string) => Promise<Kernel> }} KernelHost
- *   start: rejects when the kernel cannot start.
+ *   start: rejects when the kernel cannot start, or has not said it is ready within ten seconds.
  */
 export {}
