@@ -55,6 +55,18 @@ test('a run\'s folder is traced relative to the working copy, with / between its
   assert.deepEqual(trace.filter(({ type }) => type === 'run').map(({ cwd }) => cwd), ['api', 'api/src'])
 })
 
+test('a cell that prints 8 MiB leaves a cell log of 1 MiB at most, its first and last lines kept', BOUNDED, async (t) => {
+  const { host } = realRun(t, async (repl) => {
+    await repl.call({ code: "const line = 'x'.repeat(1023); console.log('first'); for (let i = 0; i < 8192; i += 1) console.log(line); console.log('last')" })
+  })
+
+  await host.start()
+
+  const log = host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/cell-1.log`)
+  assert.ok(Buffer.byteLength(log) <= 1_048_576 + 200, `${Buffer.byteLength(log)} bytes`)
+  assert.deepEqual([log.startsWith('first\n'), log.endsWith('\nlast\n')], [true, true])
+})
+
 test('a program started in a folder outside the working copy is not started, and the cell reads why', BOUNDED, async (t) => {
   const answers = []
   const { host } = realRun(t, async (repl) => {

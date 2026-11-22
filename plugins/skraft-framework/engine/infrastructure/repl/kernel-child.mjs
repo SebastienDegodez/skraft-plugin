@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { inspect } from 'node:util'
 import { createOutput } from '../process/output-cut.mjs'
 import { refusalOfKill } from '../../domain/repl/refusals.mjs'
+import { createPrintWindow } from './print-window.mjs'
 
 /**
  * The process behind one `skraft_repl` attempt: a `node:repl` server on streams of its own, whose
@@ -20,7 +21,7 @@ import { refusalOfKill } from '../../domain/repl/refusals.mjs'
  * @typedef {{
  *   ipc: Ipc, handles: Map<number, Handle>, nextRun: number,
  *   cell: { id: number, done: (outcome: { value: string | null, error: string | null }) => void } | null,
- *   prompted: (() => void) | null, server: any,
+ *   prompted: (() => void) | null, server: any, printing?: ReturnType<typeof createPrintWindow>,
  * }} Kernel
  */
 
@@ -39,6 +40,8 @@ class Handle {
     this.buffer = createOutput(BUFFER_BYTES)
     /** @type {Record<string, unknown> | null} */
     this.result = null
+    /** @type {string | undefined} what output() gives once the output is let go */
+    this.forgotten = undefined
     this.cell = kernel.cell?.id ?? null
     this.done = new Promise((resolve, reject) => Object.assign(this, { settle: resolve, fail: reject }))
     this.done.catch(() => undefined)
@@ -49,7 +52,15 @@ class Handle {
   /** @param {number} [lines] */
   tail(lines = 50) { return this.output().replace(/\n$/, '').split('\n').slice(-lines).join('\n') }
 
-  output() { return this.buffer.text() }
+  output() { return this.forgotten ?? this.buffer.text() }
+
+  /** Its output is let go; the handle names the log that holds it. */
+  forget() {
+    if (this.forgotten !== undefined || this.result === null) return
+    this.forgotten = `[the output of r${this.id} is no longer kept in the kernel: it is in ${this.result.log}]`
+    this.result.output = this.forgotten
+    this.buffer = createOutput(0)
+  }
 
   poll() { return this.result }
 
@@ -71,7 +82,7 @@ class Handle {
  */
 export const startKernel = (ipc) => {
   /** @type {Kernel} */
-  const kernel = { ipc, handles: new Map(), nextRun: 1, cell: null, prompted: null, server: null }
+  const kernel = /** @type {Kernel} */ ({ ipc, handles: new Map(), nextRun: 1, cell: null, prompted: null, server: null })
   routeConsole(kernel)
   kernel.server = replServer(kernel)
   defineApi(kernel)
@@ -82,7 +93,8 @@ export const startKernel = (ipc) => {
 
 /** What a cell prints, and what runs later print, goes to the server as `print`. @param {Kernel} kernel */
 const routeConsole = (kernel) => {
-  const sink = new Writable({ write: (chunk, _encoding, next) => { kernel.ipc.send({ t: 'print', cell: kernel.cell?.id ?? null, text: String(chunk) }); next() } })
+  kernel.printing = createPrintWindow((cell, text) => kernel.ipc.send({ t: 'print', cell, text }))
+  const sink = new Writable({ write: (chunk, _encoding, next) => { kernel.printing?.write(kernel.cell?.id ?? null, Buffer.from(chunk)); next() } })
   globalThis.console = new Console({ stdout: sink, stderr: sink })
 }
 
@@ -136,15 +148,24 @@ const onMessage = (kernel, message) => {
 const HANDLERS = {
   cell: (kernel, { id, code }) => { void evaluate(kernel, id, code) },
   chunk: (kernel, { rid, text }) => kernel.handles.get(rid)?.buffer.push(Buffer.from(text, 'utf8')),
-  exit: (kernel, { rid, result }) => finish(kernel.handles.get(rid), result),
+  exit: (kernel, { rid, result }) => finish(kernel, kernel.handles.get(rid), result),
   interrupt: (kernel) => interrupt(kernel),
 }
 
-/** @param {Handle | undefined} handle @param {Record<string, unknown>} result */
-const finish = (handle, result) => {
+/** @param {Kernel} kernel @param {Handle | undefined} handle @param {Record<string, unknown>} result */
+const finish = (kernel, handle, result) => {
   if (handle === undefined || handle.result !== null) return
   handle.result = { ...result, output: handle.output() }
   handle.settle(handle.result)
+  forgetOld(kernel)
+}
+
+/** The kernel keeps the output of its last runs only; an older handle names its log. */
+const KEPT_HANDLES = 50
+
+/** @param {Kernel} kernel */
+const forgetOld = (kernel) => {
+  for (const handle of kernel.handles.values()) if (handle.id <= kernel.nextRun - 1 - KEPT_HANDLES && handle.result !== null) handle.forget()
 }
 
 /** The awaits of the cell on a run stop waiting. @param {Kernel} kernel */
@@ -159,6 +180,7 @@ const evaluate = async (kernel, id, code) => {
     kernel.prompted = () => done({ value: null, error: errorText(kernel.server.lastError) })
     kernel.server.eval(`${code}\n`, kernel.server.context, 'cell', (/** @type {any} */ error, /** @type {unknown} */ value) => done(settled(error, value)))
   })
+  kernel.printing?.close()
   kernel.cell = null
   kernel.prompted = null
   kernel.ipc.send({ t: 'cell-done', id, ...outcome })

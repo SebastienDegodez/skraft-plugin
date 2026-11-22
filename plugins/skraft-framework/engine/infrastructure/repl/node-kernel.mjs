@@ -77,8 +77,32 @@ const FROM_KERNEL = {
 
 /** @param {State} state @param {number | null} cell @param {string} text */
 const printed = (state, cell, text) => {
-  if (state.cell !== null && state.cell.id === cell) state.cell.printed.push(text)
-  else state.late.push(text)
+  if (state.cell !== null && state.cell.id === cell) keep(state.cell, 'printed', text)
+  else keep(state, 'late', text)
+}
+
+/**
+ * The kernel bounds what it prints; this server bounds it again, past a little more than that,
+ * as a cell can also write to the channel itself.
+ */
+const PRINTED_LIMIT = 1_048_576 + 4096
+const DROPPED = '\n… what was printed past 1 MiB was dropped …\n'
+
+/** What was printed outside a cell, taken: the room for the next starts again. @param {State & { sizes?: Record<string, number> }} state */
+const takeLate = (state) => {
+  if (state.sizes !== undefined) state.sizes.late = 0
+  return state.late.splice(0)
+}
+
+/**
+ * @param {{ sizes?: Record<string, number> } & Record<string, any>} holder @param {'printed' | 'late'} list @param {string} text
+ */
+const keep = (holder, list, text) => {
+  holder.sizes ??= {}
+  const size = holder.sizes[list] ?? 0
+  holder.sizes[list] = size + text.length
+  if (size + text.length <= PRINTED_LIMIT) holder[list].push(text)
+  else if (size <= PRINTED_LIMIT) holder[list].push(DROPPED)
 }
 
 /** @param {State} state @param {{ id: number, value: string | null, error: string | null }} message */
@@ -95,7 +119,7 @@ const ended = (state, { id, value, error }) => {
  * @returns {CellOutcome}
  */
 const outcome = (state, cell, status, { value = null, error = null } = {}) => {
-  const text = [...state.late.splice(0), ...cell.printed.slice(cell.taken)].join('')
+  const text = [...takeLate(state), ...cell.printed.slice(cell.taken)].join('')
   cell.taken = cell.printed.length
   return { status, printed: text, value, error }
 }
@@ -153,7 +177,7 @@ const wait = (state, budgetMs) => {
 const claimLeft = (state) => {
   const left = state.left ?? { status: /** @type {const} */ ('done'), printed: '', value: null, error: null }
   state.left = null
-  return { ...left, printed: [...state.late.splice(0), left.printed].join('') }
+  return { ...left, printed: [...takeLate(state), left.printed].join('') }
 }
 
 /** The cell's end, or what it printed so far once the budget is spent. @param {State} state @param {Cell} cell @param {number} budgetMs @returns {Promise<CellOutcome>} */

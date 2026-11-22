@@ -195,6 +195,25 @@ test('a kernel that is stopped ends with every process its cells started by them
   assert.equal(alive, false)
 })
 
+test('the kernel keeps the output of its last 50 runs; an older handle names the log that holds its output', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const kept = await cell(kernel, "const hs = []; for (let i = 0; i < 51; i += 1) { const h = run(['" + process.execPath.replaceAll('\\', '\\\\') + "', '-e', 'console.log(1)']); hs.push(h); await h }; [hs[0].output(), (await hs[0]).output, hs[50].output()]")
+
+  assert.equal(kept.value, "[\n  '[the output of r1 is no longer kept in the kernel: it is in 1.log]',\n  '[the output of r1 is no longer kept in the kernel: it is in 1.log]',\n  '1\\n'\n]")
+})
+
+test('what a cell prints past 1 MiB comes back as its first and last half megabytes around a marker', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  const noisy = await cell(kernel, "const line = 'x'.repeat(1023); console.log('first'); for (let i = 0; i < 8192; i += 1) console.log(line); console.log('last')")
+
+  assert.ok(Buffer.byteLength(noisy.printed) <= 1_048_576 + 200, `${Buffer.byteLength(noisy.printed)} bytes`)
+  assert.ok(noisy.printed.startsWith('first\n'))
+  assert.ok(noisy.printed.endsWith('\nlast\n'))
+  assert.match(noisy.printed, /\n… the cell printed more than 1 MiB: its first and last 512 KiB are kept …\n/)
+})
+
 test('a kernel that exits by itself reports it crashed with the cell it was running', BOUNDED, async (t) => {
   const { kernel, seen } = await openKernel(t)
 
