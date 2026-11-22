@@ -15,7 +15,7 @@ const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 /** The sha of the red commit whose subject is given, short. @param {ReturnType<typeof scripted>} host @param {string} subject */
 const shaOf = (host, subject) => host.events().filter((event) => event.type === 'commits.checked').flatMap((event) => event.commits).find((commit) => commit.subject === subject).sha.slice(0, 7)
 
-test('after each step the tracking folder holds qa-report.md: the test plan, each component\'s last gates with its mutation score in a workflow that runs mutation, the TDD red commits, the acceptance test of DISTILL first, and each review\'s verdict with its findings', async () => {
+test('after each step the tracking folder holds qa-report.md: the test plan, each component\'s last gates with its mutation score in a workflow that runs mutation, and each review\'s verdict with its findings', async () => {
   const host = scripted({ workflow: MUTATION_WORKFLOW, components: [API, WEB], git: twoRepositories() }, (it) => nominal(it, REFS_42))
   host.agentRunner.review = lenses({ consistency: [says('consistency', 'pass', [finding('F1', 'low', 'the context map names no owner')])], refuter: [refutes('refuted', 'the map names the owner')] })
   const seen = []
@@ -59,12 +59,6 @@ test('after each step the tracking folder holds qa-report.md: the test plan, eac
     '',
     'Mutation score: no mutant in the files the story changed.',
     '',
-    '## TDD red commits',
-    '',
-    '| Commit | Subject | Replay exit code |',
-    '| --- | --- | ---: |',
-    `| \`${shaOf(host, acceptance)}\` | \`${acceptance}\` | 1 |`,
-    '',
     '## Reviews',
     '',
     '| Review | Pass | Verdict | Findings | Lenses |',
@@ -95,10 +89,6 @@ test('before DISTILL the QA report has no test plan, no red commit and no gate; 
     '',
     'No gate has run yet.',
     '',
-    '## TDD red commits',
-    '',
-    'No red commit yet.',
-    '',
     '## Reviews',
     '',
     'No review has run yet.',
@@ -106,18 +96,16 @@ test('before DISTILL the QA report has no test plan, no red commit and no gate; 
   ].join('\n'))
 })
 
-test('a red commit the machine could not replay is no TDD red commit of the QA report while the run waits for a human', async () => {
-  const host = scripted({ replay: new ScriptedReplay({ exits: { 'root-1': null } }) }, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']) })(it)])
-  host.agentRunner.judge = () => judgeAnswer('ask-human', 'dotnet is not installed')
+test('the QA report holds no red commit: the TDD loop proves itself to the developer, in the pull request', async () => {
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent()(it)])
 
-  const outcome = await host.start()
+  await host.start()
 
-  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'])
   const qa = await host.tracking.read(SLUG, QA)
-  assert.ok(qa.includes('\n## TDD red commits\n\nNo red commit yet.\n'), qa)
+  assert.doesNotMatch(qa, /red commit|walking skeleton/i)
 })
 
-test('a mutation score names each scope with every survivor, a commit subject with backticks or a pipe stays one code span in its cell, a failed gate shows fail, and a test that kills mutants has no replayed exit code', async () => {
+test('a mutation score names each scope with every survivor, and a failed gate shows fail', async () => {
   const report = strykerReport({
     'src/Checkout.Domain/Order.cs': [[10, 'Equality', '!=', 'Survived'], [11, 'Equality', '==', 'Killed']],
     'src/Checkout.Api/Endpoints.cs': [[3, 'String', null, 'Killed'], [4, 'Boolean', 'false', 'Killed'], [5, 'Boolean', 'true', 'Killed'], [6, 'Boolean', 'true', 'Killed'], [9, 'Equality', '!=', 'NoCoverage']],
@@ -156,10 +144,6 @@ test('a mutation score names each scope with every survivor, a commit subject wi
   ].join('\n')), seen[0])
   const qa = await host.tracking.read(SLUG, QA)
   assert.ok(qa.includes('\n| mutation | pass | 0 s | [gates/api/mutation-2.log](gates/api/mutation-2.log) |\n'), qa)
-  assert.ok(qa.includes([
-    `| \`${shaOf(host, subject)}\` | \`\` ${subject.replace('|', '\\|')} \`\` | 1 |`,
-    `| \`${shaOf(host, kill)}\` | \`${kill}\` | - |`,
-  ].join('\n')), qa)
 })
 
 test('a review a lens the host could not start left open is in progress, with what the other lenses said', async () => {
@@ -184,7 +168,7 @@ test('a component whose gates stopped before mutation shows its gates alone', as
     '| build | pass | 0 s | [gates/api/build-1.log](gates/api/build-1.log) |',
     '| test | fail | 0 s | [gates/api/test-1.log](gates/api/test-1.log) |',
     '',
-    '## TDD red commits',
+    '## Reviews',
   ].join('\n')), qa)
 })
 
@@ -213,6 +197,6 @@ test('a mutation run whose report was not read says so, and shows no score or su
     '',
     'Mutation score: mutation report not read.',
     '',
-    '## TDD red commits',
+    '## Reviews',
   ].join('\n')), qa)
 })

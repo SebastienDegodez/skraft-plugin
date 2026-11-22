@@ -1,12 +1,12 @@
 import { cell, code } from './markdown-safety.mjs'
 import { durationText } from './run-report.mjs'
-import { finalGates, isTestPlan, redCommits } from './run-facts.mjs'
+import { finalGates, isTestPlan } from './run-facts.mjs'
 import { lensesText, reviewPasses } from './review-passes.mjs'
 
 /**
  * qa-report.md: what a qualification team reads to judge the story, from the journal alone: the
- * test plan, each component's last gates with its mutation score and survivors, the red commits
- * of its TDD cycles, each review's verdict. Every text an agent or a tool wrote sits in a code
+ * test plan, each component's last gates with its mutation score and survivors, each review's
+ * verdict. The red commits prove the TDD loop to a developer, not to QA: the pull request holds them. Every text an agent or a tool wrote sits in a code
  * span; the rest is the engine's.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
@@ -26,7 +26,6 @@ export const renderQaReport = ({ slug, status, events }) => [
   '',
   ...section('Test plan', testPlanLines(events)),
   ...section('Gates', gateLines(events)),
-  ...section('TDD red commits', redCommitLines(events)),
   ...section('Reviews', reviewLines(events)),
 ].join('\n')
 
@@ -82,17 +81,6 @@ const scoreText = ({ scope, bar, score, counted }) => `${scope} ${Math.floor(sco
 
 /** @param {string[]} survivors */
 const survivorLines = (survivors) => (survivors.length === 0 ? ['No surviving mutant.'] : ['Surviving mutants:', '', ...survivors.map((line) => `- ${code(line)}`)])
-
-/** @param {RunEvent[]} events */
-const redCommitLines = (events) => {
-  const commits = redCommits(events)
-  if (commits.length === 0) return ['No red commit yet.']
-  return [
-    '| Commit | Subject | Replay exit code |',
-    '| --- | --- | ---: |',
-    ...commits.map(({ sha, subject, exitCode }) => `| ${code(sha)} | ${cell(code(subject))} | ${exitCode ?? '-'} |`),
-  ]
-}
 
 /** @param {RunEvent[]} events */
 const reviewLines = (events) => {
