@@ -85,6 +85,19 @@ test('require in a cell finds the packages of .repl first, then those of the wor
   assert.equal(answers[0].text, "=> [ 'from .repl', 'from the working copy', 1 ]")
 })
 
+test('a package of .repl that cannot load one of its own dependencies fails, never replaced by the working copy\'s package of the same name', BOUNDED, async (t) => {
+  const answers = []
+  const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: "require('dup').name" })) })
+  for (const [folder, body] of [[join(root, '.repl', 'node_modules', 'dup'), "require('nowhere')\n"], [join(root, 'node_modules', 'dup'), "module.exports = { name: 'the working copy' }\n"]]) {
+    mkdirSync(folder, { recursive: true })
+    writeFileSync(join(folder, 'index.js'), body)
+  }
+
+  await host.start()
+
+  assert.match(answers[0].text, /^error: Error: Cannot find module 'nowhere'/)
+})
+
 test('a .repl/package.json with dependencies and no .repl/node_modules is told at the first result', BOUNDED, async (t) => {
   const answers = []
   const { host, root } = realRun(t, async (repl) => { answers.push(await repl.call({ code: '1' })) })

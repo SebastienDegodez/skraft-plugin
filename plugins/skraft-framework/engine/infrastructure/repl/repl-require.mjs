@@ -4,21 +4,11 @@ import { join } from 'node:path'
 
 /**
  * `require` in a cell: the packages of `.repl/` first (`.repl/package.json`, installed by the
- * developer under `.repl/node_modules/`), then those of the working copy.
+ * developer under `.repl/node_modules/`), then, as Node walks up from there, those of the working
+ * copy. A package found that fails to load its own dependency fails: no other one stands in for it.
  * @param {string} root the working copy @returns {(id: string) => unknown}
  */
-export const projectRequire = (root) => {
-  const fromRepl = createRequire(join(root, '.repl', 'package.json'))
-  const fromRoot = createRequire(join(root, 'package.json'))
-  return (id) => {
-    try {
-      return fromRepl(id)
-    } catch (error) {
-      if (/** @type {NodeJS.ErrnoException} */ (error).code !== 'MODULE_NOT_FOUND') throw error
-      return fromRoot(id)
-    }
-  }
-}
+export const projectRequire = (root) => createRequire(join(root, '.repl', 'package.json'))
 
 /**
  * Whether `.repl/package.json` names packages that are not installed: it has dependencies and
