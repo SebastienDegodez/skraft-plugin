@@ -68,6 +68,8 @@ const LIMITS = Object.freeze({
   commentLimit: 60_000,
   // gh takes the body file itself.
   takesRequestFile: false,
+  // The screenshots gh is handed in one command, at most: GitHub's limit on one upload batch is not measured, so the engine stays under it.
+  attachLimit: 50,
 })
 
 /**

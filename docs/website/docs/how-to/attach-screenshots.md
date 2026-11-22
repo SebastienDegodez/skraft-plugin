@@ -113,7 +113,8 @@ the dark ones folded. How they get there depends on the forge:
   emptied, never deleted; skraft reads the comment back and says which did not attach, and the
   next `skraft publish` posts it again. skraft reads the body back and says which screenshots did not attach;
   the next `skraft publish` sends the body again with them, as it does when the screenshots changed. `skraft doctor`
-  warns when your gh has no `--attach` (gh 2.103.3 has it); with such a gh, skraft opens or updates
+  warns when your gh has no `--attach` (gh 2.103.3 has it). gh is handed at most 50 screenshots in
+  one command: a front end past them shows none, and says where they are. With a gh without `--attach`, skraft opens or updates
   the pull request without its screenshots, says why in its Screenshots section and in the
   publication's reason, and journals `pull-request.screenshots-skipped`.
 - **Azure DevOps**: `az` sends no file as a binary body, so the pull request's attachments cannot

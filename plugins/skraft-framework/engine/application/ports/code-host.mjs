@@ -74,6 +74,7 @@
  *   attachesFiles: boolean,
  *   fileUrl: (commit: string, path: string) => Promise<string | null>,
  *   screenshotsBlocked: () => Promise<string | null>,
+ *   attachLimit?: number,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
@@ -104,6 +105,7 @@
  *   copy) that the forge's pull request shows as an image, null when the remote names no
  *   repository. screenshotsBlocked: why this machine's forge client cannot show screenshots in a
  *   pull request (gh without --attach, az without its azure-devops extension), null when it can.
+ *   attachLimit: the most screenshots the forge's client attaches in one command (gh: 50); none when it attaches none.
  *   storyLink: the line of a pull request's body that links it to the story's issue, as the
  *   forge reads it: one that closes the issue when the pull request merges, when closes is true;
  *   null when the forge links none.

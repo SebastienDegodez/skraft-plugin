@@ -127,6 +127,22 @@ test('a gh that takes no --attach still opens and updates the pull request, with
   assert.deepEqual(eventsOf(host, 'forge.write').filter(({ outcome }) => outcome !== 'applied'), [])
 })
 
+test('gh is handed at most 50 screenshots in one command: a front end past them is told where its screenshots are, and the pull request is still opened', async () => {
+  const roots = ['shop', 'kiosk', 'admin', 'back-office', 'partners']
+  const twelve = ['light', 'dark'].flatMap((theme) => Array.from({ length: 6 }, (_, at) => ({ title: `Step ${at + 1}`, theme, path: `skraft-visuals/${theme}-${at + 1}.png`, bytes: `PNG ${theme} ${at}` })))
+  const fronts = roots.map((root) => ({ ...WEB, name: root, root }))
+  const host = scripted({
+    workflow: WORKFLOW, components: [API, ...fronts], git: new InMemoryGit(),
+    config: { publish: { pullRequest: true, questionVersions: { pullRequest: 2, visuals: 2 }, visuals: true } },
+  }, (it) => [agent({ trace: false, work: async () => { for (const [at, root] of roots.entries()) { playwrightWrites(it.workspace, twelve, root); await writeE2eTrace(it, { cwd: root, command: WEB.commands.e2e, exitCode: 0, folder: `logs/runs/deliver-1-${at + 1}` }) } } })(it)])
+
+  assert.equal((await host.start(STORY)).status, 'done')
+
+  assert.deepEqual(host.codeHost.attached.map((sent) => sent.length), [48])
+  assert.match(await screenshots(host), /\n- partners: e2e run passed [^\n]*; 12 screenshots not attached: the forge's client attaches at most 50 screenshots to a pull request; they are in `partners\/skraft-visuals`\n/)
+  assert.match(eventsOf(host, 'step.recorded').find(({ step }) => step === 'publish').reason, /^pull request #42 opened as a draft: \S+$/)
+})
+
 test('on a forge whose client attaches no file, the screenshots are committed on the working branch and the pull request shows each at its commit, from the address the forge gives', async () => {
   const host = visualsRun({ codeHost: azure() })
 

@@ -272,7 +272,7 @@ test('the screenshots of a pull request go with its body: gh uploads each one --
   assert.deepEqual(forge.calls().slice(before).filter((args) => args.some((arg) => arg.startsWith('--attach='))), [], 'a gh without --attach is never handed one')
 
   forge.set({})
-  assert.equal(host.attachesFiles, true)
+  assert.deepEqual([host.attachesFiles, host.attachLimit], [true, 50])
   assert.equal(await host.screenshotsBlocked(), null)
   forge.set({ help: 'FLAGS\n  -B, --base branch' })
   assert.equal(await host.screenshotsBlocked(), 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots')

@@ -699,6 +699,8 @@ export class InMemoryCodeHost {
     /** the address of a committed file: GitHub's raw route on the repository the remote names unless given */
     this.fileUrlOf = fileUrl ?? ((commit, path) => (this.named === null ? null : `https://${this.named.host}/${this.named.repository}/raw/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`))
     this.blocked = screenshotsBlocked
+    /** the most screenshots gh is handed in one command */
+    this.attachLimit = 50
     /** the longest description a listing by branch gives (Azure's Get Pull Requests: 400); a read by number gives it whole */
     this.listBodyLimit = listBodyLimit
     this.cut = cut

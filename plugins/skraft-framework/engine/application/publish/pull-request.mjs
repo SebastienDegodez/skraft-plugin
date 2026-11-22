@@ -82,7 +82,7 @@ const pulled = (deps, slug, { rendered, visuals }) => {
 const attachable = async (codeHost, target, facts) => {
   const screenshots = target.ok && facts.visuals?.attached ? facts.visuals.components.flatMap((component) => component.screenshots) : []
   const blocked = screenshots.length === 0 ? null : await codeHost.screenshotsBlocked()
-  if (blocked === null) return { facts, unattached: null }
+  if (blocked === null) return { facts: screenshots.length === 0 ? facts : { ...facts, visuals: withinLimit(/** @type {Visuals} */ (facts.visuals), codeHost.attachLimit ?? Number.POSITIVE_INFINITY) }, unattached: null }
   return { facts: { ...facts, visuals: withoutScreenshots(/** @type {Visuals} */ (facts.visuals), blocked) }, unattached: { reason: blocked, screenshots: screenshots.map(({ path }) => path) } }
 }
 
@@ -91,6 +91,28 @@ const withoutScreenshots = (visuals, reason) => ({
   ...visuals,
   components: visuals.components.map((component) => (component.screenshots.length === 0 ? component : { ...component, detail: `${screenshotCount(component.screenshots.length)} not attached: ${reason}`, screenshots: [] })),
 })
+
+/**
+ * The visuals whose screenshots the pull request shows number no more than the forge's client
+ * takes in one command: the front ends past them, in order, show none and say where theirs are.
+ * @param {Visuals} visuals @param {number} limit
+ * @returns {Visuals}
+ */
+const withinLimit = (visuals, limit) => ({
+  ...visuals,
+  components: visuals.components.reduce((kept, component) => [...kept, fitted(kept, component, limit)], /** @type {Visuals['components']} */ ([])),
+})
+
+/**
+ * The component as shown once those before it are: whole while its screenshots fit, else none.
+ * @param {Visuals['components']} kept @param {Visuals['components'][number]} component @param {number} limit
+ */
+const fitted = (kept, component, limit) => {
+  const used = shownScreenshots({ commit: null, components: kept }).length
+  if (used + shownScreenshots({ commit: null, components: [component] }).length <= limit) return component
+  const path = component.screenshots[0].path
+  return { ...component, detail: `${screenshotCount(component.screenshots.length)} not attached: the forge's client attaches at most ${limit} screenshots to a pull request; they are in \`${path.slice(0, path.lastIndexOf('/'))}\``, screenshots: [] }
+}
 
 /** @param {number} count */
 const screenshotCount = (count) => `${count} screenshot${count === 1 ? '' : 's'}`
