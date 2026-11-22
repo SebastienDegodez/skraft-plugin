@@ -115,6 +115,7 @@ If YES → ambiguous → flag.
 1. List all scenario titles from `*.feature`
 2. List all entries in `impl-plan-{story}.md`
 3. Verify bijection
+4. The group table: every scenario of the `## Scenarios` table in exactly one group, no number the table does not list, S1 in group 1
 
 **Severity:** HIGH — DELIVER cannot start if a scenario has no implementation entry.
 
@@ -185,7 +186,8 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 | `refactoring` | the story and the patch add no public interface: no endpoint, command, message or public type |
 | `docs-only` | the story changes configuration or documentation only: no source file |
 
-**How to check:** the engine already refuses a table that tags a scenario other than S1, puts S1 in a `react` component, names an unknown exemption, or declares `docs-only` while a commit changes a component's source.
+**How to check:**
+0. The `## Scenarios` table and its exemption line: S1 alone carries `@walking-skeleton`, in a back-end component when the configuration has one (a `react` front end only when it is the only component); a story that declares `Walking skeleton exemption:` declares `library`, `refactoring` or `docs-only`, tags no scenario `@walking-skeleton`, and `docs-only` holds only when no commit of the story changes a component's source.
 1. No exemption: open the walking skeleton. It starts the component through its production composition root and sends the request, command or message the story's entry point takes; the use case and the internal gateways it reaches are the real ones, the database a Testcontainers container. A walking skeleton that calls the use case, uses an in-memory repository or is a Gherkin binding is a finding; so is an S1 with no acceptance test of its own.
 2. An exemption: check it against the story and the patch; an entry point the component has (`library`), or a public interface the story adds (`refactoring`), is a finding.
 
