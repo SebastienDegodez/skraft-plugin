@@ -57,6 +57,17 @@ test('the first result of a kernel names the modules of the project\'s REPL libr
   assert.equal(answers[1].text, '')
 })
 
+test('a cell that declares a top-level const or let a second time reads why, and what to do', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('again', async () => { throw new Error("SyntaxError: Identifier 'unit' has already been declared") })
+  const answers = []
+  const { host } = replRun({ kernels, calls: { 2: async (repl) => { answers.push(await repl.call({ code: 'again' })) } } })
+
+  await host.start()
+
+  assert.equal(answers[0].text, "error: SyntaxError: Identifier 'unit' has already been declared\nhint: a top-level const or let lives as long as the kernel: assign it again without const or let, use another name, or call skraft_repl with reset: true for a fresh kernel")
+})
+
 test('an agent that commits no code, or a call with no attempt open, is refused with a fixed text and no kernel starts', async () => {
   const answers = []
   const kernels = new ScriptedKernelHost()

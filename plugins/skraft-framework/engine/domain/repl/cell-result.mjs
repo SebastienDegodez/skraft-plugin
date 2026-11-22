@@ -45,9 +45,16 @@ const doneLine = (run) => `[run-done r${run.id} ${endOf(run)} in ${seconds(run.d
 
 /** The trailing value or the error of the cell. @param {CellParts} parts @returns {string[]} */
 const closing = ({ value, error, status }) => {
-  if (error !== null) return [`${status === 'interrupted' ? 'interrupted' : 'error'}: ${error}`]
+  if (error !== null) return [`${status === 'interrupted' ? 'interrupted' : 'error'}: ${error}`, ...hintOf(error)]
   return value === null ? [] : [`=> ${value}`]
 }
+
+/** Node's error for a top-level const or let declared again (measured on Node 22). */
+const REDECLARED = /^SyntaxError: Identifier '[^']+' has already been declared/
+const REDECLARED_HINT = 'hint: a top-level const or let lives as long as the kernel: assign it again without const or let, use another name, or call skraft_repl with reset: true for a fresh kernel'
+
+/** @param {string} error @returns {string[]} */
+const hintOf = (error) => (REDECLARED.test(error) ? [REDECLARED_HINT] : [])
 
 /**
  * The text kept of an output past the room it has: its first and last halves around a marker.

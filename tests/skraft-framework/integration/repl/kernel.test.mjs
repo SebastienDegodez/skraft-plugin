@@ -69,6 +69,16 @@ test('a cell that throws, awaits a rejection, names nothing it declared or is cu
   assert.equal(incomplete.error, 'SyntaxError: the cell is incomplete')
 })
 
+test('a top-level const declared a second time fails with the error the result explains', BOUNDED, async (t) => {
+  const { kernel } = await openKernel(t)
+
+  await cell(kernel, 'const unit = 1')
+  const again = await cell(kernel, 'const unit = 2')
+
+  assert.equal(again.status, 'error')
+  assert.match(again.error, /^SyntaxError: Identifier 'unit' has already been declared/)
+})
+
 test('what a cell prints comes back with it, and what a later run prints arrives with the next cell', BOUNDED, async (t) => {
   const { kernel } = await openKernel(t)
 
