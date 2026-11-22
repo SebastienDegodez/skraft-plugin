@@ -11,6 +11,7 @@ tools:
   - search/codebase
   - execute/runInTerminal
   - skraft/skraft_repl
+  - skraft/skraft_repl_reset
   - execute/getTerminalOutput
   - execute/testFailure
   - graphify/*
@@ -139,7 +140,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
 7. **Run them once and commit the red.**
    - Run nothing before every test and stub is written. Then run the walking skeleton and the acceptance tests once through `skraft_repl`, as `gate('test', <the component's test command from your brief, else from `skraft-config.json`, else the stack's standard one>, { cwd, label: 'red' })`, failures listed (the review reads that traced run, never a log you write): that run builds the solution, so run no separate build before or after it. Read the output: each fails on its business assertion. On a compile or setup failure, fix the harness or the skeleton, never the assertion. A test that already passes on the stubs needs no code: note it in your result summary and keep its scenario; never merge it into another scenario's `Examples`. Never chain that run to a commit.
    - Run formatting and static checks on the tests and the stubs with `gate(name, command, { cwd })`, then commit the walking skeleton, the acceptance tests, the skeleton they call and the `.feature` of their components in one test commit, each file named in `git add` (never `.`, `-A` or a folder; the plans under `.copilot-tracking/` are not part of it), with the commit line your brief gives, exactly; replace a placeholder in it as it says. A `.feature` of a component with no test in the story goes in a `docs(<slug>): …` commit of its own before it. Run no build or test after the commit.
-   - A cell that will not stop: call `skraft_repl` with `reset: true` (variables and runs end, a fresh kernel runs `code`). The project's helpers in `.repl/lib/` are `lib.<name>` in every cell: use one when it runs the command you need; never write under `.repl/`.
+   - A cell that will not stop: call `skraft_repl_reset`, then `skraft_repl` (variables and runs end, the next cell runs in a fresh kernel). The project's helpers in `.repl/lib/` are `lib.<name>` in every cell: use one when it runs the command you need; never write under `.repl/`.
    - Declare a top-level variable you reuse across `skraft_repl` cells with `var`, or under a new name in each cell; a second `const` or `let` of the same name fails the cell.
    - A story exempt of a walking skeleton writes none: its red holds the acceptance tests alone.
 8. **Self-check**, before your result, written out as this list, each item checked:

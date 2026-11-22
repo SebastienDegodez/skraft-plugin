@@ -58,6 +58,9 @@ for (const [field, client, error] of [
   ['tools: [skraft/skraft_absent]', 'copilot', /unsupported copilot/],
   ['tools: [skraft/skraft_precheck]', 'claude', /unsupported claude/],
   ['tools: [mcp__plugin_skraft_skraft__skraft_precheck]', 'local', /unsupported local/],
+  ['tools: [Read, mcp__plugin_skraft_skraft__skraft_repl]', 'claude', /names skraft_repl without skraft_repl_reset/],
+  ['tools: [read/readFile, skraft/skraft_repl]', 'copilot', /names skraft_repl without skraft_repl_reset/],
+  ['tools: [read/readFile, skraft/skraft_repl]', 'local', /names skraft_repl without skraft_repl_reset/],
 ]) {
   test(`tools contract rejects ${client} ${JSON.stringify(field)}`, () => {
     assert.throws(() => validateAgentTools(descriptor(field), { client, agentIds: ['worker'] }), error)
