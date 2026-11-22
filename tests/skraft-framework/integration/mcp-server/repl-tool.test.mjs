@@ -24,10 +24,13 @@ test('skraft_repl is listed with a closed schema that takes the cell, even an em
   const unknown = await host.call('skraft_repl', { code: '1', command: 'rm -rf secret-name' })
   const missing = await host.call('skraft_repl', {})
   const numeric = await host.call('skraft_repl', { code: 1 })
+  const reset = await host.call('skraft_repl', { code: '1', reset: true })
 
-  assert.deepEqual([listed.inputSchema.required, listed.inputSchema.additionalProperties, Object.keys(listed.inputSchema.properties)], [['code'], false, ['code', 'reset', 'workspace']])
+  assert.deepEqual([listed.inputSchema.required, listed.inputSchema.additionalProperties, Object.keys(listed.inputSchema.properties)], [['code'], false, ['code', 'workspace']])
   assert.match(listed.description, /await handle gives \{ exitCode, output, durationMs, head, log \} \(head: the HEAD of the repository holding cwd when the program ended\)/)
-  assert.deepEqual([unknown.isError, textOf(unknown)], [true, 'skraft_repl takes only these arguments: code, reset, workspace'])
+  assert.deepEqual([unknown.isError, textOf(unknown)], [true, 'skraft_repl takes only these arguments: code, workspace'])
+  assert.deepEqual([reset.isError, textOf(reset)], [true, 'skraft_repl takes only these arguments: code, workspace'])
+  assert.match(listed.description, /call skraft_repl_reset/)
   assert.equal(textOf(missing), 'skraft_repl needs the argument code')
   assert.equal(textOf(numeric), 'the argument code of skraft_repl must be a text of at most 200000 characters')
   await host.close()
@@ -99,24 +102,6 @@ test('skraft_status answers well before the system gives a process\'s start time
 
   assert.equal(slowest.slug, SLUG)
   assert.ok(slowest.took < 4000, `skraft_status took ${slowest.took} ms`)
-})
-
-test('a reset during a cell that never yields answers within ten seconds from a fresh kernel, whose variables are new', BOUNDED, async (t) => {
-  const { cwd } = pipelineRepository(t)
-  await skraft(cwd, ['init', SLUG])
-  await toDeliveryAttempt(cwd)
-  const host = mcpHost({ roots: [cwd] })
-  await host.initialize()
-  t.after(() => host.close())
-  await host.call('skraft_repl', { code: 'globalThis.kept = 1' })
-  host.write(JSON.stringify({ jsonrpc: '2.0', id: 'spins', method: 'tools/call', params: { name: 'skraft_repl', arguments: { code: 'while (true) {}' } } }))
-  await new Promise((done) => setTimeout(done, 300))
-
-  const asked = Date.now()
-  const reset = await host.call('skraft_repl', { code: 'typeof kept', reset: true })
-
-  assert.ok(Date.now() - asked < 10_000)
-  assert.equal(textOf(reset), "repl-reset: the kernel of this attempt was ended on request, with the runs it had started: its variables are gone, and the next skraft_repl starts a fresh kernel\n=> 'undefined'")
 })
 
 test('skraft_status answers while a cell runs, and a cancellation of the request ends the cell and the program it started', BOUNDED, async (t) => {

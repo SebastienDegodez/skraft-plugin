@@ -37,7 +37,7 @@ const CELL_MS = 7_260_000
  * @param {any} deps @param {ReplState} state
  */
 export const createRepl = (deps, state) => Object.freeze({
-  /** @param {{ code: string, id?: unknown, reset?: boolean }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
+  /** @param {{ code: string, id?: unknown }} request id: the request's, which a cancellation names @returns {Promise<ReplOutcome>} */
   call: (request) => call(deps, state, request),
   /** `skraft_repl_reset`: ends the kernel of the open attempt and its runs, even mid-cell; the next call starts a fresh one. @returns {Promise<ReplOutcome>} */
   reset: () => resetAttempt(deps, state),
@@ -69,17 +69,17 @@ export const openFlight = (state, id) => {
   return flight
 }
 
-/** @param {any} deps @param {ReplState} state @param {{ code: string, id?: unknown, reset?: boolean }} request @returns {Promise<ReplOutcome>} */
-const call = async (deps, state, { code, id, reset = false }) => {
+/** @param {any} deps @param {ReplState} state @param {{ code: string, id?: unknown }} request @returns {Promise<ReplOutcome>} */
+const call = async (deps, state, { code, id }) => {
   const flight = openFlight(state, id)
   try {
-    return await inAttempt(deps, state, { code, flight, reset })
+    return await inAttempt(deps, state, { code, flight })
   } finally {
     state.flights?.delete(id)
   }
 }
 
-/** @param {any} deps @param {ReplState} state @param {{ code: string, flight: Flight, reset: boolean }} request @returns {Promise<ReplOutcome>} */
+/** @param {any} deps @param {ReplState} state @param {{ code: string, flight: Flight }} request @returns {Promise<ReplOutcome>} */
 const inAttempt = async (deps, state, request) => {
   const bound = await bindAttempt(deps)
   if (!bound.ok) return refused(bound.code)
@@ -90,9 +90,9 @@ const inAttempt = async (deps, state, request) => {
   }
 }
 
-/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {{ code: string, flight: Flight, reset: boolean }} request @returns {Promise<ReplOutcome>} */
+/** @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound @param {{ code: string, flight: Flight }} request @returns {Promise<ReplOutcome>} */
 const inEntry = async (deps, state, bound, request) => {
-  const held = await entryFor(deps, state, bound, request.reset)
+  const held = await entryFor(deps, state, bound)
   if (!held.ok) return refused(held.code, held.evidence ?? null)
   return evaluate(deps, held.entry, request, held.notice)
 }
@@ -131,10 +131,9 @@ const endOnRequest = async (deps, state, entry) => {
  * The entry of the attempt, one call after the other: a call that arrives while another starts
  * the kernel waits for it and shares it.
  * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
- * @param {boolean} reset a fresh kernel, even when one serves the attempt
  * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
-const entryFor = (deps, state, bound, reset) => serially(state, () => entryNow(deps, state, bound, reset))
+const entryFor = (deps, state, bound) => serially(state, () => entryNow(deps, state, bound))
 
 /**
  * One change of the entry after the other: a start, the end the sweep or the session asks for.
@@ -147,12 +146,11 @@ const serially = (state, work) => {
 }
 
 /**
- * What the next result says first of the kernel it runs in: a reset, a kernel that died, or one
+ * What the next result says first of the kernel it runs in: a kernel that died, or one a reset,
  * the sweep or the session ended since this attempt's last call.
- * @param {ReplState} state @param {string} key @param {boolean} reset
+ * @param {ReplState} state @param {string} key
  */
-const noticeOf = (state, key, reset) => {
-  if (reset) return 'repl-reset'
+const noticeOf = (state, key) => {
   const current = state.entry
   if (current !== null) return current.key === key ? current.gone : null
   return state.ended === key ? 'repl-fresh' : null
@@ -162,14 +160,13 @@ const noticeOf = (state, key, reset) => {
  * The entry of the attempt: the one in place, or a kernel started now, once the lease on the
  * attempt is held. A call of another attempt ends the kernel of the earlier one.
  * @param {any} deps @param {ReplState} state @param {import('./repl-attempt.mjs').Bound & { ok: true }} bound
- * @param {boolean} reset a fresh kernel, even when one serves the attempt
  * @returns {Promise<{ ok: true, entry: Entry, notice: string | null } | { ok: false, code: string, evidence?: string | null }>}
  */
-const entryNow = async (deps, state, bound, reset) => {
+const entryNow = async (deps, state, bound) => {
   const key = keyOf(deps, bound)
   const current = state.entry
-  if (!reset && current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
-  const notice = noticeOf(state, key, reset)
+  if (current !== null && current.key === key && current.gone === null) return { ok: true, entry: current, notice: null }
+  const notice = noticeOf(state, key)
   await retire(deps, state)
   const started = await startEntry(deps, state, { ...bound, key })
   return started.ok ? { ok: true, entry: started.entry, notice } : started
@@ -270,7 +267,7 @@ const settledWithin = (deps, pending, ms) => new Promise((resolve) => {
   void Promise.allSettled([...pending]).then(() => { stop(); resolve(undefined) })
 })
 
-/** @param {any} deps @param {Entry} entry @param {{ code: string, flight: Flight, reset: boolean }} request @param {string | null} notice @returns {Promise<ReplOutcome>} */
+/** @param {any} deps @param {Entry} entry @param {{ code: string, flight: Flight }} request @param {string | null} notice @returns {Promise<ReplOutcome>} */
 const evaluate = async (deps, entry, { code, flight }, notice) => {
   if (flight.cancelled) return refused('repl-interrupted')
   flight.launched = true

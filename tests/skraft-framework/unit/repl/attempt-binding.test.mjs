@@ -65,7 +65,7 @@ test('a cell that declares a top-level const or let a second time reads why, and
 
   await host.start()
 
-  assert.equal(answers[0].text, "error: SyntaxError: Identifier 'unit' has already been declared\nhint: a top-level const or let lives as long as the kernel: declare a variable reused across cells with var, or under a new name, or call skraft_repl with reset: true for a fresh kernel")
+  assert.equal(answers[0].text, "error: SyntaxError: Identifier 'unit' has already been declared\nhint: a top-level const or let lives as long as the kernel: declare a variable reused across cells with var, or under a new name, or call skraft_repl_reset for a fresh kernel")
 })
 
 test('an agent that commits no code, or a call with no attempt open, is refused with a fixed text and no kernel starts', async () => {
@@ -135,6 +135,7 @@ test('a second call while a cell runs is refused as busy, and an empty call wait
 
   assert.deepEqual(answers.map(({ ok, code }) => [ok, code]), [[true, null], [false, 'repl-busy'], [true, null]])
   assert.equal(answers[0].text, 'started\n\n[the cell still runs: call skraft_repl with empty code to wait for it]')
+  assert.equal(answers[1].text, 'repl-busy: a cell of this attempt is still running: call skraft_repl with empty code to wait for it, wait for the cancellation, or call skraft_repl_reset to end it')
   assert.equal(answers[2].text, '=> finished')
 })
 
@@ -468,7 +469,7 @@ test('a run this server still ends after a reset is never closed as lost by the 
   const { host } = replRun({ kernels, launcher, calls: { 2: async (repl, run) => {
     await repl.call({ code: 'start' })
     await sleep(10)
-    const resetting = repl.call({ code: '1', reset: true })
+    const resetting = repl.reset()
     await sleep(10)
     run.clock.advance(10_000)
     await resetting
@@ -499,16 +500,16 @@ test('a program the launcher starts while the kernel ends is killed as soon as t
   assert.deepEqual(launcher.started[0].program.killed, [['SIGKILL', 0]])
 })
 
-test('a reset during a cell that never ends ends its kernel and its runs, starts a fresh kernel and says the variables are gone', async () => {
+test('a reset during a cell that never ends ends its kernel and its runs, the cell answers it, and the next call starts a fresh kernel and says the variables are gone', async () => {
   const kernels = new ScriptedKernelHost()
   const launcher = new ScriptedLauncher()
   kernels.script.set('forever', async ({ run }) => { void run('npm run e2e'); await new Promise(() => undefined) })
   kernels.script.set('fresh', async () => 'fresh')
   const answers = []
-  const { host } = replRun({ kernels, launcher, calls: { 2: async (one) => {
+  const { host } = replRun({ kernels, launcher, budgetMs: 5000, calls: { 2: async (one) => {
     const stuck = one.call({ code: 'forever', id: 1 })
     await sleep(10)
-    answers.push(await one.call({ code: 'fresh', id: 2, reset: true }), await stuck)
+    answers.push(await one.reset(), await stuck, await one.call({ code: 'fresh', id: 2 }))
   } } })
 
   await host.start()
@@ -516,7 +517,9 @@ test('a reset during a cell that never ends ends its kernel and its runs, starts
   const trace = host.tracking.files.get(`${SLUG}/logs/runs/distill-1-1/runs.jsonl`).trim().split('\n').map((line) => JSON.parse(line))
   assert.equal(kernels.kernels.length, 2)
   assert.equal(kernels.kernels[0].stopped, true)
-  assert.equal(answers[0].text, 'repl-reset: the kernel of this attempt was ended on request, with the runs it had started: its variables are gone, and the next skraft_repl starts a fresh kernel\n=> fresh')
+  assert.deepEqual(answers.map(({ ok, code }) => [ok, code]), [[true, 'repl-reset'], [false, 'repl-reset'], [true, null]])
+  assert.equal(answers[0].text, 'repl-reset: the kernel of this attempt was ended on request, with the runs it had started: its variables are gone, and the next skraft_repl starts a fresh kernel')
+  assert.equal(answers[2].text, 'repl-fresh: the kernel of this attempt was ended (on request, unused for 15 minutes, its attempt over, or the session closing) and a fresh one started: its variables are gone\n=> fresh')
   assert.deepEqual(trace.filter(({ type }) => type === 'run').map(({ killed }) => killed), [true])
 })
 

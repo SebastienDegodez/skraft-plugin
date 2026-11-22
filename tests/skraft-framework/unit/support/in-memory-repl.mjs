@@ -74,8 +74,9 @@ class ScriptedKernel {
     const run = (command, options = {}) => this.ask({ cell: this.cells, command, cwd: options.cwd ?? '.', timeout: options.timeout ?? 600, gate: options.gate ?? null, label: options.label ?? null, options: Object.keys(options) })
     const work = (this.script.get(code) ?? (async () => null))({ run, print: (text) => printed.push(text), id: this.cells })
     const restarted = new Promise((resolve) => { this.restartCell = () => resolve({ status: 'restarted', printed: printed.join(''), value: null, error: null }) })
+    const stopped = new Promise((resolve) => { this.stopCell = () => resolve({ status: 'stopped', printed: printed.join(''), value: null, error: null }) })
     const ended = work.then((value) => ({ status: 'done', printed: printed.join(''), value, error: null }), (error) => ({ status: 'error', printed: printed.join(''), value: null, error: error.message }))
-    return this.within(Promise.race([ended, restarted]), printed, budgetMs)
+    return this.within(Promise.race([ended, restarted, stopped]), printed, budgetMs)
   }
   async wait(budgetMs) {
     if (this.flying === null) return this.left ?? { status: 'done', printed: '', value: null, error: null }
@@ -101,7 +102,11 @@ class ScriptedKernel {
   }
   chunk(rid, text) { this.chunks.push([rid, text]) }
   exited(rid, result) { this.exits.get(rid)?.(result) }
-  stop() { this.stopped = true }
+  /** The server ends the kernel: the cell in flight answers stopped, as the real one does. */
+  stop() {
+    this.stopped = true
+    this.stopCell?.()
+  }
   /** The kernel dies on its own. @param {'restarted' | 'crashed'} why */
   die(why) { this.events.onGone(why) }
 }

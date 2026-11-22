@@ -115,7 +115,8 @@ test('a kernel whose REPL library never lets it be ready is ended at the start d
     const asked = Date.now()
     answers.push(await repl.call({ code: '1' }), Date.now() - asked)
     rmSync(join(folder, '.repl', 'lib', 'spin.mjs'))
-    answers.push(await repl.call({ code: '2', reset: true }))
+    await repl.reset()
+    answers.push(await repl.call({ code: '2' }))
   }, { kernels: createNodeKernelHost({ startMs: 3000 }) })
   mkdirSync(join(root, '.repl', 'lib'), { recursive: true })
   writeFileSync(join(root, '.repl', 'lib', 'spin.mjs'), 'while (true) {}\n')
@@ -124,18 +125,18 @@ test('a kernel whose REPL library never lets it be ready is ended at the start d
 
   assert.equal(answers[0].code, 'repl-failed')
   assert.ok(answers[1] < 8000, `refused after ${answers[1]} ms`)
-  assert.match(answers[2].text, /\n=> 2$/)
+  assert.match(answers[2].text, /(^|\n)=> 2$/)
 })
 
 test('a real kernel started again by a reset gives its first run the next id of the attempt', BOUNDED, async (t) => {
   const answers = []
   const { host } = realRun(t, async (repl) => {
-    answers.push(await repl.call({ code: "await run([process.execPath, '-e', '0'])" }), await repl.call({ code: "await run([process.execPath, '-e', '0'])", reset: true }))
+    answers.push(await repl.call({ code: "await run([process.execPath, '-e', '0'])" }), await repl.reset(), await repl.call({ code: "await run([process.execPath, '-e', '0'])" }))
   })
 
   await host.start()
 
-  assert.match(answers[1].text, /\nr2 exit 0 \(\d+\.\d s\) .* - logs\/runs\/deliver-1-1\/2\.log(\n|$)/)
+  assert.match(answers[2].text, /\nr2 exit 0 \(\d+\.\d s\) .* - logs\/runs\/deliver-1-1\/2\.log(\n|$)/)
 })
 
 test('a cell that prints 8 MiB leaves a cell log of 1 MiB at most, its first and last lines kept', BOUNDED, async (t) => {

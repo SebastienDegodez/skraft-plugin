@@ -235,7 +235,7 @@ const replTool = async (session, args, id) => {
 }
 
 /** @param {Session} session @param {Record<string, any>} args @param {unknown} id */
-const replOf = (session, args, id) => replAnswer(session, args.workspace, (repl) => repl.call({ code: args.code, id, reset: args.reset === true }))
+const replOf = (session, args, id) => replAnswer(session, args.workspace, (repl) => repl.call({ code: args.code, id }))
 
 /**
  * The REPL tools in the folder of the call; skraft_repl_reset waits for no other call either: it

@@ -7,7 +7,7 @@
 /** @type {Readonly<Record<string, string>>} */
 export const REFUSALS = Object.freeze({
   'repl-unavailable': 'skraft_repl works only inside the open attempt of an agent that commits code, and none is open now',
-  'repl-busy': 'a cell of this attempt is still running: call skraft_repl with empty code to wait for it, or wait for the cancellation',
+  'repl-busy': 'a cell of this attempt is still running: call skraft_repl with empty code to wait for it, wait for the cancellation, or call skraft_repl_reset to end it',
   'repl-held-elsewhere': 'another skraft MCP server holds the REPL of this attempt; use that session, or end it',
   'repl-restarted': 'the kernel was ended because a cell would not stop: its variables are gone, and the runs it had started were ended',
   'repl-reset': 'the kernel of this attempt was ended on request, with the runs it had started: its variables are gone, and the next skraft_repl starts a fresh kernel',

@@ -154,7 +154,8 @@ test('run ids go on across the kernels of an attempt: a run after a reset or a c
   const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0, text: 'first\n' }, 'npm run lint': { exitCode: 0, text: 'second\n' } } })
   const { host } = delivery({ kernels, launcher, work: async (repl) => {
     await repl.call({ code: 'test' })
-    await repl.call({ code: 'lint', reset: true })
+    await repl.reset()
+    await repl.call({ code: 'lint' })
     kernels.kernels.at(-1).die('crashed')
     await repl.call({ code: 'test' })
   } })
