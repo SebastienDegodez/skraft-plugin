@@ -50,7 +50,7 @@ const start = (entry, events, { cwd, firstRid, startMs }) => new Promise((resolv
   const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null }
   const deadlines = [setTimeout(() => notReady(state, reject), READY_MS), setTimeout(() => notReady(state, reject), startMs)]
   child.once('error', reject)
-  child.once('exit', () => reject(new Error('the kernel exited before it was ready')))
+  child.once('exit', () => { deadlines.forEach(clearTimeout); reject(new Error('the kernel exited before it was ready')) })
   child.on('message', (/** @type {any} */ message) => route(state, message, { alive: () => clearTimeout(deadlines[0]), ready: (lib) => { deadlines.forEach(clearTimeout); resolve(kernelOf(state, lib)) } }))
   child.on('exit', () => crashed(state))
 })
