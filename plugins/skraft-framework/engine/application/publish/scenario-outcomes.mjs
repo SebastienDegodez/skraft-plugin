@@ -1,4 +1,4 @@
-import { pathUnder } from '../../domain/config/relative-path.mjs'
+import { runsUnder } from '../../domain/pipeline/component-files.mjs'
 import { runsFolder } from '../../domain/evidence/run-trace.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { scenarioOutcomes } from '../../domain/reporting/scenario-outcomes.mjs'
@@ -29,7 +29,7 @@ export const scenarioOutcomesOf = async (deps, { slug, events, components }) => 
   const trace = await deliveryTrace(deps, slug, events)
   /** @type {Record<string, ComponentSuite>} */
   const suites = {}
-  for (const component of components) suites[component.name] = await suiteOf(deps, { slug, trace }, component)
+  for (const component of components) suites[component.name] = await suiteOf(deps, { slug, trace, components }, component)
   return scenarioOutcomes({ scenarios, commits: checkedCommits(events), suites })
 }
 
@@ -53,13 +53,13 @@ const deliveryTrace = async (deps, slug, events) => {
 }
 
 /**
- * The last traced `test` run under the component, its log, and the commit HEAD is on there.
- * @param {OutcomeDeps} deps @param {{ slug: string, trace: import('../../domain/evidence/run-trace.mjs').TraceRecord[] | null }} delivery @param {Component} component
+ * The last traced `test` run of the component (none of a component nested under its root), its log, and the commit HEAD is on there.
+ * @param {OutcomeDeps} deps @param {{ slug: string, trace: import('../../domain/evidence/run-trace.mjs').TraceRecord[] | null, components: Component[] }} delivery @param {Component} component
  * @returns {Promise<ComponentSuite>}
  */
-const suiteOf = async (deps, { slug, trace }, component) => {
+const suiteOf = async (deps, { slug, trace, components }, component) => {
   const final = await deps.sourceControl.head(component.root)
   if (trace === null) return { final, verified: false, run: null, log: null }
-  const run = /** @type {any} */ (trace.findLast((record) => record.type === 'run' && record.gate === 'test' && pathUnder(record.cwd, component.root) !== null)) ?? null
+  const run = /** @type {any} */ (trace.findLast((record) => record.type === 'run' && record.gate === 'test' && runsUnder(record.cwd, component, components))) ?? null
   return { final, verified: true, run, log: run === null ? null : await deps.files.read(slug, run.log) }
 }

@@ -1,5 +1,6 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { joinRelative, normalizeRelative, pathUnder } from '../../domain/config/relative-path.mjs'
+import { joinRelative, normalizeRelative } from '../../domain/config/relative-path.mjs'
+import { runsUnder } from '../../domain/pipeline/component-files.mjs'
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { evidenceCopies, isFrontend, readManifest, VISUALS_MANIFEST } from '../../domain/reporting/visuals.mjs'
@@ -67,7 +68,8 @@ const e2eRun = async (deps, request, component) => {
 }
 
 /**
- * The last run traced as the e2e gate of the component, in any attempt of the run.
+ * The last run traced as the e2e gate of the component, in any attempt of the run: none of a
+ * component nested under its root.
  * @param {VisualsDeps} deps @param {VisualsRequest} request @param {Component} component
  * @returns {Promise<import('../../domain/evidence/run-trace.mjs').RunRecord | null>}
  */
@@ -75,7 +77,7 @@ const lastE2e = async (deps, { slug, journal, config }, component) => {
   const folders = (await deps.files.list(slug, 'logs/runs')).filter((path) => path.endsWith('/runs.jsonl')).map((path) => path.slice(0, -'/runs.jsonl'.length)).sort()
   for (const folder of folders.reverse()) {
     const trace = await readTrace(/** @type {any} */ (deps), { slug, folder, events: journal.events })
-    const found = trace.ok ? trace.records.findLast((record) => record.type === 'run' && record.gate === 'e2e' && pathUnder(record.cwd, component.root) !== null) : undefined
+    const found = trace.ok ? trace.records.findLast((record) => record.type === 'run' && record.gate === 'e2e' && runsUnder(record.cwd, component, config.components)) : undefined
     if (found !== undefined) return /** @type {import('../../domain/evidence/run-trace.mjs').RunRecord} */ (found)
   }
   return null

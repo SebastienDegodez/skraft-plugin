@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { SLUG, agent, scripted } from '../support/pipeline-host.mjs'
+import { API, SLUG, agent, scripted } from '../support/pipeline-host.mjs'
 
 const research = (it) => [agent()(it), agent()(it)]
 const TWO = [['Customer pays by card', 'api', '@walking-skeleton @AC-1'], ['Customer is refused an expired card', 'api', '@error-case @AC-2']]
@@ -14,8 +14,8 @@ const designing = async ({ git, tracking }) => {
 const SUITE_LOG = 'Passed CheckoutTests.S1_pays_by_card [12 ms]\nPassed CheckoutTests.refuses_expired_card [3 ms]\nPassed ReceiptTests.S21_prints_the_receipt [2 ms]\n'
 
 /** A story of two scenarios, delivered in one green, its trace changed by `trace`. */
-const delivered = async (trace = {}) => {
-  const host = scripted({}, (it) => [...research(it), agent({ plan: TWO, work: designing })(it), agent({ trace: { log: (run) => (run.gate === 'test' ? SUITE_LOG : ''), ...trace } })(it)])
+const delivered = async (trace = {}, components) => {
+  const host = scripted(components === undefined ? {} : { components }, (it) => [...research(it), agent({ plan: TWO, work: designing })(it), agent({ trace: { log: (run) => (run.gate === 'test' ? SUITE_LOG : ''), ...trace } })(it)])
   const outcome = await host.start()
   assert.equal(outcome.status, 'done', outcome.reason)
   return host
@@ -54,4 +54,9 @@ test('a whole suite that failed, or ran on another commit than the final one, pr
 
   const none = await delivered({ omit: ['api/test'] })
   assert.deepEqual((await scenariosOf(none))[1], '| S2 | Customer is refused an expired card | `@AC-2` | api | `root-1` | `root-2` | not proven: no traced run of the whole test suite of its component | — | — |')
+
+  // api at the working copy's root, web under it: web's suite is no run of api's.
+  const web = { ...API, name: 'web', root: 'web', stack: 'javascript', commands: { test: 'npm test' } }
+  const nested = await delivered({ omit: ['api/test'] }, [API, web])
+  assert.deepEqual((await scenariosOf(nested))[0], '| S1 | Customer pays by card | `@AC-1` | api | `root-1` | `root-2` | not proven: no traced run of the whole test suite of its component | — | — |')
 })

@@ -417,4 +417,9 @@ test('a front end with no traced e2e run is told how to trace one: the engine st
   assert.equal(visualsStep(host).outcome, 'not-recorded')
   assert.match(await screenshots(host), /^- web: no traced e2e run: run the front end's e2e command through skraft_repl with gate\('e2e', <command>, \{ cwd: <its root> \}\)/)
   assert.deepEqual(host.machine.lines(), [])
+  // A front end at the working copy's root, kiosk, and web under it: web's traced e2e run is no run of kiosk's.
+  const nested = visualsRun({ components: [{ ...WEB, name: 'kiosk', root: '.' }, WEB] })
+  assert.equal((await nested.start(STORY)).status, 'done')
+  assert.match(await screenshots(nested), /^- kiosk: no traced e2e run: run the front end's e2e command/)
+  assert.match(await screenshots(nested), /\n- web: e2e run passed .*; 4 screenshots attached to the pull request\n/)
 })
