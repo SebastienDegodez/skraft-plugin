@@ -78,12 +78,3 @@ const refusal = async (deps, line, key, number) => {
   if (key === null) return { code: 'no-key', reason: 'runs.jsonl cannot be verified: this machine holds no key of the run' }
   return (await deps.hasher.hmacSha256(key, signed.body)) === signed.sig ? null : { code: 'wrong-signature', reason: `runs.jsonl line ${number} does not carry the signature of the run's key` }
 }
-
-/**
- * Whether the log file of a run is the one its record hashed.
- * @param {any} deps @param {{ slug: string }} where @param {import('../../domain/evidence/run-trace.mjs').RunRecord} record
- */
-export const logMatches = async (deps, { slug }, record) => {
-  const text = await deps.files.read(slug, record.log)
-  return text !== null && (await deps.hasher.sha256(text)) === record.sha256
-}

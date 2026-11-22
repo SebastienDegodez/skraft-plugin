@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { logMatches, readTrace } from '../../../../plugins/skraft-framework/engine/application/evidence/run-trace-store.mjs'
+import { readTrace } from '../../../../plugins/skraft-framework/engine/application/evidence/run-trace-store.mjs'
 import { SLUG, pipelineRepository } from '../support/pipeline-repository.mjs'
 import { git, inProcessServices, journal, skraft } from '../support/workspace.mjs'
 import { toDeliveryAttempt } from '../mcp-server/delivery-attempt.mjs'
@@ -43,7 +43,6 @@ test('a run is traced with the HEAD of the repository before and after it, a cle
   const log = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, ended.log), 'utf8')
   assert.equal(log, 'seen\n')
   assert.equal(ended.sha256, createHash('sha256').update(log).digest('hex'))
-  assert.equal(await logMatches(inProcessServices(cwd).adapters(), { slug: SLUG }, ended), true)
 })
 
 test('a run\'s log is written as it runs, and the hash its line holds is the one of the whole log', BOUNDED, async (t) => {
@@ -64,7 +63,7 @@ test('a run\'s log is written as it runs, and the hash its line holds is the one
   assert.equal(ended.sha256, createHash('sha256').update('first\nlast\n').digest('hex'))
 })
 
-test('a file written after a run was traced is refused: a line edited, a line added without the key and a log rewritten each show', BOUNDED, async (t) => {
+test('a trace written after a run was traced is refused: a line edited and a line added without the key each show, by its code', BOUNDED, async (t) => {
   const { cwd, host } = await attemptWithRepl(t)
   await host.call('skraft_repl', { code: `await gate('test', [${NODE}, '-e', 'process.exit(1)'])` })
   const path = join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, FOLDER, 'runs.jsonl')
@@ -74,13 +73,9 @@ test('a file written after a run was traced is refused: a line edited, a line ad
   const edited = await readBack(cwd)
   writeFileSync(path, `${original}${JSON.stringify({ type: 'run', run: 9, exitCode: 0, gate: 'test' })}\n`)
   const added = await readBack(cwd)
-  writeFileSync(path, original)
-  const [, ended] = (await readBack(cwd)).records
-  writeFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, ended.log), 'tests passed\n')
 
-  assert.deepEqual([edited.ok, edited.reason], [false, "runs.jsonl line 2 does not carry the signature of the run's key"])
-  assert.deepEqual([added.ok, added.reason], [false, 'runs.jsonl line 3 is not signed'])
-  assert.equal(await logMatches(inProcessServices(cwd).adapters(), { slug: SLUG }, ended), false)
+  assert.deepEqual([edited.ok, edited.code, edited.reason], [false, 'wrong-signature', "runs.jsonl line 2 does not carry the signature of the run's key"])
+  assert.deepEqual([added.ok, added.code, added.reason], [false, 'unsigned-line', 'runs.jsonl line 3 is not signed'])
 })
 
 test('a run started with a file left uncommitted in the working copy is traced as not clean, and an ignored file does not make it so', BOUNDED, async (t) => {
