@@ -293,15 +293,15 @@ Then a dialog titled **Scenarios** asks, with the scenarios the acceptance desig
 here):
 
 ```text
-Read the 2 scenarios of the story before DELIVER builds them: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). DELIVER makes them pass in one pass, one commit per group, in this order: 1. S1; 2. S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): acceptance tests S1–S2": <files>. skraft does not run them: check that each fails on its own assertion; the designer's run is in <log>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
+Read the 2 scenarios of the story before DELIVER builds them: S1 "<title>" (web, walking skeleton); S2 "<title>" (web). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1; 2. S2. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit <sha> "test(checkout): acceptance tests S1–S2": <files>. skraft does not run them: check that each fails on its own assertion; the designer's run is in <log>. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).
 ```
 
 Open the test plan and the commits the question names, read them, then choose **APPROVED**.
 
-`software-engineer` then makes every group pass in one pass, in plan order: unit tests and code
-first, uncommitted, then one commit per group, `feat(checkout): S1 <title of S1>`, chained to
-`npm test`, so the commit exists only when the tests pass. The first one makes S1's test and the
-walking skeleton pass; `feat(checkout): S2 <title of S2>` follows.
+`software-engineer` then makes every group pass in one pass, working them in plan order: unit tests and code
+first, uncommitted, then one commit for the story, `feat(checkout): S1–S2 <the rules of the story>`, chained to
+`npm test`, so the commit exists only when the tests pass. It makes S1's test, S2's and the
+walking skeleton pass together; a second green commit is refused (`green-split`).
 
 The engine then runs the component's gates (`test`), then the DELIVER review (test-integrity,
 architecture-boundaries, cold-reader). The pane ticks `gates` and `deliver_review`.
@@ -359,7 +359,7 @@ The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 
 Open `pull-request.md`: it is the result of your first run. `git log --oneline` shows, on
 `pay-by-card`, the research and design documents, the ratified ADR, then the red
-`test(checkout): …` of every acceptance test and one green `feat(checkout): …` per group.
+`test(checkout): …` of every acceptance test and one green `feat(checkout): …`.
 
 ## What you built <!-- #what-you-built -->
 

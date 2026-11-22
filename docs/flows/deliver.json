@@ -55,8 +55,8 @@
       "w": 304,
       "h": 82,
       "role": {
-        "fr": "Fait passer chaque groupe de scénarios au vert dans l'ordre du plan, en un seul passage et un commit par groupe, après le rouge que DISTILL a commité.",
-        "en": "Makes each group of scenarios pass in plan order, in one dispatch and one commit per group, after the red DISTILL committed."
+        "fr": "Fait passer chaque groupe de scénarios au vert dans l'ordre du plan, en un seul passage et un seul commit vert, après le rouge que DISTILL a commité.",
+        "en": "Makes each group of scenarios pass in plan order, in one dispatch and one green commit, after the red DISTILL committed."
       },
       "in": [
         {
@@ -66,8 +66,8 @@
       ],
       "out": [
         {
-          "fr": "un vert par groupe",
-          "en": "one green per group"
+          "fr": "un seul vert",
+          "en": "one green"
         }
       ]
     },

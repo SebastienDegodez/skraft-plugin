@@ -22,7 +22,7 @@ The detail of each gate cited: [Gates](./gates.md).
 | RESEARCH | `skraft` | the engine | `solution-researcher` | output filled, research records | — |
 | DESIGN | `skraft` | the engine | `solution-architect` | DESIGN records, structural scan, 3-lens review | `adr-ratification` |
 | DISTILL | `skraft` | the engine | `acceptance-designer` | `## Scenarios` table, delivery groups, one red commit, 4-lens review | `scenario-review` |
-| DELIVER | `skraft` | the engine | `software-engineer` | one green commit per group of scenarios, in one dispatch; gates, `review` | — |
+| DELIVER | `skraft` | the engine | `software-engineer` | one green commit for the story, the groups worked in plan order, in one dispatch; gates, `review` | — |
 | PUBLISH | `skraft` | the engine | `pr-writer` | pull request prose | — |
 
 DISCOVER and DISCUSS do not go through the engine: no journal, no command gate. RESEARCH to
@@ -169,9 +169,9 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | `scenario_review -> deliver` | `APPROVED` | — |
 | `scenario_review -> distill` | `REVISE` (corrections required, sent back to the acceptance designer) | 2 |
 
-After `APPROVED`, no edge leads the groups: the engine runs `deliver` on group 1, then on group 2,
-and so on, each pass a visit of its own; after the last group, `deliver` leaves by its edge to
-`gates`. An interrupted run resumes on the group in progress.
+After `APPROVED`, no edge leads the groups: the engine runs `deliver` once for the story, the
+software engineer working the groups in the plan's order; `deliver` then leaves by its edge to
+`gates`.
 
 ### The `## Scenarios` table <!-- #scenarios -->
 
@@ -201,7 +201,7 @@ Walking skeleton exemption: none
 | `docs-only`: no commit of the story changes a component's `src` paths | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <file>, source of <component>; remove the exemption and tag S1 @walking-skeleton` |
 
 The implementation plan beside it (`impl-plan-…` for `test-plan-…`) groups the scenarios DELIVER
-makes pass, one green commit each, in its order, under any heading:
+makes pass, in its order, under any heading; the table gives the order of work, and the story takes one green commit:
 
 ```text
 | Group | Scenarios | Rule |
@@ -217,7 +217,7 @@ makes pass, one green commit each, in its order, under any heading:
 | only scenarios of the test plan | `<plan>: S<n> is no scenario of the test plan` |
 | S1 in the first group | `<plan>: S1 is in the first group, the one the walking skeleton walks` |
 
-A plan with no table holding the `Group` and `Scenarios` columns delivers one scenario per group.
+A plan with no table holding the `Group` and `Scenarios` columns works one scenario per group.
 
 Each failure sends the agent of the pass back with the line; after its last attempt, or two
 attempts in a row refused the same way, the run asks the `blocked` question, and `STOP` ends it
@@ -227,18 +227,18 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 
 | Node | Kind | Role |
 | --- | --- | --- |
-| `deliver` | agent `software-engineer` | one dispatch per story: makes each group of the implementation plan pass in plan order, one green commit each, the tests of later groups alone still failing; the green of the group holding S1 makes the walking skeleton pass too and every later green keeps it passing; after the last, the passes the gates or the review send back, on the whole story |
+| `deliver` | agent `software-engineer` | one dispatch per story: works each group of the implementation plan in plan order and commits one green for the whole story (a second one is refused, `green-split`); that green makes the walking skeleton pass too; after the last, the passes the gates or the review send back, on the whole story |
 | `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commands of the changed components, then of all |
 | `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
 | `visuals` | publication `playwright-visuals`, `when="frontend"` | each front end's `e2e` command, screenshots committed |
 
 | | |
 | --- | --- |
-| Brief | the groups, in the order the engineer delivers them, one green each (`- <g> of <G> — S1 "<title>" (component <c>, tags …); …`; a group whose acceptance tests already pass takes none); the commit of the acceptance tests DISTILL committed, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one, or one failing on a build or setup error: it stops `blocked`, naming it); one commit line per group, exactly: `group <g>: <test command> [<the filter leaving out the later groups' scenarios>] && git add <each file you changed> && git commit -s -m "feat(<story>): <scenarios and rule of the group>" -m "Refs: #<issue>"`; the last group's runs unfiltered. A pass the gates or the review sent back lists no group: only the acceptance tests it never changes, and the commit rules of the cycle |
+| Brief | the groups, in the order the engineer works them (`- <g> of <G> — S1 "<title>" (component <c>, tags …); …`); the commit of the acceptance tests DISTILL committed, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one, or one failing on a build or setup error: it stops `blocked`, naming it); one commit line, exactly: `<the test command of each component> && git add <each file you changed> && git commit -s -m "feat(<story>): S1–S<n> <the rules of the story>" -m "Refs: #<issue>"`. A pass the gates or the review sent back lists no group: only the acceptance tests it never changes, and the commit rules of the cycle |
 | Declared output | `changes/{date}/change-log.md` |
 | Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
 | Allowed writes | the tracking folder, each component's `src` and `tests` paths, and the files at their roots; a change outside it is refused |
-| Commits | `deliver`, the story's pass: at least one `feat(<story>): …` (or `fix`) and at most one per group, in plan order, each naming its group's scenarios in its subject and chained in bash to the test command as the brief writes it; no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths; the engine runs no test ([Commits](./gates.md#commits)). `deliver` sent back by the gates or the review: each `feat` or `fix` after a `test(<story>): …` since the last green, the gate failure standing for that red on a pass the gates sent back, `refactor` allowed. A DELIVER journal of an earlier V2 alpha, one dispatch per group, is not resumed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
+| Commits | `deliver`, the story's pass: one `feat(<story>): …` (or `fix`) for the whole story, whatever its subject names, chained in bash to the test command as the brief writes it; a second one is refused (`green-split`); no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths; the engine runs no test ([Commits](./gates.md#commits)). `deliver` sent back by the gates or the review: each `feat` or `fix` after a `test(<story>): …` since the last green, the gate failure standing for that red on a pass the gates sent back, `refactor` allowed. A DELIVER journal of an earlier V2 alpha, one dispatch per group, is not resumed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
 | Mutation | none: the plugin's pipeline runs no mutation, the developer runs it apart; a team's own workflow may still hold a `gate="mutation"` node ([The DOT workflow](./workflow-dot.mdx)) |
 
 | Lens (`review`) | Gates |
