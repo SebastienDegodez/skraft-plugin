@@ -318,6 +318,29 @@ test('a lease whose running holder has not renewed it for five minutes is taken 
   assert.equal(answers[2], answers[3])
 })
 
+test('the sweep renews its lease in place only well before its end, takes it back past that, and ends the kernel when the lease is not its own once written', async () => {
+  const calls = []
+  const kernels = new ScriptedKernelHost()
+  const { host } = replRun({ kernels, calls: { 2: async (repl, one) => {
+    const locks = one.deps.repl.locks
+    const counted = (name) => async (...args) => { calls.push(name); return locks[name](...args) }
+    one.deps.repl.locks = { create: (...args) => locks.create(...args), read: (...args) => locks.read(...args), renew: counted('renew'), replace: counted('replace'), held: (slug) => locks.held(slug) }
+    await repl.call({ code: '1' })
+    one.clock.sleep(30_000)
+    await repl.sweep()
+    one.clock.sleep(5 * 60_000 - 5_000)
+    await repl.sweep()
+    one.deps.repl.locks = { ...one.deps.repl.locks, renew: async (slug, seen, text) => { await locks.renew(slug, seen, text); locks.tracking.files.set(locks.tracking.key(slug, '.lock'), 'another server'); return true } }
+    one.clock.sleep(30_000)
+    await repl.sweep()
+  } } })
+
+  await host.start()
+
+  assert.deepEqual(calls.slice(0, 2), ['renew', 'replace'])
+  assert.equal(kernels.kernels[0].stopped, true, 'a lease another server wrote over is no longer this kernel\'s')
+})
+
 test('a kernel that cannot start is a refusal with a fixed text naming the run\'s unexpected.log, which holds the error, and the lease is given back', async () => {
   const answers = []
   const { host } = replRun({ kernels: new ScriptedKernelHost({ fails: true }), calls: { 2: async (repl, one) => {

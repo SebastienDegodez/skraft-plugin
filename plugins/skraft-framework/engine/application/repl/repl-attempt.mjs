@@ -2,6 +2,7 @@ import { deriveRun, openNode } from '../../domain/journal/run-state.mjs'
 import { roleOf } from '../../domain/pipeline/roles.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
+import { RENEW_MARGIN_MS } from '../../domain/pipeline/run-lease.mjs'
 
 /**
  * @typedef {{ ok: true, slug: string, step: string, folder: string, events: any[] } | { ok: false, code: 'repl-unavailable' }} Bound
@@ -86,8 +87,20 @@ const holderOf = (text) => {
  * @param {any} deps @param {{ slug: string, folder: string }} bound @param {string} seen
  */
 export const renewLease = async (deps, bound, seen) => {
+  const { locks } = deps.repl
   const text = leaseText(deps)
-  return (await deps.repl.locks.renew(lockName(bound), seen, text)) ? text : null
+  const written = inPlace(deps, seen) ? await locks.renew(lockName(bound), seen, text) : await locks.replace(lockName(bound), seen, text)
+  return written && (await locks.read(lockName(bound))) === text ? text : null
+}
+
+/**
+ * Whether the lease may be renewed in place: far enough from its end that no other server takes
+ * it over meanwhile; past that, it is taken back the way a gone server's is, one server only winning.
+ * @param {any} deps @param {string} seen
+ */
+const inPlace = (deps, seen) => {
+  const at = Date.parse(holderOf(seen)?.renewedAt ?? '')
+  return Number.isFinite(at) && deps.clock.now().getTime() - at < LEASE_MS - RENEW_MARGIN_MS
 }
 
 /** @param {any} deps @param {{ slug: string, folder: string }} bound @param {string} text */
