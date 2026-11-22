@@ -22,7 +22,7 @@ test('diff lists the changes of the .skraft/review.skraft.dot of the working cop
 
 test('diff lists the changes of the designated workflow, then those of each workflow of the working copy it calls; one the plugin does not ship is said so', async () => {
   const stamped = edit(BUILT_IN_WORKFLOW, ['goal="Deliver the story"]', 'goal="Deliver the story", skraft_version="2.0.0"]'])
-  const review = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'], ['lens="cold-reader"', 'lens="cold-reader", model="economy"'], ['lens="mock-fidelity"', 'lens="acme-mocks"'])
+  const review = edit(BUILT_IN_REVIEW, ['input_trace="optional"]', 'input_trace="optional", skraft_version="2.0.0"]'], ['lens="cold-reader"', 'lens="cold-reader", model="economy"'], ['lens="mock-fidelity"', 'lens="acme-mocks"'])
   const both = host({ files: { ...ejectedPipeline(edit(stamped, ['deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]', 'deliver_review -> deliver [label="NEEDS_REWORK", max_visits=5]'])), '.skraft/review.skraft.dot': review } })
   assert.deepEqual(await both.commands.diff({ pluginVersion: '2.0.0' }), {
     ok: true,

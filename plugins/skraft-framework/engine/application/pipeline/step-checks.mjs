@@ -23,7 +23,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
  *   environment: null, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
- *    evidence?: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }> | null, red?: boolean,
+ *    evidence?: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }> | null, red?: boolean, invalid?: string,
  * } | { commits: CheckedCommit[], environment: string }} StepCheck
  *   environment: why the machine could not check the step (Git failing); the step then stays
  *   open. uncommitted: the files in its scope the agent changed
@@ -127,22 +127,26 @@ export const checkStep = async (context, step) => {
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
   const evidence = await evidenceOf(context, step)
   const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
-  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario, evidence: evidence.checked, ...(evidence.red === true ? { red: true } : {}) }
+  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario, evidence: evidence.checked, ...evidenceMarks(evidence) }
 }
 
 /**
  * The runs the REPL traced for an attempt that delivers code, kept for the DELIVER review that
- * judges them; the designer's red run; null for any other role, and for a trace that cannot be
- * read or a designer that traced no red. Never a refusal.
+ * judges them, none with the code of what breaks a trace that cannot be verified; the designer's
+ * red run; null for any other role, and for a designer that traced no red. Never a refusal.
  * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step
- * @returns {Promise<{ checked: import('./evidence-checks.mjs').TracedRun[] | null, red?: boolean }>}
+ * @returns {Promise<{ checked: import('./evidence-checks.mjs').TracedRun[] | null, red?: boolean, invalid?: string }>}
  */
 const evidenceOf = async ({ deps, slug }, { role, evidence }) => {
-  if (evidence === null || evidence === undefined) return { checked: null }
+  if (evidence === null || evidence === undefined || (role.tdd !== 'red' && role.tdd !== 'cycle')) return { checked: null }
   const attempt = { slug, folder: evidence.folder, events: evidence.events }
   if (role.tdd === 'red') return redEvidence(deps, attempt)
-  return { checked: role.tdd === 'cycle' ? await tracedRuns(deps, attempt) : null }
+  const traced = await tracedRuns(deps, attempt)
+  return { checked: traced.runs, ...(traced.invalid === undefined ? {} : { invalid: traced.invalid }) }
 }
+
+/** What the journal keeps beside the runs: the designer's red, a trace that cannot be verified. @param {{ red?: boolean, invalid?: string }} evidence */
+const evidenceMarks = ({ red, invalid }) => ({ ...(red === true ? { red: true } : {}), ...(invalid === undefined ? {} : { invalid }) })
 
 /**
  * The designer's traced run of the acceptance tests, labelled `red`: kept for the review, never required.

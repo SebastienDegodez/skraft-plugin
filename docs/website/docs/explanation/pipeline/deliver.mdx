@@ -73,7 +73,7 @@ The engine runs no gate. The software engineer runs every gate (`build`, `format
 (`gate(name, command, { cwd })`, see [The REPL](../../reference/repl.md)); the run of the commit
 line is the `test` run, and a gate the project's documents name no command for is declared with
 `absent`. The engine refuses no attempt for these runs. It journals
-`evidence.checked` for the runs whose trace reads through its signatures and hands the trace to the DELIVER
+`evidence.checked` for the runs whose trace reads through its signatures, else the code of what broke it, and hands the trace or that code to the DELIVER
 review ([Gates](../../reference/gates.md#command-gates)).
 
 Then come the DELIVER review's lenses: test integrity, architecture boundaries, cold reading,

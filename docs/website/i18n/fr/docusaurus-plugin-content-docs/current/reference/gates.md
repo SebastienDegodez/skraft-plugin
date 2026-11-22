@@ -47,7 +47,7 @@ et le moteur journalise la trace signée de ces exécutions et la remet à la re
 | Gate absente | une gate dont les documents du projet ne nomment aucune commande se déclare par `absent(gate, component, reason)` ; `test` n'est jamais absente |
 | Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signée ; un dossier par tentative |
 | Jugement | la lentille `quality-gates` de la revue DELIVER (ci-dessous) ; le moteur ne refuse aucune tentative pour une exécution |
-| Journal | `evidence.checked` avec `runs: [{ run, gate, cwd, log, sha256 }]`, seulement quand la trace se lit jusqu'à ses signatures ; le run rouge du concepteur porte `red: true` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
+| Journal | `evidence.checked` avec `runs: [{ run, gate, cwd, log, sha256 }]` quand la trace se lit jusqu'à ses signatures, sinon `runs: []` et `invalid` avec le code de ce qui l'a cassée (`unsigned-line`, `no-key`, `wrong-signature`), que la revue remet à la lentille dans `trace.json` ; le run rouge du concepteur porte `red: true` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
 | Rapport | le tableau « Preuves de qualité » de la pull request, du commentaire d'issue et de `qa-report.md` (Gate, Dossier, Exécution, Preuve), la ligne du panneau Claude Code `Preuves de qualité : build exécution 1, test exécution 4` et la ligne du canvas Copilot |
 | Seuils | aucun n'est configurable ; le seuil de mutation (80 sur le cœur, 80 sur la frontière) est un nombre en lecture seule de la vue de configuration |
 
@@ -226,6 +226,7 @@ lentilles jugent une pull request par `skraft review --pr`.
 | **K3** | `contract-fidelity` | Une vérification fournisseur Microcks vérifie son résultat. | blocker |
 | **K4** | `contract-fidelity` | Le test d'intégration vérifie le contrat de la réponse. | high |
 | **K5** | `contract-fidelity` | Aucun appel réel vers l'aval ne fuit. | blocker |
+| **Q0** | `quality-gates` | Chaque trace de `trace.json` est `verified` ; une trace `invalid` (`unsigned-line`, `no-key`, `wrong-signature`) est un seul constat, jamais un run manquant par gate. | blocker |
 | **Q1** | `quality-gates` | Chaque gate d'un composant touché a une ligne de run dans la trace, ou une ligne `absent` avec une raison (jamais pour `test`) ; un démarrage sans run et un run perdu ne sont pas un run. | blocker |
 | **Q2** | `quality-gates` | Le dernier run de la gate a réussi : ni tué, ni expiré, sortie 0. | blocker |
 | **Q3** | `quality-gates` | Ce run s'est terminé sur le dernier commit du journal des changements. | blocker |

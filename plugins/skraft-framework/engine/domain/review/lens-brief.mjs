@@ -36,6 +36,7 @@ const TITLES = Object.freeze({
   patch: 'Changes since the base of the run (open a whole file only when the patch lacks the context a finding needs)',
   files: 'Paths those changes touch (a path with no section in the patch is a new file: open it)',
   components: 'Components (stack, mocking strategy, contract testing, BDD, gates with a traced run)',
+  trace: 'Trace of each delivering step (its runs.jsonl verified or invalid, with the reason code)',
 })
 
 /** @param {LensBrief} brief */

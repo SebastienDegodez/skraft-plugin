@@ -66,7 +66,7 @@ One JSON object per line. Every event carries `type`, `at` (ISO-8601 UTC) and `p
 | `phase.closed`, `run.finished`, `run.stopped` | the pipeline | `phase`; `status`, `code`, `reason` |
 | `review.lens`, `review.refuted`, `review.noted`, `review.cost` | a review node | `lens`, `verdict`, `findings`, `fingerprint`; the refuter's verdict per finding |
 | `commits.checked` | after an attempt that made commits | `commits`, each `{ repository, sha, subject, kind, verdict }` |
-| `evidence.checked` | after a DELIVER attempt whose trace reads through its signatures | `runs`, each `{ run, gate, cwd, log, sha256 }`; `red: true` for the designer's red run ([Quality evidence](#gate-evidence)) |
+| `evidence.checked` | after a DELIVER attempt | `runs`, each `{ run, gate, cwd, log, sha256 }`; for a trace that does not read through its signatures, `runs: []` and `invalid` (`unsigned-line`, `no-key`, `wrong-signature`); `red: true` for the designer's red run ([Quality evidence](#gate-evidence)) |
 | `visuals.recorded` | `playwright-visuals` | each front end's screenshots |
 | `publish.requested`, `pull-request.opened`, `pull-request.updated`, `pull-request.details-kept`, `pull-request.details-skipped` | `skraft publish`, the `publish` node | `number`, `url`, `bodyHash`, `part` |
 | `issue.commented`, `issue.comment-skipped` | the run | `issue`, `kind`, `url` or `reason` |
@@ -100,7 +100,7 @@ An ADR is published when the run's base holds the file. After each attempt, an u
 
 ## Quality evidence <!-- #gate-evidence -->
 
-The engine runs no gate and refuses no attempt for one. The software engineer runs each gate through [`skraft_repl`](./repl.md), which writes a signed trace `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` and one log per run. The engine journals `evidence.checked` (the runs of the attempt whose trace reads through its signatures, never their output) and hands the trace to the DELIVER review; its `quality-gates` lens judges it ([Gates](./gates.md)). The pull request table, the issue comment and `qa-report.md` read the journaled runs.
+The engine runs no gate and refuses no attempt for one. The software engineer runs each gate through [`skraft_repl`](./repl.md), which writes a signed trace `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` and one log per run. The engine journals `evidence.checked` (the runs of the attempt whose trace reads through its signatures, never their output; else none, with the code of what broke the trace) and hands the trace, or that code, to the DELIVER review; its `quality-gates` lens judges it ([Gates](./gates.md)). The pull request table, the issue comment and `qa-report.md` read the journaled runs.
 
 ## Logs <!-- #logs -->
 

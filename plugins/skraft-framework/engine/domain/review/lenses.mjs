@@ -7,13 +7,14 @@ import { FAMILY } from '../config/model-assignment.mjs'
  * model family it runs on in a workflow the repository ejected; the configuration's `assign`
  * decides the family each lens runs on (`model-assignment.mjs`).
  *
- * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files' | 'components'} InputKind
+ * @typedef {'overview' | 'outputs' | 'context' | 'patch' | 'files' | 'components' | 'trace'} InputKind
  *   overview: the review's shared context (story, project rules, who wrote which document), read
  *   by every lens but a blind one; outputs: what the agents of the review's phase filled or
  *   wrote in the tracking folder; context: the story's artifacts and what the agents of the
  *   other phases filled or wrote; patch: the changes since the run's base; files: the paths
  *   those changes touch; components: each component's stack, mocking strategy, contract testing
- *   and BDD choice, as the configuration gives them, and the gates that hold a traced run on it in this run.
+ *   and BDD choice, as the configuration gives them, and the gates that hold a traced run on it in this run;
+ *   trace: each delivering step's trace of runs, verified or invalid with the code of what breaks it.
  * @typedef {{ path: RegExp, line: RegExp }} Trigger
  *   a lens with a trigger runs only when a changed path or a line the patch keeps matches.
  * @typedef {'mock' | 'contract'} TriggerName what a lens node's `when=` names
@@ -79,7 +80,7 @@ const KNOWN = /** @type {Readonly<Record<string, { inputs: readonly InputKind[],
   'boundary-enforcement': { inputs: OWN_CHANGES },
   'architecture-boundaries': { inputs: Object.freeze(/** @type {InputKind[]} */ (['context', 'patch', 'files', 'components'])) },
   'cold-reader': { inputs: CHANGES, blind: true, scope: 'code' },
-  'quality-gates': { inputs: Object.freeze(/** @type {InputKind[]} */ (['outputs', 'patch', 'files', 'components'])) },
+  'quality-gates': { inputs: Object.freeze(/** @type {InputKind[]} */ (['outputs', 'patch', 'files', 'components', 'trace'])) },
   'mock-fidelity': { inputs: CHANGES_AND_COMPONENTS },
   'contract-fidelity': { inputs: CHANGES_AND_COMPONENTS },
 })))

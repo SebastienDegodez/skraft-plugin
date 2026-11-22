@@ -90,7 +90,7 @@ refusé (`attribute <clé> is not supported on a <forme> node (supported: …)`)
 | `when` (lentille) | `mock` ou `contract` | voir [Lentilles conditionnelles](#conditional-lenses) |
 | `question` | `adr-ratification` ou `scenario-review` | voir [Phases](./phases.md#human-questions) |
 | `workflow` | nom de base kebab-case (`review`) | le workflow appelé |
-| `with_<entrée>` | `base`, `head`, `story`, `documents` ou `components` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
+| `with_<entrée>` | `base`, `head`, `story`, `documents`, `components` ou `trace` | lie l'entrée `<entrée>` du workflow appelé à cette valeur du run |
 | `mandatory` | `true` | voir [Nœuds obligatoires](#mandatory-nodes) ; `mandatory=false` est refusé |
 
 ## Arêtes {/* #edges */}
@@ -219,15 +219,15 @@ deliver_review -> visuals [label="APPROVED"]
 | --- | --- |
 | Nœud d'appel (`shape=house`) | `workflow="<nom>"` obligatoire : le nom de base d'un workflow, en kebab-case (`review`) ; `mandatory`, `label`, `phase` et `with_<entrée>` facultatifs, rien d'autre (ni `model=` ni `refuter=` : le fan-in appelé les nomme). Ses arêtes sont celles d'un fan-in : une `APPROVED`, au plus une `NEEDS_REWORK`, avec `max_visits` |
 | Workflow appelé | ne lance qu'une revue : start → fan-out → un nœud lentille par branche → réfuteur → fan-in → exit, sans arête `NEEDS_REWORK` (l'appel la porte). Ses nœuds prennent la phase de l'appel. Un appel en son sein est refusé |
-| Entrées | chacune un attribut de graphe du workflow appelé, `input_<nom>="required"` ou `"optional"`. L'appel lie chacune par son nom à ce que le run détient : `base` et `head` (les changements que la revue lit), `story`, `documents` (ce que les agents ont rempli ou écrit, par phase), `components` (chaque composant avec les gates passées dessus). `with_<nom>="<valeur>"` la lie à une autre de ces valeurs. Une entrée requise non liée, un `with_` qui ne lie aucune entrée, ou un workflow appelé qui ne lie rien à `base` ou à `head` est refusé |
+| Entrées | chacune un attribut de graphe du workflow appelé, `input_<nom>="required"` ou `"optional"`. L'appel lie chacune par son nom à ce que le run détient : `base` et `head` (les changements que la revue lit), `story`, `documents` (ce que les agents ont rempli ou écrit, par phase), `components` (chaque composant avec les gates passées dessus), `trace` (la trace de chaque étape de livraison, `verified` ou `invalid` avec le code de ce qui l'a cassée ; une pull request n'en a pas). `with_<nom>="<valeur>"` la lie à une autre de ces valeurs. Une entrée requise non liée, un `with_` qui ne lie aucune entrée, ou un workflow appelé qui ne lie rien à `base` ou à `head` est refusé |
 | Journal | celui d'un fan-in : `step.started` et `step.recorded` sous l'id de l'appel (`deliver_review`), `review.lens`, `review.refuted`. `NEEDS_REWORK` renvoie le travail à l'agent avec les findings (`sentBy: review`) |
-| Entrée non liée | aucune lentille n'en reçoit rien : sans `documents`, pas de `context.md` ni de document du run ; sans `story`, le brief dit `Story: none` ; sans `components`, pas de `components.json` |
+| Entrée non liée | aucune lentille n'en reçoit rien : sans `documents`, pas de `context.md` ni de document du run ; sans `story`, le brief dit `Story: none` ; sans `components`, pas de `components.json` ; sans `trace`, pas de `trace.json` |
 
 `review.skraft.dot` du plugin ne lit que ses entrées, jamais le journal d'un run :
 
 ```dot
 digraph review {
-  graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
+  graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional", input_trace="optional"]
   start  [shape=Mdiamond]
   lenses [shape=component]
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
@@ -265,7 +265,7 @@ run (chaque revue de `pipeline.skraft.dot`, et `review` appelé par lui). Les fi
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents de la phase, patch, chemins changés |
 | `architecture-boundaries` | documents de la story et des autres phases, patch, chemins changés, `components.json` |
 | `cold-reader` | patch et chemins changés seulement, sans les ADR ni la [documentation durable](./run-journal.md#durable-docs) : ni story, ni périmètre, ni contexte |
-| `quality-gates` | documents de la phase, dont la trace `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, le journal des changements, `components.json` |
+| `quality-gates` | documents de la phase, dont chaque trace vérifiée `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, le journal des changements, `components.json`, `trace.json` (chaque trace `verified`, ou `invalid` avec son code : un seul constat Q0) |
 | `mock-fidelity`, `contract-fidelity` | patch, chemins changés, `components.json` |
 | `fitness` | tout ce qui précède, patch et chemins changés limités à tout dossier `docs/adr/`, `docs/architecture/` et `docs/domain/event-model/` (`design.patch`, `design-files.txt`) |
 | `business-alignment` | tout ce qui précède, patch et chemins changés limités aux `.feature`, là où leur composant les garde (`features.patch`, `features-files.txt`) |

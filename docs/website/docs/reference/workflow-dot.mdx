@@ -90,7 +90,7 @@ Attributes common to every shape: `label`, `shape`, `phase`. Any other attribute
 | `when` (lens) | `mock` or `contract` | see [Conditional lenses](#conditional-lenses) |
 | `question` | `adr-ratification` or `scenario-review` | see [Phases](./phases.md#human-questions) |
 | `workflow` | kebab-case base name (`review`) | the called workflow |
-| `with_<input>` | `base`, `head`, `story`, `documents` or `components` | binds the called workflow's input `<input>` to this value of the run |
+| `with_<input>` | `base`, `head`, `story`, `documents`, `components` or `trace` | binds the called workflow's input `<input>` to this value of the run |
 | `mandatory` | `true` | see [Mandatory nodes](#mandatory-nodes); `mandatory=false` is refused |
 
 ## Edges {/* #edges */}
@@ -218,15 +218,15 @@ deliver_review -> visuals [label="APPROVED"]
 | --- | --- |
 | Call node (`shape=house`) | `workflow="<name>"` required: the base name of a workflow, kebab-case (`review`); `mandatory`, `label`, `phase` and `with_<input>` optional, nothing else (no `model=` or `refuter=`: the called fan-in names them). Its edges are those of a fan-in: one `APPROVED`, at most one `NEEDS_REWORK`, with `max_visits` |
 | Called workflow | runs one review and nothing else: start → fan-out → one lens node per branch → refuter → fan-in → exit, without a `NEEDS_REWORK` edge (the call carries it). Its nodes take the call's phase. A call inside it is refused |
-| Inputs | each one a graph attribute of the called workflow, `input_<name>="required"` or `"optional"`. The call binds each one by name to what the run holds: `base` and `head` (the changes the review reads), `story`, `documents` (what the agents filled or wrote, by phase), `components` (each component with the gates that passed on it). `with_<name>="<value>"` binds it to another of these. A required input left unbound, a `with_` that binds no input, or a called workflow that binds nothing to `base` or `head` is refused |
+| Inputs | each one a graph attribute of the called workflow, `input_<name>="required"` or `"optional"`. The call binds each one by name to what the run holds: `base` and `head` (the changes the review reads), `story`, `documents` (what the agents filled or wrote, by phase), `components` (each component with the gates that passed on it), `trace` (each delivering step's trace, `verified` or `invalid` with the code of what broke it; a pull request has none). `with_<name>="<value>"` binds it to another of these. A required input left unbound, a `with_` that binds no input, or a called workflow that binds nothing to `base` or `head` is refused |
 | Journal | that of a fan-in: `step.started` and `step.recorded` under the call's id (`deliver_review`), `review.lens`, `review.refuted`. `NEEDS_REWORK` sends the work back to the agent with the findings (`sentBy: review`) |
-| Unbound input | a lens gets nothing from it: without `documents`, no `context.md` and no document of the run; without `story`, the brief says `Story: none`; without `components`, no `components.json` |
+| Unbound input | a lens gets nothing from it: without `documents`, no `context.md` and no document of the run; without `story`, the brief says `Story: none`; without `components`, no `components.json`; without `trace`, no `trace.json` |
 
 The plugin's `review.skraft.dot` reads only its inputs, never the journal of a run:
 
 ```dot
 digraph review {
-  graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
+  graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional", input_trace="optional"]
   start  [shape=Mdiamond]
   lenses [shape=component]
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
@@ -264,7 +264,7 @@ review of `pipeline.skraft.dot`, and `review` called by it). The files sit in
 | `architecture-compliance`, `testability`, `boundary-enforcement` | documents of the phase, patch, changed paths |
 | `architecture-boundaries` | documents of the story and of the other phases, patch, changed paths, `components.json` |
 | `cold-reader` | patch and changed paths only, without the ADRs nor the [durable documentation](./run-journal.md#durable-docs): no story, no feature scope, no context |
-| `quality-gates` | documents of the phase, among them the trace `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, the change log, `components.json` |
+| `quality-gates` | documents of the phase, among them each verified trace `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, the change log, `components.json`, `trace.json` (each trace `verified`, or `invalid` with its code: one Q0 finding) |
 | `mock-fidelity`, `contract-fidelity` | patch, changed paths, `components.json` |
 | `fitness` | everything above, the patch and changed paths narrowed to any `docs/adr/`, `docs/architecture/` and `docs/domain/event-model/` folder (`design.patch`, `design-files.txt`) |
 | `business-alignment` | everything above, the patch and changed paths narrowed to the `.feature` files, wherever their component keeps them (`features.patch`, `features-files.txt`) |

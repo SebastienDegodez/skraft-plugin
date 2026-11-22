@@ -10,15 +10,15 @@ import { readTrace } from '../evidence/run-trace-store.mjs'
  */
 
 /**
- * Every run the delivering attempt traced, in the order they ran; null when its trace cannot be
- * read (an edited or unsigned line), so that nothing stands for it.
+ * Every run the delivering attempt traced, in the order they ran; none, with the code of what
+ * breaks it, when its trace cannot be verified (an edited or unsigned line), so that nothing stands for it.
  * @param {any} deps @param {{ slug: string, folder: string, events: any[] }} attempt
- * @returns {Promise<TracedRun[] | null>}
+ * @returns {Promise<{ runs: TracedRun[], invalid?: import('../evidence/run-trace-store.mjs').TraceRefusal }>}
  */
 export const tracedRuns = async (deps, attempt) => {
   const trace = await readTrace(deps, attempt)
-  if (!trace.ok) return null
-  return trace.records.flatMap((record) => (record.type === 'run' ? [factOf(record)] : []))
+  if (!trace.ok) return { runs: [], invalid: trace.code }
+  return { runs: trace.records.flatMap((record) => (record.type === 'run' ? [factOf(record)] : [])) }
 }
 
 /** @param {import('../../domain/evidence/run-trace.mjs').RunRecord} record @returns {TracedRun} */

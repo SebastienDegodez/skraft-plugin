@@ -41,6 +41,7 @@ const runInputs = (facts) => ({
   story: facts.run.story,
   documents: documentsOf(facts),
   components: facts.components.map((component) => ({ ...component, gates: gatesWithRuns(facts.events, component) })),
+  trace: traceFacts(facts.events, facts.workflow, facts.phase),
 })
 
 /**
@@ -75,11 +76,24 @@ const redLogsOf = (events, workflow, phase) => events
  * engine could read: what the review judges the quality evidence by.
  * @param {RunFacts['events']} events @param {Workflow} workflow @param {string} phase @returns {string[]}
  */
-const tracesOf = (events, workflow, phase) => {
+const tracesOf = (events, workflow, phase) => traceFacts(events, workflow, phase).filter(({ status }) => status === 'verified').map(({ trace }) => trace)
+
+/**
+ * The trace of the last delivering attempt of each node of the phase, relative to the tracking
+ * folder: verified, or invalid with the code of what breaks it.
+ * @param {RunFacts['events']} events @param {Workflow} workflow @param {string} phase
+ * @returns {import('../review/review-runs.mjs').TraceFact[]}
+ */
+const traceFacts = (events, workflow, phase) => {
   const kept = events.filter((event) => event.type === 'evidence.checked' && event.red !== true && workflow.nodes[event.step]?.phase === phase)
-  const last = new Map(kept.map((event) => [event.step, `${runsFolder(event.step, event.visit, event.attempt)}/runs.jsonl`]))
+  const last = new Map(kept.map((event) => [event.step, traceFact(event)]))
   return [...last.values()]
 }
+
+/** @param {any} event an evidence.checked event @returns {import('../review/review-runs.mjs').TraceFact} */
+const traceFact = ({ step, visit, attempt, invalid }) => ({
+  step, trace: `${runsFolder(step, visit, attempt)}/runs.jsonl`, ...(invalid === undefined ? { status: 'verified' } : { status: 'invalid', code: invalid }),
+})
 
 /**
  * The agent nodes of a phase that ran, each with the documents it filled or wrote.

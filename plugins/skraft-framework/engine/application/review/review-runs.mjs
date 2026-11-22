@@ -51,9 +51,13 @@ import { takeFromLastPass } from './review-repeats.mjs'
  * @typedef {{
  *   base: RunState['base'], story?: RunState['story'], documents?: ReviewDocuments,
  *   components?: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
+ *   trace?: TraceFact[],
  * }} ReviewInputs
- *   what the review reads, and only that: the changes since base, the story, the documents and
- *   the components, each with the gates that passed on it; a review not bound to one has none.
+ *   what the review reads, and only that: the changes since base, the story, the documents,
+ *   the components, each with the gates that passed on it, and whether each delivering step's
+ *   trace could be verified; a review not bound to one has none.
+ * @typedef {{ step: string, trace: string, status: 'verified' | 'invalid', code?: string }} TraceFact
+ *   trace: the step's runs.jsonl, relative to the tracking folder; code: what breaks an invalid one.
  * @typedef {{
  *   outputs: string[], context: string[], artifacts: string[],
  *   phases: Array<{ phase: string, steps: Array<{ step: string, agent: string, documents: string[] }> }>,
@@ -272,6 +276,7 @@ const filesOf = (review, { changes, scopes }, { rules, present }) => [
   ...Object.entries(scopes).flatMap(([scope, part]) => [[`${scope}.patch`, part.patch], [`${scope}-files.txt`, lines(part.paths)]]),
   ...(review.inputs.documents === undefined ? [] : [/** @type {[string, string]} */ (['context.md', contextOf(review, rules, present)])]),
   ...(review.inputs.components === undefined ? [] : [/** @type {[string, string]} */ (['components.json', componentsOf(review)])]),
+  ...(review.inputs.trace === undefined ? [] : [/** @type {[string, string]} */ (['trace.json', `${JSON.stringify(review.inputs.trace, null, 2)}\n`])]),
 ]
 
 /** @param {string[]} paths */
@@ -288,11 +293,12 @@ const writeAll = async ({ deps, slug }, folder, files) => {
  * @param {Review} review @param {string} folder @param {{ changed: boolean, present: Set<string> }} state
  * @returns {Record<InputKind, string[]>}
  */
-const inputsOf = ({ inputs: { documents, components } }, folder, { changed, present }) => ({
+const inputsOf = ({ inputs: { documents, components, trace } }, folder, { changed, present }) => ({
   ...documentInputs(documents, folder, present),
   patch: changed ? [`${folder}/changes.patch`] : [],
   files: changed ? [`${folder}/changed-files.txt`] : [],
   components: components === undefined ? [] : [`${folder}/components.json`],
+  trace: trace === undefined ? [] : [`${folder}/trace.json`],
 })
 
 /**

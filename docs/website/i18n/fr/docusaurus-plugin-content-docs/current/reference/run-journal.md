@@ -66,7 +66,7 @@ Un objet JSON par ligne. Chaque événement porte `type`, `at` (ISO-8601 UTC) et
 | `phase.closed`, `run.finished`, `run.stopped` | le pipeline | `phase` ; `status`, `code`, `reason` |
 | `review.lens`, `review.refuted`, `review.noted`, `review.cost` | un nœud de revue | `lens`, `verdict`, `findings`, `fingerprint` ; le verdict du réfuteur par constat |
 | `commits.checked` | après une tentative qui a fait des commits | `commits`, chacun `{ repository, sha, subject, kind, verdict }` |
-| `evidence.checked` | après une tentative DELIVER dont la trace se lit jusqu'à ses signatures | `runs`, chacun `{ run, gate, cwd, log, sha256 }` ; `red: true` pour le run rouge du concepteur ([Preuves qualité](#gate-evidence)) |
+| `evidence.checked` | après une tentative DELIVER | `runs`, chacun `{ run, gate, cwd, log, sha256 }` ; pour une trace qui ne se lit pas jusqu'à ses signatures, `runs: []` et `invalid` (`unsigned-line`, `no-key`, `wrong-signature`) ; `red: true` pour le run rouge du concepteur ([Preuves qualité](#gate-evidence)) |
 | `visuals.recorded` | `playwright-visuals` | les captures de chaque front |
 | `publish.requested`, `pull-request.opened`, `pull-request.updated`, `pull-request.details-kept`, `pull-request.details-skipped` | `skraft publish`, le nœud `publish` | `number`, `url`, `bodyHash`, `part` |
 | `issue.commented`, `issue.comment-skipped` | le run | `issue`, `kind`, `url` ou `reason` |
@@ -100,7 +100,7 @@ Un ADR est publié quand la base du run contient le fichier. Après chaque tenta
 
 ## Preuves qualité <!-- #gate-evidence -->
 
-Le moteur ne lance aucun gate et ne refuse aucune tentative pour l'un d'eux. L'ingénieur logiciel lance chaque gate par [`skraft_repl`](./repl.md), qui écrit une trace signée `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` et un log par run. Le moteur journalise `evidence.checked` (les runs de la tentative dont la trace se lit jusqu'à ses signatures, jamais leur sortie) et remet la trace à la revue DELIVER ; sa lentille `quality-gates` la juge ([Gates](./gates.md)). Le tableau de la pull request, le commentaire d'issue et `qa-report.md` lisent les runs journalisés.
+Le moteur ne lance aucun gate et ne refuse aucune tentative pour l'un d'eux. L'ingénieur logiciel lance chaque gate par [`skraft_repl`](./repl.md), qui écrit une trace signée `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` et un log par run. Le moteur journalise `evidence.checked` (les runs de la tentative dont la trace se lit jusqu'à ses signatures, jamais leur sortie ; sinon aucun, avec le code de ce qui a cassé la trace) et remet la trace, ou ce code, à la revue DELIVER ; sa lentille `quality-gates` la juge ([Gates](./gates.md)). Le tableau de la pull request, le commentaire d'issue et `qa-report.md` lisent les runs journalisés.
 
 ## Logs <!-- #logs -->
 

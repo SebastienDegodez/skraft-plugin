@@ -41,35 +41,42 @@ const write = async (deps, { slug, folder, signingKey: key }, record) => {
 }
 
 /**
- * The trace of an attempt with every line's signature checked.
+ * The trace of an attempt with every line's signature checked; refused, the code of the first
+ * line that breaks it: `unsigned-line`, `no-key` (this machine holds no key of the run) or
+ * `wrong-signature` (a line edited after it was signed).
  * @param {any} deps @param {{ slug: string, folder: string, events: Array<{ keyId?: string }> }} where
- * @returns {Promise<{ ok: true, records: TraceRecord[] } | { ok: false, reason: string }>}
+ * @returns {Promise<{ ok: true, records: TraceRecord[] } | { ok: false, code: TraceRefusal, reason: string }>}
  */
 export const readTrace = async (deps, { slug, folder, events }) => {
   const text = await deps.files.read(slug, tracePath(folder))
   if (text === null) return { ok: true, records: [] }
   const key = await signingKeyOf(deps, events)
   const checked = await checkedLines(deps, text.split('\n').filter((line) => line !== ''), key)
-  return checked.reason === null ? { ok: true, records: checked.records } : { ok: false, reason: checked.reason }
+  return checked.refused === null ? { ok: true, records: checked.records } : { ok: false, ...checked.refused }
 }
 
-/** @param {any} deps @param {string[]} lines @param {string | null} key @returns {Promise<{ records: TraceRecord[], reason: string | null }>} */
+/** @param {any} deps @param {string[]} lines @param {string | null} key @returns {Promise<{ records: TraceRecord[], refused: Refused | null }>} */
 const checkedLines = async (deps, lines, key) => {
   const records = []
   for (const [index, line] of lines.entries()) {
-    const reason = await refusal(deps, line, key, index + 1)
-    if (reason !== null) return { records: [], reason }
+    const refused = await refusal(deps, line, key, index + 1)
+    if (refused !== null) return { records: [], refused }
     records.push(JSON.parse(signatureOf(line)?.body ?? line))
   }
-  return { records, reason: null }
+  return { records, refused: null }
 }
 
-/** Why the line is not one this server signed; null when it is. @param {any} deps @param {string} line @param {string | null} key @param {number} number */
+/**
+ * @typedef {'unsigned-line' | 'no-key' | 'wrong-signature'} TraceRefusal
+ * @typedef {{ code: TraceRefusal, reason: string }} Refused
+ */
+
+/** Why the line is not one this server signed; null when it is. @param {any} deps @param {string} line @param {string | null} key @param {number} number @returns {Promise<Refused | null>} */
 const refusal = async (deps, line, key, number) => {
   const signed = signatureOf(line)
-  if (signed === null) return `runs.jsonl line ${number} is not signed`
-  if (key === null) return 'runs.jsonl cannot be verified: this machine holds no key of the run'
-  return (await deps.hasher.hmacSha256(key, signed.body)) === signed.sig ? null : `runs.jsonl line ${number} does not carry the signature of the run's key`
+  if (signed === null) return { code: 'unsigned-line', reason: `runs.jsonl line ${number} is not signed` }
+  if (key === null) return { code: 'no-key', reason: 'runs.jsonl cannot be verified: this machine holds no key of the run' }
+  return (await deps.hasher.hmacSha256(key, signed.body)) === signed.sig ? null : { code: 'wrong-signature', reason: `runs.jsonl line ${number} does not carry the signature of the run's key` }
 }
 
 /**

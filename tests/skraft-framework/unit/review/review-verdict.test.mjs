@@ -119,7 +119,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Write no file, change nothing, start no agent.',
     ...answer('cold-reader'),
   ].join('\n'))
-  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing, BDD, gates with a traced run)': 'components' }
+  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing, BDD, gates with a traced run)': 'components', 'Trace of each delivering step (its runs.jsonl verified or invalid, with the reason code)': 'trace' }
   const kinds = (dispatch) => [...new Set(dispatch.prompt.split('\n').filter((line) => /^  - .+: \//.test(line)).map((line) => line.slice(4, line.indexOf(':'))).map((title) => KIND[title] ?? 'patch'))]
   assert.deepEqual(Object.fromEntries(host.agentRunner.reviewed().map((dispatch) => [dispatch.agent, kinds(dispatch)])), {
     'consistency-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
@@ -132,7 +132,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     'test-integrity-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
     'architecture-boundaries-lens': ['overview', 'context', 'patch', 'files', 'components'],
     'cold-reader-lens': ['patch', 'files'],
-    'quality-gates-lens': ['overview', 'outputs', 'patch', 'files', 'components'],
+    'quality-gates-lens': ['overview', 'outputs', 'patch', 'files', 'components', 'trace'],
   })
   assert.ok(prompt('test-integrity-lens', 'deliver_review').includes([
     `  - Documents of this phase: ${TRACKING}/${CHANGE_LOG}`,

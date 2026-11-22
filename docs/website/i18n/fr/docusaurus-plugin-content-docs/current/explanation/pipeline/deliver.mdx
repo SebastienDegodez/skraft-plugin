@@ -76,7 +76,7 @@ Le moteur ne lance aucune gate. L'ingénieur logiciel lance chaque gate (`build`
 `skraft_repl` (`gate(name, command, { cwd })`, voir [Le REPL](../../reference/repl.md)) ;
 l'exécution de la ligne de commit est l'exécution `test`, et une gate dont les documents du projet
 ne nomment aucune commande se déclare avec `absent`. Le moteur ne refuse aucune tentative pour ces exécutions. Il journalise
-`evidence.checked` pour les exécutions dont la trace se lit jusqu'à ses signatures et remet la trace à la revue DELIVER
+`evidence.checked` pour les exécutions dont la trace se lit jusqu'à ses signatures, sinon le code de ce qui l'a cassée, et remet la trace ou ce code à la revue DELIVER
 ([Gates](../../reference/gates.md#command-gates)).
 
 Viennent ensuite les lentilles de la revue DELIVER : intégrité des tests, frontières

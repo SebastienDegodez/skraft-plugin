@@ -46,7 +46,7 @@ the engine journals the signed trace of those runs and hands it to the DELIVER r
 | Absent gate | a gate the project's documents name no command for is declared with `absent(gate, component, reason)`; `test` is never absent |
 | Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signed; one folder per attempt |
 | Judgement | the `quality-gates` lens of the DELIVER review (below); the engine refuses no attempt for a run |
-| Journal | `evidence.checked` with `runs: [{ run, gate, cwd, log, sha256 }]`, only when the trace reads through its signatures; the designer's run labelled `red` carries `red: true` ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
+| Journal | `evidence.checked` with `runs: [{ run, gate, cwd, log, sha256 }]` when the trace reads through its signatures, else `runs: []` and `invalid` with the code of what broke it (`unsigned-line`, `no-key`, `wrong-signature`), which the review hands the lens in `trace.json`; the designer's run labelled `red` carries `red: true` ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
 | Report | the "Quality evidence" table of the pull request, the issue comment and `qa-report.md` (Gate, Folder, Run, Evidence), the Claude Code pane row `Quality evidence: build run 1, test run 4` and the Copilot canvas line |
 | Thresholds | none is configurable; the mutation bar (80 on the core, 80 on the boundary) is a read-only number of the configuration view |
 
@@ -224,6 +224,7 @@ a pull request through `skraft review --pr`.
 | **K3** | `contract-fidelity` | A Microcks provider verification asserts its result. | blocker |
 | **K4** | `contract-fidelity` | The integration test asserts the response contract. | high |
 | **K5** | `contract-fidelity` | No real downstream call leaks. | blocker |
+| **Q0** | `quality-gates` | Each trace of `trace.json` is `verified`; an `invalid` one (`unsigned-line`, `no-key`, `wrong-signature`) is one finding, never a missing run per gate. | blocker |
 | **Q1** | `quality-gates` | Each gate of a touched component has a run line in the trace, or an `absent` line with a reason (never for `test`); a start with no run and a lost run are no run. | blocker |
 | **Q2** | `quality-gates` | The last run of the gate passed: not killed, not timed out, exit 0. | blocker |
 | **Q3** | `quality-gates` | That run ended on the final commit of the change log. | blocker |

@@ -4,7 +4,7 @@ import { BUILT_IN_REVIEW, BUILT_IN_WORKFLOW } from '../support/in-memory-host.mj
 import { loadWorkflow } from '../../../../plugins/skraft-framework/engine/application/workflow/load-workflow.mjs'
 import { edit, host, reviewWithLenses } from './support.mjs'
 
-const STAMPED_REVIEW = edit(BUILT_IN_REVIEW, ['input_components="optional"]', 'input_components="optional", skraft_version="2.0.0"]'])
+const STAMPED_REVIEW = edit(BUILT_IN_REVIEW, ['input_trace="optional"]', 'input_trace="optional", skraft_version="2.0.0"]'])
 const REVIEW = { pluginVersion: '2.0.0', workflow: 'review' }
 
 const PIPELINE = '.skraft/pipeline.skraft.dot'

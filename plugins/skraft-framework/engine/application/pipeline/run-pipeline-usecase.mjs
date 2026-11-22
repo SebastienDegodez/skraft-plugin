@@ -794,7 +794,7 @@ const judgeAttempt = async (context, run, next, attempt) => {
  */
 const keepEvidence = async ({ journal }, { node, visit, attempt }, checked) => {
   if (checked.evidence === undefined || checked.evidence === null || failedCheck(checked)) return
-  await journal.append('evidence.checked', { step: node.id, visit, attempt, ...(checked.red === true ? { red: true } : {}), runs: checked.evidence })
+  await journal.append('evidence.checked', { step: node.id, visit, attempt, ...(checked.red === true ? { red: true } : {}), runs: checked.evidence, ...(checked.invalid === undefined ? {} : { invalid: checked.invalid }) })
 }
 
 /**

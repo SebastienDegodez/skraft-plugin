@@ -39,7 +39,7 @@ const DELIVER_CALL = node('deliver_review', 'call', {
   mandatory: true,
   branches: LENSES.deliver_review.map((lens) => ({ id: lens.replaceAll('-', '_'), lens, when: { 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' }[lens] ?? null, mandatory: ['test-integrity', 'architecture-boundaries'].includes(lens) ? true : null })),
   refutedBy: { id: 'refuter', mandatory: true },
-  call: { workflow: 'review', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components' }, fanIn: 'verdict', mandatory: true },
+  call: { workflow: 'review', with: {}, inputs: { base: 'base', head: 'head', story: 'story', documents: 'documents', components: 'components', trace: 'trace' }, fanIn: 'verdict', mandatory: true },
 })
 
 /** check() refused with these errors, in this order. */

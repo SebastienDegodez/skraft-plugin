@@ -12,10 +12,11 @@ const componentsOf = (host) => JSON.parse(host.workspace.files.get('skraft-confi
  * commit line, unless `trace` changes it.
  * @param {any} host
  * @param {{ step: string, visit: number, attempt: number }} step
- * @param {{ omit?: string[], absent?: string[], edit?: (run: any) => any, open?: boolean, unsigned?: boolean }} [trace]
- *   omit: `<component>/<gate>` never run; absent: declared absent; edit: changes each run of the trace
+ * @param {{ omit?: string[], absent?: string[], edit?: (run: any) => any, open?: boolean, unsigned?: boolean, edited?: boolean }} [trace]
+ *   omit: `<component>/<gate>` never run; absent: declared absent; edit: changes each run of the trace;
+ *   edited: each line changed after it was signed
  */
-export const writeDeliveryTrace = async (host, { step, visit, attempt }, { omit = [], absent = [], edit = (run) => run, open = false, unsigned = false } = {}) => {
+export const writeDeliveryTrace = async (host, { step, visit, attempt }, { omit = [], absent = [], edit = (run) => run, open = false, unsigned = false, edited = false } = {}) => {
   const folder = `logs/runs/${step}-${visit}-${attempt}`
   const records = []
   let run = 0
@@ -31,14 +32,15 @@ export const writeDeliveryTrace = async (host, { step, visit, attempt }, { omit 
     }
   }
   if (open) records.push({ type: 'start', run: run + 1, cell: 1, at: 'then', command: 'npm test', cwd: '.', gate: 'test', label: null })
-  await host.tracking.write(host.slug, `${folder}/runs.jsonl`, `${(await Promise.all(records.map((record) => lineOf(host, record, unsigned)))).join('\n')}\n`)
+  await host.tracking.write(host.slug, `${folder}/runs.jsonl`, `${(await Promise.all(records.map((record) => lineOf(host, record, unsigned, edited)))).join('\n')}\n`)
 }
 
-const lineOf = async (host, record, unsigned) => {
+const lineOf = async (host, record, unsigned, edited = false) => {
   const body = JSON.stringify(record)
   if (unsigned) return body
   const keyId = host.events().find((event) => typeof event.keyId === 'string').keyId
-  return signedLine(body, await host.deps.hasher.hmacSha256(await host.deps.journalKeys.read(keyId), body))
+  const sig = await host.deps.hasher.hmacSha256(await host.deps.journalKeys.read(keyId), body)
+  return signedLine(edited ? body.replace('"exitCode":0', '"exitCode":1') : body, sig)
 }
 
 /**

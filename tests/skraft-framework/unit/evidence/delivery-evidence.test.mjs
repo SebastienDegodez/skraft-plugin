@@ -18,13 +18,20 @@ test('a delivery is not refused for its quality evidence: an engineer that trace
   }
 })
 
-test('a trace edited afterwards, or left unsigned, stands for nothing: no run of it is journaled', async () => {
-  const host = delivering({ trace: { unsigned: true } })
+test('a trace edited afterwards, or left unsigned, is journaled invalid with its reason, and the quality-gates lens is told so in place of reading it', async () => {
+  for (const [trace, code] of [[{ unsigned: true }, 'unsigned-line'], [{ edited: true }, 'wrong-signature']]) {
+    const host = delivering({ trace })
 
-  await host.start()
+    await host.start()
 
-  assert.deepEqual(recorded(host, 'deliver').map(({ outcome }) => outcome), ['done'])
-  assert.deepEqual(host.events().filter((event) => event.type === 'evidence.checked' && event.red !== true), [])
+    assert.deepEqual(recorded(host, 'deliver').map(({ outcome }) => outcome), ['done'])
+    const checked = host.events().filter((event) => event.type === 'evidence.checked' && event.red !== true)
+    assert.deepEqual(checked.map(({ step, visit, attempt, runs, invalid }) => ({ step, visit, attempt, runs, invalid })), [{ step: 'deliver', visit: 1, attempt: 1, runs: [], invalid: code }], code)
+    const lens = host.agentRunner.batches.at(-1).find(({ agent: id }) => id === 'quality-gates-lens').prompt
+    assert.ok(lens.includes(`  - Trace of each delivering step (its runs.jsonl verified or invalid, with the reason code): ${host.tracking.location(SLUG, 'reviews/deliver_review-1/trace.json')}`), lens)
+    assert.ok(!lens.includes('deliver-1-1/runs.jsonl'), lens)
+    assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/trace.json')), [{ step: 'deliver', trace: 'logs/runs/deliver-1-1/runs.jsonl', status: 'invalid', code }])
+  }
 })
 
 test('every run the delivery attempt traced is journaled by run and hash, never by output', async () => {
