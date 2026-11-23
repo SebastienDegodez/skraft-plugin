@@ -44,7 +44,7 @@ et le moteur journalise la trace signée de ces exécutions et la remet à la re
 | Règle | Détail |
 | --- | --- |
 | Qui lance | l'ingénieur logiciel, par `skraft_repl`, dans chaque composant que l'histoire a modifié ; `skraft_repl_reset` arrête un noyau qui ne s'arrête pas, ses runs tracés comme tués |
-| Gate absente | une gate dont les documents du projet ne nomment aucune commande se déclare par `absent(gate, component, reason)` ; `test` n'est jamais absente |
+| Gate absente | une gate sans commande pour le composant dans `skraft-config.json` se déclare par `absent(gate, component, reason)`, l'appel exact que donne sa ligne `no command` du brief de livraison ; `test` n'est jamais absente |
 | Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signée ; un dossier par tentative |
 | Jugement | la lentille `quality-gates` de la revue DELIVER (ci-dessous) ; le moteur ne refuse aucune tentative pour une exécution |
 | Journal | `evidence.checked` avec `runs: [{ run, gate, cwd, log, sha256 }]` quand la trace se lit jusqu'à ses signatures, sinon `runs: []` et `invalid` avec le code de ce qui l'a cassée (`unsigned-line`, `no-key`, `wrong-signature`), que la revue remet à la lentille dans `trace.json` ; le run rouge du concepteur porte `red: true` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |

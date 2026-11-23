@@ -43,7 +43,7 @@ the engine journals the signed trace of those runs and hands it to the DELIVER r
 | Rule | Detail |
 | --- | --- |
 | Who runs | the software engineer, through `skraft_repl`, in each component the story changed; `skraft_repl_reset` ends a kernel that will not stop, its runs traced as killed |
-| Absent gate | a gate the project's documents name no command for is declared with `absent(gate, component, reason)`; `test` is never absent |
+| Absent gate | a gate the component has no command for in `skraft-config.json` is declared with `absent(gate, component, reason)`, the exact call its `no command` line of the delivery brief gives; `test` is never absent |
 | Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signed; one folder per attempt |
 | Judgement | the `quality-gates` lens of the DELIVER review (below); the engine refuses no attempt for a run |
 | Journal | `evidence.checked` with `runs: [{ run, gate, cwd, log, sha256 }]` when the trace reads through its signatures, else `runs: []` and `invalid` with the code of what broke it (`unsigned-line`, `no-key`, `wrong-signature`), which the review hands the lens in `trace.json`; the designer's run labelled `red` carries `red: true` ([Tracking folder and journal](./run-journal.md#gate-evidence)) |
