@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.109](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.108...v2.0.0-alpha.109) (2026-11-23)
+
+### 🐛 Bug Fixes
+
+* **engine:** the local CI names the installs a fresh checkout lacks, and absent is described as the brief gives it ([#650](https://github.com/SebastienDegodez/skraft-plugin/issues/650)) ([fbf837e](https://github.com/SebastienDegodez/skraft-plugin/commit/fbf837e31bf061f9882c5515fc35b2953548a302)), closes [#647](https://github.com/SebastienDegodez/skraft-plugin/issues/647)
+
 ## [2.0.0-alpha.108](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.107...v2.0.0-alpha.108) (2026-11-22)
 
 ### ⚠ BREAKING CHANGES
