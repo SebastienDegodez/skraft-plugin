@@ -78,10 +78,8 @@ export default {
     'plugins/skraft-framework/src/application/dispatch-provenance-service.mjs',
     // qg-verify: deterministic evidence verification
     'plugins/skraft-framework/src/domain/evidence-verification-policy.mjs',
-    // G6 mutation gate: runs the developer's declared command and judges its report
+    // G6 mutation gate (/skraft-mutation): runs the developer's command and judges its result
     'plugins/skraft-framework/src/domain/mutation-gate-policy.mjs',
-    // /skraft-init: components and mutation settings of skraft-config.json
-    'plugins/skraft-framework/src/domain/config-init-policy.mjs',
     'plugins/skraft-framework/src/application/evidence-verification-service.mjs',
     // G9 handoff guard + dispatch timeline
     'plugins/skraft-framework/src/domain/handoff-policy.mjs',

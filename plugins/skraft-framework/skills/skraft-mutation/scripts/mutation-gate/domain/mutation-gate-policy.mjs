@@ -1,11 +1,11 @@
 // Pure rules of the mutation gate (G6). No IO: the CLI runs the commands and reads the files.
 //
-// Mutation testing is the developer's responsibility. The developer declares a command per
-// component in skraft-config.json (`components[].commands.mutation`, the v2 shape) that runs
-// their mutation tool and writes its scores and surviving mutants as JSON to the file SKRAFT
-// names in SKRAFT_MUTATION_RESULT: core and boundary for a Clean Architecture component, global
-// for a single project. SKRAFT runs it, holds every scope to the bar and hands the survivors on
-// to be killed; without any command the gate does not run.
+// Mutation testing is the developer's responsibility and never runs in the pipeline: DELIVER
+// records G6 `not_run`. The developer runs /skraft-mutation, which asks them for the command of
+// each component and passes it here. The command runs their mutation tool and writes its scores
+// and surviving mutants as JSON to the file SKRAFT names in SKRAFT_MUTATION_RESULT: core and
+// boundary for a Clean Architecture component, global for a single project. SKRAFT holds every
+// scope to the bar and hands the survivors on to be killed.
 
 // The score every scope must reach, in percent. Not configurable.
 export const MUTATION_BAR = 80
@@ -13,17 +13,8 @@ export const MUTATION_BAR = 80
 // The environment variable naming the file the command writes its result to.
 export const RESULT_VARIABLE = 'SKRAFT_MUTATION_RESULT'
 
-// Where /skraft-mutation keeps the developer's last run, for DELIVER to reuse.
-export const MANUAL_EVIDENCE = '.copilot-tracking/mutation'
-
-// Whether DELIVER runs G6: yes unless the team set `mutation.pipeline` to false (/skraft-init
-// mutation), in which case the developer runs /skraft-mutation.
-export const inPipeline = (config) => !(object(config) && object(config.mutation) && config.mutation.pipeline === false)
-
-// A developer run stands for G6 when it judged HEAD, on a working copy whose tracked files all
-// matched HEAD, and reached a verdict (pass or fail).
-export const reusableRun = (manifest, head) => object(manifest)
-	&& manifest.revision === head && manifest.clean === true && [0, 1].includes(manifest.exit_code)
+// G6 in a delivery: never run by the pipeline.
+export const PIPELINE_NOT_RUN = 'G6 not run: mutation testing runs outside the pipeline; the developer runs /skraft-mutation.'
 
 // The scope sets a result may carry, in report order.
 const SCOPE_SETS = Object.freeze([['core', 'boundary'], ['global']])
@@ -40,29 +31,43 @@ const insidePath = (value) => {
 	return parts.includes('..') ? null : (parts.join('/') || '.')
 }
 
-// The components whose mutation the gate runs, each with the command to run and its folder.
-export function mutationComponents(config) {
-	if (!object(config) || config.components === undefined) return { components: [], problems: [] }
-	if (!Array.isArray(config.components)) return { components: [], problems: ['components must be a list'] }
+// `<name>=<command>` or `<name>@<root>=<command>`: the component, the folder its command runs
+// in (the repository root by default) and the command.
+const RUN = /^([^@=]+?)(?:@([^=]*))?=(.*)$/s
+
+// The runs the developer gave, each `--run` value parsed and checked.
+export function mutationRuns(specs) {
 	const components = []
 	const problems = []
 	const names = new Set()
-	config.components.forEach((entry, index) => {
-		if (!object(entry) || !object(entry.commands) || entry.commands.mutation === undefined) return
-		const command = entry.commands.mutation
-		const label = text(entry.name) ? entry.name : `components[${index}]`
+	for (const spec of specs) {
+		const match = RUN.exec(spec ?? '')
+		if (!match) {
+			problems.push(`--run ${spec}: expected <name>[@<root>]=<command>`)
+			continue
+		}
+		const [, rawName, rawRoot, rawCommand] = match
+		const name = rawName.trim()
 		const local = []
-		if (!text(entry.name)) local.push(`${label}: name is required`)
-		else if (names.has(entry.name)) local.push(`${label}: declared twice`)
-		const root = insidePath(entry.root ?? '.')
-		if (root === null) local.push(`${label}: root must be a folder inside the repository`)
-		if (!text(command)) local.push(`${label}: commands.mutation must be a command`)
-		names.add(entry.name)
+		if (!text(name)) local.push(`--run ${spec}: the component name is required`)
+		else if (names.has(name)) local.push(`${name}: given twice`)
+		const root = insidePath(rawRoot === undefined || rawRoot.trim() === '' ? '.' : rawRoot)
+		if (root === null) local.push(`${name}: root must be a folder inside the repository`)
+		if (!text(rawCommand)) local.push(`${name}: the mutation command is empty`)
+		names.add(name)
 		if (local.length) problems.push(...local)
-		else components.push({ name: entry.name, root, command: command.trim() })
-	})
+		else components.push({ name, root, command: rawCommand.trim() })
+	}
 	return { components, problems }
 }
+
+// A command that tests only what changed names a base or an incremental mode.
+const INCREMENTAL = /\{baseSha\}|--since|delta|incremental|--diff|git[- ]diff|changed|withHistory/i
+
+// The alert to raise before a run that mutates the whole component, or null.
+export const fullRunWarning = ({ name, command }) => (INCREMENTAL.test(command)
+	? null
+	: `warning: ${name} runs a full mutation (no --since, {baseSha}, delta or incremental option): every mutant of the component is tested`)
 
 // `{baseSha}` in a command takes the base revision, as in v2.
 export function withBase(command, base) {

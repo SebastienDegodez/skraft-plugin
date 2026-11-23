@@ -1,6 +1,6 @@
 ---
 name: quality-gates-dotnet
-description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Every gate is captured once, after the story's last work commit. Provides the concrete `dotnet` commands and how their outputs map onto the tech-agnostic schema. Mutation (G6) is the developer's, run through `mutation-testing`.
+description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Every gate is captured once, after the story's last work commit. Provides the concrete `dotnet` commands and how their outputs map onto the tech-agnostic schema. Mutation (G6) never runs in a delivery: it is the developer's, through `/skraft-mutation`.
 ---
 
 # Quality Gates — .NET Adapter
@@ -76,11 +76,9 @@ If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture 
 
 ## G6 — Mutation score
 
-Mutation testing is the developer's responsibility: this adapter runs no mutation tool and
-ships no mutation config. Load `mutation-testing` and run its gate once, after the story's last
-work commit; it runs the `commands.mutation` the developer declared in `skraft-config.json` and
-judges the report. Exit 3 means none is declared: record G6 `not_run`, never `pass`, and tell
-the developer.
+Never run in a delivery. This adapter runs no mutation tool or gate and ships no mutation
+config: record G6 `not_run` with the rationale `G6 not run: mutation testing runs outside the
+pipeline; the developer runs /skraft-mutation.`, never `pass`, and tell the developer.
 
 ## G7 — No mocks in Domain/Application
 
@@ -139,7 +137,7 @@ its evidence-only commit and `qg-verify` — and exits with `qg-verify`'s verdic
 
 ```bash
 node "<skill>/scripts/qg-collect.mjs" --root . --evidence "$EV" --story {story} --feature {feature} \
-  --base {DELIVER baseSha} --mutation-gate "<mutation-testing skill>/scripts/mutation-gate/cli/mutation-gate.mjs" \
+  --base {DELIVER baseSha} \
   --cycle 1:{red sha}:{green sha}:{acceptance test file} --cycle 2:…
 ```
 
@@ -148,7 +146,7 @@ the `test` commit holding its acceptance test. It prints one line per gate, then
 `fail` or `inconclusive` is yours to fix: fix the code or the cycles, then run it again. By hand,
 the same flow is:
 
-1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G6 (`mutation-testing`'s gate), G7, G11 —
+1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G7, G11 —
    each through `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
 2. For each scenario, write the RED + GREEN snapshots with `snapshot.mjs --rev`.
 3. `repo_root_rev = git rev-parse HEAD` — the last work commit.

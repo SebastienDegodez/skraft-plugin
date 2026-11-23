@@ -1,49 +1,47 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-	MANUAL_EVIDENCE, MUTATION_BAR, RESULT_VARIABLE, inPipeline, mutationComponents, mutationVerdict, readResult, reusableRun, withBase,
+	MUTATION_BAR, PIPELINE_NOT_RUN, RESULT_VARIABLE, fullRunWarning, mutationRuns, mutationVerdict, readResult, withBase,
 } from '../../../plugins/skraft-framework/src/domain/mutation-gate-policy.mjs'
-
-const component = (patch = {}) => ({ name: 'api', root: 'api', stack: 'dotnet', commands: { mutation: 'node mutation.mjs' }, ...patch })
 
 test('every scope is held to 80%, and the result file comes through SKRAFT_MUTATION_RESULT', () => {
 	assert.equal(MUTATION_BAR, 80)
 	assert.equal(RESULT_VARIABLE, 'SKRAFT_MUTATION_RESULT')
 })
 
-test('only components that declare commands.mutation are run, folders and commands normalized', () => {
-	const { components, problems } = mutationComponents({
-		components: [
-			component({ root: '.\\api\\', commands: { mutation: '  node mutation.mjs  ' } }),
-			component({ name: 'web', root: undefined }),
-			component({ name: 'docs', root: 'docs', commands: { test: 'true' } }),
-			null, 'x', { name: 'n', commands: null },
-		],
-	})
+test('each --run gives a component, the folder its command runs in and the command, normalized', () => {
+	const { components, problems } = mutationRuns(['api@.\\api\\=  node mutation.mjs  ', 'web=npx stryker run --incremental', 'docs@=a=b'])
 	assert.deepEqual(problems, [])
 	assert.deepEqual(components, [
 		{ name: 'api', root: 'api', command: 'node mutation.mjs' },
-		{ name: 'web', root: '.', command: 'node mutation.mjs' },
+		{ name: 'web', root: '.', command: 'npx stryker run --incremental' },
+		{ name: 'docs', root: '.', command: 'a=b' },
 	])
+	assert.deepEqual(mutationRuns([]), { components: [], problems: [] })
 })
 
-test('a config without components or without any mutation command runs nothing', () => {
-	assert.deepEqual(mutationComponents({}), { components: [], problems: [] })
-	assert.deepEqual(mutationComponents(null), { components: [], problems: [] })
-	assert.deepEqual(mutationComponents({ components: [component({ commands: {} })] }).components, [])
+test('a run the gate cannot place is a problem naming it, never a silent skip', () => {
+	const problems = (spec) => mutationRuns([spec]).problems
+	assert.deepEqual(problems('api@../elsewhere=x'), ['api: root must be a folder inside the repository'])
+	assert.deepEqual(problems('api@/abs=x'), ['api: root must be a folder inside the repository'])
+	assert.deepEqual(problems('api@C:/x=x'), ['api: root must be a folder inside the repository'])
+	assert.deepEqual(problems('api=  '), ['api: the mutation command is empty'])
+	assert.deepEqual(problems('node mutation.mjs'), ['--run node mutation.mjs: expected <name>[@<root>]=<command>'])
+	assert.deepEqual(problems(' @api=x'), ['--run  @api=x: the component name is required'])
+	assert.deepEqual(mutationRuns(['api=x', 'api=y']).problems, ['api: given twice'])
+	assert.deepEqual(mutationRuns(['api@apps/api=x']).components[0].root, 'apps/api')
 })
 
-test('a mutation command the gate cannot place is a problem naming the entry, never a silent skip', () => {
-	const problems = (patch) => mutationComponents({ components: [component(patch)] }).problems
-	assert.deepEqual(mutationComponents({ components: 'x' }).problems, ['components must be a list'])
-	assert.deepEqual(problems({ root: '../elsewhere' }), ['api: root must be a folder inside the repository'])
-	assert.deepEqual(problems({ root: '/abs' }), ['api: root must be a folder inside the repository'])
-	assert.deepEqual(problems({ root: 'C:/x' }), ['api: root must be a folder inside the repository'])
-	assert.deepEqual(problems({ commands: { mutation: '  ' } }), ['api: commands.mutation must be a command'])
-	assert.deepEqual(problems({ name: undefined }), ['components[0]: name is required'])
-	assert.deepEqual(mutationComponents({ components: [component(), component()] }).problems, ['api: declared twice'])
-	assert.deepEqual(problems({ root: '.' }), [])
-	assert.deepEqual(mutationComponents({ components: [component({ root: 'apps/api' })] }).components[0].root, 'apps/api')
+test('a command with no base or incremental option is a full run, and is warned', () => {
+	const warn = (command) => fullRunWarning({ name: 'api', command })
+	assert.match(warn('dotnet stryker'), /^warning: api runs a full mutation \(no --since, \{baseSha\}, delta or incremental option\)/)
+	for (const command of ['dotnet stryker --since:{baseSha}', 'dotnet stryker --since main', 'npx stryker run --incremental', 'mvn pitest:mutationCoverage -DwithHistory', 'cosmic-ray --diff', 'mutmut run --paths-to-mutate $(git diff --name-only)', 'npm run mutation:delta', 'node m.mjs --changed']) {
+		assert.equal(warn(command), null, command)
+	}
+})
+
+test('DELIVER never runs G6: its rationale sends the developer to /skraft-mutation', () => {
+	assert.match(PIPELINE_NOT_RUN, /^G6 not run: .*outside the pipeline.*\/skraft-mutation/)
 })
 
 test('{baseSha} takes the base revision; a command that needs one without it is refused', () => {
@@ -130,26 +128,4 @@ test('a scope below 80%, a failed command or an unreadable result fails the gate
 	assert.deepEqual(low.scores.map(({ passed }) => passed), [false, true])
 	assert.deepEqual(mutationVerdict([run('api', 2, [{ name: 'global', score: 99 }])]).problems, ['api: the mutation command exited 2'])
 	assert.deepEqual(mutationVerdict([{ name: 'api', exitCode: 1, reading: { ok: false, reason: 'is missing' } }]).problems, ['api: the mutation command exited 1', 'api: the mutation result is missing'])
-})
-
-test('mutation runs in the pipeline unless the team set mutation.pipeline to false', () => {
-	assert.equal(inPipeline({}), true)
-	assert.equal(inPipeline(null), true)
-	assert.equal(inPipeline({ mutation: {} }), true)
-	assert.equal(inPipeline({ mutation: { pipeline: true } }), true)
-	assert.equal(inPipeline({ mutation: { pipeline: false } }), false)
-	assert.equal(inPipeline({ mutation: false }), true)
-	assert.equal(MANUAL_EVIDENCE, '.copilot-tracking/mutation')
-})
-
-test('a developer run stands for G6 only when it judged HEAD on a clean working copy', () => {
-	const run = { revision: 'abc', clean: true, exit_code: 0 }
-	assert.equal(reusableRun(run, 'abc'), true)
-	assert.equal(reusableRun({ ...run, exit_code: 1 }, 'abc'), true)
-	assert.equal(reusableRun(run, 'def'), false)
-	assert.equal(reusableRun({ ...run, clean: false }, 'abc'), false)
-	assert.equal(reusableRun({ ...run, exit_code: 2 }, 'abc'), false)
-	assert.equal(reusableRun({ ...run, exit_code: 3 }, 'abc'), false)
-	assert.equal(reusableRun({ revision: 'abc', exit_code: 0 }, 'abc'), false)
-	assert.equal(reusableRun(null, 'abc'), false)
 })

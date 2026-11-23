@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Every quality gate of a .NET story in one command: runs G1–G7 and G11, writes the G9
+// Every quality gate of a .NET story in one command: runs G1–G5, G7 and G11, records G6
+// `not_run` (mutation runs outside the pipeline, through /skraft-mutation), writes the G9
 // snapshots, lists the covered commits, assembles the evidence log (contract v6), commits the
 // evidence directory alone and runs qg-verify on it. Exit: qg-verify's (0 pass, 1 fail,
 // 2 inconclusive), or 2 on a usage error.
 //   node qg-collect.mjs --root . --evidence <dir> --story <story> --feature <scope> --base <sha>
 //     --cycle <k>:<red sha>:<green sha>:<acceptance test file> [--cycle …]
-//     [--mutation-gate <mutation-testing skill>/scripts/mutation-gate/cli/mutation-gate.mjs]
 //     [--solution <file>] [--no-commit]
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -18,8 +18,10 @@ import { absoluteDir, dotnetCommand, fromRoot, isEntry, main, parseArguments, us
 import { runNoMocks } from './no-mocks-in-core.mjs'
 import { snapshot } from './snapshot.mjs'
 
-const USAGE = 'usage: qg-collect.mjs --root <repo> --evidence <dir> --story <story> --feature <scope> --base <sha> --cycle <k>:<red>:<green>:<file> [--cycle …] [--mutation-gate <cli>] [--solution <file>] [--no-commit]'
+const USAGE = 'usage: qg-collect.mjs --root <repo> --evidence <dir> --story <story> --feature <scope> --base <sha> --cycle <k>:<red>:<green>:<file> [--cycle …] [--solution <file>] [--no-commit]'
 const HERE = dirname(fileURLToPath(import.meta.url))
+// G6 is never run by the pipeline: the developer runs /skraft-mutation.
+export const MUTATION_NOT_RUN = 'G6 not run: mutation testing runs outside the pipeline; the developer runs /skraft-mutation.'
 
 const git = (root, args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trimEnd()
 const read = (path) => (existsSync(path) ? readFileSync(path, 'utf8') : '')
@@ -62,7 +64,7 @@ async function runDotnet(evidence, root, name, args) {
 
 export async function collect(argv) {
 	const input = parseArguments(argv, {
-		values: ['root', 'evidence', 'story', 'feature', 'base', 'mutation-gate', 'solution'],
+		values: ['root', 'evidence', 'story', 'feature', 'base', 'solution'],
 		repeated: ['cycle'], flags: ['no-commit'], usage: USAGE,
 	})
 	for (const name of ['root', 'evidence', 'story', 'feature', 'base']) if (!input[name]) throw usageError(`--${name} is required\n${USAGE}`)
@@ -82,23 +84,12 @@ export async function collect(argv) {
 	const archCommand = await runDotnet(evidence, root, 'qg-arch', ['test', solution, '--nologo', '--filter', 'FullyQualifiedName~Architecture', '--logger', 'trx;LogFileName=qg-arch.trx', '--results-directory', evidence])
 	runNoMocks(['--root', root, '--evidence', evidence])
 	runCoverage(['--root', root, '--evidence', evidence, '--solution', solution])
-	let mutationCommand
-	if (input['mutation-gate']) {
-		const args = ['--root', root, '--evidence', evidence, '--since', input.base, '--pipeline']
-		spawnSync(process.execPath, [input['mutation-gate'], ...args], { cwd: root, stdio: 'ignore' })
-		mutationCommand = `node ${input['mutation-gate']} ${args.join(' ')}`
-	}
 
 	const testsMetrics = trxMetrics(read(join(evidence, 'qg-tests.trx')))
 	const archMetrics = trxMetrics(read(join(evidence, 'qg-arch.trx')))
 	const tests = gateFrom(evidence, ref, 'G1', 'Acceptance test(s) pass', 'qg-tests', testsCommand, testsMetrics ? { metrics: testsMetrics } : {})
 	const build = gateFrom(evidence, ref, 'G3', 'Build passes', 'qg-build', buildCommand)
-	const mutationExit = read(join(evidence, 'qg-mutation.exit')).trim()
-	const mutation = !mutationCommand
-		? { id: 'G6', label: 'Mutation score meets the bar', status: 'fail', rationale: 'qg-collect ran without --mutation-gate' }
-		: mutationExit === '3'
-			? { id: 'G6', label: 'Mutation score meets the bar', status: 'not_run', rationale: read(join(evidence, 'qg-mutation.stdout')).split(/\r?\n/)[0] || 'no mutation command declared' }
-			: gateFrom(evidence, ref, 'G6', 'Mutation score meets the bar', 'qg-mutation', mutationCommand)
+	const mutation = { id: 'G6', label: 'Mutation score meets the bar', status: 'not_run', rationale: MUTATION_NOT_RUN }
 	const gates = [
 		tests,
 		{ ...tests, id: 'G2', label: 'All unit tests pass' },

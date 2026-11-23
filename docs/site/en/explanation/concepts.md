@@ -60,7 +60,7 @@ Mutation Score measures test suite effectiveness, not just code coverage. Mutati
 
 In the DELIVER phase, the Mutation Score serves as a quality gate: an insufficient score blocks the reviewer's PASS verdict.
 
-**Mutation testing is the developer's responsibility.** It must be done on every story, with the tool of your choice: SKRAFT ships no mutation tool, config or scaffold. Declare per component in `skraft-config.json` the command that runs your tool (`components[].commands.mutation`); it writes its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT`, with its surviving mutants as `file:line detail` lines unless the team turns them off — `core` and `boundary` for Clean Architecture, `global` for a single project. The `mutation-testing` skill's gate runs it and holds every scope to 80%. With no command declared, G6 does not run and the report says so.
+**Mutation testing is the developer's responsibility.** It must be done on every story, with the tool of your choice: SKRAFT ships no mutation tool, config or scaffold. The pipeline never runs it: every delivery records G6 `not_run` and the report says so. Run `/skraft-mutation` when you choose: it asks for each component's command (proposing one found in `CONTRIBUTING.md`, warning on a full, non-incremental run); the command writes its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT`, with its surviving mutants as `file:line detail` lines unless the team leaves them out — `core` and `boundary` for Clean Architecture, `global` for a single project — and the gate holds every scope to 80%.
 
 ## Object Calisthenics
 

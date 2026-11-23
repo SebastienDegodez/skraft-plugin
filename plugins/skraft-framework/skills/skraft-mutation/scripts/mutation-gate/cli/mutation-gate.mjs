@@ -1,52 +1,33 @@
 #!/usr/bin/env node
-// G6 — the mutation gate. Mutation testing is the developer's responsibility: this runs the
-// mutation command each component declares in skraft-config.json (`commands.mutation`) with
-// SKRAFT_MUTATION_RESULT naming the file it writes its scores and survivors to, then holds every
-// scope (core and boundary, or global) to 80% and lists every survivor to kill.
+// G6 — the mutation gate, run by /skraft-mutation on the developer's demand, never by the
+// pipeline. Mutation testing is the developer's responsibility: this runs the command they give
+// for each component with SKRAFT_MUTATION_RESULT naming the file it writes its scores and
+// survivors to, then holds every scope (core and boundary, or global) to 80% and lists every
+// survivor to kill.
 //
-//   node mutation-gate.mjs --root <repo> --evidence <dir> [--since <base>] [--pipeline]
+//   node mutation-gate.mjs --root <repo> --evidence <dir> --run <name>[@<root>]=<command> [--run …] [--since <base>]
 //
-// --pipeline: DELIVER's run. When the team set `mutation.pipeline` to false, the developer runs
-// /skraft-mutation instead (evidence in .copilot-tracking/mutation): DELIVER reuses that run
-// when it judged HEAD on a clean working copy, and otherwise does not run G6.
+// A command with no --since, {baseSha}, delta or incremental option mutates the whole component:
+// the gate warns before running it.
 //
 // Writes <evidence>/qg-mutation.stdout, .exit, .stdout.sha256 and qg-mutation/ (each command's
 // log and result, manifest.json).
-// Exit: 0 pass · 1 gate failed · 2 blocked (invalid config or input) · 3 not run (no command).
+// Exit: 0 pass · 1 gate failed · 2 blocked (no run given, invalid input).
 import { execFileSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { closeSync, openSync, realpathSync } from 'node:fs'
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { MANUAL_EVIDENCE, MUTATION_BAR, RESULT_VARIABLE, inPipeline, mutationComponents, mutationVerdict, readResult, reusableRun, withBase } from '../domain/mutation-gate-policy.mjs'
+import { MUTATION_BAR, RESULT_VARIABLE, fullRunWarning, mutationRuns, mutationVerdict, readResult, withBase } from '../domain/mutation-gate-policy.mjs'
 
-export const EXIT = Object.freeze({ pass: 0, fail: 1, blocked: 2, notRun: 3 })
-const CONFIG_FILE = 'skraft-config.json'
-const NOT_RUN = [
-	`G6 not run: no component declares commands.mutation in ${CONFIG_FILE}.`,
-	'Mutation testing is the developer\'s responsibility: declare the command that runs your mutation tool',
-	`and writes its scores and survivors to $${RESULT_VARIABLE} with /skraft-init mutation, and SKRAFT runs it on every story.`,
-]
-const notInPipeline = (head) => [
-	`G6 not run: mutation runs outside the pipeline (${CONFIG_FILE} sets mutation.pipeline to false),`,
-	`and no developer run judged HEAD ${head} on a clean working copy. Run /skraft-mutation, then deliver again.`,
-]
+export const EXIT = Object.freeze({ pass: 0, fail: 1, blocked: 2 })
+const USAGE = 'usage: mutation-gate.mjs --root <repo> --evidence <dir> --run <name>[@<root>]=<command> [--run …] [--since <base>]'
 
 const sha256 = (text) => createHash('sha256').update(text).digest('hex')
 const git = (root, args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
 const toPosix = (path) => path.split('\\').join('/')
-
-async function readConfig(root) {
-	const text = await readFile(join(root, CONFIG_FILE), 'utf8').catch((error) => (error.code === 'ENOENT' ? null : Promise.reject(error)))
-	if (text === null) return {}
-	try {
-		return JSON.parse(text)
-	} catch {
-		throw new Error(`${CONFIG_FILE} is not valid JSON`)
-	}
-}
 
 // Tracked files that differ from HEAD, with a hash of their content, so a run that leaves a
 // source modified (a mutant not restored) is caught even in a file already modified before it.
@@ -64,13 +45,12 @@ function runCommand(command, { cwd, log, result }) {
 	}).finally(() => closeSync(out))
 }
 
-export async function runMutationGate({ root: rootInput, evidence: evidenceInput, since, pipeline = false }) {
+export async function runMutationGate({ root: rootInput, evidence: evidenceInput, since, run = [] }) {
 	const lines = []
 	const manifest = { bar: MUTATION_BAR, components: [] }
 	let exitCode = EXIT.blocked
 	let prefix
 	let root
-	let reused = false
 	try {
 		root = resolve(rootInput)
 		const evidence = resolve(root, evidenceInput)
@@ -79,30 +59,12 @@ export async function runMutationGate({ root: rootInput, evidence: evidenceInput
 		for (const stale of [`${prefix}.stdout`, `${prefix}.exit`, `${prefix}.stdout.sha256`, prefix]) await rm(stale, { recursive: true, force: true })
 		await mkdir(prefix)
 
-		const config = await readConfig(root)
-		const { components, problems } = mutationComponents(config)
+		const { components, problems } = mutationRuns(run)
 		if (problems.length) throw new Error(problems.join('; '))
-		if (components.length === 0) {
-			lines.push(...NOT_RUN)
-			manifest.verdict = { status: 'not_run' }
-			exitCode = EXIT.notRun
-			return { exitCode, manifest, lines }
-		}
-		if (pipeline && !inPipeline(config)) {
-			const head = git(root, ['rev-parse', 'HEAD'])
-			const manual = join(root, MANUAL_EVIDENCE, 'qg-mutation')
-			const run = await readFile(join(manual, 'manifest.json'), 'utf8').then(JSON.parse).catch(() => null)
-			if (!reusableRun(run, head)) {
-				lines.push(...notInPipeline(head))
-				manifest.verdict = { status: 'not_run' }
-				exitCode = EXIT.notRun
-				return { exitCode, manifest, lines }
-			}
-			for (const suffix of ['.stdout', '.exit', '.stdout.sha256', '']) await cp(`${manual}${suffix}`, `${prefix}${suffix}`, { recursive: true, force: true })
-			reused = true
-			exitCode = run.exit_code
-			lines.push(`G6 reuses the developer's /skraft-mutation run on HEAD ${head}:`, ...(await readFile(`${manual}.stdout`, 'utf8')).trimEnd().split('\n'))
-			return { exitCode, manifest: run, lines }
+		if (components.length === 0) throw new Error(`no component to run: give one --run per component\n${USAGE}`)
+		for (const component of components) {
+			const warning = fullRunWarning(component)
+			if (warning) lines.push(warning)
 		}
 		const base = since ? git(root, ['rev-parse', '--verify', `${since}^{commit}`]) : undefined
 		const commands = components.map((component) => ({ ...component, line: withBase(component.command, base) }))
@@ -147,7 +109,7 @@ export async function runMutationGate({ root: rootInput, evidence: evidenceInput
 		lines.push(`mutation gate ${exitCode === EXIT.blocked ? 'blocked' : 'failed'}: ${error.message}`)
 		return { exitCode, manifest, lines }
 	} finally {
-		if (prefix && !reused) {
+		if (prefix) {
 			manifest.exit_code = exitCode
 			const text = `${lines.join('\n')}\n`
 			await writeFile(join(prefix, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`).catch(() => {})
@@ -161,8 +123,8 @@ export async function runMutationGate({ root: rootInput, evidence: evidenceInput
 async function main() {
 	let result
 	try {
-		const { values } = parseArgs({ options: { root: { type: 'string', default: '.' }, evidence: { type: 'string' }, since: { type: 'string' }, pipeline: { type: 'boolean', default: false } } })
-		if (!values.evidence) throw new Error('usage: mutation-gate.mjs --root <repo> --evidence <dir> [--since <base>] [--pipeline]')
+		const { values } = parseArgs({ options: { root: { type: 'string', default: '.' }, evidence: { type: 'string' }, since: { type: 'string' }, run: { type: 'string', multiple: true, default: [] } } })
+		if (!values.evidence) throw new Error(USAGE)
 		result = await runMutationGate(values)
 	} catch (error) {
 		result = { exitCode: EXIT.blocked, lines: [`mutation gate blocked: ${error.message}`] }

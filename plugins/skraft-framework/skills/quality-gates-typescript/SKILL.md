@@ -55,11 +55,9 @@ Asks ESLint for the resolved config of a source file and fails unless
 
 ## G6 — Mutation score
 
-Mutation testing is the developer's responsibility: this adapter runs no mutation tool and
-ships no mutation config. Load `mutation-testing` and run its gate once, after the story's last
-work commit; it runs the `commands.mutation` the developer declared in `skraft-config.json` and
-judges the report. Exit 3 means none is declared: record G6 `not_run`, never `pass`, and tell
-the developer.
+Never run in a delivery. This adapter runs no mutation tool or gate and ships no mutation
+config: record G6 `not_run` with the rationale `G6 not run: mutation testing runs outside the
+pipeline; the developer runs /skraft-mutation.`, never `pass`, and tell the developer.
 
 ## G7 — No test doubles in the core and the unit tests
 
@@ -98,7 +96,7 @@ captured: the `test` commit is the RED.
 
 ## Producer flow at the end of the story
 
-1. Run G1/G2, G3, G4, G5, G6 (`mutation-testing`'s gate), G7, G11 — each through its script.
+1. Run G1/G2, G3, G4, G5, G7, G11 — each through its script.
 2. Dump the RED and GREEN snapshots per scenario.
 3. `repo_root_rev = git rev-parse HEAD`; build `commits_covered[]` from the DELIVER base.
 4. Assemble `$EV/qg-{story}.json` (contract v6) with `"tech_adapter": "quality-gates-typescript"`, commit `$EV` alone, then run `qg-verify`.

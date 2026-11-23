@@ -2,7 +2,7 @@
 // verification in one command — one turn of the engineer instead of ten.
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -81,23 +81,7 @@ const story = (name) => {
   return { root, git, base, red, greens, test }
 }
 
-// A mutation gate that writes its evidence and exits with the given code, as mutation-testing's does.
-const mutationGate = (exit, stdout) => {
-  const gate = join(workspace, `mutation-gate-${exit}.mjs`)
-  writeFileSync(gate, `import { createHash } from 'node:crypto'
-import { writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-const ev = process.argv[process.argv.indexOf('--evidence') + 1]
-const out = ${JSON.stringify(stdout)}
-writeFileSync(join(ev, 'qg-mutation.stdout'), out)
-writeFileSync(join(ev, 'qg-mutation.exit'), '${exit}\\n')
-writeFileSync(join(ev, 'qg-mutation.stdout.sha256'), createHash('sha256').update(out).digest('hex') + '\\n')
-process.exit(${exit})
-`)
-  return gate
-}
-
-const collect = ({ root, base, red, greens, test }, env = {}, extra = ['--mutation-gate', mutationGate(0, 'Mutation score 92%\n')]) =>
+const collect = ({ root, base, red, greens, test }, env = {}, extra = []) =>
   spawnSync(process.execPath, [COLLECT, '--root', root, '--evidence', '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout',
     '--story', 'checkout', '--feature', 'shop', '--base', base,
     '--cycle', `1:${red}:${greens[0]}:${test}`, '--cycle', `2:${red}:${greens[1]}:${test}`, ...extra], {
@@ -123,15 +107,24 @@ describe('qg-collect', () => {
     assert.deepEqual(repo.git('show', '--name-only', '--format=', 'HEAD').split('\n').every((file) => file.startsWith('.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout/')), true)
   })
 
-  it('records G6 not_run with the gate\'s reason when no mutation command is declared', () => {
+  it('records G6 not_run and runs no mutation: the developer runs /skraft-mutation', () => {
     const repo = story('mutation')
-    const gate = mutationGate(3, 'no component declares commands.mutation\n')
 
-    const result = collect(repo, {}, ['--mutation-gate', gate])
+    const result = collect(repo)
 
     assert.equal(result.status, 0, result.stdout + result.stderr)
-    const log = JSON.parse(readFileSync(join(repo.root, '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout/qg-checkout.json'), 'utf8'))
-    assert.deepEqual(log.gates[5], { id: 'G6', label: 'Mutation score meets the bar', status: 'not_run', rationale: 'no component declares commands.mutation' })
+    const evidence = join(repo.root, '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout')
+    const log = JSON.parse(readFileSync(join(evidence, 'qg-checkout.json'), 'utf8'))
+    assert.deepEqual(log.gates[5], { id: 'G6', label: 'Mutation score meets the bar', status: 'not_run', rationale: 'G6 not run: mutation testing runs outside the pipeline; the developer runs /skraft-mutation.' })
+    assert.equal(existsSync(join(evidence, 'qg-mutation.exit')), false)
+  })
+
+  it('refuses --mutation-gate: the pipeline never runs mutation', () => {
+    const repo = story('no-gate')
+
+    const result = collect(repo, {}, ['--mutation-gate', 'gate.mjs'])
+
+    assert.equal(result.status, 2, result.stdout + result.stderr)
   })
 
   it('fails when a test fails, and still writes and commits the log', () => {
@@ -147,7 +140,7 @@ describe('qg-collect', () => {
   it('marks G5 not applicable when the solution holds no architecture test', () => {
     const repo = story('no-arch')
 
-    collect(repo, { FAKE_ARCH_COUNTS: '0,0,0' }, ['--no-commit', '--mutation-gate', mutationGate(0, 'ok\n')])
+    collect(repo, { FAKE_ARCH_COUNTS: '0,0,0' }, ['--no-commit'])
 
     const log = JSON.parse(readFileSync(join(repo.root, '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout/qg-checkout.json'), 'utf8'))
     assert.equal(log.gates[4].status, 'not_applicable')
