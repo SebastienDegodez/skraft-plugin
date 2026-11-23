@@ -9,6 +9,21 @@ persona: tech-lead
 Agents that produce, lenses that judge, an engine that decides and a driver that starts.
 Nobody approves their own work, and no agent starts another.
 
+## Two independent relay races <!-- #standalone -->
+
+Outside the framework pipeline, the `skraft-design` skill conducts readiness, RESEARCH, DESIGN,
+the consistency / architecture-compliance / fitness review and refutation before its architecture
+PR. Each new ADR stays Proposed on the branch and becomes Accepted only when a human merges that
+PR; no separate ADR ratification is asked. `design-solution-architect` produces each story brief;
+an epic is split into passes of at most 20 stories. Producers and lenses never dispatch other agents.
+
+After human merge, the independent `skraft-deliver` skill supplies the brief and cited documents
+to `deliver-acceptance-designer`, then `deliver-software-engineer`. DISTILL review and human
+scenario approval precede TDD; gates and delivery review precede visuals and PR publication.
+The host session alone starts the workers requested by each engine. Neither skill invokes the
+other engine. The [catalogue](../../reference/catalogue.md) owns the full worker and lens inventory;
+[the how-to](../../how-to/design-then-deliver.mdx) describes installation and freshness refusals.
+
 ## Four roles, never mixed
 
 SKRAFT is not a monolithic agent. The work splits into four roles, and each does only its own.

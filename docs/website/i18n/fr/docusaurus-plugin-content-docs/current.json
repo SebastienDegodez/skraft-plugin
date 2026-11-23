@@ -127,6 +127,10 @@
     "message": "Installer skraft sur un hôte",
     "description": "The label for the doc item 'Install skraft on a host' in sidebar 'howTo', linking to the doc how-to/install-on-a-host"
   },
+  "sidebar.howTo.doc.how-to/design-then-deliver": {
+    "message": "Concevoir puis livrer",
+    "description": "The label for the doc item 'Design then deliver' in sidebar 'howTo', linking to the doc how-to/design-then-deliver"
+  },
   "sidebar.howTo.doc.how-to/machine-setup": {
     "message": "Configurer son poste",
     "description": "The label for the doc item 'Set up your machine' in sidebar 'howTo', linking to the doc how-to/machine-setup"

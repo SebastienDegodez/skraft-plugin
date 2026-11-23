@@ -9,6 +9,31 @@ persona: tech-lead
 Un seul moteur décide de tout ; chaque hôte le fait tourner avec ce qu'il sait faire. Seul
 le pilote lance des agents, et aucun agent n'en lance un autre.
 
+## Design et livraison independants <!-- #standalone -->
+
+`skraft-framework` conserve son moteur et ses pilotes existants. Les plugins installables seuls
+`skraft-design` et `skraft-deliver` portent leurs moteurs, agents, configurations et journaux ;
+ils n'importent ni framework ni l'autre plugin. Leur session hote conduit une boucle MCP privee
+`next` / `record`, sans CLI utilisateur. La verification native des hotes reste en attente.
+
+```mermaid
+flowchart LR
+    DH["Host session: design"] --> R["design-solution-researcher"]
+    DH --> A["design-solution-architect"]
+    DH --> V["DESIGN review and refuter"]
+    A --> B["Story brief + cited documents"]
+    B --> M["Architecture PR merged by human"]
+    M -.-> T["Host session: deliver"]
+    T --> S["deliver-acceptance-designer"]
+    T --> I["deliver-software-engineer"]
+    T --> W["Delivery review and refuter"]
+```
+
+Seuls les documents versions franchissent cette frontiere. Deliver copie le commit de la base
+recuperee, pas l'arbre de travail. Le brief est optionnel, mais un brief non fusionne ou un ADR cite
+invalide n'est jamais ignore en silence. Voir [Concevoir, fusionner, puis livrer](../how-to/design-then-deliver.mdx)
+et [Equipe](./pipeline/team.md#standalone) pour les passages entre phases.
+
 ## Le problème à résoudre
 
 SKRAFT doit dérouler le même pipeline sous Claude Code, GitHub Copilot CLI et VS Code, sur

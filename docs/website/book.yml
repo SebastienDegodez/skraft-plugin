@@ -217,6 +217,13 @@ parts:
             doc: how-to/install-on-a-host
             purpose_fr: "Installer le plugin dans Claude Code, Copilot CLI ou VS Code, puis verifier que l'hote le voit et que la ligne de commande repond."
             purpose_en: "Install the plugin in Claude Code, Copilot CLI or VS Code, then check that the host sees it and that the command line answers."
+          - id: design-then-deliver
+            type: editorial
+            label_fr: "Concevoir puis livrer"
+            label_en: "Design then deliver"
+            doc: how-to/design-then-deliver
+            purpose_fr: "Installer deux plugins autonomes, fusionner leur brief d'architecture et livrer avec ou sans brief."
+            purpose_en: "Install independent plugins, merge the architecture brief and deliver with or without a brief."
           - id: machine-setup
             type: editorial
             label_fr: "Configurer son poste"

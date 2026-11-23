@@ -1,0 +1,16 @@
+{
+  "name": "skraft-design-engine",
+  "version": "0.1.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "10.12.0"
+  }
+}

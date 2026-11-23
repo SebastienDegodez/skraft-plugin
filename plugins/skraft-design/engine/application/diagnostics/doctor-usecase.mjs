@@ -1,0 +1,319 @@
+import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
+import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
+import { gatesOf, STORY_GATES } from '../../domain/gates/gate-plan.mjs'
+import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
+import { readWorkflows } from '../workflow/load-workflow.mjs'
+import { findComponentSkills } from '../pipeline/component-skills.mjs'
+import { forgeCheck } from './forge-check.mjs'
+import { modelChecks } from './model-checks.mjs'
+import { joinRelative } from '../../domain/config/relative-path.mjs'
+import { needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
+import { mutationCheck } from './mutation-check.mjs'
+
+/**
+ * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
+ * @typedef {import('../../domain/config/skraft-config.mjs').BddPair} BddPair
+ * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
+ * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
+ *   subject: `node`, `config`, `forge`, `models`, `models/<host>`, `<component>`,
+ *   `<component>/<command>`, `mutation`, `infrastructure`, `container-runtime` or `vscode`; warn: worth
+ *   knowing, never a failure.
+ * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
+ *   assignments: what each agent the workflow dispatches runs on, by host; null when the
+ *   configuration or the workflow cannot be read.
+ * @typedef {{
+ *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list' | 'write'>,
+ *   userSettings: import('../ports/user-settings.mjs').UserSettings,
+ *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
+ *   executables: import('../ports/executables.mjs').Executables,
+ *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
+ *   sourceControl: import('../ports/source-control.mjs').SourceControl,
+ *   runtime: import('../ports/runtime.mjs').Runtime,
+ *   copilotSdk: import('../ports/copilot-sdk.mjs').CopilotSdk,
+ * } & import('./model-checks.mjs').ModelCheckDeps & import('../config/forge.mjs').ForgeDeps & import('./mutation-check.mjs').MutationCheckDeps} DoctorDeps
+ */
+
+const NODE_MAJOR = 22
+
+/**
+ * Doctor — checks that every command of every component can run on this machine: Node, the
+ * configuration, the forge, each component's root, each command's program, the skills the agents writing
+ * its tests are asked to read, the infrastructure policy of its tests,
+ * Docker or Podman when a policy runs a container, then what each agent the workflow dispatches
+ * runs on, per host, and last how VS Code runs the pipeline.
+ * With `run`, starts each command once from its component's root.
+ * @param {DoctorDeps} deps
+ */
+export const createDoctor = (deps) => Object.freeze({
+  /** @param {{ run?: boolean, base?: string | null }} [request] @returns {Promise<DoctorReport>} */
+  check: (request) => check(deps, request),
+})
+
+/**
+ * Node, then the configuration; the rest only once the configuration names components.
+ * @param {DoctorDeps} deps @param {{ run?: boolean, base?: string | null }} [request]
+ * @returns {Promise<DoctorReport>}
+ */
+const check = async (deps, { run = false, base = null } = {}) => {
+  const checks = [nodeCheck(deps.runtime.nodeVersion())]
+  const configured = configCheck(await loadConfig(deps))
+  checks.push(configured.check)
+  const vscode = vscodeCheck(await deps.copilotSdk.locate())
+  if (!configured.ok) return report([...checks, vscode], null)
+  const forge = await forgeCheck(deps, configured.config.forge)
+  const commands = await configuredChecks(deps, configured.config, { run, base })
+  const models = await modelsOf(deps, configured.config)
+  return report([...checks, forge, ...commands, ...models.checks, vscode], models.assignments)
+}
+
+/**
+ * How VS Code runs the pipeline: through the Copilot SDK when the Copilot CLI ships one, else
+ * through the agent loop the orchestrator agent conducts.
+ * @param {import('../ports/copilot-sdk.mjs').CopilotSdkLocation} location @returns {DoctorCheck}
+ */
+const vscodeCheck = (location) => ({
+  subject: 'vscode', status: 'ok',
+  detail: location.found
+    ? `Copilot SDK ${location.version} (${location.sdk}): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`
+    : `no Copilot SDK under ${location.looked}: under VS Code, the Skraft Design - Orchestrator agent conducts skraft next and skraft record; install the Copilot CLI to run the pipeline through its SDK`,
+})
+
+/**
+ * The base with `run`, each component, the infrastructure of their tests, then the container runtime.
+ * @param {DoctorDeps} deps @param {SkraftConfig} config
+ * @param {{ run: boolean, base: string | null }} request
+ * @returns {Promise<DoctorCheck[]>}
+ */
+const configuredChecks = async (deps, config, { run, base }) => {
+  const resolved = run ? await resolveBases(deps, { config, flag: base }) : null
+  /** @type {DoctorCheck[]} */
+  const checks = resolved?.ok === false ? [{ subject: 'base', status: 'fail', detail: resolved.reason }] : []
+  for (const component of config.components) {
+    checks.push(...await componentChecks(deps, component, { run, baseSha: baseShaOf(resolved, component.name) }))
+  }
+  checks.push(await mutationCheck(deps, config.components))
+  return [...checks, ...config.components.flatMap(infrastructureChecks), ...await containerChecks(deps, config.components)]
+}
+
+/**
+ * What the component's tests run each dependency on, row by row.
+ * @param {Component} component @returns {DoctorCheck[]}
+ */
+const infrastructureChecks = (component) => policyLines(component).map((detail) => ({ subject: 'infrastructure', status: /** @type {const} */ ('ok'), detail }))
+
+/** The container runtimes doctor asks, in order. */
+const RUNTIMES = Object.freeze(['docker', 'podman'])
+/** How long a runtime may take to answer `info`. */
+const RUNTIME_TIMEOUT_MS = 15_000
+const NO_CONTAINERS = 'the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs'
+
+/**
+ * The first container runtime on the PATH that answers, when a component's policy runs a
+ * container; a warning, never a failure, when none does.
+ * @param {DoctorDeps} deps @param {Component[]} components @returns {Promise<DoctorCheck[]>}
+ */
+const containerChecks = async (deps, components) => {
+  if (!components.some(needsContainers)) return []
+  // Stryker disable next-line StringLiteral: the working copy resolves '' and '.' to the same folder
+  const found = (await Promise.all(RUNTIMES.map((runtime) => deps.executables.locate(runtime, '.')))).flatMap((located, index) => (located === null ? [] : [RUNTIMES[index]]))
+  for (const runtime of found) {
+    if (await answers(deps, runtime)) return [{ subject: 'container-runtime', status: 'ok', detail: `${runtime} answers ${runtime} info` }]
+  }
+  return [{ subject: 'container-runtime', status: 'warn', detail: `${silent(found)}; ${NO_CONTAINERS}` }]
+}
+
+/** Whether `<runtime> info` exits 0. @param {DoctorDeps} deps @param {string} runtime */
+const answers = async (deps, runtime) => (await deps.commandRunner.run({ argv: [runtime, 'info'], cwd: '.', timeoutMs: RUNTIME_TIMEOUT_MS })).exitCode === 0
+
+/** Why no runtime answers. @param {string[]} found the runtimes on the PATH */
+const silent = (found) => (found.length === 0 ? `neither ${RUNTIMES.join(' nor ')} is on the PATH` : found.map((runtime) => `${runtime} does not answer ${runtime} info`).join(', '))
+
+/**
+ * The config check, and the configuration once it names at least one component.
+ * @param {Awaited<ReturnType<typeof loadConfig>>} loaded
+ * @returns {{ ok: true, check: DoctorCheck, config: SkraftConfig } | { ok: false, check: DoctorCheck }}
+ */
+const configCheck = (loaded) => {
+  if (!loaded.ok) return { ok: false, check: configFails(loaded.reason) }
+  const { components } = loaded.config
+  if (!loaded.present) return { ok: false, check: configFails(`no ${CONFIG_FILE}; run skraft init to detect the components`) }
+  if (components.length === 0) return { ok: false, check: configFails(NO_COMPONENT) }
+  const names = components.map(({ name }) => name).join(', ')
+  return { ok: true, check: { subject: 'config', status: 'ok', detail: `${components.length} components: ${names}` }, config: loaded.config }
+}
+
+/**
+ * The base a component's commands get: HEAD without `run`, none when the bases did not resolve.
+ * @param {Awaited<ReturnType<typeof resolveBases>> | null} resolved @param {string} component
+ */
+const baseShaOf = (resolved, component) => {
+  if (resolved === null) return 'HEAD'
+  return resolved.ok ? baseOf(resolved.bases, component)?.sha ?? null : null
+}
+
+/**
+ * The root, the gates, each command, then its skills; a root that is not a folder is the only check.
+ * @param {DoctorDeps} deps @param {Component} component
+ * @param {{ run: boolean, baseSha: string | null }} request
+ * @returns {Promise<DoctorCheck[]>}
+ */
+const componentChecks = async (deps, component, { run, baseSha }) => {
+  if ((await deps.workspace.list(component.root)) === null) {
+    return [{ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` }]
+  }
+  /** @type {DoctorCheck[]} */
+  const checks = gatesOf(component).some((gate) => STORY_GATES.includes(gate)) ? [] : [{ subject: component.name, status: 'fail', detail: NO_GATE }]
+  for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
+  return [...checks, ...await bddChecks(deps, component), ...await skillChecks(deps, component)]
+}
+
+/**
+ * Where each runner of the component reads its scenarios; a component that declines Gherkin says
+ * nothing, and one that decided neither way fails, since no run of it would start. A pair whose
+ * scenarios are written and whose bindings folder is not a folder is a warning: nothing binds
+ * them, the runner reports them undefined, and `test` still passes.
+ * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
+ */
+const bddChecks = async (deps, component) => {
+  const subject = `${component.name}/bdd`
+  if (component.bdd === null) return [{ subject, status: 'fail', detail: UNDECIDED }]
+  return Promise.all(component.bddPaths.map((pair) => bddCheck(deps, component.root, subject, pair)))
+}
+
+/** What a component whose Gherkin nobody decided leaves the developer to do. */
+const UNDECIDED = 'the component does not say whether it describes its behaviour in Gherkin; run /skraft-init, or write "bdd" in skraft-design-config.json'
+
+/**
+ * One pair's line: where its runner reads, and a failure naming each folder of the pair that is no
+ * folder of the working copy — a path that names nothing holds no scenario and binds no step,
+ * whatever the gates say. A pair bound to nothing is read from the pair alone.
+ * @param {DoctorDeps} deps @param {string} root @param {string} subject @param {BddPair} pair
+ * @returns {Promise<DoctorCheck>}
+ */
+const bddCheck = async (deps, root, subject, pair) => {
+  const named = pair.runner === null ? '' : `${pair.runner}: `
+  const missing = await missingFolders(deps, root, pair)
+  if (missing.length > 0) return { subject, status: 'fail', detail: `${named}${listed(missing)} ${missing.length === 1 ? 'is no folder' : 'are no folders'} of the working copy` }
+  if (pair.steps === null) return { subject, status: 'ok', detail: `${named}${pair.features}, bound to nothing` }
+  return { subject, status: 'ok', detail: `${named}${pair.features} → ${pair.steps}` }
+}
+
+/** The folders of the pair the working copy has not got. @param {DoctorDeps} deps @param {string} root @param {BddPair} pair */
+const missingFolders = async (deps, root, { features, steps }) => {
+  // Stryker disable next-line ConditionalExpression: a pair that binds nothing names no second folder, and asking the port about the absent one asks about the component root, whose own check answers for it; both readings report the same missing folders
+  const named = steps === null ? [features] : [features, steps]
+  const found = await Promise.all(named.map((inner) => isFolder(deps, root, inner)))
+  return named.filter((_, index) => !found[index])
+}
+
+/** `a`, `a and b`: what a reader says out loud. @param {string[]} folders */
+const listed = (folders) => folders.join(' and ')
+
+/** Whether a folder of the component is a folder. @param {DoctorDeps} deps @param {string} root @param {string} inner */
+const isFolder = async (deps, root, inner) => (await deps.workspace.list(joinRelative(root, inner))) !== null
+
+/**
+ * The skills the component asks of the agents writing its tests that exist nowhere: a warning,
+ * the skills' own rules choosing another recipe for its tests or stopping them.
+ * @param {DoctorDeps} deps @param {Component} component @returns {Promise<DoctorCheck[]>}
+ */
+const skillChecks = async ({ agentCatalog }, component) => {
+  const { nowhere } = await findComponentSkills(agentCatalog, [component])
+  if (nowhere.length === 0) return []
+  const names = nowhere.map(({ skill }) => skill).join(', ')
+  return [{ subject: component.name, status: 'warn', detail: `skills found nowhere, in the plugin or the working copy: ${names}; design-mocking-strategy-roster and design-contract-testing say which recipe its tests use instead, or that they stop` }]
+}
+
+/** Gates first, in their order, then the other commands as written. @param {Component} component */
+const commandNames = (component) => {
+  const gates = gatesOf(component)
+  return [...gates, ...Object.keys(component.commands).filter((name) => !gates.includes(name))]
+}
+
+/**
+ * @param {DoctorDeps} deps
+ * @param {{ component: Component, name: string, run: boolean, baseSha: string | null }} request
+ * @returns {Promise<DoctorCheck>}
+ */
+const commandCheck = async (deps, { component, name, run, baseSha }) => {
+  const subject = `${component.name}/${name}`
+  const line = component.commands[name]
+  const parsed = parseCommand(line, { baseSha })
+  if (!parsed.ok) return { subject, status: 'fail', detail: `${JSON.stringify(line)} ${parsed.reason}` }
+  const [program] = parsed.argv
+  const choices = programChoices(parsed.argv)
+  const found = await locateFirst(deps, choices, component.root)
+  if (found === null) return { subject, status: 'fail', detail: notFound({ component, name, program, choices }) }
+  if (!run || name === 'mutation') return { subject, status: 'ok', detail: `${program} → ${found.located}` }
+  return runCheck(deps, subject, { argv: found.argv, cwd: component.root })
+}
+
+/**
+ * @param {{ component: Component, name: string, program: string, choices: string[][] }} missing
+ */
+const notFound = ({ component, name, program, choices }) =>
+  `command not found: ${program} (from ${component.root}${lookedFor(choices)}); install it or change commands.${name} in ${CONFIG_FILE}`
+
+/** Where `doctor --run` keeps what each command it starts writes, relative to the working copy. */
+const DOCTOR_LOGS = '.copilot-tracking/skraft-doctor'
+
+/**
+ * Starts the located command once and keeps what it wrote in its log; it passes only on exit 0,
+ * and a failure names the log.
+ * @param {DoctorDeps} deps @param {string} subject @param {{ argv: string[], cwd: string }} command
+ * @returns {Promise<DoctorCheck>}
+ */
+const runCheck = async (deps, subject, { argv, cwd }) => {
+  const result = await deps.commandRunner.run({ argv, cwd })
+  if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
+  const ran = commandText(argv)
+  const log = `${DOCTOR_LOGS}/${subject}.log`
+  await deps.workspace.write(log, commandLog(ran, cwd, result))
+  return result.exitCode === 0
+    ? { subject, status: 'ok', detail: `${ran} passed` }
+    : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}; its output is in ${log}` }
+}
+
+/**
+ * The log of a command the doctor ran: the command, where, how it ended, then what it wrote.
+ * @param {string} ran @param {string} cwd @param {import('../ports/command-runner.mjs').CommandResult} result
+ */
+const commandLog = (ran, cwd, { exitCode, stdout, stderr }) =>
+  [`$ ${ran}`, `cwd: ${cwd}`, `result: exited ${exitCode}`, '--- stdout', stdout, '--- stderr', stderr, ''].join('\n')
+
+/**
+ * The first program choice found on this machine, and where.
+ * @param {DoctorDeps} deps @param {string[][]} choices @param {string} cwd
+ * @returns {Promise<{ argv: string[], located: string } | null>}
+ */
+const locateFirst = async (deps, choices, cwd) => {
+  for (const argv of choices) {
+    const located = await deps.executables.locate(argv[0], cwd)
+    if (located !== null) return { argv, located }
+  }
+  return null
+}
+
+/**
+ * What the agents of the workflow run on, and the checks of it; nothing when the workflow cannot
+ * be read, which `skraft workflow check` reports.
+ * @param {DoctorDeps} deps @param {SkraftConfig} config
+ */
+const modelsOf = async (deps, config) => {
+  const { read } = await readWorkflows(deps)
+  return read.ok ? modelChecks(deps, config, read.workflow) : { checks: [], assignments: null }
+}
+
+/** @param {string} version @returns {DoctorCheck} */
+const nodeCheck = (version) => {
+  const major = Number.parseInt(version.slice(1), 10)
+  return major >= NODE_MAJOR
+    ? { subject: 'node', status: 'ok', detail: `Node ${version}` }
+    : { subject: 'node', status: 'fail', detail: `Node ${version}; skraft needs Node ${NODE_MAJOR} or later` }
+}
+
+/** @param {string} detail @returns {DoctorCheck} */
+const configFails = (detail) => ({ subject: 'config', status: 'fail', detail })
+
+/** @param {DoctorCheck[]} checks @param {DoctorReport['assignments']} assignments @returns {DoctorReport} */
+const report = (checks, assignments) => ({ ok: checks.every((check) => check.status !== 'fail'), checks, assignments })

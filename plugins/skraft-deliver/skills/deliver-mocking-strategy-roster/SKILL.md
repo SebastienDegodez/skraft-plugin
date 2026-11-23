@@ -1,0 +1,43 @@
+---
+name: deliver-mocking-strategy-roster
+description: 'Use when an integration test must mock a downstream HTTP/event dependency and the agent needs to know which mocking strategy and stack recipe apply. Default: in-process (MSW) for a React component, Microcks for every other stack; a component overrides it with `"mocking": { "strategy": ... }` in skraft-deliver-config.json. Reads the strategy from the component line of the brief and names the `mocking-<strategy>-<stack>` skill that holds the recipe.'
+---
+
+# Mocking Strategy Roster
+
+## Read the strategy from the brief
+
+Each component line of the brief reads `name: root (stack), mocking: microcks|inprocess, contract testing: on|off`.
+Take the strategy of the component whose `root` holds the test you write.
+
+- `mocking: microcks` — mock the downstream from its OpenAPI/examples contract in a Microcks container.
+- `mocking: inprocess` — an in-process test double injected into the test host.
+
+Without a brief, read the component whose `root` holds the test in `skraft-deliver-config.json`: its `mocking.strategy`; when absent, `inprocess` for a `react` stack, `microcks` for any other.
+
+Never pick a strategy from an instruction file or the test you are copying; the component decides. The brief lists the matching `mocking-<strategy>-<stack>` skill; apply its recipe.
+
+## Strategy x stack → recipe
+
+| Strategy | Stack | Skill |
+|---|---|---|
+| microcks | dotnet | `deliver-mocking-microcks-dotnet` |
+| inprocess | dotnet | `deliver-mocking-inprocess-dotnet` |
+| microcks | python | `deliver-mocking-microcks-python` |
+| inprocess | python | `deliver-mocking-inprocess-python` |
+| microcks | typescript, react, javascript tested with Vitest | `deliver-mocking-microcks-typescript` |
+| inprocess | typescript, react, javascript tested with Vitest | `deliver-mocking-inprocess-typescript` |
+| microcks | java | `deliver-mocking-microcks-java` |
+| inprocess | java | `deliver-mocking-inprocess-java` |
+
+With `inprocess`, the recipe's library table picks the library: its rows are ordered by priority, take the first one already present in the test project.
+
+## No recipe → stop
+
+When the component's stack has no row above, stop, write no mock, and write your result `blocked`, its summary naming the component, its strategy, its stack and `unsupported_stack: no mocking recipe`.
+
+## Rules
+
+- Mock the DOWNSTREAM dependency, never the code under test.
+- One strategy per component; never mix Microcks and in-process doubles in one test project. A React front end's Playwright e2e run reaches the back end through Microcks whatever its strategy (`deliver-mocking-microcks-typescript`).
+- Microcks runs one container per test session, from the test runner's global setup, on Docker or Podman. No container runtime answers: an environment problem to report, the scenario INDETERMINATE; never a reason to skip the test or switch to an in-process double.

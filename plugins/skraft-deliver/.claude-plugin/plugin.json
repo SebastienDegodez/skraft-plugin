@@ -1,0 +1,35 @@
+{
+  "name": "skraft-deliver",
+  "version": "0.1.0",
+  "description": "Deliver a story from DISTILL to pull request, with or without merged architecture.",
+  "author": {
+    "name": "SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "agents": [
+    "./com.anthropic.claude-code/agents/deliver-acceptance-designer.md",
+    "./com.anthropic.claude-code/agents/deliver-architecture-boundaries-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-boundary-enforcement-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-business-alignment-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-cold-reader-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-contract-fidelity-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-coverage-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-finding-refuter.md",
+    "./com.anthropic.claude-code/agents/deliver-mock-fidelity-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-pr-writer.md",
+    "./com.anthropic.claude-code/agents/deliver-replay-judge.md",
+    "./com.anthropic.claude-code/agents/deliver-software-engineer.md",
+    "./com.anthropic.claude-code/agents/deliver-test-integrity-lens.md",
+    "./com.anthropic.claude-code/agents/deliver-testability-lens.md"
+  ],
+  "mcpServers": {
+    "skraft-deliver": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/engine/drivers/cli/server.mjs"
+      ]
+    }
+  }
+}

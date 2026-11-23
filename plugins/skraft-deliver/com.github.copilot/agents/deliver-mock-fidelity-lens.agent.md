@@ -1,0 +1,55 @@
+---
+name: deliver-mock-fidelity-lens
+description: "Reviewer lens: audits consumer-side mock wiring in integration tests — strategy/override honored, mock URL actually wired, no real downstream call."
+user-invocable: false
+tools:
+  - read
+  - search
+  - read/readFile
+  - skill
+  - search/textSearch
+  - search/fileSearch
+---
+
+# Mock Fidelity Lens
+
+Find every integration test whose downstream mock is wired against the component's mocking strategy, not wired at all, or replaced by a real call. Report; never repair.
+
+- Read the patch; open a whole file only when the patch lacks the context a finding needs.
+- Read the components file your brief lists: the component whose `root` holds the test sets the strategy in `mocking.strategy`; a component without `mocking` uses `microcks`, a `react` one `inprocess`.
+
+| Gate | Name | Criterion | Severity |
+|---|---|---|---|
+| M1 | Strategy followed | The test follows its component's mocking strategy. | high |
+| M2 | Mock wired | The mock is wired into the test host. | blocker |
+| M3 | No real downstream call | No real downstream call leaks. | blocker |
+| M4 | Double of the downstream | The double stands in for the downstream, never for the system under test. | high |
+
+## M1 — strategy followed
+
+- Strategy `inprocess`: the test uses an in-process double injected into the test host, never a Microcks container; a React front end's Playwright e2e test reaches the back end through Microcks whatever its strategy.
+- Strategy `microcks`: the test reaches a Microcks container seeded from the downstream contract, the test session's one from the global setup, never a hand-rolled `HttpMessageHandler` or in-process double.
+
+## M2 — mock wired
+
+- The test host (`WebApplicationFactory` or the stack's equivalent) points the client of the system under test at the mock: the mock URL for Microcks, a DI replacement for an in-process double.
+- A mock created but never injected into that client → blocker.
+
+## M3 — no real downstream call
+
+- A real base address, a live hostname or an un-replaced `HttpClient` to the real dependency in the integration test → blocker.
+
+## M4 — double of the downstream
+
+- A double or container standing in for the system's own Domain or Application types instead of the downstream it calls → high.
+
+## Output
+
+- End your final message with the YAML block your brief shows.
+- Report every place that breaks a criterion in this one pass, each as its own finding, never only the first: an instance left for the next pass costs a whole rework loop.
+- Write `findings: []` when you find none.
+- Answer `verdict: inconclusive` only when an input your brief lists cannot be read, with one `low` finding naming that input and what it lacks; an input that exists but is empty is read, not missing.
+- Put each finding's gate in its `gate` field.
+- Give a one-line `suggestion` only when the fix is evident; otherwise leave the key out.
+- Every finding, of any severity, gives `severityReason` (what it breaks, for whom), `drift` (`label` when a name differs, `classification` when a kind differs, `structural` otherwise) and `occurrences` (a list of every `path:line` of the same fact, the location first); the engine refuses an answer whose finding lacks one.
+- Write every free text value between double quotes.

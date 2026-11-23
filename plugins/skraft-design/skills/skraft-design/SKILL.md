@@ -1,0 +1,18 @@
+---
+name: skraft-design
+description: Design and publish architecture for one ready GitHub or Azure DevOps story or epic. Use for architecture before implementation, or resume an interrupted architecture run.
+---
+
+# Architecture design
+
+Use only this plugin's `skraft_design_*` MCP tools. Never call `skraft`, a shell entry point, another plugin's engine or another plugin's tools.
+
+1. Resolve the project's absolute Git root and exactly one issue or epic number. If either is ambiguous, ask through native `ask_user` or `askQuestions`.
+2. Call `skraft_design_setup` with `workspace`. For each returned question, ask its exact text and options through native chat. Relay YES/NO as the corresponding boolean to `setup`. Never infer publication consent. Preserve existing developer commands. Configure `baseBranch` in `skraft-design-config.json` when the merged architecture branch is not `main`.
+3. Call `skraft_design_start` with `workspace` and exactly one of `issue` or `epic`. To resume an active run without reselecting its scope, call `skraft_design_next` instead.
+4. On `dispatch`, start only the listed agents, using their exact `agent`, `prompt`, and supplied model and effort. Omit unset model or effort. If the host cannot select the supplied agent or assignment, report the concrete blocker and stop; never substitute a worker. Workers do not dispatch. Save each worker's final reply unchanged to its `reply` file, including its reply token. Then call `skraft_design_record`.
+5. On `waiting`, ask the engine's exact question and options through native chat, requesting a refusal reason there. Relay only that reply to `skraft_design_answer`, then call `next`. If native chat is missing or dismissed, leave paused and record nothing. Never answer human questions from worker output.
+6. On `blocked` or `refused`, report `code` and `reason`; do not bypass readiness, review or ratification. On `not-recorded`, finish the listed dispatches before calling `record`.
+7. Repeat only the returned handoff until completion. Report the architecture PR, or local output when publication was declined. Tell the user delivery consumes architecture only after the PR is merged; never merge it.
+
+Unforeseen incident questions are not human approvals: follow their offered engine actions and submit only observed model, cost and unit. Missing observations leave the incident paused. Never invent usage.

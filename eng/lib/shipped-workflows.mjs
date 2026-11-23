@@ -7,8 +7,11 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 import { readWorkflow } from '../../plugins/skraft-framework/engine/domain/workflow/workflow.mjs'
+import { readWorkflow as readDesignWorkflow } from '../../plugins/skraft-design/engine/domain/workflow/workflow.mjs'
+import { readWorkflow as readDeliveryWorkflow } from '../../plugins/skraft-deliver/engine/domain/workflow/workflow.mjs'
 
 const REFUTER = 'finding-refuter'
+const STANDALONE_READERS = { 'skraft-design': readDesignWorkflow, 'skraft-deliver': readDeliveryWorkflow }
 
 /** The workflow a story's run starts from. */
 const STORY_PIPELINE = 'pipeline.skraft.dot'
@@ -21,7 +24,7 @@ const STORY_PIPELINE = 'pipeline.skraft.dot'
  *   phases: each phase in run order with the first agent it dispatches (none when only reviews and gates run in it);
  *   agents: every agent the workflow dispatches, its lenses (`<lens>-lens`) and the refuter included
  */
-export function workflowAgents(workflow) {
+export function workflowAgents(workflow, prefix = '') {
   const nodes = workflow.order.map((id) => workflow.nodes[id])
   const phases = []
   for (const node of nodes) {
@@ -31,8 +34,9 @@ export function workflowAgents(workflow) {
   const reviews = nodes.filter((node) => node.kind === 'review')
   const agents = [
     ...nodes.filter((node) => node.kind === 'agent' && node.agent).map((node) => node.agent),
-    ...reviews.flatMap((node) => node.lenses.map((lens) => `${lens}-lens`)),
-    ...(reviews.length ? [REFUTER] : []),
+    ...reviews.flatMap((node) => node.lenses.map((lens) => `${prefix}${lens}-lens`)),
+    ...(reviews.length ? [`${prefix}${REFUTER}`] : []),
+    ...(prefix && nodes.some((node) => node.agent === `${prefix}software-engineer`) ? [`${prefix}replay-judge`] : []),
   ]
   return { phases, agents: [...new Set(agents)] }
 }
@@ -51,14 +55,15 @@ export function findShippedWorkflows(root) {
     if (!existsSync(dir)) return []
     return readdirSync(dir).filter((file) => file.endsWith('.skraft.dot')).sort().flatMap((file) => {
       const text = readFileSync(join(dir, file), 'utf8')
-      const asEntry = readWorkflow(text)
-      const read = asEntry.ok ? asEntry : readWorkflow(text, { called: true })
+      const reader = STANDALONE_READERS[pluginDir] ?? readWorkflow
+      const asEntry = reader(text)
+      const read = asEntry.ok ? asEntry : reader(text, { called: true })
       if (!read.ok) return []
       return [{
         path: relative(root, join(dir, file)).split('\\').join('/'),
         pluginDir,
-        entry: asEntry.ok && file === STORY_PIPELINE,
-        ...workflowAgents(read.workflow),
+        entry: asEntry.ok && file === STORY_PIPELINE && !STANDALONE_READERS[pluginDir],
+        ...workflowAgents(read.workflow, STANDALONE_READERS[pluginDir] ? `${pluginDir.slice('skraft-'.length)}-` : ''),
       }]
     })
   })

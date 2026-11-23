@@ -1,0 +1,121 @@
+---
+title: "Design, merge, then deliver"
+description: "Install independent design and delivery plugins, publish architecture, merge it and deliver a story with or without a brief."
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Design, merge, then deliver
+
+Publish architecture with `skraft-design`, merge its PR, then implement a story with `skraft-deliver`.
+Each plugin installs alone; neither requires `skraft-framework` or the `skraft` command.
+
+:::caution[Native host verification pending]
+These plugins are experimental. Local engine and protocol checks do not certify a complete
+Claude Code, Copilot CLI or Azure DevOps session.
+:::
+
+## Prerequisites {/* #prerequisites */}
+
+- Node 22 or later, Git and a clean working branch.
+- An authenticated `gh`, or `az` with its Azure DevOps extension, matching the repository forge.
+- A ready story labelled or tagged `status/ready`, or an epic containing ready stories, for design.
+- Native human questions and agent dispatch supported by the host.
+
+## 1. Install independently {/* #install */}
+
+From a checkout containing these plugins:
+
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
+
+Load either plugin directory with your host's local plugin loader, or install the corresponding
+`skraft-design@skraft` and `skraft-deliver@skraft` marketplace entries once this revision is published.
+Enable their MCP servers when prompted.
+
+</TabItem>
+<TabItem value="copilot-cli" label="Copilot CLI">
+
+```console
+$ copilot plugin install ./plugins/skraft-design
+$ copilot plugin install ./plugins/skraft-deliver
+```
+
+Install only the plugin you need.
+
+</TabItem>
+<TabItem value="vscode" label="VS Code">
+
+Add either or both locations in workspace settings:
+
+```json
+{
+  "chat.plugins.enabled": true,
+  "chat.pluginLocations": {
+    "<clone path>/plugins/skraft-design": true,
+    "<clone path>/plugins/skraft-deliver": true
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Check that the chosen plugin's `skraft_design_*` or `skraft_deliver_*` MCP tools are available.
+If tools or worker agents are missing, stop rather than substituting another plugin.
+
+## 2. Run design {/* #design */}
+
+Ask the host to use `skraft-design` for the issue or epic. Its setup detects components and
+asks publication consent; keep developer commands. Set `baseBranch` in `skraft-design-config.json`
+when the merged base is not `main`.
+
+On GitHub, use terminal sub-issues as stories; do not nest technical tasks under them.
+Azure DevOps keeps its native story types.
+
+The engine excludes unready stories and asks whether to continue without them. Each design pass
+handles at most 20 ready stories. Research precedes design; three review lenses, a refuter and
+the engine verdict precede the architecture PR. New ADRs stay Proposed on its branch and become
+Accepted only when you merge that PR; no separate ADR ratification is asked. The plugin publishes
+the architecture PR only with consent, and keeps research in one marked issue comment.
+
+Read each `docs/architecture/stories/<number>-<slug>.md`: its header records the issue identity,
+body fingerprint, components, criteria, ADRs and shared documents.
+
+## 3. Merge, then deliver {/* #deliver */}
+
+Review and merge the architecture PR yourself. Ask the host to use `skraft-deliver` for one story.
+Its separate setup and `skraft-deliver-config.json` preserve independent publication choices,
+commands and Gherkin bindings. Use the same `baseBranch` as design.
+
+Delivery reads the brief and cited documents from one fetched commit of that merged base,
+then supplies snapshots to its agents. DISTILL, scenario review, human approval, TDD,
+gates, implementation review and optional visuals precede the delivery PR.
+Without a brief, delivery announces its absence and still starts at DISTILL.
+
+Resume by asking the same plugin to continue its active run. State stays under
+`.copilot-tracking/skraft-design-runs/` or `.copilot-tracking/skraft-deliver-runs/`;
+each uses its own `.active-slug`. Answer engine questions through native chat.
+Dismissal leaves the run paused.
+
+## Troubleshooting {/* #troubleshooting */}
+
+### Architecture is refused {/* #freshness */}
+
+`architecture-unmerged`: merge the design PR before retrying.
+`architecture-stale`: a cited ADR is not Accepted in the merged base; publish and merge a design
+PR that supplies a valid decision before delivery.
+A changed issue asks KEEP or REDESIGN; only a human can choose.
+`architecture-invalid`: correct the brief header or missing cited document through a design PR.
+
+### Design excludes a story {/* #readiness */}
+
+Refine it with `skraft-backlog` before adding `status/ready`. Architecture-blocked stories
+need explicit human exclusion; they are never silently dropped.
+
+## Next steps {/* #next-steps */}
+
+- [Architecture](../explanation/architecture.md)
+- [The team](../explanation/pipeline/team.md)
+- [Catalogue](../reference/catalogue.md)

@@ -21,6 +21,16 @@
       "name": "skraft-brownfield",
       "source": "./plugins/skraft-brownfield",
       "description": "skraft brownfield — characterize a legacy codebase into a PRD, lock its current behaviour under characterization tests, then refactor it safely with the Mikado Method or a Strangler Fig."
+    },
+    {
+      "name": "skraft-design",
+      "source": "./plugins/skraft-design",
+      "description": "Design and publish architecture for ready stories or epics; standalone engine, no user CLI."
+    },
+    {
+      "name": "skraft-deliver",
+      "source": "./plugins/skraft-deliver",
+      "description": "Deliver a story from DISTILL with or without merged architecture; standalone engine, no user CLI."
     }
   ]
 }

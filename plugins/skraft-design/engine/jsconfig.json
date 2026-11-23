@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "strict": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2023",
+    "noEmit": true
+  },
+  "include": ["**/*.mjs"],
+  "exclude": ["node_modules", "reports", ".stryker-tmp"]
+}

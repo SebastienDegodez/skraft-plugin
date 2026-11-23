@@ -1,0 +1,122 @@
+---
+title: "Concevoir, fusionner, puis livrer"
+description: "Installer design et deliver seuls, publier puis fusionner l'architecture, et realiser une story avec ou sans brief."
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Concevoir, fusionner, puis livrer
+
+Publiez l'architecture avec `skraft-design`, fusionnez sa PR, puis realisez une story avec `skraft-deliver`.
+Chaque plugin s'installe seul, sans `skraft-framework` ni commande `skraft`.
+
+:::caution[Verification native des hotes en attente]
+Ces plugins sont experimentaux. Les controles locaux du moteur et du protocole ne certifient
+pas une session complete Claude Code, Copilot CLI ou Azure DevOps.
+:::
+
+## Prerequis {/* #prerequisites */}
+
+- Node 22 ou plus, Git et une branche de travail propre.
+- `gh` authentifie, ou `az` avec son extension Azure DevOps, correspondant a la forge du depot.
+- Une story avec le label ou tag `status/ready`, ou une epique contenant des stories pretes, pour design.
+- Questions humaines natives et lancement d'agents disponibles dans l'hote.
+
+## 1. Installer separement {/* #install */}
+
+Depuis un clone contenant ces plugins :
+
+<Tabs groupId="host" queryString="host">
+<TabItem value="claude-code" label="Claude Code" default>
+
+Chargez chaque dossier voulu avec le chargeur local de plugins de l'hote, ou installez les entrees
+`skraft-design@skraft` et `skraft-deliver@skraft` du marketplace apres publication de cette revision.
+Activez leurs serveurs MCP lorsque l'hote le demande.
+
+</TabItem>
+<TabItem value="copilot-cli" label="Copilot CLI">
+
+```console
+$ copilot plugin install ./plugins/skraft-design
+$ copilot plugin install ./plugins/skraft-deliver
+```
+
+Installez seulement le plugin necessaire.
+
+</TabItem>
+<TabItem value="vscode" label="VS Code">
+
+Ajoutez un ou deux dossiers aux reglages du workspace :
+
+```json
+{
+  "chat.plugins.enabled": true,
+  "chat.pluginLocations": {
+    "<clone path>/plugins/skraft-design": true,
+    "<clone path>/plugins/skraft-deliver": true
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Verifiez la presence des outils MCP `skraft_design_*` ou `skraft_deliver_*` du plugin choisi.
+Si les outils ou agents manquent, arretez sans remplacer le plugin.
+
+## 2. Lancer design {/* #design */}
+
+Demandez a l'hote d'utiliser `skraft-design` pour l'issue ou l'epique. Sa configuration detecte
+les composants et demande le consentement de publication ; gardez les commandes du developpeur.
+Fixez `baseBranch` dans `skraft-design-config.json` si la base fusionnee n'est pas `main`.
+
+Sur GitHub, utilisez les sous-issues terminales comme stories, sans taches techniques imbriquees.
+Azure DevOps conserve ses types natifs de stories.
+
+Le moteur exclut les stories non pretes et demande de continuer sans elles ou d'arreter.
+Chaque passe traite au plus 20 stories pretes. La recherche precede la conception ;
+trois lentilles, un refutateur et le verdict du moteur precedent la PR d'architecture. Les nouveaux
+ADR restent Proposed sur sa branche et deviennent Accepted seulement si vous fusionnez cette PR ;
+aucune ratification distincte n'est demandee. Le plugin publie la PR seulement avec consentement
+et conserve la recherche dans un commentaire d'issue unique, marque.
+
+Lisez chaque `docs/architecture/stories/<number>-<slug>.md` : son en-tete garde l'identite de
+l'issue, l'empreinte du corps, les composants, criteres, ADR et documents communs.
+
+## 3. Fusionner, puis livrer {/* #deliver */}
+
+Relisez et fusionnez vous-meme la PR d'architecture. Demandez a l'hote d'utiliser `skraft-deliver`
+pour une story. Sa configuration et `skraft-deliver-config.json` gardent des choix de publication,
+commandes et bindings Gherkin independants. Utilisez le meme `baseBranch` que design.
+
+Deliver lit le brief et les documents cites depuis un commit recupere de cette base fusionnee,
+puis transmet leurs copies aux agents. DISTILL, revue des scenarios, validation humaine, TDD,
+gates, revue d'implementation et visuels optionnels precedent la PR de livraison.
+Sans brief, deliver annonce son absence et commence quand meme a DISTILL.
+
+Pour reprendre, demandez au meme plugin de continuer son run actif. L'etat reste sous
+`.copilot-tracking/skraft-design-runs/` ou `.copilot-tracking/skraft-deliver-runs/` ;
+chacun possede son `.active-slug`. Repondez aux questions du moteur dans le dialogue natif.
+Fermer ce dialogue laisse le run en pause.
+
+## Depannage {/* #troubleshooting */}
+
+### Architecture refusee {/* #freshness */}
+
+`architecture-unmerged` : fusionnez la PR design avant de reessayer.
+`architecture-stale` : un ADR cite n'est pas Accepted dans la base fusionnee ; publiez et fusionnez
+une PR design avec une decision valide avant deliver.
+Une issue modifiee demande KEEP ou REDESIGN ; seule une personne choisit.
+`architecture-invalid` : corrigez l'en-tete du brief ou le document cite manquant par une PR design.
+
+### Design exclut une story {/* #readiness */}
+
+Affinez-la avec `skraft-backlog` avant d'ajouter `status/ready`. Une story bloquee par
+l'architecture exige une exclusion humaine explicite ; elle n'est jamais abandonnee en silence.
+
+## Etapes suivantes {/* #next-steps */}
+
+- [Architecture](../explanation/architecture.md)
+- [Equipe](../explanation/pipeline/team.md)
+- [Catalogue](../reference/catalogue.md)

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "skraft-deliver",
+  "version": "0.1.0",
+  "description": "Deliver a story from DISTILL to pull request, with or without merged architecture.",
+  "author": {
+    "name": "SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "extensions": {
+    "com.github.copilot": {}
+  }
+}

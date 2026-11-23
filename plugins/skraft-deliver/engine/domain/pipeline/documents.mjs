@@ -1,0 +1,17 @@
+/**
+ * The documents of a pipeline: every file of its tracking folder but those the engine keeps
+ * (the journal, the session's lease, the agents' result files, the review inputs) and what
+ * commands and the engine's own checks printed or left behind (the logs, a pre-check's trail and
+ * its receipt, the temporary files).
+ */
+const ENGINE_FILES = /^(events\.jsonl$|\.lock(\.|$)|results\/|reviews\/|logs\/|\.tmp\/)/
+
+/** @param {string} path relative to the pipeline's tracking folder */
+export const isDocument = (path) => !ENGINE_FILES.test(path)
+
+/**
+ * The documents an attempt wrote: those that did not exist before it, or whose content changed.
+ * @param {Record<string, string>} before document → content hash when the attempt started
+ * @param {Record<string, string>} after document → content hash when it ended
+ */
+export const writtenDocuments = (before, after) => Object.keys(after).filter((path) => before[path] !== after[path]).sort()

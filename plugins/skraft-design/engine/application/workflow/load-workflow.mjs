@@ -1,0 +1,153 @@
+import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
+import { REPLAY_JUDGE } from '../../domain/pipeline/replay-verdict.mjs'
+import { roleOf } from '../../domain/pipeline/roles.mjs'
+import { checkMandatory } from '../../domain/workflow/mandatory.mjs'
+import { checkLocks, readWorkflow } from '../../domain/workflow/workflow.mjs'
+import { ejectedPath, withCalls } from './called-workflows.mjs'
+
+/**
+ * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
+ * @typedef {import('../ports/agent-catalog.mjs').AgentSource} AgentSource
+ * @typedef {{
+ *   workspace: import('../ports/workspace.mjs').ConfigSource,
+ *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
+ * }} WorkflowFiles
+ * @typedef {WorkflowFiles & { agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog }} WorkflowDeps
+ * @typedef {{ ok: true, workflow: Workflow, name: string, unlocked: Array<{ node: string, reason: string }>, sources: Record<string, AgentSource> }
+ *   | { ok: false, name: string, reason: string, errors: string[] }} WorkflowLoading
+ */
+
+/** The name of the plugin's own workflow. */
+export const BUILT_IN = 'skraft'
+
+/** A working copy that holds nothing: the plugin's workflow calls the plugin's workflows only. */
+const NOTHING = Object.freeze({ read: async () => null })
+
+/** Where `skraft workflow eject` copies the plugin's pipeline, relative to the working copy. */
+export const WORKFLOW_FILE = ejectedPath('pipeline')
+
+/** Where the working copy keeps its copy of the workflow a run follows. @param {WorkflowFiles} deps */
+const ownPath = (deps) => ejectedPath(deps.workflowSource.name ?? 'pipeline')
+
+/**
+ * The plugin's pipeline and the one the run follows: `.skraft-design/pipeline.skraft.dot` when the working
+ * copy ejected it, else the plugin's; each read and checked on its own, with the workflows their
+ * call nodes call: the plugin's for the plugin's, `.skraft-design/<name>.skraft.dot` else the plugin's for
+ * the other.
+ * @param {WorkflowFiles} deps
+ * @returns {Promise<{ name: string, builtIn: Workflow, read: ReturnType<typeof readWorkflow> }>}
+ */
+export const readWorkflows = async (deps) => {
+  const shipped = await deps.workflowSource.builtIn()
+  const builtIn = await shippedCalling(deps, shipped)
+  const own = await deps.workspace.read(ownPath(deps))
+  const calls = Object.fromEntries(Object.values(builtIn.nodes).flatMap(({ id, call }) => (call === null ? [] : [[id, call.workflow]])))
+  return { name: own === null ? BUILT_IN : ownPath(deps), builtIn, read: await withCalls(deps, readWorkflow(own ?? shipped, { calls })) }
+}
+
+/** The plugin's pipeline calling the plugin's workflows. @param {WorkflowFiles} deps @param {string} shipped its text */
+const shippedCalling = async (deps, shipped) => /** @type {{ workflow: Workflow }} */ (await withCalls({ ...deps, workspace: NOTHING }, readWorkflow(shipped))).workflow
+
+/**
+ * The plugin's pipeline twice: calling the plugin's workflows, and calling those the working copy
+ * ejected into `.skraft-design/`, else the plugin's; whatever pipeline the working copy ejected.
+ * @param {WorkflowFiles} deps
+ * @returns {Promise<{ builtIn: Workflow, read: ReturnType<typeof readWorkflow> }>}
+ */
+export const readShippedCalls = async (deps) => {
+  const shipped = await deps.workflowSource.builtIn()
+  return { builtIn: await shippedCalling(deps, shipped), read: await withCalls(deps, readWorkflow(shipped)) }
+}
+
+/**
+ * The workflow a run follows, refused with every error found: its own, the locked nodes of
+ * the plugin's workflow it drops, the mandatory ones it drops or breaks, and (with agents) the agents nobody provides.
+ * @param {WorkflowDeps} deps
+ * @param {{ agents?: boolean }} request
+ * @returns {Promise<WorkflowLoading>}
+ */
+export const loadWorkflow = async (deps, { agents = true }) => {
+  const { name, builtIn, read } = await readWorkflows(deps)
+  if (!read.ok) return refused(name, read.errors)
+  const { workflow } = read
+  const locks = checkLocks(builtIn, workflow)
+  const located = agents ? await locateAgents(deps.agentCatalog, workflow) : { sources: {}, errors: [] }
+  const errors = [...locks.errors, ...checkMandatory(builtIn, workflow), ...located.errors]
+  if (errors.length > 0) return refused(name, errors)
+  return { ok: true, workflow, name, unlocked: locks.unlocked, sources: located.sources }
+}
+
+/**
+ * @typedef {import('../ports/agent-catalog.mjs').AgentCatalog} AgentCatalog
+ * @typedef {{ sources: Record<string, AgentSource>, errors: string[] }} Located
+ * @typedef {{ node: string, agent: string, what: string, reviews: boolean }} WantedAgent
+ *   what: how a refusal names it; reviews: a lens or the refuter, whose skills the engine hands on.
+ */
+
+/**
+ * The source of each agent the nodes start, one lookup after the other, in node order: an
+ * agent node's agent, a review node's lenses and the refuter.
+ * @param {AgentCatalog} agentCatalog @param {Pick<Workflow, 'nodes'>} workflow
+ * @returns {Promise<Located>} errors: the agents nobody provides, and the skills of a lens or
+ *   of the refuter nobody provides
+ */
+export const locateAgents = async (agentCatalog, workflow) => {
+  /** @type {Located} */
+  const located = { sources: {}, errors: [] }
+  for (const wanted of uniqueAgents(workflow)) await locateAgent(agentCatalog, located, wanted)
+  return located
+}
+
+/** Each agent once, at the first node that starts it. @param {Pick<Workflow, 'nodes'>} workflow */
+const uniqueAgents = (workflow) => {
+  const wanted = Object.values(workflow.nodes).flatMap(agentsOf)
+  return wanted.filter((entry, index) => wanted.findIndex((other) => other.agent === entry.agent) === index)
+}
+
+/** @param {AgentCatalog} agentCatalog @param {Located} located @param {WantedAgent} wanted */
+const locateAgent = async (agentCatalog, located, wanted) => {
+  const source = await agentCatalog.locate(wanted.agent)
+  if (source === null) {
+    located.errors.push(`node ${wanted.node}: ${wanted.what} not found in the plugin, .claude/agents/ or .github/agents/`)
+    return
+  }
+  located.sources[wanted.agent] = source
+  if (wanted.reviews) located.errors.push(...await missingSkills(agentCatalog, wanted))
+}
+
+/** @param {AgentCatalog} agentCatalog @param {WantedAgent} wanted */
+const missingSkills = async (agentCatalog, { node, agent, what }) => {
+  const { missing } = await agentCatalog.skills(agent)
+  return missing.map((skill) => `node ${node}: skill ${skill} of ${what} not found in the plugin's skills/, .claude/skills/ or .github/skills/`)
+}
+
+/**
+ * The agents a node starts.
+ * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node
+ * @returns {WantedAgent[]}
+ */
+const agentsOf = (node) => {
+  const { id, kind, agent, lenses } = node
+  if (kind === 'agent') return [{ node: id, agent: /** @type {string} */ (agent), what: `agent ${agent}`, reviews: false }, ...(replays(node) ? [judgeOf(id)] : [])]
+  if (kind !== 'review' && kind !== 'call') return []
+  return [
+    ...lenses.map(lensNameOf).map((lens) => ({ node: id, agent: lensAgent(lens), what: `lens ${lens} (agent ${lensAgent(lens)})`, reviews: true })),
+    { node: id, agent: REFUTER, what: `agent ${REFUTER}`, reviews: true },
+  ]
+}
+
+/**
+ * Whether the engine replays the commits of an agent node: the reds of an agent whose commits
+ * are acceptance tests, the reds and greens of a node marked each="scenario".
+ * @param {import('../../domain/workflow/workflow.mjs').WorkflowNode} node
+ */
+const replays = (node) => node.each === 'scenario' || roleOf(node).tdd === 'red'
+
+/** The replay judge, which the engine asks about each red and green it replays. @param {string} node @returns {WantedAgent} */
+const judgeOf = (node) => ({ node, agent: REPLAY_JUDGE, what: `agent ${REPLAY_JUDGE}`, reviews: false })
+
+/** The lens a node's spec names. @param {string} spec a spec the workflow already checked */
+const lensNameOf = (spec) => /** @type {import('../../domain/review/lenses.mjs').LensSpec} */ (readLensSpec(spec)).name
+
+/** @param {string} name @param {string[]} errors @returns {WorkflowLoading} */
+const refused = (name, errors) => ({ ok: false, name, reason: `${name} is invalid: ${errors.join('; ')}`, errors })

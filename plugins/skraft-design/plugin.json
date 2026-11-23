@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "skraft-design",
+  "version": "0.1.0",
+  "description": "Design and publish architecture for a story or epic, independently of story delivery.",
+  "author": {
+    "name": "SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "extensions": {
+    "com.github.copilot": {}
+  }
+}

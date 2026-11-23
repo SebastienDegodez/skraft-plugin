@@ -1,0 +1,65 @@
+import { createInit } from '../pipeline/init-usecase.mjs'
+import { openActiveRun } from '../pipeline/active-run.mjs'
+import { createReadiness } from './readiness.mjs'
+import { normalBody } from '../../domain/architecture/brief.mjs'
+import { contextQuestion, stopped, stopRun, waitingFor } from './context.mjs'
+import { runIdentity } from './run-identity.mjs'
+
+export const createDesignRun = (deps) => Object.freeze({
+  start: (request) => start(deps, request),
+  prepare: () => prepare(deps),
+})
+
+const start = async (deps, request) => {
+  const scope = await createReadiness(deps).check(request)
+  if (!scope.ok) return { status: 'refused', ...scope }
+  const identity = await runIdentity(deps, `${request.epic ? 'epic' : 'issue'}-${scope.root.number}`)
+  if (!identity.ok) return { status: 'refused', ...identity }
+  const { slug } = identity
+  const branched = await deps.architectureRepository.branch({ name: `design/${slug}`, existing: identity.existing })
+  if (!branched.ok) return { status: 'refused', ...branched }
+  return initializeScope(deps, slug, scope)
+}
+
+const initializeScope = async (deps, slug, scope) => {
+  const initialized = await createInit({ ...deps, initialIssue: scope.root }).init({ slug, story: { issue: scope.root.number, title: scope.root.title } })
+  if (!initialized.ok) return { status: 'refused', ...initialized }
+  const opened = await openActiveRun(deps, slug)
+  if (!opened.ok) return opened.outcome
+  if (!opened.journal.events.some((event) => event.type === 'architecture.scope')) await keepScope(deps, opened, scope)
+  return prepare(deps)
+}
+
+const keepScope = async (deps, { slug, journal }, scope) => {
+  const stories = []
+  for (const story of scope.stories) stories.push({ ...story, bodySha256: await deps.hasher.sha256(normalBody(story.body)) })
+  await journal.append('architecture.scope', { root: scope.root, stories, excluded: scope.excluded, batchSize: 20 })
+}
+
+const prepare = async (deps) => {
+  const opened = await openActiveRun(deps, null)
+  if (!opened.ok) return opened.outcome
+  const scope = opened.journal.events.find((event) => event.type === 'architecture.scope')
+  if (!scope) return stopped(opened.slug, 'architecture-scope-missing', 'Start design with an issue or epic first.')
+  const binding = await bindScope(deps, opened, scope)
+  if (binding) return binding
+  return exclusions(opened, scope)
+}
+
+const bindScope = async (deps, { slug, journal }, scope) => {
+  if (journal.events.some((event) => event.type === 'architecture.bound')) return null
+  const previous = await deps.architectureForge.research(scope.root.number)
+  if (!previous.ok) return stopped(slug, 'research-unreadable', 'The previous research comment could not be read; restore forge access and resume.')
+  await deps.files.write(slug, 'plans/architecture-scope.json', JSON.stringify(scope, null, 2))
+  await deps.files.write(slug, 'plans/architecture-pass.json', JSON.stringify({ stories: scope.stories.slice(0, 20) }, null, 2))
+  await deps.files.write(slug, 'plans/prior-research.md', previous.body ?? 'No previous research comment.')
+  await journal.append('architecture.bound', { artifacts: ['plans/architecture-scope.json', 'plans/architecture-pass.json', 'plans/prior-research.md'] })
+  return null
+}
+const exclusions = async ({ slug, journal }, scope) => {
+  if (scope.excluded.length === 0) return { status: 'ready', slug }
+  const text = `Stories excluded: ${scope.excluded.map(({ issue, reason }) => `#${issue}: ${reason}`).join('; ')} Continue without them or stop?`
+  const question = await contextQuestion(journal, { key: 'architecture-exclusions', kind: 'architecture-exclusions', text })
+  if (!question.answer) return waitingFor(slug, question)
+  return question.answer === 'CONTINUE' ? { status: 'ready', slug } : stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.')
+}

@@ -1,0 +1,118 @@
+#!/usr/bin/env node
+// Initializes a Clean Architecture project structure for .NET, from the current directory.
+// Node, no shell: the same on Linux, macOS and Windows.
+//
+// Usage:   node init-project.mjs <ProjectName> [--bus]
+// Example: node init-project.mjs Ordering
+// --bus adds the command and query bus; pass it only once SKILL.md's three bus conditions hold.
+// SKRAFT_DOTNET replaces the `dotnet` executable (a .mjs path runs through this Node).
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const TEMPLATES = fileURLToPath(new URL('../templates/', import.meta.url))
+const TEMPLATE_FILES = [
+	['Domain/IDomainMarker.cs', 'src/{p}.Domain/IDomainMarker.cs'],
+	['Application/IApplicationMarker.cs', 'src/{p}.Application/IApplicationMarker.cs'],
+	['Infrastructure/IInfrastructureMarker.cs', 'src/{p}.Infrastructure/IInfrastructureMarker.cs'],
+	['Api/IApiMarker.cs', 'src/{p}.Api/IApiMarker.cs'],
+	['IntegrationTest/ArchitectureTests.cs', 'tests/{p}.IntegrationTest/ArchitectureTests.cs'],
+]
+const PLAIN_FILES = [
+	['Infrastructure/DependencyInjection.cs', 'src/{p}.Infrastructure/DependencyInjection.cs'],
+]
+const BUS_FILES = [
+	['Application/Shared/ICommandHandler.cs', 'src/{p}.Application/Shared/ICommandHandler.cs'],
+	['Application/Shared/IQueryHandler.cs', 'src/{p}.Application/Shared/IQueryHandler.cs'],
+	['Application/Shared/ICommandBus.cs', 'src/{p}.Application/Shared/ICommandBus.cs'],
+	['Application/Shared/IQueryBus.cs', 'src/{p}.Application/Shared/IQueryBus.cs'],
+	['Infrastructure/CQRS/CommandBus.cs', 'src/{p}.Infrastructure/CQRS/CommandBus.cs'],
+	['Infrastructure/CQRS/QueryBus.cs', 'src/{p}.Infrastructure/CQRS/QueryBus.cs'],
+	['Infrastructure/DependencyInjection.Bus.cs', 'src/{p}.Infrastructure/DependencyInjection.cs'],
+]
+
+function dotnet(args, cwd) {
+	const custom = process.env.SKRAFT_DOTNET
+	const [command, prefix] = custom && /\.(mjs|cjs|js)$/.test(custom) ? [process.execPath, [custom]] : [custom || 'dotnet', []]
+	const result = spawnSync(command, [...prefix, ...args], { cwd, stdio: 'inherit', shell: false })
+	if (result.error) throw new Error(`dotnet could not start: ${result.error.message}`)
+	if (result.status !== 0) throw new Error(`dotnet ${args.join(' ')} exited ${result.status}`)
+}
+
+const FRAMEWORK = 'net10.0'
+const FRAMEWORK_MAJOR = '10.*'
+
+export function initProject(name, { cwd = process.cwd(), log = (line) => process.stdout.write(`${line}\n`), bus = false } = {}) {
+	if (!/^[A-Za-z_][A-Za-z0-9_.]*$/.test(name ?? '')) throw new Error('Project name required: a C# identifier such as Ordering')
+	const p = (path) => path.replaceAll('{p}', name)
+	const project = (layer) => p(`src/{p}.${layer}/{p}.${layer}.csproj`)
+	const tests = (kind) => p(`tests/{p}.${kind}/{p}.${kind}.csproj`)
+
+	log(`🚀 Initializing Clean Architecture project: ${name}`)
+	log('\n📦 Creating solution...')
+	dotnet(['new', 'sln', '-n', name], cwd)
+
+	log('\n📁 Creating source projects...')
+	for (const [layer, template] of [['Domain', 'classlib'], ['Application', 'classlib'], ['Infrastructure', 'classlib'], ['Api', 'web']]) {
+		dotnet(['new', template, '-n', p(`{p}.${layer}`), '-o', p(`src/{p}.${layer}`), '-f', FRAMEWORK], cwd)
+		rmSync(join(cwd, p(`src/{p}.${layer}/Class1.cs`)), { force: true })
+		dotnet(['sln', 'add', project(layer)], cwd)
+	}
+
+	log('\n🧪 Creating test projects...')
+	for (const kind of ['UnitTest', 'IntegrationTest']) {
+		dotnet(['new', 'xunit', '-n', p(`{p}.${kind}`), '-o', p(`tests/{p}.${kind}`), '-f', FRAMEWORK], cwd)
+		dotnet(['sln', 'add', tests(kind)], cwd)
+	}
+
+	log('\n🔗 Configuring project references...')
+	// Each layer references its inner neighbour only; the rest is transitive.
+	for (const [from, to] of [
+		[project('Application'), project('Domain')],
+		[project('Infrastructure'), project('Application')],
+		[project('Api'), project('Infrastructure')],
+		[tests('UnitTest'), project('Application')],
+		[tests('UnitTest'), project('Domain')],
+		[tests('IntegrationTest'), project('Api')],
+		[tests('IntegrationTest'), project('Domain')],
+		[tests('IntegrationTest'), project('Application')],
+		[tests('IntegrationTest'), project('Infrastructure')],
+	]) dotnet(['add', from, 'reference', to], cwd)
+
+	log('\n📦 Adding NuGet packages...')
+	// Mvc.Testing ships with ASP.NET Core: its next major targets only the next framework.
+	for (const [target, pkg, version] of [
+		[project('Infrastructure'), 'Microsoft.Extensions.DependencyInjection.Abstractions'],
+		[tests('IntegrationTest'), 'Microsoft.AspNetCore.Mvc.Testing', FRAMEWORK_MAJOR],
+		[tests('IntegrationTest'), 'NetArchTest.Rules'],
+	]) dotnet(['add', target, 'package', pkg, ...(version ? ['--version', version] : [])], cwd)
+
+	log('\n📂 Creating directory structure...')
+	for (const dir of ['src/{p}.Domain/Shared', 'src/{p}.Application/Shared', 'src/{p}.Infrastructure/Shared',
+		'tests/{p}.UnitTest/Application', 'tests/{p}.IntegrationTest/Api']) mkdirSync(join(cwd, p(dir)), { recursive: true })
+
+	log(`\n📄 Creating marker interfaces, ${bus ? 'the command and query bus' : 'DI registration'} and architecture tests from templates...`)
+	for (const [template, destination] of [...TEMPLATE_FILES, ...(bus ? BUS_FILES : PLAIN_FILES)]) {
+		const target = join(cwd, p(destination))
+		mkdirSync(dirname(target), { recursive: true })
+		writeFileSync(target, readFileSync(join(TEMPLATES, template), 'utf8').replaceAll('[ProjectName]', name))
+	}
+
+	log('\n🔨 Building solution...')
+	dotnet(['build'], cwd)
+	log(`\n✅ Clean Architecture project ${name} initialized.`)
+	log(`Next: business rules in src/${name}.Domain, each feature as a folder in every layer project (src/${name}.Application/<Feature>/, ...),`)
+	log('architecture tests with: dotnet test --nologo --filter "FullyQualifiedName~.ArchitectureTests."')
+}
+
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+	try {
+		const [name, ...options] = process.argv.slice(2)
+		if (name === undefined || options.some((option) => option !== '--bus')) throw new Error('Usage: node init-project.mjs <ProjectName> [--bus]')
+		initProject(name, { bus: options.includes('--bus') })
+	} catch (error) {
+		process.stderr.write(`❌ ${error.message}\n`)
+		process.exitCode = 1
+	}
+}

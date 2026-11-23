@@ -1,0 +1,231 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { createHash, createHmac } from 'node:crypto'
+import { agent, pipelineHost, SETTLED_PUBLISH } from '../support/pipeline-host.mjs'
+import { createDesignRun } from '../../../../plugins/skraft-design/engine/application/architecture/design-run.mjs'
+import { createAgentLoop } from '../../../../plugins/skraft-design/engine/drivers/cli/agent-loop.mjs'
+import { createRunPipeline } from '../../../../plugins/skraft-design/engine/application/pipeline/run-pipeline-usecase.mjs'
+import { createDecide } from '../../../../plugins/skraft-design/engine/application/decisions/decide-usecase.mjs'
+
+const story = (number, ready = true) => ({ number, title: 'Card checkout', body: 'AC-1: the receipt is visible.', labels: ready ? ['status/ready'] : [], story: true, forge: 'github', repository: 'shop/checkout' })
+const session = (stories = [story(42)], slug = 'issue-42', options = {}) => {
+  const host = pipelineHost({ slug, ...options })
+  const branches = []
+  const deps = { ...host.deps,
+    hasher: { sha256: async (text) => createHash('sha256').update(text).digest('hex'), hmacSha256: async (key, text) => createHmac('sha256', key).update(text).digest('hex') },
+    architectureForge: { read: async () => ({ ok: true, issue: story(42) }), descendants: async () => ({ ok: true, stories }), research: async () => ({ ok: true, body: 'Previous investigation.' }) },
+    architectureRepository: { branch: async (request) => { branches.push(request); return { ok: true } } },
+  }
+  const run = createDesignRun(deps)
+  const loop = createAgentLoop({ adapters: deps, log: () => {}, then: { next: 'next', record: 'record', review: () => 'review' } })
+  return { host, deps, run, loop, branches }
+}
+
+test('a story creates an isolated resumable run and hands only research to the host', async () => {
+  const { host, run, loop, branches } = session()
+  assert.equal((await run.start({ issue: 42 })).status, 'ready')
+  const dispatch = await loop.next()
+  assert.equal(dispatch.status, 'dispatch', dispatch.reason)
+  assert.deepEqual(dispatch.dispatches.map(({ agent }) => agent), ['design-solution-researcher'])
+  const scope = JSON.parse(await host.tracking.read('issue-42', 'plans/architecture-pass.json'))
+  assert.equal(scope.stories[0].number, 42)
+  assert.match(scope.stories[0].bodySha256, /^[0-9a-f]{64}$/)
+  assert.equal((await run.prepare()).status, 'ready')
+  assert.equal((await loop.next()).code, 'not-recorded')
+  assert.deepEqual(branches, [{ name: 'design/issue-42', existing: false }])
+})
+
+test('an epic with unready stories waits for native human consent and resumes the same journal', async () => {
+  const { host, deps, run } = session([story(42), story(43, false)])
+  const waiting = await run.start({ epic: 42 })
+  assert.equal(waiting.status, 'waiting', waiting.reason)
+  assert.deepEqual(waiting.question.options, ['CONTINUE', 'STOP'])
+  assert.equal(host.agentRunner.dispatches.length, 0)
+  const { createDecide } = await import('../../../../plugins/skraft-design/engine/application/decisions/decide-usecase.mjs')
+  const answered = await createDecide(deps).decide({ key: waiting.question.key, answer: 'CONTINUE' })
+  assert.equal(answered.ok, true, answered.reason)
+  assert.equal((await run.prepare()).status, 'ready')
+  const events = (await deps.journal.lines('epic-42')).map((line) => JSON.parse(line))
+  assert.equal(events.filter(({ type }) => type === 'run.started').length, 1)
+  assert.equal(events.find(({ type }) => type === 'question.answered').by, 'decide')
+})
+
+test('research and reviewed story architecture publish a single research comment and architecture PR', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', {
+    config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } },
+    files: { 'docs/adr/adr-001-example.md': '<!-- markdownlint-disable-file -->\n---\nstatus: Accepted\n---\n' },
+  })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository,
+      bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: ['docs/adr/adr-001-example.md'] }],
+      adrs: ['docs/adr/adr-001-example.md'], documents: ['docs/architecture/context-map.md'] }
+    const path = 'docs/architecture/stories/42-card-checkout.md'
+    await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+    git.change(path)
+  } })(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent }) => agent), ['design-solution-researcher', 'design-solution-architect', 'design-pr-writer'])
+  assert.deepEqual(host.agentRunner.reviewed().map(({ agent }) => agent), ['design-consistency-lens', 'design-architecture-compliance-lens', 'design-fitness-lens'])
+  assert.equal(host.events().filter(({ type }) => type === 'architecture.pass-completed').length, 1)
+  assert.ok(host.events().some(({ type }) => type === 'run.finished'))
+  const comments = host.codeHost.comments.filter(({ body }) => body.startsWith('<!-- skraft-design:research:v1 -->'))
+  assert.equal(comments.length, 1)
+  assert.equal(comments[0].edits, 0)
+  assert.equal(host.codeHost.pullRequests.length, 1)
+})
+
+test('an epic runs separate reviewed passes of twenty stories and one remaining story', async () => {
+  const { host, deps, run } = session(Array.from({ length: 21 }, (_, index) => story(index + 1)), 'epic-42')
+  const started = await run.start({ epic: 42 })
+  assert.equal(started.status, 'ready', started.reason)
+  const sizes = []
+  const design = agent({ work: async ({ workspace, git, tracking }) => {
+    const current = JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories
+    sizes.push(current.length)
+    for (const item of current) {
+      const brief = { version: 1, issue: item.number, forge: item.forge, repository: item.repository, bodySha256: item.bodySha256,
+        components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: ['docs/architecture/context-map.md'] }
+      const path = `docs/architecture/stories/${item.number}-card-checkout.md`
+      await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+      git.change(path)
+    }
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), design, design)
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.deepEqual(sizes, [20, 1])
+  const events = (await deps.journal.lines('epic-42')).map((line) => JSON.parse(line))
+  assert.equal(events.filter(({ type }) => type === 'architecture.pass-completed').length, 2)
+})
+
+test('excluding every architecture-blocked story stops without an empty architecture PR', async () => {
+  const { host, deps, run } = session()
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ tracking }) => {
+    await tracking.write('issue-42', 'details/blocked-stories.json', JSON.stringify([{ issue: 42, reason: 'Missing business decision.' }]))
+  } })(host))
+  const paused = await createRunPipeline(deps).run()
+  assert.equal(paused.status, 'waiting', paused.reason)
+  assert.equal(paused.question.kind, 'architecture-blocked')
+  assert.equal((await createDecide(deps).decide({ key: paused.question.key, answer: 'CONTINUE' })).ok, true)
+  const finished = await createRunPipeline(deps).run()
+  assert.equal(finished.status, 'blocked', finished.reason)
+  assert.equal(finished.code, 'architecture-empty')
+  assert.equal(host.agentRunner.dispatches.some(({ agent }) => agent === 'design-pr-writer'), false)
+})
+
+test('a researcher that cannot go on keeps its research and open questions on the issue while a human answers', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent({ result: { status: 'blocked', summary: 'Three questions need the product owner.' } })(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'waiting', outcome.reason)
+  const comments = host.codeHost.comments.filter(({ body }) => body.startsWith('<!-- skraft-design:research:v1 -->'))
+  assert.equal(comments.length, 1)
+})
+
+test('without consent a blocked researcher writes nothing on the issue', async () => {
+  const { host, deps, run } = session()
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent({ result: { status: 'blocked', summary: 'Three questions need the product owner.' } })(host))
+  assert.equal((await createRunPipeline(deps).run()).status, 'waiting')
+  assert.equal(host.codeHost.comments.length, 0)
+})
+
+test('a brief whose repository differs from the engine identity is refused naming the field and its expected value', async () => {
+  const { host, deps, run } = session()
+  await run.start({ issue: 42 })
+  const wrong = agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    const brief = { version: 1, issue: 42, forge: 'github', repository: 'checkout', bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: [] }
+    const path = 'docs/architecture/stories/42-card-checkout.md'
+    await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+    git.change(path)
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), wrong, wrong, wrong, wrong)
+  await createRunPipeline(deps).run()
+  const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
+  assert.ok(failures.some((line) => line.includes('repository="shop/checkout"') && !line.includes('bodySha256=')), failures.join('|'))
+})
+
+test('an unreadable brief is refused naming the rule it breaks', async () => {
+  const { host, deps, run } = session()
+  await run.start({ issue: 42 })
+  const wrong = agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    const brief = { version: 1, issue: 42, forge: current.forge, repository: current.repository, bodySha256: current.bodySha256,
+      components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: ['docs/adr/adr-001-x.md'] }], adrs: [], documents: [] }
+    const path = 'docs/architecture/stories/42-card-checkout.md'
+    await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+    git.change(path)
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), wrong, wrong, wrong, wrong)
+  await createRunPipeline(deps).run()
+  const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
+  assert.ok(failures.some((line) => line.includes('invalid criteria') && line.includes('listed in the brief adrs')), failures.join('|'))
+})
+
+test('a Proposed ADR is accepted only after every architecture pass and only through the PR merge', async () => {
+  const adr = 'docs/adr/adr-001-card-checkout.md'
+  const index = 'docs/adr/decisions-index.md'
+  const { host, deps, run } = session(Array.from({ length: 21 }, (_, index) => story(index + 1)), 'epic-42', {
+    files: { [index]: '| ADR | Status | Ratified by |\n| --- | --- | --- |\n| ADR-001 | Proposed | — |\n' },
+  })
+  await run.start({ epic: 42 })
+  const statusBetweenPasses = []
+  const design = agent({ work: async ({ workspace, git, tracking }) => {
+    const currentStories = JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories
+    if (currentStories[0].number === 21) statusBetweenPasses.push((await workspace.read(adr)).match(/status: (\w+)/)?.[1])
+    const decision = '<!-- markdownlint-disable-file -->\n---\nadr: 1\ntitle: Card checkout\nstatus: Proposed\ndecision: Expose checkout state through a read query.\nratified_by: null\n---\n'
+    for (const current of currentStories) {
+      const citesAdr = current.number === 1
+      const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository,
+        bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: citesAdr ? [adr] : [] }],
+        adrs: citesAdr ? [adr] : [], documents: [] }
+      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      if (citesAdr) await workspace.write(adr, decision)
+      await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+      git.change(...(citesAdr ? [adr, path] : [path]))
+    }
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), design, design)
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures).join('; '))
+  assert.equal(host.human.questions.some(({ kind }) => kind === 'adr-merge-acceptance'), false)
+  assert.deepEqual(statusBetweenPasses, ['Proposed'])
+  assert.match(await host.workspace.read(adr), /status: Accepted/)
+  assert.match(await host.workspace.read(adr), /ratified_by: "architecture PR merge"/)
+  assert.match(await host.workspace.read(index), /\| ADR-001 \| Accepted \| architecture PR merge \|/)
+  const events = host.events()
+  assert.ok(events.findIndex(({ type, step }) => type === 'step.recorded' && step === 'adr') > events.findLastIndex(({ type }) => type === 'architecture.pass-completed'))
+  const step = events.find(({ type, step }) => type === 'step.recorded' && step === 'adr')
+  assert.equal(step.answer, 'ACCEPTED_ON_MERGE')
+  assert.equal(step.outcome, 'skipped')
+  assert.deepEqual(step.subjects, [adr])
+  assert.match(await host.tracking.read('epic-42', 'pull-request-body.md'), /accepted only if this architecture PR merges/)
+})
+
+test('a Proposed ADR already on the merge base cannot be auto-accepted by the architecture PR', async () => {
+  const adr = 'docs/adr/adr-001-card-checkout.md'
+  const decision = '<!-- markdownlint-disable-file -->\n---\nadr: 1\ntitle: Card checkout\nstatus: Proposed\ndecision: Expose checkout state through a read query.\nratified_by: null\n---\n'
+  const { host, deps, run } = session([story(42)], 'issue-42', { files: { [adr]: decision } })
+  host.git.published.add(adr)
+  await run.start({ issue: 42 })
+  const design = agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository,
+      bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [adr] }],
+      adrs: [adr], documents: [] }
+    const path = 'docs/architecture/stories/42-card-checkout.md'
+    await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+    git.change(path)
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), design)
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'waiting')
+  assert.match(await host.workspace.read(adr), /status: Proposed/)
+  assert.equal(host.events().some(({ type, step }) => type === 'step.recorded' && step === 'adr'), false)
+})

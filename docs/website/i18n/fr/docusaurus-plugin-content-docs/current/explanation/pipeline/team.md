@@ -9,6 +9,22 @@ persona: tech-lead
 Des agents qui produisent, des lentilles qui jugent, un moteur qui décide et un pilote qui
 lance. Personne ne valide son propre travail, et aucun agent n'en lance un autre.
 
+## Deux relais independants <!-- #standalone -->
+
+Hors du pipeline framework, le skill `skraft-design` conduit readiness, RESEARCH, DESIGN,
+la revue consistency / architecture-compliance / fitness et la refutation avant sa PR d'architecture.
+Chaque ADR nouveau reste Proposed sur la branche et devient Accepted seulement si une personne
+fusionne cette PR ; aucune ratification distincte n'est demandee. `design-solution-architect`
+produit chaque brief de story ; une epique est decoupee en passes d'au plus 20 stories.
+Producteurs et lentilles ne lancent aucun agent.
+
+Apres fusion humaine, le skill independant `skraft-deliver` transmet brief et documents cites
+a `deliver-acceptance-designer`, puis `deliver-software-engineer`. Revue DISTILL et validation
+humaine des scenarios precedent le TDD ; gates et revue de livraison precedent visuels et PR.
+Seule la session hote lance les agents demandes par chaque moteur. Aucun skill n'invoque l'autre
+moteur. Le [catalogue](../../reference/catalogue.md) porte l'inventaire complet des agents et lentilles ;
+le [guide](../../how-to/design-then-deliver.mdx) decrit installation et refus de fraicheur.
+
 ## Quatre rôles, jamais confondus
 
 SKRAFT n'est pas un agent monolithique. Le travail se répartit entre quatre rôles, et chacun

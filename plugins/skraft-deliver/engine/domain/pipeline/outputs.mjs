@@ -1,0 +1,23 @@
+/**
+ * @param {string} pattern an output path with `{date}` and `{slug}`
+ * @param {{ date: string, slug: string }} values
+ */
+export const outputPath = (pattern, { date, slug }) => pattern.replaceAll('{date}', date).replaceAll('{slug}', slug)
+
+/** The template an output starts from, in the story's language. @param {string} pattern a template name, `{language}` in it or not @param {import('../reporting/language.mjs').Language} language */
+export const templateName = (pattern, language) => pattern.replaceAll('{language}', language)
+
+/** The UTC calendar day of an instant, `YYYY-MM-DD`. @param {Date} instant */
+export const dayOf = (instant) => instant.toISOString().slice(0, 10)
+
+const PLACEHOLDER = /\{\{[^{}]*\}\}/g
+
+/**
+ * An output is filled once it holds text other than what the engine pre-created, with none of
+ * that template's placeholders `{{…}}` left. Other double braces are the subject's own
+ * (`{{baseUrl}}` in a Postman or OpenCollection document), not a placeholder.
+ * @param {string | null} text the file's content, null when absent
+ * @param {string | null} precreated what the engine wrote before dispatching, null when nothing
+ */
+export const isFilled = (text, precreated) =>
+  text !== null && text.trim() !== '' && text !== precreated && !(precreated?.match(PLACEHOLDER) ?? []).some((placeholder) => text.includes(placeholder))

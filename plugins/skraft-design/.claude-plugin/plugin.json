@@ -1,0 +1,28 @@
+{
+  "name": "skraft-design",
+  "version": "0.1.0",
+  "description": "Design and publish architecture for a story or epic, independently of story delivery.",
+  "author": {
+    "name": "SebastienDegodez"
+  },
+  "homepage": "https://github.com/SebastienDegodez/skraft-plugin",
+  "repository": "https://github.com/SebastienDegodez/skraft-plugin",
+  "license": "GPL-3.0-or-later",
+  "agents": [
+    "./com.anthropic.claude-code/agents/design-architecture-compliance-lens.md",
+    "./com.anthropic.claude-code/agents/design-consistency-lens.md",
+    "./com.anthropic.claude-code/agents/design-finding-refuter.md",
+    "./com.anthropic.claude-code/agents/design-fitness-lens.md",
+    "./com.anthropic.claude-code/agents/design-pr-writer.md",
+    "./com.anthropic.claude-code/agents/design-solution-architect.md",
+    "./com.anthropic.claude-code/agents/design-solution-researcher.md"
+  ],
+  "mcpServers": {
+    "skraft-design": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/engine/drivers/cli/server.mjs"
+      ]
+    }
+  }
+}

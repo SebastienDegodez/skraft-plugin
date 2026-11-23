@@ -9,6 +9,31 @@ persona: tech-lead
 One engine decides everything; each host runs it with what it can do. Only the driver starts
 agents, and no agent starts another.
 
+## Independent design and delivery <!-- #standalone -->
+
+`skraft-framework` retains its existing engine and host drivers. The separately installable
+`skraft-design` and `skraft-deliver` plugins carry their own engines, workers, settings and journals;
+they import neither framework nor each other. Their host session conducts a private MCP
+`next` / `record` handover loop; there is no user CLI. Native host verification is still pending.
+
+```mermaid
+flowchart LR
+    DH["Host session: design"] --> R["design-solution-researcher"]
+    DH --> A["design-solution-architect"]
+    DH --> V["DESIGN review and refuter"]
+    A --> B["Story brief + cited documents"]
+    B --> M["Architecture PR merged by human"]
+    M -.-> T["Host session: deliver"]
+    T --> S["deliver-acceptance-designer"]
+    T --> I["deliver-software-engineer"]
+    T --> W["Delivery review and refuter"]
+```
+
+Only versioned documents cross that boundary. Delivery snapshots the fetched base commit, not
+the current working copy. A brief is optional, but an unmerged brief or an invalid cited ADR is
+not silently ignored. See [Design, merge, then deliver](../how-to/design-then-deliver.mdx)
+and [The team](./pipeline/team.md#standalone) for the phase handoffs.
+
 ## The problem to solve
 
 SKRAFT must run the same pipeline under Claude Code, GitHub Copilot CLI and VS Code, on Windows,

@@ -1,0 +1,51 @@
+/**
+ * SourceControl — the Git facts of a folder of the working copy or of a neighbour repository.
+ *
+ * @typedef {{ sha: string, parent: string, subject: string, body: string, files: string[] }} Commit
+ *   parent: its first parent's sha, '' for a root commit; body: the message after the subject
+ *   and its blank line, trailers included, '' when there is none; files: the files the commit changed, relative to the folder asked about, `/`-separated.
+ * @typedef {{
+ *   unavailable: () => Promise<string | null>,
+ *   remoteUrl: () => Promise<string | null>,
+ *   repository: (dir: string) => Promise<string | null>,
+ *   mergeBase: (dir: string, ref: string) => Promise<string | null>,
+ *   branch: (dir: string) => Promise<string | null>,
+ *   isAncestor: (dir: string, ancestor: string, descendant: string) => Promise<boolean>,
+ *   changedFiles: (dir: string, sha: string) => Promise<string[] | null>,
+ *   head: (dir: string) => Promise<string | null>,
+ *   files: (dir: string) => Promise<string[] | null>,
+ *   commits: (dir: string, since: string) => Promise<Commit[] | null>,
+ *   diff: (dir: string, sha: string) => Promise<string | null>,
+ *   existsAt: (dir: string, sha: string, path: string) => Promise<boolean>,
+ *   show: (dir: string, sha: string, path: string) => Promise<string | null>,
+ *   filesAt: (dir: string, sha: string) => Promise<string[] | null>,
+ *   commitFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string, output: string }>,
+ *   commitCopies: (dir: string, copies: Array<{ from: string, to: string, within: string }>, message: string) => Promise<{ ok: true } | { ok: false, error: string, refused?: string[] }>,
+ * }} SourceControl
+ *   unavailable: null when Git runs on this host, else why it does not. remoteUrl: the URL of the
+ *   working copy's remote, origin else the first one Git lists, as Git keeps it; null without one
+ *   or outside Git. dir is relative to the
+ *   working copy. repository: the folder's repository top, relative
+ *   to the working copy, null when dir is in no repository. mergeBase: `git merge-base HEAD
+ *   <ref>` in dir, null when the ref or the merge base does not exist. branch: the branch HEAD is
+ *   on in dir, null when HEAD is detached. isAncestor: whether the
+ *   first commit is the second or one it descends from; false when Git cannot tell. changedFiles: files
+ *   under dir changed since sha (committed, staged, unstaged, untracked), relative to dir;
+ *   null when Git cannot tell. head: the sha HEAD points at in dir, null when there is none.
+ *   files: the files Git lists under dir, tracked or untracked and not ignored, relative to dir;
+ *   null when Git cannot tell.
+ *   commits: the commits reachable from HEAD and not from since, oldest first; null when Git
+ *   cannot tell. diff: the unified diff of the tracked files under dir since sha (committed,
+ *   staged, unstaged), paths relative to dir; null when Git cannot tell. existsAt: whether the
+ *   commit holds the file (path relative to dir). show: the file's text as the commit holds it,
+ *   null when it holds none. filesAt: the files the commit holds under dir, relative to dir; null
+ *   when Git cannot tell. commitFiles: stages the files (relative to dir)
+ *   and commits them alone with that message; ok with nothing to commit; on a refusal, output is
+ *   what Git printed (a hook that refused it, a missing identity). commitCopies: copies
+ *   each file, byte for byte, from `from` to `to` (all relative to dir), ignored or not, then
+ *   commits the copies alone with that message; refused lists the files it copies none of, each
+ *   a symbolic link, resolving outside its folder `within`, or not a PNG. On a failure nothing
+ *   it staged stays staged.
+
+ */
+export {}

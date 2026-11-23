@@ -1,0 +1,33 @@
+digraph design {
+  graph [version="2", goal="Design the architecture"]
+
+  start    [shape=Mdiamond]
+  research [shape=box, agent="design-solution-researcher", phase="RESEARCH"]
+  design   [shape=box, agent="design-solution-architect", phase="DESIGN"]
+  subgraph cluster_design_review {
+    label="DESIGN review"
+    design_review_lenses [shape=component]
+    design_review_consistency [shape=note, lens="consistency"]
+    design_review_architecture_compliance [shape=note, lens="architecture-compliance"]
+    design_review_fitness [shape=note, lens="fitness"]
+    design_review_refuter [shape=octagon, mandatory=true]
+    design_review [shape=tripleoctagon, mandatory=true]
+  }
+  adr      [shape=hexagon, question="adr-merge-acceptance"]
+  architecture_pass [shape=hexagon, question="architecture-pass"]
+  pr_writer [shape=box, agent="design-pr-writer", phase="PUBLISH"]
+  publish  [shape=parallelogram, publish="pull-request"]
+  exit     [shape=Msquare]
+
+  start -> research -> design -> design_review_lenses
+  design_review_lenses -> design_review_consistency -> design_review_refuter
+  design_review_lenses -> design_review_architecture_compliance -> design_review_refuter
+  design_review_lenses -> design_review_fitness -> design_review_refuter
+  design_review_refuter -> design_review
+  design_review -> design  [label="NEEDS_REWORK", max_visits=2]
+  design_review -> architecture_pass [label="APPROVED"]
+  architecture_pass -> design [label="NEXT", max_visits=50]
+  architecture_pass -> adr [label="COMPLETE"]
+  adr -> pr_writer [label="ACCEPTED_ON_MERGE"]
+  pr_writer -> publish -> exit
+}

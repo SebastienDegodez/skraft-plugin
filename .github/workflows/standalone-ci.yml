@@ -1,0 +1,35 @@
+name: Standalone design and delivery
+
+on:
+  push:
+    branches: [integration/v2-next]
+    paths: ['plugins/skraft-design/**', 'plugins/skraft-deliver/**', 'tests/skraft-design/**', 'tests/skraft-deliver/**', '.github/workflows/standalone-ci.yml', 'scripts/project-plugin-adapters.mjs', 'package.json', '.claude-plugin/marketplace.json', '.github/plugin/marketplace.json']
+  pull_request:
+    branches: [integration/v2-next]
+    paths: ['plugins/skraft-design/**', 'plugins/skraft-deliver/**', 'tests/skraft-design/**', 'tests/skraft-deliver/**', '.github/workflows/standalone-ci.yml', 'scripts/project-plugin-adapters.mjs', 'package.json', '.claude-plugin/marketplace.json', '.github/plugin/marketplace.json']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --prefix plugins/skraft-design/engine
+      - run: npm ci --ignore-scripts --prefix plugins/skraft-deliver/engine
+      - run: npm run standalone:check
+      - run: npm run lint:standalone
+      - run: npm run test:standalone
