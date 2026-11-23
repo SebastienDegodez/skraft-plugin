@@ -37,38 +37,33 @@ rationale that grants an exemption.
 | Clean Architecture boundaries | blocking |
 | TDD cycle respected | blocking |
 | Test integrity | blocking |
-| Mutation meets the bar, when the developer declared a command | blocking |
-| Mutation with no declared command | not run, reported |
+| Mutation, in a delivery | never run: G6 `not_run`, reported |
+| Mutation, in a `/skraft-mutation` run | every scope meets the bar |
 | Gherkin gate (user-approved scenarios) | blocking |
 | ADR for non-trivial decisions | blocking |
 | Object Calisthenics (Domain) | blocking |
 
 A gate that cannot run is not a passed gate. Report it as a failure and stop. The one
-exception is mutation with no command declared: G6 is `not_run`, never `pass`, and the report
-says so.
+exception is mutation: the pipeline never runs it, so G6 is `not_run`, never `pass`, and the
+report says so.
 
 ## Mutation is the developer's responsibility
 
 Mutation testing must be done on every story, and running it is the developer's
 responsibility, not SKRAFT's. SKRAFT ships no mutation tool, no mutation config and no
-scaffold. The developer:
+scaffold, and the pipeline never runs mutation: every delivery records G6 `not_run`. The
+developer:
 
 1. picks the tool (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…) and its configuration;
-2. declares, per component in `skraft-config.json`, the command that runs it
-   (`components[].commands.mutation`, the v2 shape);
+2. runs `/skraft-mutation`, which asks for the command of each component (proposing one found in
+   `CONTRIBUTING.md`) and warns when the command is a full run rather than an incremental one;
 3. makes that command compute the scores and write them as JSON to the file named by
    `SKRAFT_MUTATION_RESULT`: `core` and `boundary` for a Clean Architecture component, `global`
    for a single project; each scope may list its surviving mutants, one `file:line detail` line
    each, which the team can leave out;
 4. may set the tool's own break threshold; SKRAFT judges 80% on every scope regardless.
 
-`mutation-testing`'s `mutation-gate` runs each declared command, reads each result and returns
-the verdict as its exit code: 0 pass, 1 fail, 2 blocked, 3 not run. You never judge a score by
-reading a number. No caller argument sets the bar: the gate refuses one.
-
-A team may run mutation outside the pipeline (`mutation.pipeline: false`, set by
-`/skraft-init mutation`): the developer runs `/skraft-mutation`, and DELIVER reuses that run when
-it judged HEAD on a clean working copy. With no command declared, or no such run, the gate exits
-3 and G6 is recorded `not_run` with its rationale. You
-never write the command, the tool config or the result yourself to make G6 run: tell the
-developer it is theirs to declare.
+`/skraft-mutation`'s `mutation-gate` runs each command, reads each result and returns the
+verdict as its exit code: 0 pass, 1 fail, 2 blocked. You never judge a score by reading a
+number. No caller argument sets the bar: the gate refuses one. You never run mutation, write the
+command, the tool config or the result yourself.

@@ -34,8 +34,7 @@ export const BUNDLES = [
 		],
 	},
 	{ entry: 'src/cli/report.mjs', targets: ['skills/qa-reporting/scripts/report'] },
-	{ entry: 'src/cli/mutation-gate.mjs', targets: ['skills/mutation-testing/scripts/mutation-gate', 'skills/skraft-mutation/scripts/mutation-gate'] },
-	{ entry: 'src/cli/skraft-init.mjs', targets: ['skills/skraft-init/scripts/init'] },
+	{ entry: 'src/cli/mutation-gate.mjs', targets: ['skills/skraft-mutation/scripts/mutation-gate'] },
 ]
 
 const MARKER = 'GENERATED.md'

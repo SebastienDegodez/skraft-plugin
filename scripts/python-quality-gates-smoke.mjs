@@ -15,7 +15,7 @@
 //               100% line coverage of that core
 //   G9          snapshot.mjs writes the committed bytes of a test file
 //
-// Mutation (G6) is the developer's own command, run by the mutation-testing skill's gate.
+// Mutation (G6) never runs in a delivery: the developer runs it with /skraft-mutation.
 //
 // Usage:  node scripts/python-quality-gates-smoke.mjs [--python <interpreter>] [--keep]
 //   --python  an interpreter that already holds pytest and coverage;

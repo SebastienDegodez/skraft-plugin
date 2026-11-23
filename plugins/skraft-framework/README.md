@@ -11,9 +11,10 @@ must load, the artifacts a phase must produce, the verdicts and the commits.
 
 - **Phases you can trust.** A phase cannot start out of order, and cannot close without its
   artifacts, a recorded review verdict and, for delivery, a new commit.
-- **Proof, not claims.** Tests, architecture checks, coverage and mutation scores are run by
-  scripts and recorded as evidence; a missing proof blocks delivery instead of passing silently.
-  Mutation runs the command you declare; without one it is reported as not run, never as passed.
+- **Proof, not claims.** Tests, architecture checks and coverage are run by scripts and
+  recorded as evidence; a missing proof blocks delivery instead of passing silently. Mutation
+  never runs in the pipeline: it is reported as not run, never as passed, and you run it with
+  `/skraft-mutation`.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
   ADRs and mutation testing ship as skills the agents load when they need them.
 - **Resumable.** State, recovery data and an append-only audit trail live in your repository.
@@ -78,14 +79,13 @@ A stack without a quality-gates adapter blocks DELIVER with a structured reason:
 guesses a command or skips a gate.
 
 **Mutation testing is your responsibility.** It must be done on every story, with the tool
-you choose: SKRAFT ships no mutation tool, config or scaffold. Declare the command per
-component in `skraft-config.json` (`components[].commands.mutation`); it writes its scores as
-JSON to the file named by `SKRAFT_MUTATION_RESULT` (`core` and `boundary` for Clean
-Architecture, `global` for a single project), with its surviving mutants as `file:line detail`
-lines unless your team turns them off. SKRAFT runs it on every story and holds every
-scope to 80%. Without a declared command, the mutation gate does not run, and every
-evidence log and report says so. `/skraft-init mutation` sets it up, in the pipeline (every
-story) or outside it (you run `/skraft-mutation` when you choose).
+you choose: SKRAFT ships no mutation tool, config or scaffold, and the pipeline never runs it:
+every evidence log and report records G6 `not_run`. Run `/skraft-mutation` when you choose: it
+asks for each component's command (proposing one found in `CONTRIBUTING.md`) and warns when it
+is a full run rather than an incremental one (`--since`, `{baseSha}`, delta). The command writes
+its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT` (`core` and `boundary` for
+Clean Architecture, `global` for a single project), with its surviving mutants as
+`file:line detail` lines unless your team leaves them out; SKRAFT holds every scope to 80%.
 
 ## Guarantees
 

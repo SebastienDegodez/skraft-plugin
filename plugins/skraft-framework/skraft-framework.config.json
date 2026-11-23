@@ -251,10 +251,6 @@
         "policy": "on-demand"
       },
       {
-        "name": "mutation-testing",
-        "policy": "on-demand"
-      },
-      {
         "name": "skraft-quality-bar",
         "policy": "on-demand"
       },

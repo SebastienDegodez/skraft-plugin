@@ -1,6 +1,6 @@
 ---
 name: resolving-stack-commands
-description: Use whenever an agent must run a toolchain command (build, test) and needs the concrete invocation. Resolves build/test commands from the detected stack via the `quality-gates-<tech>` adapters; mutation is the developer's command, run through mutation-testing. No agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer and software-engineer.
+description: Use whenever an agent must run a toolchain command (build, test) and needs the concrete invocation. Resolves build/test commands from the detected stack via the `quality-gates-<tech>` adapters; mutation is never resolved, the developer runs it through /skraft-mutation. No agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer and software-engineer.
 ---
 
 # Resolving Stack Commands (stack-agnostic)
@@ -23,7 +23,7 @@ says how.
 Detect the stack from markers at the repo root, then resolve the concrete
 commands from the matching `quality-gates-<tech>` adapter (the adapter owns the
 build / test commands and their evidence mapping). Mutation is never resolved here: the
-developer declares it in `skraft-config.json` and `mutation-testing`'s gate runs it.
+pipeline never runs it, and the developer gives its command to `/skraft-mutation`.
 
 
 | Stack | Detection markers | Adapter | Status |
@@ -78,11 +78,10 @@ Inside a SKRAFT pipeline, resolved commands live in one file every later agent r
 | build | {command} | {dir} |
 | test — full suite | {command} | {dir} |
 | test — one test (filter placeholder `{TestName}`) | {command} | {dir} |
-| mutation (`mutation-testing` gate; `not declared` when `skraft-config.json` has no `commands.mutation`) | {command} | {dir} |
 ```
 
 ## Contract for callers
 
-- Resolve the command (build / test) from the matching `quality-gates-<tech>` adapter; do not embed it in workflow steps. Mutation comes from `skraft-config.json` through `mutation-testing`.
-- Run it, then assert on its output (build succeeds, RED on a business assertion, GREEN gate, mutation score, etc.).
+- Resolve the command (build / test) from the matching `quality-gates-<tech>` adapter; do not embed it in workflow steps.
+- Run it, then assert on its output (build succeeds, RED on a business assertion, GREEN gate, etc.).
 - Adding a stack = add a `quality-gates-<tech>` adapter and a row here, with zero edits to agents.

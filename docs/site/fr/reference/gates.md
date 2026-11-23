@@ -217,7 +217,7 @@ compromis délibérément — la qualité ne se négocie pas.
 | **G3** | Le build passe. | Compilation / vérification de types réussie. |
 | **G4** | L'analyse statique passe. | Linter/analyseur sans problème bloquant. |
 | **G5** | Les règles d'architecture passent. | Les tests de direction de dépendance (Clean Architecture) passent. |
-| **G6** | Le score de mutation atteint la barre. | La gate de mutation a lancé chaque `commands.mutation` déclarée par le développeur dans `skraft-config.json` et sort en `0` : chaque scope rapporté (core et boundary, ou global) atteint 80 %. `not_run` quand aucune n'est déclarée. |
+| **G6** | Le score de mutation atteint la barre. | Toujours `not_run` dans une livraison : le pipeline ne lance jamais la mutation. Le développeur lance `/skraft-mutation`, qui exige 80 % sur chaque scope (core et boundary, ou global). |
 | **G7** | Aucun mock dans le cœur Domain/Application. | Attestation par grep : zéro symbole de framework de mock dans ces couches. |
 | **G8** | Message complet du commit conventionnel. | Chaque commit couvert utilise le scope fonctionnel, le sign-off et l'issue connue ; la cloture exige un travail reellement termine et toutes les gates requises passees. |
 | **G9** | Aucune altération de test (intégrité RED→GREEN). | Pour chaque scénario, son fichier de test d'acceptance n'a changé que par **ajout** entre son commit `test` RED et son commit green. |
@@ -240,25 +240,23 @@ ou recu de completion supplementaire.
   syntaxique, pas une preuve de completion.
 
 > **La mutation est la responsabilité du développeur.** Elle doit être faite à chaque story,
-> mais SKRAFT ne fournit ni outil de mutation, ni configuration, ni scaffold. Vous choisissez
-> l'outil (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…), vous le configurez, et vous
-> déclarez par composant dans `skraft-config.json` la commande qui le lance
-> (`components[].commands.mutation`, la forme de la v2). Cette commande écrit ses scores en JSON
-> dans le fichier désigné par `SKRAFT_MUTATION_RESULT` : `core` et `boundary` pour un composant
-> Clean Architecture, `global` pour un mono-projet, chacun avec ses mutants survivants en lignes
-> `fichier:ligne détail`, sauf si l'équipe les désactive. La gate du skill `mutation-testing`
-> lance ces commandes une fois, après le dernier commit de travail de la story, exige 80 % sur
-> chaque scope et liste chaque survivant rapporté à tuer ; son **code de sortie** fait verdict. Un score lu dans un rapport et
-> jugé en prose est une opinion sur une gate, pas une gate ; G11 s'atteste de la même façon.
-> `/skraft-init mutation` la configure, dans le pipeline (DELIVER la lance à chaque story) ou
-> hors du pipeline (`mutation.pipeline: false` : le développeur lance `/skraft-mutation`, et
-> DELIVER reprend ce run s'il a jugé le même commit sur une copie de travail propre). Sans
-> commande déclarée, ou sans ce run, G6 est enregistrée `not_run` avec sa justification : jamais
-> `pass`, jamais silencieuse — `qg-verify` et le rapport l'affichent.
+> mais SKRAFT ne fournit ni outil de mutation, ni configuration, ni scaffold, et le pipeline ne
+> la lance jamais : chaque livraison enregistre G6 `not_run` avec sa justification — jamais
+> `pass`, jamais silencieuse, `qg-verify` et le rapport l'affichent. Vous choisissez l'outil
+> (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…), vous le configurez, et vous lancez
+> `/skraft-mutation` quand vous le décidez. Il demande la commande de chaque composant, en
+> proposant celle trouvée dans `CONTRIBUTING.md`, et alerte quand la commande est un run complet
+> (sans `--since`, `{baseSha}`, delta ni option incrémentale). Cette commande écrit ses scores en
+> JSON dans le fichier désigné par `SKRAFT_MUTATION_RESULT` : `core` et `boundary` pour un
+> composant Clean Architecture, `global` pour un mono-projet, chacun avec ses mutants survivants
+> en lignes `fichier:ligne détail`, sauf si l'équipe les omet. La gate exige 80 % sur chaque
+> scope et liste chaque survivant rapporté à tuer ; son **code de sortie** fait verdict. Un score
+> lu dans un rapport et jugé en prose est une opinion sur une gate, pas une gate ; G11 s'atteste
+> de la même façon.
 
 > Une gate réellement non pertinente est marquée `not_applicable` **avec
 > justification** — jamais en remplacement d'un `fail` ou d'une évidence manquante. Une
-> gate qui *ne peut pas* s'exécuter — commande de mutation déclarée qui échoue, SDK absent —
+> gate qui *ne peut pas* s'exécuter — SDK absent —
 > est `fail`, jamais `not_applicable`.
 
 ---

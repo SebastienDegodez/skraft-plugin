@@ -4,8 +4,8 @@
 //
 // The unit tests drive the scripts with a fake dotnet that writes whatever report a test
 // asks for. They prove the scripts read a report correctly; they cannot prove the real
-// toolchain still writes it. Mutation (G6) is the developer's own command, run by the
-// mutation-testing skill's gate, so no mutation tool runs here.
+// toolchain still writes it. Mutation (G6) never runs in a delivery: the developer runs it
+// with /skraft-mutation, so no mutation tool runs here.
 //
 // So this runs the shipped scripts with the real toolchain on a small Clean Architecture
 // solution, in a throwaway Git copy of tests/skraft-framework/quality-gates/fixtures/dotnet-checkout:

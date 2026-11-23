@@ -66,21 +66,10 @@ Check UnitTest files:
 Test names, variables, and assertions use business vocabulary
 (see the project's FR→EN lexicon). No `test1`, `data`, `ProcessData`.
 
-### C8 — mutation score meets the bar
+### C8 — mutation stays out of the delivery
 
-**S7 DETERMINISTIC TOOL BRIDGE — execute via terminal, not prose.**
-
-1. Resolve the stack's adapter (`resolving-stack-commands`) and run its mutation
-   scripts in order — core first, then boundary. Each script carries the threshold for
-   its scope and returns the verdict as an exit code; `skraft-quality-bar` states the
-   values. Never hand-assemble the runner invocation here.
-2. Parse output — extract survivors.
-3. For real survivors → write boundary test → re-run scoped.
-4. For equivalent mutants → document in code comment.
-
-Zero surviving mutants in Domain and Application (equivalent mutants documented if accepted).
-
-Load the `mutation-testing` skill for full workflow.
+Run no mutation tool, mutation gate or `/skraft-mutation`: G6 is recorded `not_run`. The
+developer runs `/skraft-mutation`; when they ask to kill its survivors, load `mutation-testing`.
 
 ### C9 — Conventional commit format
 

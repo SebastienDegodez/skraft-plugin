@@ -36,7 +36,7 @@ it, **and which production layer a business rule's code lands in**. Everything e
 | What the observable behaviour IS, and whether it is approved | `bdd-methodology` |
 | Which test project, which **test** layer, which double | `clean-architecture-testing` |
 | Whether a domain test is authorized; coverage matrix; walking-skeleton strategy A–D | `test-design-mandates` |
-| Mutation score, survivor classification, report parsing | `mutation-testing` |
+| Survivor classification after a developer's `/skraft-mutation` run | `mutation-testing` |
 | Commit-time self-check | `craft-discipline` |
 | Cleaning up test code that already passes | `test-refactoring-catalog` |
 | **Phase order, entry evidence, the outer→inner handoff, and which production layer a rule's code lands in** | **this skill** |
@@ -338,23 +338,19 @@ BEFORE its commit:
    BLOCK the commit and move it. Moving misplaced code is not the forbidden post-GREEN iteration: the
    acceptance test does not change and stays green throughout.
 
-## Coverage and Mutation Gate
+## Coverage Gate
 
 This skill owns **when** the gate runs and **what evidence closes it**. `skraft-quality-bar` owns
 the numbers, and no setting lowers them.
 
 Code you cannot cover is code no approved behavior asked for — delete it rather than lower the bar.
 
-After both test streams are green and before merge, run the `mutation-testing` skill, which owns
-the mechanics: what the run covers, how a surviving mutant is classified, and what happens to a
-test that kills nothing.
+The coverage run happens once, after the story's last work commit, and only it closes the gate.
+If the gate has not run, the work is not complete — that is sequence, and it holds for every
+change.
 
-Run no mutation inside a cycle. The coverage run and the mutation runs since the delivery's base
-commit happen once, after the story's last work commit, and only they close the gate.
-
-The gate is closed when coverage and both mutation runs meet the bar and every survivor is
-resolved. If the gate has not run, the work is not complete — that is sequence, and it holds for
-every change.
+Mutation never runs in the delivery, inside a cycle or after it: G6 is recorded `not_run`, and
+the developer runs `/skraft-mutation`.
 
 ## Walking Skeleton (first slice of a feature)
 
@@ -468,13 +464,12 @@ worth taking.
 | Skipping Gherkin ("too small") | Even small features benefit from behavior-first thinking |
 | Polluting Gherkin with class/endpoint names | Keep scenarios in business language only |
 | Testing data structures directly by default | Test policies/rules; data types are covered by usage |
-| Skipping the mutation gate before merge | Run the mutation-testing skill after tests green |
 
 ## Integration with other skills
 
 `bdd-methodology` defines WHAT → this skill drives RED → inspection → SYNTHESIZE-GREEN →
-`mutation-testing` validates test quality before merge → `craft-discipline` is the commit-time
-self-check. See **What this skill owns** for the full delegation map, and pair with domain-specific
+`craft-discipline` is the commit-time self-check; `mutation-testing` serves the developer's
+`/skraft-mutation` runs. See **What this skill owns** for the full delegation map, and pair with domain-specific
 testing skills for patterns and examples.
 
 ## References

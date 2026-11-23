@@ -1,6 +1,6 @@
 ---
 name: quality-gates-javascript
-description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, or when judging whether a recorded JavaScript test result is enough to call delivery verified. Owns command resolution from checked-in package scripts and fresh evidence capture. Mutation (G6) is the developer's, run through mutation-testing. Not for explaining test code, TypeScript or Vitest packages (quality-gates-typescript), or coverage enforcement.
+description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, or when judging whether a recorded JavaScript test result is enough to call delivery verified. Owns command resolution from checked-in package scripts and fresh evidence capture. Mutation (G6) never runs in a delivery; the developer runs it through /skraft-mutation. Not for explaining test code, TypeScript or Vitest packages (quality-gates-typescript), or coverage enforcement.
 ---
 
 # JavaScript quality gates
@@ -31,11 +31,9 @@ Missing tooling, unsupported scope, failed gates or absent evidence block delive
 
 ## G6 — Mutation score
 
-Mutation testing is the developer's responsibility: this adapter runs no mutation tool and
-ships no mutation config. Load `mutation-testing` and run its gate once, after the story's last
-work commit; it runs the `commands.mutation` the developer declared in `skraft-config.json` and
-judges the report. Exit 3 means none is declared: record G6 `not_run`, never `pass`, and tell
-the developer.
+Never run in a delivery. This adapter runs no mutation tool or gate and ships no mutation
+config: record G6 `not_run` with the rationale `G6 not run: mutation testing runs outside the
+pipeline; the developer runs /skraft-mutation.`, never `pass`, and tell the developer.
 
 ## Evidence
 
