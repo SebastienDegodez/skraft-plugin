@@ -3,6 +3,13 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.17.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.17.0...v1.17.1) (2026-11-23)
+
+### 🐛 Bug Fixes
+
+* **skraft-framework:** give test-only rework a commit shape the review accepts ([#652](https://github.com/SebastienDegodez/skraft-plugin/issues/652)) ([45744da](https://github.com/SebastienDegodez/skraft-plugin/commit/45744da8df2f3e024f93fbe43b36a0bbf91e1181))
+* **skraft-framework:** never run mutation testing in the pipeline ([#651](https://github.com/SebastienDegodez/skraft-plugin/issues/651)) ([8b8de08](https://github.com/SebastienDegodez/skraft-plugin/commit/8b8de08f0fd51b65dbd82f7856fad62741f0b6cc))
+
 ## [1.17.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.16.1...v1.17.0) (2026-11-21)
 
 ### ✨ Features
