@@ -71,8 +71,8 @@ once green, and no `test` commit of its own.
 The engine runs no gate. The software engineer runs every gate (`build`, `format`, `lint`, `test`,
 `architecture`, `coverage`) of each component the story changed through the MCP tool `skraft_repl`
 (`gate(name, command, { cwd })`, see [The REPL](../../reference/repl.md)); the run of the commit
-line is the `test` run, and a gate the project's documents name no command for is declared with
-`absent`. The engine refuses no attempt for these runs. It journals
+line is the `test` run, and a gate the component has no command for is declared with
+`absent`, as the brief's `no command` line gives it. The engine refuses no attempt for these runs. It journals
 `evidence.checked` for the runs whose trace reads through its signatures, else the code of what broke it, and hands the trace or that code to the DELIVER
 review ([Gates](../../reference/gates.md#command-gates)).
 
