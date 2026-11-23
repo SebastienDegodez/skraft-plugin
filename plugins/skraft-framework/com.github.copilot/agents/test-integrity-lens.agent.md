@@ -63,6 +63,7 @@ Compare test assertions between commits:
 - If an assertion was weakened (e.g., `Assert.Equal(90, x)` → `Assert.NotNull(x)`) → blocker
 - If a test was deleted to make the suite pass → blocker
 - If `[Skip]` was added to a failing test → blocker
+- A `test` commit whose body records `PLAN_DEVIATION: <old assertion> → <new assertion>` replaces an assertion: judge each replacement it lists. Blocker only when the new assertion accepts a value the old one rejected, or a removed line is not listed
 
 ## Output
 

@@ -200,7 +200,8 @@ error only when read: a red is never chained to a commit; a green is.
 |---|---|
 | Acceptance tests of the story (skraft DISTILL) | One `test` commit: every scenario's acceptance test and the skeleton they call, after one run whose output shows each failing on a business assertion, formatted and linted before the commit |
 | Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained so it commits only when the run passes: `<test command, pending scenarios excluded> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"` |
-| No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `feat` or `fix` with its test and the code, once green; `refactor` for a change under green |
+| No scenario: gates or review sent the story back, a session without skraft | Each cycle: `feat` or `fix` with its test and the code, once green; `refactor` for a change under green |
+| Review asks for a stronger test, no behavior change | One `test` commit, never a RED→GREEN cycle: it adds assertions or cases to existing tests and never removes or rewrites a line. A stricter assertion that must replace an existing one carries `PLAN_DEVIATION: <old assertion> → <new assertion>` in the commit body, one line per replacement |
 
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
 named and sent back to whoever wrote it.
