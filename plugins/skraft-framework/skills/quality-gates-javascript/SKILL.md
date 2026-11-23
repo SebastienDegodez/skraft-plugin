@@ -1,6 +1,6 @@
 ---
 name: quality-gates-javascript
-description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, or when judging whether a recorded JavaScript test result is enough to call delivery verified. Owns command resolution from checked-in package scripts and fresh evidence capture. Mutation (G6) never runs in a delivery: it is the developer's, through /skraft-mutation. Not for explaining test code, TypeScript or Vitest packages (quality-gates-typescript), or coverage enforcement.
+description: Use in a JavaScript/Node.js project when running its existing package tests or build scripts, or when judging whether a recorded JavaScript test result is enough to call delivery verified. Owns command resolution from checked-in package scripts and fresh evidence capture. Mutation (G6) never runs in a delivery; the developer runs it through /skraft-mutation. Not for explaining test code, TypeScript or Vitest packages (quality-gates-typescript), or coverage enforcement.
 ---
 
 # JavaScript quality gates

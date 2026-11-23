@@ -1,6 +1,6 @@
 ---
 name: skraft-mutation
-description: Use when the developer runs /skraft-mutation to run their mutation testing now, see each scope's score against the bar and the surviving mutants. The only way SKRAFT runs mutation: the pipeline never does, and G6 stays not_run in every delivery.
+description: Use when the developer runs /skraft-mutation to run their mutation testing now, see each scope's score against the bar and the surviving mutants. The only way SKRAFT runs mutation, since the pipeline never does and G6 stays not_run in every delivery.
 disable-model-invocation: true
 ---
 

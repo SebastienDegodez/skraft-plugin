@@ -1,6 +1,6 @@
 ---
 name: resolving-stack-commands
-description: Use whenever an agent must run a toolchain command (build, test) and needs the concrete invocation. Resolves build/test commands from the detected stack via the `quality-gates-<tech>` adapters; mutation is never resolved: the developer runs it through /skraft-mutation. No agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer and software-engineer.
+description: Use whenever an agent must run a toolchain command (build, test) and needs the concrete invocation. Resolves build/test commands from the detected stack via the `quality-gates-<tech>` adapters; mutation is never resolved, the developer runs it through /skraft-mutation. No agent hardcodes `dotnet test`, `dotnet build`, or any toolchain command. Loaded by acceptance-designer and software-engineer.
 ---
 
 # Resolving Stack Commands (stack-agnostic)
