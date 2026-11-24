@@ -93,6 +93,7 @@ test('the receipt names the attempt it read and the paths it read with the hash 
   assert.deepEqual(kept.inputs.map(({ source, path }) => `${source} ${path}`), [
     'tracking-list ',
     `tracking ${MATRIX_PATH}`,
+    'tracking research/2026-10-11/checkout-research.md',
     'workspace docs/architecture/context-map.md',
     'workspace docs/architecture/zebra.md',
   ], 'every read, each once, in one order of its own: the matrix named zebra first, the receipt sorts it last')
