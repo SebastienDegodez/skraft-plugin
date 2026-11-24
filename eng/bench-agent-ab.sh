@@ -6,7 +6,8 @@
 #
 # The suite (tests/agents/<suite>/: spec + fixtures) is taken from the CURRENT
 # checkout and copied into both worktrees, so both arms see the same stimulus,
-# fixture and graders; only the descriptors, skills and plugin code differ.
+# fixture and graders; only the descriptors, skills and plugin code differ. One exception: a
+# fixture copy of a plugin template (fixtures/**/*.template.md) is replaced by the arm's own.
 # Each arm runs through eng/run-vally-evals.sh of its own ref — the only eval
 # entry point — then eng/compare-agent-ab.mjs reads the two results.jsonl.
 #
@@ -53,6 +54,13 @@ prepare_arm() {
     sed -i.bak -E "s/^(  runs:) [0-9]+$/\1 $RUNS/" "$TREE/tests/agents/$SUITE/eval.yaml"
     rm -f "$TREE/tests/agents/$SUITE/eval.yaml.bak"
   fi
+  # A fixture file named after a plugin template is that arm's own template: the engine hands
+  # each version of an agent the template of its ref, so the suite's copy is only a placeholder.
+  local COPY OWN
+  while IFS= read -r COPY; do
+    OWN="$TREE/plugins/skraft-framework/assets/templates/$(basename "$COPY")"
+    if [ -f "$OWN" ]; then cp "$OWN" "$COPY"; fi
+  done < <(find "$TREE/tests/agents/$SUITE/fixtures" -name '*.template.md' -type f 2>/dev/null)
   # The executor imports the Copilot SDK; both arms share the current checkout's install.
   if [ -d "$ROOT/node_modules" ] && [ ! -e "$TREE/node_modules" ]; then
     ln -s "$ROOT/node_modules" "$TREE/node_modules"
