@@ -11,6 +11,7 @@ import { loadWorkflow, WORKFLOW_FILE } from '../workflow/load-workflow.mjs'
 import { workflowDrawing } from '../../domain/reporting/workflow-drawing.mjs'
 import { openJournal } from '../journal/run-journal.mjs'
 import { journalEntries, unverifiedCount } from '../../domain/reporting/journal-entries.mjs'
+import { draftPublication } from '../../domain/reporting/draft-publication.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
@@ -24,6 +25,7 @@ import { journalEntries, unverifiedCount } from '../../domain/reporting/journal-
  *   phases: PhaseView[],
  *   current: { step: string, phase: string, agent: string | null, gates: string[] | null, question: string | null, visit: number, attempt: number } | null,
  *   question: import('../../domain/reporting/run-status.mjs').WaitingQuestion | null,
+ *   draftPublication: { allowed: boolean, reason: string },
  *   attempts: number,
  *   costUsd: number | null,
  *   graph: import('../../domain/reporting/run-graph.mjs').RunGraph,
@@ -119,14 +121,19 @@ const view = async (deps) => {
 const withoutRun = (where, workflow) => ({
   ...where,
   phases: (workflow?.phases ?? []).map((phase) => ({ phase, state: /** @type {const} */ ('pending') })),
-  current: null,
-  question: null,
+  ...emptyRunDetails(),
   attempts: 0,
   costUsd: null,
   graph: runGraph(workflow, [], {}),
   reviews: [],
   gates: [],
   agents: [],
+})
+
+const emptyRunDetails = () => ({
+  current: null,
+  question: null,
+  draftPublication: { allowed: false, reason: 'no-draftable-human-decision' },
 })
 
 /**
@@ -151,6 +158,7 @@ const whereRunStands = (run, workflow) => ({
   phases: phaseStates(run, workflow?.phases ?? journalPhases(run)),
   current: currentNode(run),
   question: waitingOn(run),
+  draftPublication: draftPublication(run),
   attempts: run.attempts,
   costUsd: run.costUsd,
 })

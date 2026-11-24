@@ -22,6 +22,7 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   slug: string, story: { issue?: number | null, title?: string | null } | null, link: string | null, prose: Prose | null,
  *   adrs: Array<{ path: string, number: number, title: string | null }>, unlocked: Array<{ node: string, reason: string }>,
  *   reds: RedCommit[], gates: GateFact[], review: ReviewFacts, status: string,
+ *   pendingQuestion: import('./run-status.mjs').WaitingQuestion | null,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null, repository: import('./visuals.mjs').Repository,
  *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
@@ -232,8 +233,21 @@ const decisionLines = (facts) => {
   const lines = [
     ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.acceptedOnMerge}`),
     ...facts.unlocked.map(({ node, reason }) => `- ${words.unlocked(code(node), oneLine(reason))}`),
+    ...pendingDecisionLines(facts.pendingQuestion, words),
   ]
   return lines.length > 0 ? lines : [words.noDecision]
+}
+
+/** @param {import('./run-status.mjs').WaitingQuestion | null} question @param {Words} words */
+const pendingDecisionLines = (question, words) => {
+  if (question === null) return []
+  const key = code(question.key)
+  const options = question.options.map(code).join(', ')
+  return [
+    `- ${words.pendingDecision(inert(oneLine(question.text)), key)}`,
+    `  ${words.pendingOptions(options)}`,
+    `  ${words.pendingReply(question.key)}`,
+  ]
 }
 
 /** @param {RedCommit[]} reds @param {Words} words */

@@ -20,7 +20,7 @@ pas une session complete Claude Code, Copilot CLI ou Azure DevOps.
 
 - Node 22 ou plus, Git et une branche de travail propre.
 - `gh` authentifie, ou `az` avec son extension Azure DevOps, correspondant a la forge du depot.
-- Une story avec le label ou tag `status/ready`, ou une epique contenant des stories pretes, pour design.
+- Une story ouverte, ou une epique ouverte contenant des stories ouvertes, pour design.
 - Questions humaines natives et lancement d'agents disponibles dans l'hote.
 
 ## 1. Installer separement {/* #install */}
@@ -74,8 +74,8 @@ Fixez `baseBranch` dans `skraft-design-config.json` si la base fusionnee n'est p
 Sur GitHub, utilisez les sous-issues terminales comme stories, sans taches techniques imbriquees.
 Azure DevOps conserve ses types natifs de stories.
 
-Le moteur exclut les stories non pretes et demande de continuer sans elles ou d'arreter.
-Chaque passe traite au plus 20 stories pretes. La recherche precede la conception ;
+Le moteur exclut les stories fermees et demande de continuer sans elles ou d'arreter.
+Chaque passe traite au plus 20 stories ouvertes. La recherche precede la conception ;
 trois lentilles, un refutateur et le verdict du moteur precedent la PR d'architecture. Les nouveaux
 ADR restent Proposed sur sa branche et deviennent Accepted seulement si vous fusionnez cette PR ;
 aucune ratification distincte n'est demandee. Le plugin publie la PR seulement avec consentement
@@ -112,8 +112,9 @@ Une issue modifiee demande KEEP ou REDESIGN ; seule une personne choisit.
 
 ### Design exclut une story {/* #readiness */}
 
-Affinez-la avec `skraft-backlog` avant d'ajouter `status/ready`. Une story bloquee par
-l'architecture exige une exclusion humaine explicite ; elle n'est jamais abandonnee en silence.
+Seules les stories ouvertes entrent dans une passe de conception ; les stories fermees sont
+exclues. Une story bloquee par l'architecture exige une exclusion humaine explicite ; elle n'est
+jamais abandonnee en silence.
 
 ## Etapes suivantes {/* #next-steps */}
 

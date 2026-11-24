@@ -6,8 +6,11 @@ import { createDesignRun } from '../../../../plugins/skraft-design/engine/applic
 import { createAgentLoop } from '../../../../plugins/skraft-design/engine/drivers/cli/agent-loop.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-design/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-design/engine/application/decisions/decide-usecase.mjs'
+import { createDraftPublication } from '../../../../plugins/skraft-design/engine/application/publish/draft-publication-usecase.mjs'
+import { createObserve } from '../../../../plugins/skraft-design/engine/application/pipeline/observe-usecase.mjs'
+import { openActiveRun } from '../../../../plugins/skraft-design/engine/application/pipeline/active-run.mjs'
 
-const story = (number, ready = true) => ({ number, title: 'Card checkout', body: 'AC-1: the receipt is visible.', labels: ready ? ['status/ready'] : [], story: true, forge: 'github', repository: 'shop/checkout' })
+const story = (number, state = 'open') => ({ number, title: 'Card checkout', body: 'AC-1: the receipt is visible.', state, labels: [], story: true, forge: 'github', repository: 'shop/checkout' })
 const session = (stories = [story(42)], slug = 'issue-42', options = {}) => {
   const host = pipelineHost({ slug, ...options })
   const branches = []
@@ -35,11 +38,12 @@ test('a story creates an isolated resumable run and hands only research to the h
   assert.deepEqual(branches, [{ name: 'design/issue-42', existing: false }])
 })
 
-test('an epic with unready stories waits for native human consent and resumes the same journal', async () => {
-  const { host, deps, run } = session([story(42), story(43, false)])
+test('an epic with closed stories waits for native human consent and resumes the same journal', async () => {
+  const { host, deps, run } = session([story(42), story(43, 'closed')])
   const waiting = await run.start({ epic: 42 })
   assert.equal(waiting.status, 'waiting', waiting.reason)
   assert.deepEqual(waiting.question.options, ['CONTINUE', 'STOP'])
+  assert.equal((await createDraftPublication(deps).publish()).code, 'draft-not-allowed')
   assert.equal(host.agentRunner.dispatches.length, 0)
   const { createDecide } = await import('../../../../plugins/skraft-design/engine/application/decisions/decide-usecase.mjs')
   const answered = await createDecide(deps).decide({ key: waiting.question.key, answer: 'CONTINUE' })
@@ -115,6 +119,54 @@ test('excluding every architecture-blocked story stops without an empty architec
   assert.equal(finished.status, 'blocked', finished.reason)
   assert.equal(finished.code, 'architecture-empty')
   assert.equal(host.agentRunner.dispatches.some(({ agent }) => agent === 'design-pr-writer'), false)
+})
+
+test('a human-blocked architecture decision opens an engine-approved draft PR with answer choices', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories
+    const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository, bodySha256: current.bodySha256,
+      components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: ['docs/architecture/context-map.md'] }
+    const path = 'docs/architecture/stories/42-card-checkout.md'
+    await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+    git.change(path)
+    await tracking.write('epic-42', 'details/blocked-stories.json', JSON.stringify([{ issue: 43, reason: 'Missing business decision.' }]))
+  } })(host))
+  const paused = await createRunPipeline(deps).run()
+  assert.equal(paused.status, 'waiting', paused.reason)
+  const published = await createDraftPublication(deps).publish()
+  assert.equal(published.ok, true, published.reason)
+  assert.equal(host.codeHost.pullRequests.length, 1)
+  assert.equal(host.codeHost.pullRequests[0].draft, true)
+  assert.match(host.codeHost.pullRequests[0].body, /Human decision pending/)
+  assert.match(host.codeHost.pullRequests[0].body, /Options: `CONTINUE`, `STOP`/)
+  assert.match(host.codeHost.pullRequests[0].body, /\/skraft-answer/)
+})
+
+test('status exposes draft eligibility only for pending architecture decisions', async () => {
+  const host = pipelineHost({ slug: 'issue-42' })
+  await host.init({ slug: 'issue-42', story: { issue: 42, title: 'Card checkout' } })
+  const opened = await openActiveRun(host.deps, 'issue-42')
+  assert.equal(opened.ok, true)
+  await opened.journal.append('question.asked', {
+    key: 'architecture-blocked-0', kind: 'architecture-blocked', text: 'Continue or stop?', options: ['CONTINUE', 'STOP'],
+    refusals: [], header: 'Blocked', step: 'design_review', visit: 1, subjects: [],
+  })
+  const view = await createObserve(host.deps).view()
+  assert.equal(view.status, 'waiting')
+  assert.equal(view.question?.kind, 'architecture-blocked')
+  assert.deepEqual(view.draftPublication, { allowed: true, reason: 'human-decision-pending' })
+})
+
+test('a researcher-blocked run cannot be published as a draft PR', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent({ result: { status: 'blocked', summary: 'Three questions need the product owner.' } })(host))
+  assert.equal((await createRunPipeline(deps).run()).status, 'waiting')
+  const published = await createDraftPublication(deps).publish()
+  assert.equal(published.code, 'draft-not-allowed')
+  assert.equal(host.codeHost.pullRequests.length, 0)
 })
 
 test('a researcher that cannot go on keeps its research and open questions on the issue while a human answers', async () => {

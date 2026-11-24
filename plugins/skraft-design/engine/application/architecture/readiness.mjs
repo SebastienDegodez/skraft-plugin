@@ -7,12 +7,17 @@ const check = async ({ architectureForge }, request) => {
   if (!validRequest(request, number)) return invalid()
   const root = await architectureForge.read(number)
   if (!root.ok) return root
-  const scope = await scopeOf(architectureForge, request, root.issue)
+  if (!isOpen(root.issue)) return issueNotOpen()
+  return checkScope(architectureForge, request, root.issue)
+}
+
+const checkScope = async (forge, request, root) => {
+  const scope = await scopeOf(forge, request, root)
   if (!scope.ok) return scope
-  const ready = scope.stories.filter((story) => story.labels.includes('status/ready'))
-  const excluded = scope.stories.filter((story) => !story.labels.includes('status/ready')).map(exclusion)
-  if (ready.length === 0) return { ok: false, code: 'story-not-ready', reason: 'No ready story. Refine or split the stories with /skraft-refine.', excluded }
-  return { ok: true, root: root.issue, stories: ready, excluded, batches: chunks(ready) }
+  const open = scope.stories.filter(isOpen)
+  const excluded = scope.stories.filter((story) => !isOpen(story)).map(exclusion)
+  if (open.length === 0) return noOpenStory(excluded)
+  return { ok: true, root, stories: open, excluded, batches: chunks(open) }
 }
 
 const scopeOf = (forge, request, issue) => {
@@ -21,5 +26,8 @@ const scopeOf = (forge, request, issue) => {
 }
 const invalid = () => ({ ok: false, code: 'invalid-scope', reason: 'Choose exactly one positive issue or epic number.' })
 const validRequest = (request, number) => Number.isSafeInteger(number) && number > 0 && Boolean(request.issue) !== Boolean(request.epic)
-const exclusion = ({ number }) => ({ issue: number, reason: 'Missing status/ready; use /skraft-refine.' })
+const isOpen = ({ state }) => state === 'open'
+const issueNotOpen = () => ({ ok: false, code: 'issue-not-open', reason: 'The selected issue is not open.' })
+const noOpenStory = (excluded) => ({ ok: false, code: 'no-open-story', reason: 'No open story is available for design.', excluded })
+const exclusion = ({ number }) => ({ issue: number, reason: 'Issue is not open; omit it.' })
 const chunks = (stories) => Array.from({ length: Math.ceil(stories.length / 20) }, (_, index) => stories.slice(index * 20, index * 20 + 20))

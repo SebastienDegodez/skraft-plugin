@@ -20,7 +20,7 @@ Claude Code, Copilot CLI or Azure DevOps session.
 
 - Node 22 or later, Git and a clean working branch.
 - An authenticated `gh`, or `az` with its Azure DevOps extension, matching the repository forge.
-- A ready story labelled or tagged `status/ready`, or an epic containing ready stories, for design.
+- An open story, or an open epic containing open stories, for design.
 - Native human questions and agent dispatch supported by the host.
 
 ## 1. Install independently {/* #install */}
@@ -74,8 +74,8 @@ when the merged base is not `main`.
 On GitHub, use terminal sub-issues as stories; do not nest technical tasks under them.
 Azure DevOps keeps its native story types.
 
-The engine excludes unready stories and asks whether to continue without them. Each design pass
-handles at most 20 ready stories. Research precedes design; three review lenses, a refuter and
+The engine excludes closed stories and asks whether to continue without them. Each design pass
+handles at most 20 open stories. Research precedes design; three review lenses, a refuter and
 the engine verdict precede the architecture PR. New ADRs stay Proposed on its branch and become
 Accepted only when you merge that PR; no separate ADR ratification is asked. The plugin publishes
 the architecture PR only with consent, and keeps research in one marked issue comment.
@@ -111,7 +111,7 @@ A changed issue asks KEEP or REDESIGN; only a human can choose.
 
 ### Design excludes a story {/* #readiness */}
 
-Refine it with `skraft-backlog` before adding `status/ready`. Architecture-blocked stories
+Only open stories enter a design pass; closed stories are excluded. Architecture-blocked stories
 need explicit human exclusion; they are never silently dropped.
 
 ## Next steps {/* #next-steps */}

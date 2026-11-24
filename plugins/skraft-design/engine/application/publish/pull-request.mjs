@@ -6,7 +6,7 @@ import { PULL_REQUEST_BODY_FILE, PULL_REQUEST_FILE, renderPullRequest } from '..
 import { readProse } from '../../domain/reporting/pull-request-prose.mjs'
 import { finalGates, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPaths } from '../../domain/reporting/run-facts.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
-import { statusLine } from '../../domain/reporting/run-status.mjs'
+import { statusLine, waitingOn } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
 import { storyLanguage } from './story-language.mjs'
 import { keepRunDetails } from './run-details.mjs'
@@ -139,6 +139,7 @@ const journalFacts = (events, run, language) => ({
   gates: finalGates(events),
   review: reviewFacts(events),
   status: statusLine(run, language),
+  pendingQuestion: waitingOn(run),
   report: runReport(events),
   models: modelsOf(events),
   visuals: lastVisuals(events),

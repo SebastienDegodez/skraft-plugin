@@ -6,6 +6,7 @@ import { createMergedRepository } from '../../infrastructure/architecture/merged
 import { createDesignRun } from '../../application/architecture/design-run.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
+import { createDraftPublication } from '../../application/publish/draft-publication-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createPrecheck } from '../../application/pipeline/precheck-usecase.mjs'
 import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
@@ -64,12 +65,20 @@ const adaptersFor = async (services) => {
     architectureRepository: createMergedRepository({ ...adapters, base: config.config.baseBranch ?? 'main' }) } }
 }
 
-const execute = async (operation, args, deps, services, log) => {
+const execute = (operation, args, deps, services, log) =>
+  dispatchSimple(operation, args, deps, services) ?? executePipeline(operation, args, deps, services, log)
+
+const dispatchSimple = (operation, args, deps, services) => {
   if (operation === 'setup') return setup(deps, services, args)
   if (operation === 'answer') return createDecide(deps).decide(args)
   if (operation === 'precheck') return createPrecheck(deps).precheck()
   if (operation === 'status') return createObserve(deps).view()
+  if (operation === 'draft') return createDraftPublication(deps).publish()
   if (operation === 'report') return createObserve(deps).report()
+  return null
+}
+
+const executePipeline = async (operation, args, deps, services, log) => {
   const run = createDesignRun(deps)
   const prepared = operation === 'start' ? await run.start(args) : await run.prepare()
   if (prepared.status !== 'ready') return prepared
