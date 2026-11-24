@@ -19,194 +19,83 @@ description: >
 
 ## Overview
 
-This skill operationalizes the "When NOT to write an ADR" section of the
-`architecture-decisions` skill as a **pre-draft gate**. Load it when considering
-whether a candidate architectural choice warrants an ADR, before writing any
-ADR body.
+A pre-draft gate: load it before writing any ADR body. A whole project carries only a handful of ADRs, so the gate refuses by default.
 
-**Core question:** Does this choice ratify a genuine open question with real
-trade-offs, or does it re-declare project baseline / existing skill-enforced
-convention?
+**Posture:** every candidate is `NOT ELIGIBLE` until the gate proves otherwise. Zero eligible is the normal outcome of a story: zero ADRs, each choice written in place in the design artefact it belongs to.
 
 **When to activate:**
 - DESIGN phase begins for a story
 - Architect considers documenting a choice
-- Reviewer flags `ADR-INFLATION` (multiple ADRs for a story where 0-1 expected)
+- Reviewer flags `ADR-INFLATION`
 - User asks "should I write an ADR for X?" or "how many ADRs does this need?"
+
+---
+
+## Candidates that may pass
+
+CQRS with a dispatch bus; Event Sourcing; a saga or process manager; an aggregate crossing an existing boundary; a bounded-context split or merge, or a physical isolation or coupling mechanism between contexts that departs from the baseline; a cross-cutting strategy change (errors, validation, transaction boundary). Each still answers every question below.
+
+## Never an ADR
+
+- the project baseline: CQS method-level separation, layer boundaries, convention-based DI, the repository pattern and where an interface lives (Domain or Application: `clean-architecture-<stack>` decides it), anything a skill or an architecture test enforces;
+- anything `AGENTS.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `docs/architecture/` or an `Accepted` ADR already decides, tested or not — a supersession the stories force excepted;
+- the bounded contexts and their relationships (ACL, Conformist, Published Language, Open Host Service, Shared Kernel): they go in the context map;
+- a choice confined to one bounded context — an aggregate, value object, domain event or gateway, a translation inside its gateway, a mapping, a local type: it goes in the diagrams and contracts;
+- a choice argued from a future need ("identical today", "may diverge", "in case"): no story raised it;
+- the event model's Command/Query classification.
+
+**Silence is baseline:** a pattern no story or measurable force raised gets no ADR, neither `Accepted` nor `Rejected`. A `Rejected` ADR records a raised question the team declined.
 
 ---
 
 ## The 5-Question Checklist
 
-For each candidate choice, answer these questions in order. The FIRST `YES`
-determines the verdict.
+Answer in order; the first answer that points to `NOT ELIGIBLE` decides. `ELIGIBLE` only when all five point to it.
 
-### Q1: Is this choice already enforced by a project skill or automated architecture test?
-
-**Examples of baseline (NOT ADR-worthy):**
-- "Pure domain service with no IO" → Clean Architecture layering, enforced by the `clean-architecture-*` skill and architecture tests
-- "CQS at method level" (one handler per command/query) → `clean-architecture-*` skill
-- "Validation at the boundary, keep core pure" → Clean Architecture layering + tactical DDD
-- "Convention-based DI registration" → project skill baseline
-- "Value Object + pure validator" → tactical DDD baseline
-
-**If YES → `NOT ELIGIBLE — <cite skill or ADR that already enforces this>`**
-
----
-
-### Q2: Is this choice a "good practice" or "avoid X antipattern" framing?
-
-**Examples:**
-- "No hardcoded phase names" → good practice, not a decision
-- "Don't duplicate validation logic" → DRY principle, not a decision
-- "Avoid magic strings" → coding standard, not a decision
-
-**Good practices and antipattern avoidance are baseline expectations, not
-architectural decisions.**
-
-**If YES → `NOT ELIGIBLE — baseline good practice / antipattern avoidance`**
-
-**Exception:** If the choice is framed as a **context-mapping relationship**
-(e.g., "config as Published Language, guard as Conformist") rather than just
-"no hardcoding", proceed to Q3.
-
----
-
-### Q3: Does the choice add complexity beyond the project baseline?
-
-Load `architecture-patterns` skill. Check whether the choice is one of:
-- Establishing or changing a layer boundary
-- Choosing an aggregate boundary
-- **Adopting** a pattern that adds complexity: CQRS+Bus, Event Sourcing, Saga,
-  Specification, ACL, Published Language, Conformist
-- Establishing a bounded context boundary
-- Affecting a cross-cutting concern (error handling strategy, validation approach)
-
-**If NO → `NOT ELIGIBLE — no complexity addition beyond baseline`**
-
-**If YES → proceed to Q4.**
-
----
-
-### Q4: Was the question actually raised by a story, AC, or measurable force in the current batch?
-
-**Silence = baseline default.** ADRs (whether `Accepted` or `Rejected`) ratify
-questions that were **actually asked**. A `Rejected` ADR is legitimate ONLY when
-a story or measurable force in the batch raised the question.
-
-**Check:**
-- Does an AC explicitly require evaluating this choice?
-- Did the event model surface this as a decision point?
-- Did a technical constraint (performance, security, integration) force the question?
-
-**If NO → `NOT ELIGIBLE — unraised question; non-decision artefact (G14)`**
-
-**If YES → proceed to Q5.**
-
----
-
-### Q5: Does the choice have genuine trade-offs (not only upsides)?
-
-Every ADR must demonstrate **trade-off analysis**. If the choice has only
-benefits and no downsides, it is not a decision — it is a no-brainer that should
-be baseline.
-
-**Check the 5 Universal Forces** (from `architecture-decisions` skill):
-- Simplicity
-- Consistency
-- Performance
-- Evolvability
-- Team capability
-
-**If the choice scores high on ALL five → `NOT ELIGIBLE — no genuine trade-offs; should be baseline`**
-
-**If the choice creates tension between at least two forces → `ELIGIBLE — genuine trade-off`**
-
----
+| Q | Question | Points to NOT ELIGIBLE when |
+|---|---|---|
+| Q1 | Is it in the Never-an-ADR list? | YES — cite the item and the skill, document or ADR that settles it |
+| Q2 | Is it framed as a good practice or "avoid X" (no hardcoding, DRY, no magic strings)? | YES |
+| Q3 | Is it one of the candidates that may pass, adding complexity beyond the baseline? | NO |
+| Q4 | Did a story, an acceptance criterion or a measurable force of this batch raise the question? | NO — unraised question (G14) |
+| Q5 | Does it trade at least two of the 5 Universal Forces of `architecture-decisions` against each other? | NO — no genuine trade-off |
 
 ## Output Format
 
-For each candidate:
+One row per candidate, in the consistency matrix:
 
 ```
-Candidate: <short description>
-Verdict: ELIGIBLE | NOT ELIGIBLE
-Reason: <1-line citation to Q1-Q5 + skill/ADR section>
-```
-
-**Example (US3 candidates):**
-
-```
-Candidate: Pure domain service with no IO
-Verdict: NOT ELIGIBLE
-Reason: Q1 YES — Clean Architecture layering enforces purity
-
-Candidate: Fail-closed posture for dispatch gate
-Verdict: ELIGIBLE
-Reason: Q1 NO, Q2 NO, Q3 YES (cross-cutting error strategy), Q4 YES (AC-04), Q5 YES (over-blocking vs silent drift)
-
-Candidate: VO + validation at boundary
-Verdict: NOT ELIGIBLE
-Reason: Q1 YES — Clean Architecture layering + tactical DDD enforce this
-
-Candidate: No hardcoded phase names
-Verdict: NOT ELIGIBLE (as framed)
-Reason: Q2 YES — "no hardcoding" is a good practice, not a decision
-
-Candidate (reframed): Config as Published Language, guard as Conformist
-Verdict: ELIGIBLE
-Reason: Q2 NO (context-mapping), Q3 YES (Published Language adoption), Q4 YES (event model), Q5 YES (coupling vs drift)
+| Candidate | Verdict | Deciding question | Citation | Written in |
+|---|---|---|---|---|
+| Pure domain service with no IO | NOT ELIGIBLE | Q1 — baseline layering | clean-architecture-<stack> | diagrams |
+| Repository interface in Domain | NOT ELIGIBLE | Q1 — where an interface lives | clean-architecture-<stack> | contracts |
+| ACL between Eligibility and Policy | NOT ELIGIBLE | Q1 — context relationship | context-map.md | context-map.md |
+| Separate read model "in case load grows" | NOT ELIGIBLE | Q1 — future need | — | — |
+| Fail-closed posture for the dispatch gate | ELIGIBLE | Q1–Q5 pass: cross-cutting error strategy, AC-04, over-blocking vs silent drift | AC-04 | ADR |
 ```
 
 ---
 
-## Integration with `architecture-decisions` Skill
+## Integration with `architecture-decisions`
 
-This gate does NOT replace `architecture-decisions` — it **precedes** it:
-
-1. **Gate (this skill):** Determines IF an ADR is warranted.
-2. **Template (architecture-decisions):** Provides HOW to write the ADR body if the gate passes.
-
-**Load order:**
-- `adr-eligibility-gate` → verdict per candidate
-- If `ELIGIBLE` → load `architecture-decisions` for template + lifecycle
-
----
+This gate decides IF an ADR is warranted; `architecture-decisions` gives HOW to write one. For an `ELIGIBLE` candidate, write its ranked priorities before any option and judge every option against them.
 
 ## Anti-patterns Detected by This Gate
 
 | Anti-pattern | Description | Gate catches it via |
 |---|---|---|
-| **ADR-INFLATION** | Multiple ADRs for baseline re-declarations | Q1 |
-| **NON-DECISION** | ADR for a choice with no alternatives | Q5 |
-| **BASELINE DRIFT** | Project baseline not reflected in ADR filters | Q1 + Q3 |
+| **ADR-INFLATION** | ADRs re-declaring baseline or already-decided choices | Q1 |
+| **GOOD-PRACTICE ADR** | ADR for an "avoid X" or "always Y" framing | Q2 |
+| **BASELINE DRIFT** | A choice with no complexity beyond the baseline | Q3 |
 | **UNRAISED QUESTION** | ADR for a question nobody asked (G14) | Q4 |
-| **GOOD-PRACTICE ADR** | ADR for "avoid X" or "always Y" framing | Q2 |
-
----
-
-## Real-World Calibration
-
-Run this gate on **existing ADRs** to verify calibration:
-
-| ADR | Expected Verdict | Actual Q-path |
-|---|---|---|
-| ADR-001 (Result type) | ELIGIBLE | Q1 NO, Q3 YES, Q4 YES (#47), Q5 YES |
-| ADR-002 (Layering) | ELIGIBLE | Q1 NO (first in project), Q3 YES, Q4 YES (#47), Q5 YES |
-| ADR-003 (Config cascade) | ELIGIBLE | Q1 NO, Q3 YES, Q4 YES (#47), Q5 YES |
-| ADR-004 (pure service, US3) | NOT ELIGIBLE | Q1 YES — ADR-002 baseline |
-| ADR-005 (fail-closed, US3) | ELIGIBLE | Q1 NO, Q3 YES (cross-cutting), Q4 YES, Q5 YES |
-| ADR-006 (VO + validation, US3) | NOT ELIGIBLE | Q1 YES — layering + DDD baseline |
-| ADR-007 (no hardcoding, US3) | NOT ELIGIBLE (as framed) / ELIGIBLE (reframed) | Q2 YES (good practice) / Q3 YES (Published Language) |
-
-**If the gate yields unexpected verdicts on ADR-001..003, recalibrate Q1/Q3.**
+| **NON-DECISION** | ADR for a choice with no real alternative | Q5 |
 
 ---
 
 ## Dependencies
 
-- the `architecture-decisions` skill (cites "When NOT to write an ADR")
-- the `architecture-patterns` skill (cites baseline patterns for Q3)
+- the `architecture-decisions` skill (5 Universal Forces, ADR template)
+- the `architecture-patterns` skill (baseline patterns for Q3)
 
 ---
 
@@ -215,13 +104,16 @@ Run this gate on **existing ADRs** to verify calibration:
 ### Content evals
 
 1. **Candidate:** "pure domain service with no IO"  
-   **Expected:** `NOT ELIGIBLE — Clean Architecture layering baseline`
+   **Expected:** `NOT ELIGIBLE — Q1 (baseline layering)`
 
-2. **Candidate:** "fail-closed posture for a security gate"  
-   **Expected:** `ELIGIBLE — Q3 YES (cross-cutting concern), Q5 YES`
+2. **Candidate:** "fail-closed posture for a security gate", raised by an acceptance criterion  
+   **Expected:** `ELIGIBLE — Q3 (cross-cutting concern), Q5 (trade-off)`
 
 3. **Candidate:** "no hardcoded phase names"  
-   **Expected:** `NOT ELIGIBLE — Q2 YES (good practice)`
+   **Expected:** `NOT ELIGIBLE — Q2 (good practice)`
+
+4. **Candidate:** "Command/Query classification of the new triggers"  
+   **Expected:** `NOT ELIGIBLE — Q1 (event model classification)`
 
 ### Trigger evals
 
@@ -249,4 +141,4 @@ Run this gate on **existing ADRs** to verify calibration:
 
 ## Version
 
-**v1.0** — 2026-06-28 — Initial release (genesis output, US3 case study)
+**v2.0** — 2026-11-25 — Refusal by default; Never-an-ADR list; context relationships, single-context choices and Command/Query classification are no longer eligible.

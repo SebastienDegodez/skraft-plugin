@@ -3,7 +3,7 @@
 
 Used by the `solution-architect` persona at Phase 9 (RECONCILE & VERIFY).
 
-The matrix is the supervised-execution artefact for the cross-artefact consistency gate: ADR rows define the ratified vocabulary; every other column must align. Divergences are classified by cause to decide between back-propagation and HALT.
+The matrix is the supervised-execution artefact for the cross-artefact consistency gate: each row's source of truth — its ADR, otherwise the contracts — defines the vocabulary; every other column must align. Divergences are classified by cause to decide between back-propagation and HALT.
 
 ---
 
@@ -14,8 +14,8 @@ The matrix is the supervised-execution artefact for the cross-artefact consisten
 | `{project-slug}` | `state.json::projectSlug` | kebab-case project identifier |
 | `{date}` | persona invocation date | `YYYY-MM-DD` |
 | `{story-id}` | story metadata | e.g. `story-41` |
-| `{concept-name}` | persona Phase 9 PLAN step | one row per structural concept named in any ADR |
-| `{adr-truth}` | ADR-{NNN} | the ratified classification (source of truth) |
+| `{concept-name}` | persona Phase 9 | one row per structural concept the stories rely on |
+| `{adr-truth}` | ADR-{NNN}, otherwise `contracts` | the classification of the source of truth |
 | `{cell-value}` | grep result (Phase 9 EXEC step) | classification as found in that artefact |
 
 ---
@@ -29,7 +29,7 @@ Schema (one entry per descriptive or normative artefact for this story):
 ```yaml
 shared_artifact_registry:
   {artifact_name}:           # e.g. "event-model", "diagrams", "contracts", "ADR-007"
-    source_of_truth: {path}  # the file that ratifies this artefact's classifications
+    source_of_truth: {path}  # the file that settles this artefact's classifications
     consumers: [{phase}, ...] # downstream phases that read it: DISTILL | DELIVER
     owner: {agent-id}        # the agent allowed to write to source_of_truth (e.g. solution-architect)
     integration_risk: low | medium | high  # how badly drift here would corrupt downstream phases
@@ -78,13 +78,21 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 **Story:** {story-id}
 **Date:** {YYYY-MM-DD}
-**Source of truth:** ADR set under `docs/adr/adr-*.md`
+**Source of truth:** the concept's ADR under `docs/adr/`, otherwise `contracts-{story-id}.md`
 
 ## Matrix
 
-| Concept | ADR (source of truth) | event-model-{story-id}.md | diagrams-{story-id}.md | contracts-{story-id}.md | Cause | Verdict |
+| Concept | Source of truth | event-model-{story-id}.md | diagrams-{story-id}.md | contracts-{story-id}.md | Cause | Verdict |
 |---|---|---|---|---|---|---|
-| `{concept-name}` | `{adr-truth}` (ADR-{NNN}) | `{cell-value}` | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
+| `{concept-name}` | `{adr-truth}` | `{cell-value}` | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
+
+## ADR eligibility gate
+
+| Candidate | Verdict | Deciding question | Citation | Written in |
+|---|---|---|---|---|
+| `{candidate}` | NOT ELIGIBLE \| ELIGIBLE | Q1–Q5 | `{path or skill}` | `{artefact}` \| ADR-{NNN} |
+
+Ranked priorities of each ELIGIBLE candidate: `1. … 2. …`
 
 ## Back-propagation journal
 
@@ -107,7 +115,7 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 |---|---|---|---|
 | `LABEL_DRIFT` | Same concept, different vocabulary (e.g. `VO` vs `Value Object` vs `ValueObject`). | Back-propagate: rewrite the upstream artefact to use the ADR's spelling. | 1 per artefact |
 | `CLASSIFICATION_DRIFT` | Same concept, incompatible category (`Command` vs `Query`, `Entity` vs `Value Object`, `Aggregate` vs `Domain Service`). | Back-propagate: rewrite the upstream artefact to align on the ADR. | 1 per artefact, then HALT `decision_drift` |
-| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or contracts define a `Repository` that no ADR ratified). | **HALT immediately. No back-propagation.** This signals a real decision gap that the architect must resolve by revisiting the ADR set or the upstream artefact, not by silent rewrite. | 0 |
+| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or contracts define a `Repository` the diagram never drew). | **HALT immediately. No back-propagation.** This signals a real decision gap that the architect must resolve by revisiting the ADR set or the upstream artefact, not by silent rewrite. | 0 |
 
 ---
 
@@ -131,7 +139,7 @@ Never normalise across these boundaries (always drift):
 
 ## BLOCKER JSON shape (for `decision_drift`)
 
-Emit to the orchestrator when `STRUCTURAL_DRIFT` fires, or when `CLASSIFICATION_DRIFT` survives the back-propagation retry. The orchestrator is responsible for surfacing it to a human via the available channel (GitHub issue, IDE prompt, Slack…). The persona's job is to emit a complete, actionable payload AND persist the matching blocker file (see persona Step 9.7).
+Emit to the orchestrator when `STRUCTURAL_DRIFT` fires, or when `CLASSIFICATION_DRIFT` survives the back-propagation retry. The orchestrator is responsible for surfacing it to a human via the available channel (GitHub issue, IDE prompt, Slack…). The persona's job is to emit a complete, actionable payload AND persist the matching blocker file (see persona Phase 9).
 
 The append-only constraint of tracked decision directories (`docs/adr/`, `details/`, `reviews/`) means the persona MUST NOT edit a previously written blocker file to record the human's answer. Instead, the human (or orchestrator on the human's behalf) writes a sibling resolution file. The persona detects "resolved" by file presence, not by frontmatter mutation.
 
@@ -147,10 +155,10 @@ The append-only constraint of tracked decision directories (`docs/adr/`, `detail
   "artefact_says": "{cell-value}",
   "artefact_path": ".copilot-tracking/skraft-plans/{project-slug}/details/{date}/{artefact}-{story-id}.md",
   "cause": "STRUCTURAL_DRIFT | CLASSIFICATION_DRIFT (post-retry)",
-  "human_action_required": "Restate the divergence as a yes/no or pick-one question. Example: 'Is `RejectionReason` a Value Object (current diagram) or a Domain Event (no ADR ratifies either)?'",
+  "human_action_required": "Restate the divergence as a yes/no or pick-one question. Example: 'Is `RejectionReason` a Value Object (current diagram) or a Domain Event (contracts say Value Object)?'",
   "decision_options": [
-    {"id": "A", "label": "Value Object", "consequence": "diagrams stay; write a new ADR ratifying VO."},
-    {"id": "B", "label": "Domain Event", "consequence": "diagrams rewritten; write a new ADR ratifying Domain Event."},
+    {"id": "A", "label": "Value Object", "consequence": "diagrams stay; event model aligned on Value Object."},
+    {"id": "B", "label": "Domain Event", "consequence": "diagrams and contracts rewritten as Domain Event."},
     {"id": "C", "label": "Both — split the concept", "consequence": "new concept name needed; revisit Phase 6."}
   ],
   "resume_protocol": {
