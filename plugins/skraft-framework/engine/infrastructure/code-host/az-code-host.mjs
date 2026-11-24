@@ -1,6 +1,6 @@
 import { pullRequestPage } from '../../domain/review/azure-pull-request.mjs'
 import { find as findByNumber, keepComment as keepThread, repositoryOf } from './az-repos.mjs'
-import { keepComment, workItem } from './az-boards.mjs'
+import { keepComment, workItem, workItemComments } from './az-boards.mjs'
 import { keepPullRequestComment } from './az-threads.mjs'
 import { AZ_NOT_FROM_INSTALLER, NO_AZ, NO_AZURE_REMOTE, NO_EXTENSION, QUIET, repos, run, succeeded, unavailable, remoteOf, lines, readJson, refused, failedWrite } from './az-cli.mjs'
 import { branchOnRemote } from './git-push.mjs'
@@ -27,6 +27,7 @@ export const createAzCodeHost = ({ commandRunner }) => Object.freeze({
   ...pullRequestsOf(commandRunner),
   ...comments(commandRunner),
   issue: (number) => workItem(commandRunner, number),
+  issueComments: (number) => workItemComments(commandRunner, number),
   // Azure Repos links `#N`; `Fixes #N` also completes the work item when the pull request merges.
   storyLink: (issue, closes) => `${closes ? 'Fixes ' : ''}#${issue}`,
   // Azure DevOps refuses a pull request description past 4,000 characters.

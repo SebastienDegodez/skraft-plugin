@@ -77,7 +77,7 @@ const FAKE_GH = [
   "    state.comments.push({ id, number, login: state.login, body: readFileSync(option('field').slice('body=@'.length), 'utf8') }); save(); said(urlOf(number, id))",
   "  }",
   "  if (state.listed !== undefined) said(state.listed)",
-  "  said(state.comments.filter((one) => one.number === number).map((one) => JSON.stringify({ user: one.login === undefined ? null : { login: one.login }, body: one.body, html_url: urlOf(number, one.id) })).join('\\n'))",
+  "  said(state.comments.filter((one) => one.number === number).map((one) => JSON.stringify({ user: one.login === undefined ? null : { login: one.login }, body: one.body, html_url: urlOf(number, one.id), created_at: one.at })).join('\\n'))",
   "}",
   'process.exit(2)',
   '',
@@ -413,6 +413,32 @@ test('an issue is read by its number with its title and body once gh is signed i
   forge.set({ issue, signedIn: false })
   assert.deepEqual(await codeHost().issue(42), { read: 'failed', reason: 'gh is not signed in to github.example.com; run gh auth login --hostname github.example.com' })
   assert.deepEqual(forge.calls().at(-1)[0], 'auth')
+})
+
+test('the comments of an issue are listed page by page through gh api, each with its author, date and body, on the repository its issue is read from; a failure is a fixed reason', async (t) => {
+  const { forge, codeHost } = repository(t)
+  forge.set({ comments: [
+    { id: 901, number: 42, login: 'alice', at: '2026-10-09T09:30:00Z', body: 'Is cash in scope?' },
+    { id: 902, number: 7, login: 'bob', at: '2026-10-09T10:00:00Z', body: 'another issue' },
+    { id: 903, number: 42, at: '2026-10-10T08:00:00Z', body: 'by a deleted user' },
+  ] })
+
+  assert.deepEqual(await codeHost().issueComments(42), { ok: true, comments: [
+    { author: 'alice', date: '2026-10-09T09:30:00Z', body: 'Is cash in scope?' },
+    { author: '', date: '2026-10-10T08:00:00Z', body: 'by a deleted user' },
+  ] })
+  assert.deepEqual(forge.calls().at(-1), ['api', '--hostname=github.example.com', '--paginate', '--jq=.[]', 'repos/acme/payment/issues/42/comments'])
+  forge.set({ listed: 'not json' })
+  assert.deepEqual(await codeHost().issueComments(42), { ok: false, reason: 'gh could not list the comments of issue #42 of github.example.com/acme/payment' })
+  forge.set({ fails: true })
+  assert.deepEqual(await codeHost().issueComments(42), { ok: false, reason: 'gh could not list the comments of issue #42 of github.example.com/acme/payment' })
+})
+
+test('without a remote no comment of an issue is listed', async (t) => {
+  const { forge, codeHost } = repository(t, { remote: null })
+
+  assert.deepEqual(await codeHost().issueComments(42), { ok: false, reason: 'the working copy has no Git remote whose URL names a host and a repository' })
+  assert.deepEqual(forge.calls(), [])
 })
 
 test('the pull requests tell why none can be read, and keep a review comment as the run keeps an issue comment', async (t) => {
