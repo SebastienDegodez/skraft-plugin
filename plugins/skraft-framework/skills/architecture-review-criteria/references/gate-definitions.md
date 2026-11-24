@@ -1,4 +1,4 @@
-# Gate Definitions — G1–G13
+# Gate Definitions
 
 ## Overview
 
@@ -12,27 +12,25 @@ Evaluates: ADRs + diagrams + contracts
 
 ---
 
-### G1 — Every Diagram Element Has an ADR Justification
+### G1 — Every Structural Element Is Traced
 
 **Lens:** consistency-lens
 **Severity:** BLOCKER
 
-**Definition:** Every structural element visible in component diagrams — aggregates, bounded contexts, architectural patterns (CQRS, Event Sourcing, Saga), context map relationships — must have a corresponding ADR that justifies its existence. No element is introduced without a recorded architectural rationale. (Bumped to BLOCKER: ungrounded structural elements propagate silently into DISTILL and DELIVER as faith-based dependencies.)
+**Definition:** Every structural element visible in component diagrams — aggregates, bounded contexts, architectural patterns (CQRS, Event Sourcing, Saga), context map relationships — and every commitment the structural scan detects is traced either to an ADR (`Accepted`, or `Proposed` in the pass under review) or to a row of the consistency matrix's eligibility-gate table naming its verdict and where the choice is written. Zero ADRs is a valid outcome.
 
 **Step-by-step check:**
-1. Open all `diagrams-{story}.md` files. List every named architectural element: aggregates, bounded contexts, patterns.
-2. Open all `adr-*.md` files. Build an index: `{ ADR number → decision topic }`.
-3. For each element in step 1, search the ADR index for a justification.
-4. Any element with no corresponding ADR → G1 fail.
+1. Open all `diagrams-{story}.md` files and the current structural scan. List every named architectural element and detected commitment.
+2. Build an index from the ADRs and from each matrix gate table.
+3. Any element in neither → G1 fail.
 
 **Auto-fail examples:**
-- Diagram shows `EligibilityAggregate` with Event Sourcing notation, but no ADR exists that evaluates or accepts Event Sourcing for eligibility.
-- Diagram shows an ACL between `EligibilityContext` and `PolicyContext`, but no ADR justifies this relationship pattern.
-- A `EligibilityRenewalSaga` appears in the diagram with no ADR for the saga introduction.
+- Diagram shows `EligibilityAggregate` with Event Sourcing notation; no ADR and no gate row covers Event Sourcing.
+- The scan detects a `CommandBus`; the matrix gate table has no row for it and no ADR covers it.
 
 **Pass examples:**
-- Diagram shows `EligibilityAggregate`. ADR-001 accepts CQRS for eligibility; ADR-002 defines aggregate boundary. Both ADRs reference the eligibility aggregate explicitly. → G1 pass.
-- Diagram shows ACL between contexts. ADR-003 accepts separated contexts with ACL and explains why Conformist was rejected. → G1 pass.
+- Diagram shows an ACL between contexts; the gate row reads `NOT ELIGIBLE — Q1 context relationship — written in context-map.md`. → G1 pass.
+- Diagram shows a saga; ADR-004 (`Proposed`, this pass) adopts it. → G1 pass.
 
 ---
 
@@ -96,7 +94,7 @@ Evaluates: diagrams + contracts + event models
 - `CheckEligibilityCommandHandler` (Application layer) directly instantiates `EligibilityDbContext` (Infrastructure type). → G3 BLOCKER fail.
 
 **Pass examples:**
-- `IEligibilityRepository` is listed under Domain, as the aggregate's ADR records. `EligibilityRepository` (Infrastructure) implements it. Contracts show no Infrastructure types in Domain or Application. → G3 pass.
+- `IEligibilityRepository` is listed under Domain, as the contracts record. `EligibilityRepository` (Infrastructure) implements it. Contracts show no Infrastructure types in Domain or Application. → G3 pass.
 
 ---
 
@@ -105,11 +103,11 @@ Evaluates: diagrams + contracts + event models
 **Lens:** architecture-compliance-lens
 **Severity:** BLOCKER
 
-**Definition:** All application interfaces — repositories, gateways, event publishers, external service abstractions — must be defined in Domain or Application — a repository in the layer its aggregate's ADR records, every other interface in Application. None may be defined in Infrastructure.
+**Definition:** All application interfaces — repositories, gateways, event publishers, external service abstractions — must be defined in Domain or Application — a repository in the layer the contracts record, every other interface in Application. None may be defined in Infrastructure.
 
 **Step-by-step check:**
 1. List all interface types (names starting with `I`) in `contracts-{story}.md`.
-2. For each interface, verify it is explicitly assigned to Domain or Application in the contracts, and that a repository's layer matches its aggregate's ADR.
+2. For each interface, verify it is explicitly assigned to Domain or Application in the contracts, and that diagrams show the same layer.
 3. Check for any interface defined in the Infrastructure layer. → fail for each one found.
 
 **Auto-fail examples:**
@@ -117,7 +115,7 @@ Evaluates: diagrams + contracts + event models
 - An `IEventPublisher` interface is described as "defined in the messaging Infrastructure project." → G4 BLOCKER fail.
 
 **Pass examples:**
-- `contracts-eligibility.md` lists `IEligibilityRepository` under Domain (as its ADR records), `IDriverHistoryGateway` and `IEventPublisher` under Application. Infrastructure implementations listed separately. → G4 pass.
+- `contracts-eligibility.md` lists `IEligibilityRepository` under Domain, `IDriverHistoryGateway` and `IEventPublisher` under Application. Infrastructure implementations listed separately. → G4 pass.
 
 ---
 

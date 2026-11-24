@@ -55,7 +55,7 @@ Violations of Clean Architecture principles detectable in DESIGN artefacts — i
 
 **Severity:** BLOCKER — if the interface is in Infrastructure, the Application layer must import from Infrastructure to use it, violating the dependency rule (V-CA-02). The interface must be defined in an inner layer: Domain for an aggregate's repository, Application otherwise.
 
-**Correct approach:** Define `IEligibilityRepository` in Domain (aggregate) or Application (CRUD entity, read model), as the aggregate's ADR records. Infrastructure implements it through its Application reference. Application never references Infrastructure.
+**Correct approach:** Define `IEligibilityRepository` in Domain (aggregate) or Application (CRUD entity, read model), as the contracts record. Infrastructure implements it through its Application reference. Application never references Infrastructure.
 
 ---
 

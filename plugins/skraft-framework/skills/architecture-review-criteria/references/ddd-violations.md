@@ -73,19 +73,19 @@ eligibility.Check(driverHistory, riskScore, requestedAt)
 
 ---
 
-## V-DDD-04: Repository Layer Diverges From Its ADR
+## V-DDD-04: Repository Layer Diverges From Its Contracts
 
 **ID:** V-DDD-04
 **Severity:** BLOCKER
 
-**Description:** A repository interface sits in a layer other than the one its aggregate's ADR records, or the ADR records no layer.
+**Description:** A repository interface sits in a layer other than the one the contracts record, or the contracts record no layer.
 
 **How to detect in artefacts:**
-- Contracts list `IEligibilityRepository` under Domain while the ADR records Application, or the reverse
+- Contracts list `IEligibilityRepository` under Domain while the diagram draws it in Application, or the reverse
 - A repository for a CRUD entity without invariants is listed under Domain
-- No ADR records where the aggregate's repository is defined
+- The contracts record no layer for the aggregate's repository
 
-**Correct approach:** Repository interfaces live in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure. Record the layer in the aggregate's ADR and list the interface under that layer in contracts and diagrams.
+**Correct approach:** Repository interfaces live in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure. Record the layer in the contracts, never in an ADR, and draw the interface in that layer in the diagrams.
 
 ---
 
