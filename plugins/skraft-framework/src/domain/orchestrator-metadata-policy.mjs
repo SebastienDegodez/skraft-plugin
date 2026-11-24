@@ -6,7 +6,7 @@ import { schemaViolations } from './schema-validator.mjs'
 // Invariant-bearing fields, projectSlug (written by init) and phaseHistory (written by
 // mark-phase-started / phase closure) are not settable here. A value must match its
 // field in state.schema.json, so a `set` never writes a state the reader would refuse.
-export const SETTABLE_METADATA_FIELDS = Object.freeze(['adrRatification'])
+export const SETTABLE_METADATA_FIELDS = Object.freeze(['adrRatification', 'humanQuestions'])
 
 export const validateMetadataField = (field, value) => {
   if (!SETTABLE_METADATA_FIELDS.includes(field)) {

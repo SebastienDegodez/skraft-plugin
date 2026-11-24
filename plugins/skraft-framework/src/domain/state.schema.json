@@ -101,6 +101,30 @@
         }
       }
     },
+    "humanQuestions": {
+      "x-owner": "orchestrator",
+      "description": "Questions only a human answers: open research Unknown product questions after RESEARCH (kind product-unknowns), options for an eligible ADR candidate in DESIGN (kind adr-options). awaiting_human until answered; the phase does not advance meanwhile.",
+      "type": "object",
+      "required": ["checkpointStatus", "questions"],
+      "additionalProperties": false,
+      "properties": {
+        "checkpointStatus": { "enum": ["none", "awaiting_human", "resolved"] },
+        "kind": { "enum": ["product-unknowns", "adr-options"] },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "question"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "question": { "type": "string", "minLength": 1 },
+              "recommended": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
     "adrRatification": {
       "x-owner": "orchestrator",
       "description": "DESIGN human-ratification checkpoint. awaiting_human while Proposed ADRs wait for the human; resolved once none remain. DESIGN advances to DISTILL only when resolved.",

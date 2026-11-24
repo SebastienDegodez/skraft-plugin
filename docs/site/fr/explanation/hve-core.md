@@ -31,7 +31,8 @@ L'état persiste en JSON à
   "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
   "userPreferences": { "maxRetriesPerPhase": 2 },
-  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] }
+  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] },
+  "humanQuestions": { "checkpointStatus": "none | awaiting_human | resolved", "kind": "product-unknowns | adr-options", "questions": [] }
 }
 ```
 
@@ -40,6 +41,7 @@ L'état persiste en JSON à
   produit et comment elle a été jugée.
 - `maxRetriesPerPhase` (défaut 2) borne les reprises avant escalade humaine.
 - `adrRatification` retient DESIGN tant qu'un humain n'a pas ratifié chaque ADR proposée.
+- `humanQuestions` retient RESEARCH sur un `Unknown:` produit ouvert, ou DESIGN sur les options d'un candidat ADR éligible, jusqu'à la réponse d'un humain.
 
 La CLI d'état applique ce schéma à chaque lecture et écriture. Un champ que le schéma ne
 déclare pas, ou une valeur hors de sa forme, rend l'état invalide : aucun ancien format

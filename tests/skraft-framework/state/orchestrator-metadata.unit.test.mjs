@@ -29,12 +29,33 @@ test('SET_METADATA: records the ADR ratification checkpoint', () => {
   assert.deepEqual(r.value.adrRatification, adrRatification)
 })
 
+test('SET_METADATA: records a human-question checkpoint', () => {
+  const humanQuestions = {
+    checkpointStatus: 'awaiting_human',
+    kind: 'product-unknowns',
+    questions: [{ id: 'Q2', question: 'Does the discount apply to gift cards?', recommended: 'No' }],
+  }
+  const r = set('humanQuestions', humanQuestions)
+  assert.equal(r.ok, true)
+  assert.deepEqual(r.value.humanQuestions, humanQuestions)
+})
+
+test('SET_METADATA: rejects a human-question checkpoint of an unknown kind or without an id', () => {
+  for (const value of [
+    { checkpointStatus: 'awaiting_human', kind: 'ratification', questions: [] },
+    { checkpointStatus: 'awaiting_human', kind: 'adr-options', questions: [{ question: 'Which options?' }] },
+    { checkpointStatus: 'resolved' },
+  ]) {
+    assert.equal(set('humanQuestions', value).error.code, 'INVALID_METADATA', JSON.stringify(value))
+  }
+})
+
 test('SET_METADATA: rejects an unknown ratification status', () => {
   const r = set('adrRatification', { checkpointStatus: 'pending', pending: [], ratified: [] })
   assert.equal(r.error.code, 'INVALID_METADATA')
 })
 
-test('SET_METADATA: refuses every field but the ADR checkpoint', () => {
+test('SET_METADATA: refuses every field but the orchestrator checkpoints', () => {
   for (const field of ['currentPhase', 'verdicts', 'phaseArtifacts', 'retryCount', 'projectSlug', 'phaseHistory', 'entryMode', 'skraftPlanFile', 'referencesProcessed', 'nextActions', 'neighborPlanners', 'issueNumber']) {
     const r = set(field, {})
     assert.equal(r.ok, false, field)
@@ -126,6 +147,6 @@ test('validateMetadataField: lists the settable fields when a field is refused',
   assert.equal(r.error.field, 'verdicts')
   assert.equal(
     r.error.reason,
-    'verdicts is not settable; settable fields: adrRatification',
+    'verdicts is not settable; settable fields: adrRatification, humanQuestions',
   )
 })

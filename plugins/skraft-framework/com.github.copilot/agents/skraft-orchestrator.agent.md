@@ -67,7 +67,7 @@ Rehydrate once: read the snapshot ONE time here; after that, the output of your 
 
 1. Determine the project slug from the user request or the active issue. Let `state.mjs` resolve the tracking root (`SKRAFT_TRACKING_ROOT` override, otherwise `.copilot-tracking/skraft-plans/{projectSlug}/`); never hand-build source references.
 2. If the state does not exist, create it with `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
-3. If it exists, rehydrate in one call — `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`.
+3. If it exists, rehydrate in one call — `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`. `humanQuestions.checkpointStatus == "awaiting_human"` → re-emit that Human questions checkpoint and wait; never re-dispatch the agent that raised it.
 4. Print the resume summary:
    ```
    Pipeline state loaded.
@@ -102,6 +102,7 @@ Run `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" <subcommand> [--slug {projectS
 | `transition --to {NEXT}` | the current phase's recorded verdict is `APPROVED` |
 | `close-phase --phase {P} --verdict APPROVED [--artifact {rel}]` | you close RESEARCH, or a phase under Manual closure |
 | `set --field adrRatification --data {JSON}` | the DESIGN ratification checkpoint changes |
+| `set --field humanQuestions --data {JSON}` | a Human questions checkpoint opens or closes |
 | `scan-commits [--count N]` | before a Manual closure of DELIVER |
 | `diagnose` | a command reports `INVALID_STATE`, `CORRUPTED_STATE` or `IO_ERROR`, a hook blocks a dispatch on the state, or a phase looks stuck |
 | `rollback`, `reset`, `init`, `resolve-stale` | `diagnose` returns it as `action` |
@@ -156,7 +157,7 @@ Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slu
 **DESIGN only — structural scan, once per phase.** Before the architect's first DESIGN dispatch, run `node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs" --out .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json`, then `state.mjs record-artifact --phase RESEARCH --path details/{date}/structural-scan.json` — never `--phase DESIGN`, where a recorded artefact counts as the architect's output. The handoff blocks then hand it to the architect and the DESIGN reviewer. Never re-run it on a DESIGN retry. Never run a build, a test or a quality gate yourself.
 
 **Step 2 — Collect output**
-Verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
+An architect blocker `adr_options_needed` or `open_product_question` opens the Human questions checkpoint instead. Otherwise verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
 
 **Step 3 — Dispatch reviewer**
 Prepare the deterministic inputs below, then dispatch the reviewer with the Dispatch context header and its handoff block: the block lists the artefacts under review and, on a re-review, the previous review. Add the prepared paths verbatim. Do NOT summarize or interpret. The reviewer applies the `adversarial-review-lenses` skill and returns canonical verdict YAML without writing.
@@ -233,12 +234,11 @@ failure; never record a success-shaped fallback.
 
 ### RESEARCH (reviewer-less phase — specialist-only)
 
-RESEARCH has no reviewer: findings are grounded in citations the human can verify directly, not an adversarial gate.
-
 1. Run `state.mjs mark-phase-started --slug {projectSlug} --phase RESEARCH`, then dispatch `Skraft - Solution Researcher` with the Dispatch context header above.
 2. Verify the research document exists at `research/{date}/{slug}-research.md`. If missing, re-dispatch once; otherwise surface to user. Record it with `state.mjs record-artifact --slug {projectSlug} --phase RESEARCH --path research/{date}/{slug}-research.md`.
-3. Close the phase — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
-4. Surface progress; no unsolicited remote phase comment.
+3. Read the document's product questions. An `Unknown:` line with no `Decision:` line under it → Human questions checkpoint (`product-unknowns`) below, before closing.
+4. Close the phase — **no `--artifact`**, since there was no reviewer verdict to render: `state.mjs close-phase --slug {projectSlug} --phase RESEARCH --verdict APPROVED`. This records the verdict and advances `currentPhase` to `DESIGN` in one call.
+5. Surface progress; no unsolicited remote phase comment.
 
 ### Manual closure (a reviewed phase closed by human-validated reworks)
 
@@ -284,9 +284,18 @@ EOF
 
 4. Close it: `state.mjs close-phase --slug {projectSlug} --phase {P} --verdict APPROVED --artifact reviews/{date}/manual-close.md`. `--phase` must be the current phase and `--verdict` must be `APPROVED`; to record `CHANGES_REQUESTED`, use `record-verdict` and `incr-retry` instead.
 
+### Human questions checkpoint
+
+Same halt as the ratification checkpoint below; one stop per occasion.
+
+1. **Open.** `state.mjs set --field humanQuestions --data '{"checkpointStatus":"awaiting_human","kind":"{kind}","questions":[{"id":"Q3","question":"…","recommended":"…"}]}'`, emit the prompt for its kind, STOP. The phase does not advance.
+2. **`product-unknowns`** (after RESEARCH): list each open `Unknown:` with its recommended answer, then each `Assumption:` without a `Decision:` for confirmation, and offer "ask the product owner". On the answers, write under each question in the research document `Decision: {YYYY-MM-DD} — {who answered} — {answer}` (an assumption left unanswered stays an assumption), set `checkpointStatus` to `resolved`, close RESEARCH and continue to DESIGN; never re-dispatch the researcher. "Ask the product owner" → stop with the numbered list ready to forward; the checkpoint stays open.
+3. **`adr-options`** (DESIGN, the architect returned `adr_options_needed`): for each candidate show its ranked priorities and ask "Which options have you considered?". On the answer, set `resolved` and re-dispatch the architect with its handoff block plus one line per candidate: `ADR options — {id} {candidate}: {the developer's options, or none}`. Its ADRs then go through review and the ratification checkpoint as usual.
+4. The architect returning `open_product_question` reopens `product-unknowns` on the questions it names; write their decisions, then re-dispatch the architect.
+
 ### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
 
-ADRs ARE the project's future trajectory; the human owns that choice, not the agent. After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in the `architecture-decisions` skill (Ratification Contract); this is its wiring.
+After the DESIGN reviewer returns `APPROVED`, the orchestrator gates on human ratification of every `Proposed` ADR. The contract is defined in the `architecture-decisions` skill (Ratification Contract); this is its wiring.
 
 1. **Read the digest, not the bodies.** Read `docs/adr/decisions-index.md` (the cheap verdict surface) — `cat docs/adr/decisions-index.md`. Do NOT load full ADR bodies. To inspect one ADR's header without its body, use the S7 extraction command in `architecture-decisions` ("Reading the digest cheaply"); fall back to `read_file` on the first ~12 lines only if the command is unavailable. Collect every row whose `Status == Proposed`.
 2. **No Proposed rows →** ratification is a no-op; `state.mjs set --field adrRatification --data '{"checkpointStatus":"resolved","pending":[],"ratified":[…]}'`, then `state.mjs transition --to DISTILL`.
