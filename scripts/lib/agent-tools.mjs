@@ -15,7 +15,7 @@ const copilotTools = new Set([
 
 // https://code.claude.com/docs/en/tools-reference
 // https://code.claude.com/docs/en/sub-agents#restrict-which-tools-a-subagent-can-use
-const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'TaskOutput', 'TaskStop', 'Agent', 'Skill'])
+const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'WebFetch', 'TaskOutput', 'TaskStop', 'Agent', 'Skill'])
 const externalServers = ['graphify', 'github', 'ado', 'gitlab']
 const historicalTools = new Map([
   ['TaskOutput', 'TaskOutput was removed in Claude Code 2.1.277; use Read on the background output file on newer versions.'],

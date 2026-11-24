@@ -60,6 +60,6 @@ test('actual native tree retains 20 IDs, bounded tools, native models and four p
     assert.ok(data.tools.includes('Skill'), `${file} lacks Skill`)
     if (file.endsWith('-lens.md')) assert.deepEqual(data.tools, ['Read', 'Grep', 'Glob', 'Skill'])
   }
-  assert.deepEqual(models, { haiku: 8, sonnet: 10, opus: 1, inherit: 1 })
+  assert.deepEqual(models, { haiku: 9, sonnet: 9, opus: 1, inherit: 1 })
   assert.deepEqual(publicIds, ['brownfield-analyst', 'brownfield-harness-builder', 'brownfield-refactorer', 'skraft-orchestrator'])
 })

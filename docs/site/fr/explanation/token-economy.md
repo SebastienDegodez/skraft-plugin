@@ -140,7 +140,7 @@ La classe de modèle est **réellement appliquée** : un résolveur déterminist
 (`plugins/skraft-framework/src/`, Clean Architecture, zéro dépendance) lit le `cost_role_class` et le
 plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** de son
 descripteur `.md` au modèle concret résolu. La politique actuelle pinne les descripteurs
-Copilot : `reviewer → gpt-6-luna` ou `claude-haiku-5.5`, `implementer` et `researcher → claude-sonnet-5.5`,
+Copilot : `reviewer` et `researcher → gpt-6-luna` ou `claude-haiku-5.5`, `implementer → claude-sonnet-5.5`,
 `planner → claude-opus-5.5` ; les descripteurs Claude Code gardent les alias `haiku`, `sonnet`
 et `opus`. Le plancher Sonnet relève les deux exceptions
 (`software-engineer`, `software-engineer-reviewer`). Une seule source de vérité ; un

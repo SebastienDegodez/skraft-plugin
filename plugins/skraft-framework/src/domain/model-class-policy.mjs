@@ -4,7 +4,7 @@ import { ModelTier } from './model-tier.mjs'
 const CLASS_TIER = Object.freeze({
   reviewer: 'economy',
   implementer: 'standard',
-  researcher: 'standard',
+  researcher: 'economy',
   planner: 'frontier',
 })
 
