@@ -3,7 +3,7 @@
 
 ## Scope and success criteria
 - Scope: {{scope}}
-- Assumptions: {{assumptions}}
+- Technical assumptions: {{technical-assumptions}}
 - Success criteria: {{success-criteria}}
 
 ## Research executed
@@ -23,6 +23,9 @@
 {{recommended-approach}}
 ### Alternatives
 {{alternatives}}
+
+## Product questions
+{{product-questions}}
 
 ## Handoff to DESIGN
 {{handoff}}

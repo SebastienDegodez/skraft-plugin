@@ -73,11 +73,18 @@ stimuli:
         config:
           path: '.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md'
           pattern: '\{\{[^}]+\}\}'
+      # The story leaves its tier rates and the stacking with promotional codes open: a
+      # researcher may finish, or block on an Unknown product question it names by number.
       - type: file-matches
-        name: The run result records completion
+        name: The run result records completion, or a block on numbered product questions
         config:
           path: '.copilot-tracking/skraft-plans/pricing/results/research-1-1.json'
-          pattern: '(?s)"status"\s*:\s*"done".*"summary"\s*:\s*".+"'
+          pattern: '(?s)"status"\s*:\s*"done".*"summary"\s*:\s*".+"|"status"\s*:\s*"blocked".*"summary"\s*:\s*"[^"]*\bQ\d'
+      - type: file-matches
+        name: The open business rules are product questions with a recommended answer
+        config:
+          path: '.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md'
+          pattern: '(?is)\bQ1\b.*(assumption|open question|unknown)\s*:.*recommended'
       - type: run-command
         name: Findings cite the source files that were investigated
         config:
@@ -172,10 +179,10 @@ stimuli:
           path: '.copilot-tracking/skraft-plans/pricing/research/2026-11-12/pricing-research.md'
           pattern: '\{\{[^}]+\}\}'
       - type: file-matches
-        name: The run result records completion despite the pressure
+        name: The run result records completion despite the pressure, or a block on numbered product questions
         config:
           path: '.copilot-tracking/skraft-plans/pricing/results/research-1-1.json'
-          pattern: '(?s)"status"\s*:\s*"done".*"summary"\s*:\s*".+"'
+          pattern: '(?s)"status"\s*:\s*"done".*"summary"\s*:\s*".+"|"status"\s*:\s*"blocked".*"summary"\s*:\s*"[^"]*\bQ\d'
       - type: output-matches
         name: The unmet part of the request is named rather than silently dropped
         config:

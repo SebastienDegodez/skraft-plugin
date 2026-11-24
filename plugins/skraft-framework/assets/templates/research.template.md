@@ -3,7 +3,7 @@
 
 ## Scope and success criteria
 - Scope: {{coverage_and_exclusions}}
-- Assumptions: {{assumptions}}
+- Technical assumptions: {{technical_assumptions}}
 - Success criteria:
   - {{criterion}}
 
@@ -37,7 +37,10 @@
 ### {{approach_B}} (rejected)
 - Reason for rejection with evidence.
 
+## Product questions
+- {{Qn}} {{Assumption | Open question | Unknown}}: {{question}} Recommended: {{answer}}
+
 ## Handoff to DESIGN
 - Recommended approach + the decisions DESIGN must ratify.
 - Existing aggregates, use cases, interfaces and structural patterns DESIGN reuses: {{name}} -> {{#file:path_from_repository_root}}
-- Open questions that remain for the architect.
+- Technical questions left open for the architect.

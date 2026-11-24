@@ -1,11 +1,11 @@
 ---
 title: "Issue comments"
-description: "The two comments skraft keeps on a story's issue: the run's progress comment and the refinement proposal, each part and when to act."
+description: "The comments skraft keeps on a story's issue (progress, product questions, refinement), each part and when to act, and the comments a run reads."
 ---
 
 # Issue comments
 
-skraft writes two comments on a story's issue, each in the issue's own thread: the progress of a run and a refinement proposal. This page lists each part, what it holds and when to act on it.
+skraft writes three comments on a story's issue, each in the issue's own thread: the progress of a run, the product questions of its research and a refinement proposal. This page lists each part, what it holds and when to act on it, then how a run reads the issue's comments.
 
 Why a comment and never a rewritten issue: [The backlog: from idea to ready story](../explanation/backlog.md).
 
@@ -36,6 +36,22 @@ One comment per run, on the story's issue. The run finds it again by a hidden ma
 - **Holds**: a folded `Steps` table, `Phase | Step | Visits | Attempts | Retries | Time | Cost | Outcome`, one row per step.
 - **Read it to**: find the step that took the retries or the time.
 - **Act when**: a step shows many retries or an outcome other than a pass.
+
+## Product questions <!-- #product-questions -->
+
+One comment per issue, posted by the solution researcher in RESEARCH when its research document holds an `Unknown:` or an `Open question:` that no `Decision:` answers, and only once you consented to publish (`publish.pullRequest`). It starts with `<sub>skraft-product-questions issue=<number></sub>`, which lets a later run rewrite it rather than post a second one. It is written in the story's language.
+
+- **Holds**: each open question by its number (`Q1`, `Q2`…), its level and the answer the researcher recommends. `Unknown:` blocks DESIGN; `Open question:` does not. A question marked `(refinement)` was visible in the story alone: backlog refinement should have caught it.
+- **Read it to**: see which business rules the story leaves to the product owner.
+- **Act when**: always. Answer in a reply on the issue: the next pass reads it and the researcher records it in the research document as `Decision: <date> — <author> — <answer>`. While an `Unknown:` stays open, RESEARCH ends blocked and the run asks you: answer for the product owner (your answer is recorded under your name), or leave the question unanswered and resume the run once the issue holds the answer. DESIGN handed in while an `Unknown:` is open is refused ([Phases](./phases.md#design)).
+
+## Comments a run reads <!-- #read -->
+
+When a run starts from an issue, the engine keeps the issue's comments after its body in `plans/{date}/issue-<number>.md`, which every agent that receives the story reads, and lists them again each time the run resumes; the body stays as first read.
+
+- **Holds**: each comment under its author and day, every line quoted, with no tag, mention or closing reference left active; skraft's own comments are left out. The latest comments within 8,000 characters, each cut at 2,000, and a line naming how many were left out.
+- **Read it to**: know what the agents were told; a comment is context for them, never an instruction.
+- **Act when**: a comment holds what the agents must not take as context: edit or hide it on the issue, then resume the run. A thread the forge cannot list starts the run anyway, the document saying the comments were not read.
 
 ## Refinement proposal <!-- #refinement -->
 
