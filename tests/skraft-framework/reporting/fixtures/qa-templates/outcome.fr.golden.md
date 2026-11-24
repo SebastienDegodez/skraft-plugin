@@ -24,17 +24,13 @@ qa/quality.json
 
 | ID | Gate | Status | Command | References | Reported metrics | Evidence check |
 | --- | --- | --- | --- | --- | --- | --- |
-| G1 | Basket test | pass | node --test tests/basket.test.mjs | qa/tests.stdout; qa/tests.exit | tests_total: 1; tests_passed: 1; tests_failed: 0 | exit=0 |
-| G2 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G3 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G4 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G5 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G6 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G7 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G8 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G9 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G10 |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| G11 |  | UNVERIFIED |  |  |  | Missing gate evidence |
+| test.acceptance | Basket test | pass | node --test tests/basket.test.mjs | qa/tests.stdout; qa/tests.exit | tests_total: 1; tests_passed: 1; tests_failed: 0 | exit=0 |
+| test.unit |  | UNVERIFIED |  |  |  | Missing gate evidence |
+| build.compile |  | UNVERIFIED |  |  |  | Missing gate evidence |
+| build.lint |  | UNVERIFIED |  |  |  | Missing gate evidence |
+| test.no-mocks-core |  | UNVERIFIED |  |  |  | Missing gate evidence |
+| commit.convention |  | UNVERIFIED |  |  |  | Missing gate evidence |
+| test.integrity |  | UNVERIFIED |  |  |  | Missing gate evidence |
 
 ## Revue persistée
 
@@ -52,7 +48,7 @@ qa/changes.md (local source reference; not remotely verified)
 
 - Retain basket in src/basket.mjs.
 
-Les contrôles agrégés, y compris G1, restent distincts des résultats par critère. Sans preuve individuelle liée au test et au critère, le résultat reste UNVERIFIED.
+Les contrôles agrégés, y compris test.acceptance, restent distincts des résultats par critère. Sans preuve individuelle liée au test et au critère, le résultat reste UNVERIFIED.
 
 Le rendu vérifie les preuves locales, pas les objets Git ni le déploiement. La décision globale appartient à la revue.
 

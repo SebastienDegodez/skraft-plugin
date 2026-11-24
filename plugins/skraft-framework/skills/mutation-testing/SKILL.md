@@ -13,7 +13,7 @@ A test that kills no mutant is noise. DELETE IT.
 
 ## The developer owns mutation
 
-Mutation testing never runs in the pipeline: every delivery records G6 `not_run`. The developer
+Mutation testing never runs in the pipeline: the project's CI runs it. The developer
 runs `/skraft-mutation`, which asks for their command and runs it. You never install a mutation
 tool, write its config or a mutation command, or run mutation on your own initiative.
 

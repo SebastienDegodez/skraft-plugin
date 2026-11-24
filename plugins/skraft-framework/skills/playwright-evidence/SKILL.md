@@ -18,9 +18,9 @@ never infer today's directory or read pipeline state. Backend-only work does not
 load browser capture.
 
 ```
-Approved real E2E run → Engineer captures → Local manifest → Reviewed report refs
-                       bounded success     all evidence     remote URLs or
-                       + failure proof     retained         explicit local-only
+Approved real E2E run → Engineer captures   → evidence.screenshots → Reviewed report refs
+                       mandatory success     hashed in the v7 log   remote URLs or
+                       + failure proof       (Git-ignored)          explicit local-only
 ```
 
 `{story}` is the story slug passed as `SKRAFT_STORY_ID` env var (e.g. `42-add-eligibility-check`).
@@ -67,12 +67,16 @@ for full configuration options, parallel settings, and browser lifecycle managem
 
 ## Screenshot Capture
 
-For an approved frontend journey, capture a bounded representative success
-screenshot at its asserted outcome during the existing approved real test run.
-Agree the optional success selection count; do not invent a default. Associate
-each capture with AC, test, source revision and actual run result in the manifest.
-Screenshot alone never proves correctness. Do not rerun tests for report cosmetics;
-any additional reporting-only run needs explicit approval and cost warning.
+Screenshots are mandatory for a frontend story: one whose commits touch a `@visual`
+scenario, `tests/e2e/`, a `package.json` declaring `react` or a `playwright.config.*`.
+Capture at least one success screenshot per delivered journey at its asserted outcome,
+during the real E2E run of the story. Copy each PNG into the story's evidence directory
+`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/screenshots/` (ignored
+by Git, never committed) and record it in the `evidence.screenshots` gate of the v7 log
+(`quality-gates-evidence-contract`) with the sha256 of its bytes; on .NET pass each PNG to
+`qg-collect.mjs --screenshot`. A frontend story without a screenshot fails `qg-verify`.
+Associate each capture with AC, test, source revision and actual run result in the manifest.
+Screenshot alone never proves correctness. Do not rerun tests for report cosmetics.
 
 Success-selection and report `maxMedia` limits never truncate correctness-gate
 captures, failure diagnostics or reviewer inputs. Retain full local evidence.
@@ -209,14 +213,14 @@ Reference `references/ci-configuration.md` for the full workflow YAML.
 Add to `.gitignore`:
 
 ```
+.copilot-tracking/skraft-plans/*/evidence/
 .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/
 playwright-report/
 test-results/
 ```
 
 Preserve full local failure evidence and correctness proof; publication selection
-never deletes it. Retain only agreed optional representative success captures,
-without changing required gate capture. CI retention follows separately approved
+never deletes it, nor any screenshot the `evidence.screenshots` gate cites. CI retention follows separately approved
 policy; neither report `maxMedia` nor missing upload consent limits local proof.
 
 ## References

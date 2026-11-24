@@ -89,7 +89,7 @@ invokes declared reviewers, and applies their verdicts. It invokes neither
 
 ### 6. `software-engineer` — the craftsperson (DELIVER)
 
-- **Mission:** implement the code with Outside-In TDD, proven by the mutation score.
+- **Mission:** implement the code with Outside-In TDD, proven by the evidence log that `qg-verify` checks.
 - **Receives:** the Gherkin scenarios.
 - **Hands off:** tested code + quality evidence, to the Pull Request.
 - **Checked by:** `software-engineer-reviewer` (delivery gates).

@@ -1,8 +1,8 @@
-// G7 and G11 for .NET, as scripts the adapter ships: evidence is produced by the script,
+// test.no-mocks-core for .NET, as scripts the adapter ships: evidence is produced by the script,
 // never assembled by hand, and the script's exit code is the gate verdict.
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,8 +12,6 @@ import { promisify } from 'node:util'
 const execFileAsync = promisify(execFile)
 const SCRIPTS = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/', import.meta.url))
 const NO_MOCKS = join(SCRIPTS, 'no-mocks-in-core.mjs')
-const COVERAGE = join(SCRIPTS, 'coverage-core.mjs')
-const DOTNET_FIXTURE = fileURLToPath(new URL('./quality-gates-dotnet-fake-dotnet.fixture.mjs', import.meta.url))
 
 const touch = async (root, relativePath, contents = '') => {
   const path = join(root, relativePath)
@@ -76,76 +74,5 @@ test('G7 refuses a repository with no Domain or Application project', async () =
     const result = await run(NO_MOCKS, ['--root', root, '--evidence', join(root, 'ev')])
     assert.equal(result.exitCode, 2)
     assert.match(result.stderr, /no \*\.Domain or \*\.Application project/)
-  })
-})
-
-// ─── G11 ────────────────────────────────────────────────────────────────────────
-
-// Real Cobertura lists each line under its method and again under its class.
-const cobertura = (packages) => `<?xml version="1.0"?>\n<coverage>\n<packages>\n${packages.map(([name, covered, valid]) => {
-  const lines = Array.from({ length: valid }, (_, i) => `<line number="${i + 1}" hits="${i < covered ? 1 : 0}" branch="False"/>`).join('')
-  return `<package name="${name}" line-rate="${valid ? covered / valid : 1}"><classes><class name="C" filename="src/${name}/C.cs" line-rate="1"><methods><method name="M"><lines>${lines}</lines></method></methods><lines>${lines}</lines></class></classes></package>`
-}).join('\n')}\n</packages>\n</coverage>\n`
-
-// The fake dotnet copies one Cobertura report per test project into --results-directory.
-const fakeDotnet = async (_root, reports, exitCode = 0) => ({
-  SKRAFT_DOTNET: DOTNET_FIXTURE,
-  FAKE_DOTNET_COVERAGE_REPORTS: JSON.stringify(reports),
-  FAKE_DOTNET_TEST_EXIT: String(exitCode),
-})
-
-test('G11 passes at 100% line coverage of Domain and Application, whatever the boundary covers', async () => {
-  await withRoot(async (root) => {
-    await touch(root, 'Checkout.sln')
-    const report = join(root, 'a.xml')
-    await writeFile(report, cobertura([['Checkout.Domain', 10, 10], ['Checkout.Application', 4, 4], ['Checkout.Infrastructure', 1, 9]]))
-    const evidence = join(root, 'ev')
-    const result = await run(COVERAGE, ['--root', root, '--evidence', evidence], await fakeDotnet(root, [report]))
-    assert.equal(result.exitCode, 0, result.stderr)
-    const manifest = JSON.parse(await readFile(join(evidence, 'qg-coverage.json'), 'utf8'))
-    assert.deepEqual(manifest, { gate: 'coverage', expected: 100, covered: 14, valid: 14, percent: 100, passed: true, exit: 0 })
-    assert.equal((await readFile(join(evidence, 'qg-coverage.exit'), 'utf8')).trim(), '0')
-    assert.match(await readFile(join(evidence, 'qg-coverage.stdout'), 'utf8'), /Line coverage \(Domain, Application\): 14\/14 = 100%/)
-    assert.deepEqual((await readdir(evidence)).sort(), ['qg-coverage.exit', 'qg-coverage.json', 'qg-coverage.stdout', 'qg-coverage.stdout.sha256'])
-  })
-})
-
-test('G11 fails below the bar across every report, nested contexts included', async () => {
-  await withRoot(async (root) => {
-    await touch(root, 'Checkout.sln')
-    const a = join(root, 'a.xml')
-    const b = join(root, 'b.xml')
-    await writeFile(a, cobertura([['Ordering.Domain', 10, 10]]))
-    await writeFile(b, cobertura([['Billing.Application', 3, 4]]))
-    const evidence = join(root, 'ev')
-    const result = await run(COVERAGE, ['--root', root, '--evidence', evidence], await fakeDotnet(root, [a, b]))
-    assert.equal(result.exitCode, 1)
-    const manifest = JSON.parse(await readFile(join(evidence, 'qg-coverage.json'), 'utf8'))
-    assert.equal(manifest.passed, false)
-    assert.equal(manifest.covered, 13)
-    assert.equal(manifest.valid, 14)
-  })
-})
-
-test('G11 fails when the tests fail, and when no core package was measured', async () => {
-  await withRoot(async (root) => {
-    await touch(root, 'Checkout.sln')
-    const report = join(root, 'a.xml')
-    await writeFile(report, cobertura([['Checkout.Domain', 5, 5]]))
-    const failing = await run(COVERAGE, ['--root', root, '--evidence', join(root, 'ev1')], await fakeDotnet(root, [report], 1))
-    assert.equal(failing.exitCode, 1)
-
-    const boundaryOnly = join(root, 'b.xml')
-    await writeFile(boundaryOnly, cobertura([['Checkout.Api', 5, 5]]))
-    const unmeasured = await run(COVERAGE, ['--root', root, '--evidence', join(root, 'ev2')], await fakeDotnet(root, [boundaryOnly]))
-    assert.equal(unmeasured.exitCode, 1)
-    assert.match(await readFile(join(root, 'ev2', 'qg-coverage.stdout'), 'utf8'), /no Domain or Application package was measured/)
-  })
-})
-
-test('G11 keeps the threshold policy-owned', async () => {
-  await withRoot(async (root) => {
-    const result = await run(COVERAGE, ['--root', root, '--evidence', join(root, 'ev'), '--threshold', '50'])
-    assert.equal(result.exitCode, 2)
   })
 })

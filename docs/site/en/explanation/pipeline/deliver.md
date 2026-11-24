@@ -17,14 +17,14 @@ The DELIVER phase implements working code, guided by tests, with empirically ver
 |---|---|
 | **Comes from** | **DISTILL** — the Gherkin scenarios, the test plan, the implementation plan and the RED acceptance test |
 | **What enters** | Executable specifications to implement, in the implementation plan's order, with the test plan's layer and double per scenario; contracts, ADR index, research conventions and stack commands |
-| **What exits** | Tested code + quality evidence (mutation, RED→GREEN); outcome report at completion or blockage |
+| **What exits** | Tested code + quality evidence (tests, build, lint, RED→GREEN, screenshots for a frontend story); outcome report at completion or blockage |
 | **Goes to** | The **Pull Request** — human review then delivery |
 | **Responsible agent** | `software-engineer` |
 | **Associated reviewer** | `software-engineer-reviewer` |
 
 ## Why this phase exists
 
-Code is the only artefact that matters in production. The software-engineer applies Outside-In TDD: Acceptance Tests guide unit tests, which guide implementation. The Mutation Score verifies that tests genuinely protect behaviour. The reviewer is read-only — it never modifies code.
+Code is the only artefact that matters in production. The software-engineer applies Outside-In TDD: Acceptance Tests guide unit tests, which guide implementation. The mutation score, run by the project's CI, verifies that tests genuinely protect behaviour. The reviewer is read-only — it never modifies code.
 
 > « We grow working software, guided by tests, from the outside in. »
 > — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
@@ -32,7 +32,7 @@ Code is the only artefact that matters in production. The software-engineer appl
 <div class="fil-rouge" markdown="1">
 <span class="fil-rouge__label">☕ Running example — Starbucks <em>(illustrative)</em></span>
 
-The scenario enters. DELIVER implements the total calculation and loyalty crediting in **RED → GREEN** cycles, then a **mutation score** attests that the tests genuinely protect the loyalty rule. The code goes to a Pull Request.
+The scenario enters. DELIVER implements the total calculation and loyalty crediting in **RED → GREEN** cycles; the evidence log attests every green gate. The code goes to a Pull Request, where the project's CI computes the **mutation score** that attests the tests genuinely protect the loyalty rule.
 </div>
 
 ## What the agent produces
@@ -40,8 +40,8 @@ The scenario enters. DELIVER implements the total calculation and loyalty credit
 - Code implemented following the RED → GREEN → REFACTOR cycle.
 - Passing acceptance tests linked to Gherkin scenarios.
 - Unit tests covering Domain invariants.
-- Mutation Score as empirical proof of test quality.
-- Quality-gates evidence log, change log and outcome data for the reviewer.
+- Screenshots of the frontend outcome, for a frontend story.
+- Quality-gates evidence log (schema v7, in the git-ignored evidence directory), change log and outcome data for the reviewer.
 
 ## Handoff, RED and rework
 
@@ -55,9 +55,10 @@ The RED is DISTILL's `test` commit, which holds the acceptance test of every sce
 engineer makes them green group by group — the scenarios that pin one rule and its edge cases —
 with one green commit per group, the gate excluding the scenarios still owed, and the last group
 running the whole suite. One dispatch delivers every scenario.
-Per-cycle mutation is differential since the previous cycle's last commit and is skipped
-when no core production file changed. Only the final full core then boundary mutation run
-is G6 evidence.
+The pipeline runs neither mutation nor coverage: both are steps of the project's CI. The
+evidence log is written once, after the last work commit, into
+`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`, which Git ignores:
+nothing is committed, no snapshot is taken.
 
 The reviewer prepares `diff-{story}.patch` and `files-{story}.txt` once, then hands those
 paths to the lenses. `quality-gates` also receives the test plan, `test-integrity` receives
@@ -92,14 +93,15 @@ resolved tracking directories, never in the installed skill. No company override
 profiles or new configuration key is introduced. Template integration and default-output
 parity remain pending validation.
 
-The outcome projects recorded tests, build, static checks, coverage, mutation, review,
+The outcome projects recorded tests, build, static checks, screenshots, review,
 commits/files and limitations into Markdown. Missing or stale proof stays unverified;
 metrics are not invented. A blocked outcome states what remains incomplete. Local
 proof checks and the persisted reviewer verdict are distinct: the current renderer
-leaves G8/G9 Git-object verification to the reviewer. Delivered does not mean deployed.
+leaves `commit.convention`/`test.integrity` Git-object verification to the reviewer. Delivered does not mean deployed.
 
 For frontend work, existing producers capture Playwright evidence and reviewers check
-it. Only already remotely accessible evidence is linked, with access limitations
+it: a frontend story records `evidence.screenshots`, and `qg-verify` fails it without a
+screenshot (`SCREENSHOTS_MISSING`). Only already remotely accessible evidence is linked, with access limitations
 stated; local-only evidence is explicitly unavailable remotely, never presented as a
 published attachment. The startup-selected media cap may be zero and has no hard default.
 It limits report links, not local evidence retained for review. Omissions remain visible.
@@ -155,8 +157,9 @@ capability is active, its fidelity lens joins the adversarial panel of the
 
 ## Gates crossed here
 
-This phase crosses the delivery gates — RED/GREEN test integrity, green build,
-mutation score at threshold (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
+This phase crosses the delivery gates — RED/GREEN test integrity, green build and lint,
+no mocks in the core, commit convention and, for a frontend story, screenshots; mutation
+and coverage run in the project's CI (see the [gates catalogue]({{ "/en/reference/gates" | relative_url }})).
 The independent reviewer issues its verdict before delivery is declared approved.
 A **draft PR** may already exist after separately approved creation and
 push; opening it does not mean the delivery gates have passed.

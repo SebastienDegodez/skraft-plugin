@@ -52,8 +52,8 @@ metadata:
   outputs:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
-    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json (quality-gates evidence log)
-    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (optional, captured stdout, exit codes and RED/GREEN snapshots the evidence log references)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json (quality-gates evidence log, Git-ignored, never committed)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (captured stdout, exit codes and screenshots the evidence log references, Git-ignored, never committed)
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 
@@ -101,7 +101,7 @@ Load each skill below only when its trigger fires, never at startup.
 | `quality-gates-dotnet` | Repo is a .NET solution (`*.sln` / `*.csproj`) — concrete `dotnet` recipes that populate the contract |
 | `quality-gates-javascript` | Repo has a plain JavaScript Node package (`package.json` without `vitest` or `typescript`) — JavaScript gates; its unsupported cases are blockers to report, never gates to skip |
 | `quality-gates-python` | Repo has a Python project (`pyproject.toml`) — Python gates, run from the project's `.venv` |
-| `quality-gates-typescript` | Repo has a TypeScript package tested with Vitest (`vitest` in its `package.json`), a React front end included — Vitest, tsc, ESLint boundaries and v8 coverage, run from the package's `node_modules` |
+| `quality-gates-typescript` | Repo has a TypeScript package tested with Vitest (`vitest` in its `package.json`), a React front end included — Vitest, tsc and ESLint with its boundaries rules, run from the package's `node_modules` |
 | `resolving-stack-commands` | Needing a build or test command the stack-commands file does not hold, or one of its commands fails — never hardcode one |
 | `skraft-quality-bar` | After the story's last green commit — the thresholds the final gates enforce |
 | `qa-reporting` | After the story's last green commit, with the evidence skills, in the same turn |
@@ -164,9 +164,13 @@ Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this pa
 - Before the green, run static checks and formatting and fix every failure, never changing a line of an acceptance test.
 - **Green, once, chained**: run every test except the acceptance tests of scenarios not delivered yet (`outside-in-tdd` → Run one test, then its project → Pending excluded; the last group runs the whole suite) and commit in one command that commits only when the run passes, naming each file you changed (never `.`, `-A` or a folder): `<test command> && git add <each file you changed> && git commit -s -m "feat(feature): subject" -m "Refs: #N"` in sh and PowerShell 7; in Windows PowerShell 5.1, `<test command>; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(feature): subject" -m "Refs: #N" } }`. The run fails → nothing is committed: fix, run the line again.
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
-- **G6 is always `not_run`**: you run no mutation tool, mutation gate or `/skraft-mutation`, at any point of the story, and write no mutation command, config or result. Record G6 `not_run` with the rationale `G6 not run: mutation testing runs outside the pipeline; the developer runs /skraft-mutation.` and tell the developer in the handover.
-- Write `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` once, after the evidence commit, one line per commit since the DELIVER base, taken from `git log`, in the same turn as the outcome JSON (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v6) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). In a .NET solution, run the adapter's `qg-collect.mjs` once — it runs every gate, records G6 `not_run`, writes the snapshots and the log, commits the evidence directory alone and runs `qg-verify` — with one `--cycle` per scenario that has a green commit, never one for a rework commit. Elsewhere, run each gate command or script into `evidence/{date}/{story}/`, record one `test_integrity` cycle per scenario (its acceptance test file at the `test` commit that holds it red and at its green commit), write those snapshots via `git show <commit>:<path>`, assemble `evidence/{date}/{story}/qg-{story}.json` per that contract, commit that directory alone with the same feature scope, e.g. `chore(loyalty-discount): record quality evidence`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`. Hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
+- **Architecture, coverage and mutation never run in the story**: you run no coverage command, no separate architecture gate, no mutation tool, mutation gate or `/skraft-mutation`, at any point of the story, and write no mutation command, config or result. The project's CI runs coverage and mutation; the developer runs `/skraft-mutation`. Never record an architecture, coverage or mutation entry in the evidence log. Tell the developer in the handover.
+- Write `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` once, after the evidence log, one line per commit since the DELIVER base, taken from `git log`, in the same turn as the outcome JSON (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
+- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v7, gate ids `test.acceptance`, `test.unit`, `build.compile`, `build.lint`, `test.no-mocks-core`, `commit.convention`, `test.integrity`, `evidence.screenshots`) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). Nothing under `evidence/` is ever committed — not the log, not a capture, not a screenshot:
+  - Before the first capture, `git check-ignore -q` on the story's evidence directory must succeed; otherwise add `.copilot-tracking/skraft-plans/*/evidence/` to `.gitignore` in a work commit.
+  - In a .NET solution, run the adapter's `qg-collect.mjs` once — it runs every gate, writes the log and runs `qg-verify` — with one `--cycle` per scenario that has a green commit, never one for a rework commit, and one `--screenshot` per screenshot of a frontend story.
+  - Elsewhere, run each gate command or script into `evidence/{date}/{story}/`, record one `test_integrity` cycle per scenario (its acceptance test file, the `test` commit that holds it red and its green commit), assemble `evidence/{date}/{story}/qg-{story}.json` per that contract with `repo_root_rev` = `HEAD`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`.
+  - Hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
 
 ### Outcome handoff (success or blockage)
 
@@ -176,10 +180,11 @@ the approved test plan and captured gate outputs, not raw full logs or
 new verdict prose. Source actual impact to tests/changes; disclose missing proofs
 and blockers even when delivery stops. Leave `reviewRef` for router binding.
 
-For frontend stories only, load `playwright-evidence`:
-capture a bounded approved success screenshot during the existing real test run,
-retain all local failure/correctness evidence, and honor report media selection
-without uploads. Never rerun gates solely for reporting. Return exact
+For a frontend story — its commits touch a `@visual` scenario, `tests/e2e/`, a `package.json`
+declaring `react` or a `playwright.config.*` — load `playwright-evidence`: capturing at least one
+success screenshot during the story's real E2E run is mandatory, recorded in
+`evidence.screenshots`; `qg-verify` fails a frontend story without one. Retain all local
+failure/correctness evidence, and honor report media selection without uploads. Never rerun gates solely for reporting. Return exact
 repository-root-relative outcome, quality-evidence, change-log and
 manifest refs plus full source revision and limitations; use dispatched paths,
 not current-date guesses. No publication or pipeline-state writes.
@@ -192,8 +197,8 @@ When the handoff block's mode line reads `rework`, the previous review's finding
 2. Fix each finding with the smallest change. A production change still goes RED → SYNTHESIZE-GREEN → COMMIT through a test. A finding that only asks for a stronger test is one `test` commit that adds assertions and removes or rewrites no line; a stricter assertion that must replace one carries `PLAN_DEVIATION: <old assertion> → <new assertion>` in its body (`outside-in-tdd` → commits by pass). Never record a rework commit as a `test_integrity` cycle.
 3. Re-run only the gates your change invalidates:
    - production or test code changed → the affected tests, then a new evidence log;
-   - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures, commit it, and re-run `qg-verify`; never re-run tests;
-   - the dispatch carries `Environment re-gate` → change no code; re-run only the gate captures the previous review names inconclusive, regenerate the evidence log, commit it, and re-run `qg-verify`.
+   - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures with `repo_root_rev` = `HEAD`, and re-run `qg-verify`; never re-run tests;
+   - the dispatch carries `Environment re-gate` → change no code; re-run only the gate captures the previous review names inconclusive, regenerate the evidence log, and re-run `qg-verify`.
 4. Keep every captured output your change does not invalidate.
 
 ## Test-wiring workers (fan-out, B1)
@@ -214,7 +219,8 @@ When a slice needs **test infrastructure** rather than business logic, fan out t
 Before concluding, verify and output this valid markdown checklist visually in the chat/console:
 - [ ] Active acceptance and unit tests pass
 - [ ] Build and static analysis pass
-- [ ] G6 `not_run` recorded and reported to the developer (mutation runs through `/skraft-mutation`)
+- [ ] No architecture, coverage or mutation entry in the evidence log; the developer is told the project's CI runs coverage and mutation
+- [ ] Frontend story: at least one screenshot recorded in `evidence.screenshots`
 - [ ] No mocks used inside Domain/Application core
 - [ ] Object Calisthenics — 9 rules verified on Domain (see craft-discipline C10)
 - [ ] Code committed using conventional commits
@@ -232,7 +238,7 @@ Always print a trace of your cycle directly into the chat/console output exclusi
 **GREEN COMMIT**: <Hash/Message>.
 
 ### Mutation
-**MUTATION**: not run — the developer runs `/skraft-mutation`.
+**MUTATION**: not run — the project's CI runs it; the developer runs `/skraft-mutation`.
 ```
 
 ## Constraints

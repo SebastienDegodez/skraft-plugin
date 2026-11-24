@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// G7 for TypeScript: no mocking library and no Vitest/Jest test double in the core sources (every
+// test.no-mocks-core for TypeScript: no mocking library and no Vitest/Jest test double in the core sources (every
 // production source under a folder whose last word is domain or application), nor in the unit
 // tests. Prints one hit per line; empty on pass.
 import { existsSync, realpathSync } from 'node:fs'

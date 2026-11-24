@@ -51,10 +51,10 @@ Tous les seuils du framework sont écrits à un seul endroit — le skill [skraf
 
 | Porte | Valeur | Périmètre |
 | --- | --- | --- |
-| Score de mutation | 80 % | chaque scope : core et boundary (Clean Architecture), ou global (mono-projet) |
-| Couverture de lignes | 100 % | Domain, Application |
+| Score de mutation | 80 % | chaque scope : core et boundary (Clean Architecture), ou global (mono-projet) — exécuté par la CI du projet |
+| Couverture de lignes | 100 % | Domain, Application — exécutée par la CI du projet |
 
-Toutes les portes sont **bloquantes** — frontières Clean Architecture, cycle TDD, intégrité des tests, mutation (quand le développeur a déclaré sa commande), gate Gherkin, ADR pour toute décision non triviale, Object Calisthenics sur le Domain. Une porte qui ne peut pas s'exécuter n'est pas une porte franchie : c'est un échec, et le pipeline s'arrête. Seule exception : sans commande de mutation déclarée, G6 est `not_run`, affichée comme telle, jamais `pass`. La variante TDD est Outside-In double boucle, toujours.
+Toutes les portes sont **bloquantes** — frontières Clean Architecture, cycle TDD, intégrité des tests, gate Gherkin, ADR pour toute décision non triviale, Object Calisthenics sur le Domain. Une porte qui ne peut pas s'exécuter n'est pas une porte franchie : c'est un échec, et le pipeline s'arrête. La mutation et la couverture restent la règle craft, mais elles sont exécutées par la CI du projet, jamais par le pipeline : depuis le schéma d'évidence v7, DELIVER n'enregistre ni gate de mutation ni gate de couverture. La variante TDD est Outside-In double boucle, toujours.
 
 **Conséquence sur le coût, assumée :** la molette supprimée était aussi le gouverneur de coût du framework (fan-out des reviewers à 1, 2 ou 4 lentilles, nombre de runs de mutation, gate Gherkin activable ou non). Chaque run paie désormais la forme complète. Le choix est délibéré : la qualité n'est pas négociable.
 
@@ -183,7 +183,7 @@ Le rythme fondamental du TDD : écrire un test qui échoue, puis le faire passer
 
 Le Mutation Score mesure l'**efficacité** des tests (pas seulement la couverture) en injectant des défauts et en vérifiant que les tests les détectent. La barre est permanente : **80 % sur chaque scope** — core et boundary en Clean Architecture, global pour un mono-projet.
 
-**La mutation est la responsabilité du développeur.** Elle doit être faite à chaque story, avec l'outil de son choix : SKRAFT ne fournit ni outil, ni configuration, ni scaffold. Le pipeline ne la lance jamais : chaque livraison enregistre G6 `not_run` et le rapport l'indique. Le développeur lance `/skraft-mutation` quand il le décide : il demande la commande de chaque composant (en proposant celle trouvée dans `CONTRIBUTING.md`, avec une alerte sur un run complet, non incrémental) ; elle écrit ses scores en JSON dans le fichier désigné par `SKRAFT_MUTATION_RESULT`, avec ses mutants survivants en lignes `fichier:ligne détail` sauf si l'équipe les omet. La mesure ne se lit pas dans un rapport en prose : la gate lit les scores et rend son verdict par son **code de sortie**. Skills : [mutation-testing]({{ "/fr/dashboard/" | relative_url }}#skill-mutation-testing), [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar).
+**La mutation est la responsabilité du développeur.** Elle doit être faite à chaque story, avec l'outil de son choix, comme étape de la CI du projet : SKRAFT ne fournit ni outil, ni configuration, ni scaffold. Le pipeline ne la lance jamais. `/skraft-mutation` reste un outil manuel que le développeur lance quand il le décide : il demande la commande de chaque composant (en proposant celle trouvée dans `CONTRIBUTING.md`, avec une alerte sur un run complet, non incrémental) ; elle écrit ses scores en JSON dans le fichier désigné par `SKRAFT_MUTATION_RESULT`, avec ses mutants survivants en lignes `fichier:ligne détail` sauf si l'équipe les omet. La mesure ne se lit pas dans un rapport en prose : la gate lit les scores et rend son verdict par son **code de sortie**. Skills : [mutation-testing]({{ "/fr/dashboard/" | relative_url }}#skill-mutation-testing), [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar).
 
 > « Mutation testing provides high-fidelity assessment of test suite effectiveness. »
 > — Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
@@ -202,7 +202,7 @@ Neuf règles de discipline qui améliorent le design objet au quotidien (un seul
 
 ### Quality Gates & Evidence Contract
 
-Un journal de preuves structuré atteste l'état des portes qualité (tests, build, mutation, intégrité RED/GREEN). L'engineer le **remplit** (writer), le reviewer le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar). Skills : [quality-gates-evidence-contract]({{ "/fr/dashboard/" | relative_url }}#skill-quality-gates-evidence-contract), [resolving-stack-commands]({{ "/fr/dashboard/" | relative_url }}#skill-resolving-stack-commands).
+Un journal de preuves structuré atteste l'état des portes qualité (tests, build, lint, absence de mocks dans le cœur, convention de commit, intégrité RED/GREEN, captures d'écran frontend). Il vit dans un répertoire d'évidence ignoré par Git : rien n'est commité. L'engineer le **remplit** (writer), le reviewer le **lit** (reader). Le journal enregistre des résultats, il ne fixe pas la barre : les seuils et le niveau d'application de chaque porte viennent de [skraft-quality-bar]({{ "/fr/dashboard/" | relative_url }}#skill-skraft-quality-bar). Skills : [quality-gates-evidence-contract]({{ "/fr/dashboard/" | relative_url }}#skill-quality-gates-evidence-contract), [resolving-stack-commands]({{ "/fr/dashboard/" | relative_url }}#skill-resolving-stack-commands).
 
 ---
 

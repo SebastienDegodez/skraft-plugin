@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-	coreRoots, coreSourceFiles, coverageVerdict, isCoreFile, mockHits, noCoverHits,
+	coreSourceFiles, isCoreFile, mockHits,
 } from '../../../plugins/skraft-framework/skills/quality-gates-python/scripts/gate-policy.mjs'
 
 test('core is any source under a folder whose last word is domain or application, tests left out', () => {
@@ -12,28 +12,6 @@ test('core is any source under a folder whose last word is domain or application
 		assert.equal(isCoreFile(file), false, file)
 	}
 	assert.deepEqual(coreSourceFiles(['b/domain/x.py', 'a/application/y.py', 'a/api/z.py', 'a\\domain\\w.py']), ['a/application/y.py', 'a/domain/w.py', 'b/domain/x.py'])
-})
-
-test('coverage measures from each core folder', () => {
-	assert.deepEqual(coreRoots(['src/shop/domain/order.py', 'src/shop/domain/sub/x.py', 'src/shop/application/a.py', 'billing_domain/r.py']), ['billing_domain', 'src/shop/application', 'src/shop/domain'])
-})
-
-const coverage = (files) => ({ files: Object.fromEntries(Object.entries(files).map(([name, [statements, missing]]) => [name, {
-	summary: { num_statements: statements, covered_lines: statements - missing.length, missing_lines: missing.length }, missing_lines: missing,
-}])) })
-
-test('coverage passes at 100% of the core files and names every uncovered line', () => {
-	assert.equal(coverageVerdict(coverage({ 'src/d/a.py': [4, []], 'src/x/other.py': [9, [1]] }), ['src/d/a.py']).passed, true)
-	const fail = coverageVerdict(coverage({ 'src\\d\\a.py': [4, [3]] }), ['src/d/a.py'])
-	assert.equal(fail.passed, false)
-	assert.deepEqual(fail.missing, ['src/d/a.py: 3'])
-})
-
-test('coverage fails on an unimported core file, nothing measured, or a no-cover pragma', () => {
-	assert.equal(coverageVerdict(coverage({ 'src/d/a.py': [4, []] }), ['src/d/a.py', 'src/d/b.py']).passed, false)
-	assert.equal(coverageVerdict(coverage({}), ['src/d/a.py']).passed, false)
-	assert.equal(coverageVerdict(coverage({ 'src/d/a.py': [4, []] }), ['src/d/a.py'], ['src/d/a.py:3: # pragma: no cover']).passed, false)
-	assert.deepEqual(noCoverHits('a.py', 'x = 1\nif y:  # pragma: no cover\n'), ['a.py:2: if y:  # pragma: no cover'])
 })
 
 test('mocking libraries are detected in core sources and unit tests', () => {

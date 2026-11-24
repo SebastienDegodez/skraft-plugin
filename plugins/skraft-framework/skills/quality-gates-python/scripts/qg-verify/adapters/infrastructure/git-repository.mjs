@@ -30,6 +30,7 @@ export const createGitRepository = ({ cwd }) => {
       }
     },
     range: (base, rev) => (SHA.test(base ?? '') && SHA.test(rev ?? '') ? lines(git(['rev-list', '--no-merges', `${base}..${rev}`])) : []),
+    tracked: (path) => (typeof path === 'string' && path.length > 0 ? lines(git(['ls-files', '--', path])) : []),
     show: (sha, path) => (SHA.test(sha ?? '') && typeof path === 'string' && path.length > 0 ? git(['show', `${sha}:${path}`]) : null),
   }
 }

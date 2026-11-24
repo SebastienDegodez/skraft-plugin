@@ -4,14 +4,14 @@
 //
 // The unit tests drive the scripts with a fake dotnet that writes whatever report a test
 // asks for. They prove the scripts read a report correctly; they cannot prove the real
-// toolchain still writes it. Mutation (G6) never runs in a delivery: the developer runs it
-// with /skraft-mutation, so no mutation tool runs here.
+// toolchain still writes it. Architecture, coverage and mutation are not pipeline gates: the
+// project's CI runs them, so none of them runs here.
 //
 // So this runs the shipped scripts with the real toolchain on a small Clean Architecture
 // solution, in a throwaway Git copy of tests/skraft-framework/quality-gates/fixtures/dotnet-checkout:
 //
-//   G7, G11     no mocking framework in the core; 100% line coverage of Domain + Application
-//   init        clean-architecture-dotnet's init-project.mjs scaffolds a solution that builds
+//   test.no-mocks-core  no mocking framework in the core
+//   init                clean-architecture-dotnet's init-project.mjs scaffolds a solution that builds
 //
 // Usage:  node scripts/dotnet-quality-gates-smoke.mjs [--keep]
 // Needs:  the .NET 10 SDK on PATH, and NuGet access to restore the packages.
@@ -77,7 +77,6 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
   const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--evidence', dir, ...args], { cwd: ctx.repo, encoding: 'utf8' })
   const stdout = join(dir, `${prefix}.stdout`)
   const lines = existsSync(stdout) ? readFileSync(stdout, 'utf8').trimEnd().split('\n') : []
-  // The gate's stdout holds Stryker's own output: its tail says why a report is missing.
   return { status: result.status, line: lines.at(-1) ?? '', stderr: result.stderr ?? '', output: lines.slice(-25).join('\n') }
 }
 
@@ -85,18 +84,12 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
 
 const probes = [
   {
-    name: 'G7 no mocks in core',
+    name: 'test.no-mocks-core',
     run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence'),
     status: 0,
     line: /^$/,
   },
   {
-    name: 'G11 core coverage',
-    run: (ctx) => runGate(ctx, 'coverage-core.mjs', 'qg-coverage', 'evidence'),
-    status: 0,
-    line: /^Line coverage \(Domain, Application\): ([1-9]\d*)\/\1 = 100%/,
-  },
-{
     name: 'clean-architecture-dotnet init-project builds',
     run: (ctx) => {
       const cwd = join(ctx.root, 'scaffold')

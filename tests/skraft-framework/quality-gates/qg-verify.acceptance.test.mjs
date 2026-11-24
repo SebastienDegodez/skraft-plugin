@@ -195,3 +195,98 @@ test('a missing or unreadable log is inconclusive, and usage errors exit 3', () 
     assert.equal(spawnSync('node', [QG_VERIFY], { encoding: 'utf8' }).status, 3)
   } finally { s.cleanup() }
 })
+
+// v7: the evidence directory is ignored by Git and nothing in it is committed; the log
+// describes HEAD, and qg-verify reads every test file with `git show`.
+const v7story = (tweak = {}) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'skraft-qg-verify-v7-')))
+  const git = (...args) => execFileSync('git', ['-c', 'user.email=e@x', '-c', 'user.name=E', ...args], { cwd: root, encoding: 'utf8' }).trim()
+  const write = (path, content) => {
+    mkdirSync(dirname(join(root, path)), { recursive: true })
+    writeFileSync(join(root, path), content)
+  }
+  git('init', '-q')
+  write('.gitignore', '.copilot-tracking/skraft-plans/*/evidence/\n')
+  git('add', '.')
+  git('commit', '-q', '-s', '-m', 'chore(orders): base')
+  const base = git('rev-parse', 'HEAD')
+
+  write(TEST_FILE, RED_TEST)
+  git('add', '.')
+  git('commit', '-q', '-s', '-m', 'test(order-discount): gold customers get ten percent')
+  const red = git('rev-parse', 'HEAD')
+
+  const greenFiles = ['src/Orders.Domain/Discount.cs', TEST_FILE, ...(tweak.frontend ? ['tests/e2e/discount.spec.ts'] : [])]
+  write('src/Orders.Domain/Discount.cs', 'public static class Discount { }\n')
+  write(TEST_FILE, GREEN_TEST)
+  if (tweak.frontend) write('tests/e2e/discount.spec.ts', "test('discount', async () => {})\n")
+  git('add', '.')
+  git('commit', '-q', '-s', '-m', 'feat(order-discount): apply loyalty discounts')
+  const green = git('rev-parse', 'HEAD')
+
+  const out = (name, content) => { write(`${EV}/${name}`, content); return { ref: `${REF}/${name}`, sha: sha256(content) } }
+  const gate = (id, label, stdoutText, extra = {}) => {
+    const stdout = out(`qg-${label}.stdout`, stdoutText)
+    const exit = out(`qg-${label}.exit`, '0\n')
+    return { id, label, status: 'pass', command_executed: `run ${label}`, stdout_ref: stdout.ref, stdout_sha256: stdout.sha, stdout_tail: stdoutText, exit_code_ref: exit.ref, ...extra }
+  }
+  const gates = [
+    gate('test.acceptance', 'acceptance', 'Passed: 3\n', { metrics: { tests_total: 3, tests_passed: 3, tests_failed: 0 } }),
+    gate('test.unit', 'tests', 'Passed: 12\n', { metrics: { tests_total: 12, tests_passed: 12, tests_failed: 0 } }),
+    gate('build.compile', 'build', 'Build succeeded\n'),
+    gate('build.lint', 'analysis', '0 warnings\n'),
+    gate('test.no-mocks-core', 'mocks', ''),
+    { id: 'commit.convention', label: 'Conventional commits', status: 'pass' },
+    { id: 'test.integrity', label: 'No test tampering', status: 'pass' },
+  ]
+  if (tweak.screenshot) {
+    const shot = out('screenshots/discount.png', 'PNG bytes')
+    gates.push({ id: 'evidence.screenshots', label: 'Frontend screenshots captured', status: 'pass', screenshots: [{ ref: shot.ref, sha256: shot.sha }] })
+  }
+  const log = {
+    $schema: 'quality-gates-evidence/v7',
+    story: 'order-discount',
+    produced_at: '2026-11-24T10:00:00Z',
+    producer: 'software-engineer',
+    tech_adapter: 'quality-gates-dotnet',
+    repo_root_rev: green,
+    commits_covered: [
+      { sha: red, subject: 'test(order-discount): gold customers get ten percent', files_changed: [TEST_FILE] },
+      { sha: green, subject: 'feat(order-discount): apply loyalty discounts', files_changed: greenFiles },
+    ],
+    gates,
+    test_integrity: { cycles: [{ cycle: 1, behavior: 'gold discount', test_files: [TEST_FILE], red_commit: red, green_commit: green }] },
+  }
+  write(`${EV}/qg-order-discount.json`, `${JSON.stringify(log, null, 2)}\n`)
+  tweak.after?.({ git })
+  return { root, base, red, green, cleanup: () => rmSync(root, { recursive: true, force: true }) }
+}
+
+test('a v7 story passes with nothing committed under its evidence directory', () => {
+  const s = v7story()
+  try {
+    const result = verify(s, '--base', s.base)
+    assert.deepEqual(result.findings, [])
+    assert.equal(result.exit, 0)
+  } finally { s.cleanup() }
+})
+
+test('a v7 frontend story without a screenshot fails, and passes once one is recorded', () => {
+  const bare = v7story({ frontend: true })
+  const shown = v7story({ frontend: true, screenshot: true })
+  try {
+    const result = verify(bare, '--base', bare.base)
+    assert.equal(result.verdict, 'fail')
+    assert.ok(codes(result).includes('SCREENSHOTS_MISSING'), codes(result).join())
+    assert.equal(verify(shown, '--base', shown.base).verdict, 'pass')
+  } finally { bare.cleanup(); shown.cleanup() }
+})
+
+test('a v7 log whose evidence was committed fails', () => {
+  const s = v7story({ after: ({ git }) => { git('add', '-f', '.copilot-tracking'); git('commit', '-q', '-s', '-m', 'chore(order-discount): record quality evidence') } })
+  try {
+    const result = verify(s)
+    assert.equal(result.verdict, 'fail')
+    assert.ok(codes(result).includes('EVIDENCE_COMMITTED'), codes(result).join())
+  } finally { s.cleanup() }
+})

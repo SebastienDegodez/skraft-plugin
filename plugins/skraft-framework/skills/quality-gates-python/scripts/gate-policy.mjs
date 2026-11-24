@@ -1,5 +1,5 @@
-// Pure rules of the Python quality gates: arguments, the Domain/Application core, coverage
-// verdicts, mock detection. No I/O here; the runners own processes and files. Mutation testing
+// Pure rules of the Python quality gates: arguments, the Domain/Application core, mock
+// detection. No I/O here; the runners own processes and files. Mutation testing
 // is the developer's (/skraft-mutation): nothing here runs or configures a mutation tool.
 
 function ensure(condition, message) {
@@ -48,37 +48,6 @@ export function isCoreFile(file) {
 }
 
 export const coreSourceFiles = (files) => [...new Set(files.map((file) => file.replaceAll('\\', '/')).filter(isCoreFile))].sort()
-
-// The folders coverage measures from: each core file's path up to its first core folder.
-export function coreRoots(files) {
-	const roots = coreSourceFiles(files).map((file) => {
-		const parts = file.split('/')
-		return parts.slice(0, parts.findIndex(isCoreFolder) + 1).join('/')
-	})
-	return [...new Set(roots)].sort()
-}
-
-// `report` is the JSON written by `coverage json`; `files` restricts it to the core sources.
-export function noCoverHits(name, text) {
-	return text.split(/\r?\n/).flatMap((line, index) => /#\s*pragma:?\s*no\s*(cover|branch)/i.test(line) ? [`${name}:${index + 1}: ${line.trim()}`] : [])
-}
-
-export function coverageVerdict(report, files, excluded = []) {
-	const wanted = new Set(files)
-	const measured = Object.entries(report.files ?? {}).filter(([name]) => wanted.has(name.replaceAll('\\', '/')))
-	const statements = measured.reduce((sum, [, data]) => sum + data.summary.num_statements, 0)
-	const covered = measured.reduce((sum, [, data]) => sum + data.summary.covered_lines, 0)
-	const missing = measured.filter(([, data]) => data.summary.missing_lines > 0)
-		.map(([name, data]) => `${name.replaceAll('\\', '/')}: ${data.missing_lines.join(', ')}`)
-	const unmeasured = files.filter((file) => !measured.some(([name]) => name.replaceAll('\\', '/') === file))
-	const problems = []
-	if (excluded.length) problems.push(`coverage exclusions in Domain/Application: ${excluded.join('; ')}`)
-	if (statements === 0) problems.push('no Domain or Application statement was measured')
-	if (missing.length) problems.push(`uncovered lines in ${missing.length} file(s)`)
-	if (unmeasured.length) problems.push(`never imported: ${unmeasured.join(', ')}`)
-	const percent = statements === 0 ? null : (100 * covered) / statements
-	return { statements, covered, percent, missing, unmeasured, passed: problems.length === 0, problems }
-}
 
 const MOCK_PATTERNS = [
 	/\bunittest\.mock\b/, /\bfrom\s+unittest\s+import\s+mock\b/, /^\s*import\s+mock\b/, /^\s*from\s+mock\s+import\b/,

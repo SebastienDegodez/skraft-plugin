@@ -58,9 +58,9 @@ Mutation Score measures test suite effectiveness, not just code coverage. Mutati
 > « Mutation testing provides high-fidelity assessment of test suite effectiveness. »
 > — Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011.
 
-In the DELIVER phase, the Mutation Score serves as a quality gate: an insufficient score blocks the reviewer's PASS verdict.
+The bar stays the craft rule of `skraft-quality-bar` — 80% on every scope — but it is executed by the project's CI, never by the pipeline: since evidence schema v7, DELIVER records no mutation gate.
 
-**Mutation testing is the developer's responsibility.** It must be done on every story, with the tool of your choice: SKRAFT ships no mutation tool, config or scaffold. The pipeline never runs it: every delivery records G6 `not_run` and the report says so. Run `/skraft-mutation` when you choose: it asks for each component's command (proposing one found in `CONTRIBUTING.md`, warning on a full, non-incremental run); the command writes its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT`, with its surviving mutants as `file:line detail` lines unless the team leaves them out — `core` and `boundary` for Clean Architecture, `global` for a single project — and the gate holds every scope to 80%.
+**Mutation testing is the developer's responsibility.** It must be done on every story, with the tool of your choice, as a step of the project's CI: SKRAFT ships no mutation tool, config or scaffold. The pipeline never runs it. `/skraft-mutation` stays a manual tool you run when you choose: it asks for each component's command (proposing one found in `CONTRIBUTING.md`, warning on a full, non-incremental run); the command writes its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT`, with its surviving mutants as `file:line detail` lines unless the team leaves them out — `core` and `boundary` for Clean Architecture, `global` for a single project — and the gate holds every scope to 80%.
 
 ## Object Calisthenics
 

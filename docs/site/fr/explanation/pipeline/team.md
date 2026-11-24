@@ -89,7 +89,7 @@ ne lance ni `backlog-discoverer` ni `backlog-planner`. C'est lui qui tient le
 
 ### 6. `software-engineer` — l'artisan (DELIVER)
 
-- **Mission :** implémenter le code en Outside-In TDD, prouvé par le score de mutation.
+- **Mission :** implémenter le code en Outside-In TDD, prouvé par le journal d'évidence que vérifie `qg-verify`.
 - **Reçoit :** les scénarios Gherkin.
 - **Passe le relais :** du code testé + l'évidence qualité, vers la Pull Request.
 - **Contrôlé par :** `software-engineer-reviewer` (gates de livraison).

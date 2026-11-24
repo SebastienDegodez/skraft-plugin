@@ -3,22 +3,21 @@
 // python-quality-gates-smoke.mjs — do the Python quality-gate scripts judge a real run?
 //
 // The acceptance tests drive the scripts with a fake Python that answers what a test asks
-// for. They prove the scripts read pytest and coverage.py output correctly;
-// they cannot prove the real tools still write it, nor that the scripts start them the
-// same way on Linux, macOS and Windows.
+// for. They prove the scripts read pytest output correctly; they cannot prove the real
+// tools still write it, nor that the scripts start them the same way on Linux, macOS and Windows.
 //
 // So this runs the shipped scripts with the real toolchain on a small Clean Architecture
 // project, in a throwaway Git copy of tests/skraft-framework/quality-gates/fixtures/python-payment:
 //
-//   G1          capture.mjs records a green pytest run with its exit code
-//   G7, G11     no mocking library in the core (the domain and application folders);
-//               100% line coverage of that core
-//   G9          snapshot.mjs writes the committed bytes of a test file
+//   test.acceptance / test.unit   capture.mjs records a green pytest run with its exit code
+//   build.compile                 capture.mjs records a clean compileall run
+//   test.no-mocks-core            no mocking library in the core (the domain and application folders)
 //
-// Mutation (G6) never runs in a delivery: the developer runs it with /skraft-mutation.
+// test.integrity reads the test files with `git show`: no script to smoke. Coverage and mutation
+// never run in a delivery: the project's CI runs them, the developer runs /skraft-mutation.
 //
 // Usage:  node scripts/python-quality-gates-smoke.mjs [--python <interpreter>] [--keep]
-//   --python  an interpreter that already holds pytest and coverage;
+//   --python  an interpreter that already holds pytest;
 //             without it, a .venv is created in the copy and `pip install -e ".[dev]"` runs.
 // Needs:  Python 3.11+ on PATH (python3, or python on Windows) and PyPI access without --python.
 // Exits:  0 every probe passed, 1 a probe failed, 2 the toolchain could not run.
@@ -35,9 +34,6 @@ const FIXTURE = join(repoRoot, 'tests', 'skraft-framework', 'quality-gates', 'fi
 const SCRIPTS = join(repoRoot, 'plugins', 'skraft-framework', 'skills', 'quality-gates-python', 'scripts')
 const LOCAL_STATE = new Set(['.venv', '__pycache__', '.pytest_cache', 'build'])
 
-// The committed test file the G9 probe snapshots.
-const WEAKENED_TEST = 'tests/unit/test_money.py'
-
 const { values: opts } = parseArgs({
   options: {
     python: { type: 'string' },
@@ -48,7 +44,7 @@ const { values: opts } = parseArgs({
 
 const USAGE = `usage: node scripts/python-quality-gates-smoke.mjs [--python <interpreter>] [--keep]
 
-  --python  use this interpreter (pytest, coverage, cosmic-ray 8.x installed) instead of a fresh .venv
+  --python  use this interpreter (pytest installed) instead of a fresh .venv
   --keep    keep the throwaway copy and its evidence on success
 `
 
@@ -116,34 +112,22 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
 
 const probes = [
   {
-    name: 'G1 tests captured',
+    name: 'test.unit tests captured',
     run: (ctx) => runGate(ctx, 'capture.mjs', 'qg-tests', 'evidence', ...pythonArgs(), '--name', 'qg-tests', '--', '{python}', '-m', 'pytest', '-q', '-p', 'no:cacheprovider'),
     status: 0,
     line: /^\d+ passed in [\d.]+s$/,
   },
   {
-    name: 'G7 no mocks in core',
-    run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence', ...pythonArgs()),
+    name: 'build.compile captured',
+    run: (ctx) => runGate(ctx, 'capture.mjs', 'qg-build', 'evidence', ...pythonArgs(), '--name', 'qg-build', '--', '{python}', '-m', 'compileall', '-q', 'src'),
     status: 0,
     line: /^$/,
   },
   {
-    name: 'G11 core coverage',
-    run: (ctx) => runGate(ctx, 'coverage-core.mjs', 'qg-coverage', 'evidence', ...pythonArgs()),
+    name: 'test.no-mocks-core no mocks in core',
+    run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence', ...pythonArgs()),
     status: 0,
-    line: /^Domain\/Application line coverage 100% \(([1-9]\d*)\/\1 statements\)$/,
-  },
-  {
-    name: 'G9 snapshot',
-    run: (ctx) => {
-      const dir = join(ctx.root, 'evidence')
-      const result = spawnSync(process.execPath, [join(SCRIPTS, 'snapshot.mjs'), '--evidence', dir, '--name', 'red-1-test_money.py', '--file', WEAKENED_TEST], { cwd: ctx.repo, encoding: 'utf8' })
-      const written = join(dir, 'snapshots', 'red-1-test_money.py')
-      const same = existsSync(written) && readFileSync(written).equals(readFileSync(join(ctx.repo, WEAKENED_TEST)))
-      return { status: result.status, line: same ? 'snapshot holds the committed bytes' : 'snapshot differs from the committed file', stderr: result.stderr }
-    },
-    status: 0,
-    line: /^snapshot holds the committed bytes$/,
+    line: /^$/,
   },
 ]
 

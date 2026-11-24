@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// G7 — no mocking framework in the Domain/Application core or in its unit tests.
+// test.no-mocks-core — no mocking framework in the Domain/Application core or in its unit tests.
 // Scans every *.Domain and *.Application project (any depth: nested bounded contexts
 // included) and the *.Domain.*Tests, *.Application.*Tests and *.UnitTests projects;
 // integration tests are out of scope (in-process doubles are allowed there).

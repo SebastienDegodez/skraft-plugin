@@ -11,10 +11,11 @@ must load, the artifacts a phase must produce, the verdicts and the commits.
 
 - **Phases you can trust.** A phase cannot start out of order, and cannot close without its
   artifacts, a recorded review verdict and, for delivery, a new commit.
-- **Proof, not claims.** Tests, architecture checks and coverage are run by scripts and
-  recorded as evidence; a missing proof blocks delivery instead of passing silently. Mutation
-  never runs in the pipeline: it is reported as not run, never as passed, and you run it with
-  `/skraft-mutation`.
+- **Proof, not claims.** Tests, build, lint, the no-mocks scan, commit convention, RED→GREEN
+  integrity and, for a frontend story, screenshots are run by scripts and recorded as evidence
+  (schema `quality-gates-evidence/v7`) in a git-ignored directory; a missing proof blocks
+  delivery instead of passing silently. Coverage and mutation never run in the pipeline: they
+  belong to your project's CI, and `/skraft-mutation` stays a manual tool.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
   ADRs and mutation testing ship as skills the agents load when they need them.
 - **Resumable.** State, recovery data and an append-only audit trail live in your repository.
@@ -79,13 +80,18 @@ A stack without a quality-gates adapter blocks DELIVER with a structured reason:
 guesses a command or skips a gate.
 
 **Mutation testing is your responsibility.** It must be done on every story, with the tool
-you choose: SKRAFT ships no mutation tool, config or scaffold, and the pipeline never runs it:
-every evidence log and report records G6 `not_run`. Run `/skraft-mutation` when you choose: it
+you choose, as a step of your project's CI: SKRAFT ships no mutation tool, config or scaffold,
+and the pipeline never runs it; the evidence log records no mutation gate. The 100% line
+coverage on Domain and Application is likewise a CI step. Run `/skraft-mutation` when you choose: it
 asks for each component's command (proposing one found in `CONTRIBUTING.md`) and warns when it
 is a full run rather than an incremental one (`--since`, `{baseSha}`, delta). The command writes
 its scores as JSON to the file named by `SKRAFT_MUTATION_RESULT` (`core` and `boundary` for
 Clean Architecture, `global` for a single project), with its surviving mutants as
 `file:line detail` lines unless your team leaves them out; SKRAFT holds every scope to 80%.
+
+**Keep evidence out of Git.** Add `.copilot-tracking/skraft-plans/*/evidence/` to your
+project's `.gitignore`. Evidence logs, captures and screenshots live there and are never
+committed; `qg-verify` fails a log whose evidence Git tracks.
 
 ## Guarantees
 

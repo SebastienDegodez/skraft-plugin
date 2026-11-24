@@ -31,7 +31,7 @@ Each pipeline phase applies the CQS principle: the executor agent writes, the re
 
 ### 2. Empirical quality metrics
 
-SKRAFT measures Mutation Score, not declarative coverage. A test that detects no mutation is a test that protects nothing.
+SKRAFT requires Mutation Score, not declarative coverage, as a step of the project's CI; the pipeline itself proves every delivery with an evidence log that `qg-verify` re-checks against Git. A test that detects no mutation is a test that protects nothing.
 
 > « Software delivery performance predicts organizational performance and profitability. »
 > — Forsgren, N., Humble, J. & Kim, G., *Accelerate*, 2018.
@@ -47,7 +47,7 @@ The Walking Skeleton validates end-to-end architecture before writing any busine
 
 | Metric | Without pipeline | With SKRAFT |
 |---|---|---|
-| Change Failure Rate | High — bugs found in production | Reduced — validated by Mutation Score before merge |
+| Change Failure Rate | High — bugs found in production | Reduced — verified evidence in the pipeline, Mutation Score in CI before merge |
 | MTTR | Slow — manual diagnosis | Fast — traceability from issue → test → code |
 | Deployment Frequency | Slowed by fear of breaking things | Accelerated — every commit is verified |
 

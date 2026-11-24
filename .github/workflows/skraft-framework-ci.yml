@@ -192,11 +192,11 @@ jobs:
           "tests/skraft-framework/clean-architecture-dotnet/*.test.mjs"
           "tests/skraft-framework/reporting/*.test.mjs"
 
-      - name: Run the .NET gate scripts on a real solution (real Stryker.NET)
+      - name: Run the .NET gate scripts on a real solution
         if: always()
         run: node scripts/dotnet-quality-gates-smoke.mjs
 
-      - name: Run the Python gate scripts on a real project (real cosmic-ray)
+      - name: Run the Python gate scripts on a real project
         if: always()
         run: node scripts/python-quality-gates-smoke.mjs
 

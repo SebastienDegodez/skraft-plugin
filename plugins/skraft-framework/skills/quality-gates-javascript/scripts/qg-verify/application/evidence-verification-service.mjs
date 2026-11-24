@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { evidenceReferences, verifyEvidence } from '../domain/evidence-verification-policy.mjs'
+import { evidenceReferences, frontendProbes, frontendSignals, screenshotReferences, verifyEvidence } from '../domain/evidence-verification-policy.mjs'
 
 const sha256 = (content) => createHash('sha256').update(content).digest('hex')
 
@@ -32,25 +32,43 @@ export const verifyEvidenceLog = async ({ logPath, base, files, git }) => {
     } catch { /* absent: the policy reports it */ }
   }
 
+  const v7 = log?.$schema === 'quality-gates-evidence/v7'
+  const screenshots = new Map()
+  for (const ref of v7 ? screenshotReferences(log) : []) {
+    try {
+      screenshots.set(ref, { sha256: sha256(await files.readBytes(resolve(ref))) })
+    } catch { /* absent: the policy reports it */ }
+  }
+
   const head = git.head()
   const shas = new Set([log?.repo_root_rev, ...(Array.isArray(log?.commits_covered) ? log.commits_covered.map((c) => c?.sha) : [])])
   const commits = new Map([...shas].filter(Boolean).map((sha) => [sha, git.commit(sha)]))
   const shows = new Map()
   for (const cycle of Array.isArray(log?.test_integrity?.cycles) ? log.test_integrity.cycles : []) {
-    const testFile = cycle?.test_files?.[0]
-    for (const commit of [cycle?.red_commit, cycle?.green_commit]) {
-      const content = git.show(commit, testFile)
-      if (content !== null) shows.set(`${commit}:${testFile}`, content)
+    // v7 reads every test file from Git; older logs compare their first one with its snapshots.
+    const testFiles = v7 ? (Array.isArray(cycle?.test_files) ? cycle.test_files : []) : [cycle?.test_files?.[0]]
+    for (const testFile of testFiles) {
+      for (const commit of [cycle?.red_commit, cycle?.green_commit]) {
+        const content = git.show(commit, testFile)
+        if (content !== null) shows.set(`${commit}:${testFile}`, content)
+      }
     }
   }
 
+  const evidenceDir = logPath.slice(0, logPath.lastIndexOf('/'))
+  const touched = [...new Set([...commits.values()].flatMap((commit) => (commit?.exists ? commit.files : [])))]
+  const atRev = new Map(v7 ? frontendProbes(touched).map((path) => [path, git.show(log.repo_root_rev, path)]) : [])
+
   return verifyEvidence(log, {
     files: fileFacts,
-    evidenceDir: logPath.slice(0, logPath.lastIndexOf('/')),
+    screenshots,
+    frontend: v7 ? frontendSignals(touched, (path) => atRev.get(path) ?? undefined) : [],
+    evidenceDir,
     git: {
       head,
       headParent: git.parentOf(head),
       headFiles: git.filesOf(head),
+      trackedEvidence: v7 && evidenceDir ? git.tracked(evidenceDir) : [],
       commits,
       range: base ? git.range(base, log?.repo_root_rev) : undefined,
       shows,

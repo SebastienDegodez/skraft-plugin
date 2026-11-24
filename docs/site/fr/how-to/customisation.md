@@ -15,7 +15,7 @@ SKRAFT est un framework, pas un carcan. Chaque composant est conçu pour être a
 | Niveau | Quoi | Exemples | Citation |
 |--------|------|----------|----------|
 | **L1 — Surface** | Textes de prompts, vocabulaire, glossaire métier | Renommer les labels, adapter les templates de story, traduire les messages | Evans (2003) : le langage ubiquitaire doit refléter le domaine |
-| **L2 — Cycles** | Profondeur des phases, seuils de qualité, itérations reviewer | Ajuster le mutation score floor, changer le nombre de retries, configurer la profondeur du Walking Skeleton | Beck (2004) : scope, temps, coût et qualité sont des variables à gérer |
+| **L2 — Cycles** | Profondeur des phases, seuils de qualité, itérations reviewer | Ajuster le mutation score floor de la CI du projet, changer le nombre de retries, configurer la profondeur du Walking Skeleton | Beck (2004) : scope, temps, coût et qualité sont des variables à gérer |
 | **L3 — Invariants** | Structure des artefacts, contrats inter-agents, CQS | Modifier le format de `state.json`, changer le protocole de verdict | Martin (2017) : l'architecture protège les cas d'usage |
 
 > « A model is a selectively simplified and consciously structured form of knowledge. »
@@ -30,12 +30,27 @@ Ces contraintes sont non négociables. Chaque invariant est défendu par une ré
 | Invariant | Pourquoi | Référence |
 |-----------|----------|-----------|
 | Tests d'acceptation avant code | Les scénarios BDD définissent le comportement attendu avant toute implémentation | Adzic, G., *Specification by Example*, 2011 |
-| Mutation score floor | Le coverage de lignes est insuffisant — le mutation testing vérifie l'efficacité réelle des tests | Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011 |
+| Mutation score floor, lancé par la CI du projet | Le coverage de lignes est insuffisant — le mutation testing vérifie l'efficacité réelle des tests | Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011 |
 | Reviewer en lecture seule (CQS) | Poser une question ne doit pas changer la réponse — le reviewer ne modifie jamais les artefacts | Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997 |
 | Une story = un Use Case | Chaque passage dans le pipeline traite exactement un Use Case, pas de batching | Cockburn, A., *Writing Effective Use Cases*, 2001 |
 | Walking Skeleton d'abord | La première itération traverse toutes les couches de bout en bout | Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009 |
 | Outside-In TDD | Les tests partent du comportement observable et descendent vers les détails internes | Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009 |
 | Object Calisthenics | Contraintes de design appliquées au code métier pour forcer la qualité structurelle | Bay, J., *Object Calisthenics*, 2008 |
+
+## Prérequis du projet
+
+DELIVER attend deux choses du projet consommateur :
+
+1. **Évidence ignorée par Git.** Le `.gitignore` du projet contient la ligne
+   `.copilot-tracking/skraft-plans/*/evidence/`. Chaque journal d'évidence, capture et
+   capture d'écran y vit et n'est jamais commité ; `qg-verify` fait échouer un journal dont
+   l'évidence est suivie par Git (`EVIDENCE_COMMITTED`). Si la ligne manque, le software
+   engineer l'ajoute dans un commit de travail avant la première capture.
+2. **Couverture et mutation dans la CI du projet.** Le pipeline ne lance ni l'une ni
+   l'autre : les 100 % de couverture de lignes sur Domain et Application (sans exclusion) et
+   la barre de mutation sont des étapes de la CI du projet. Les règles d'architecture passent
+   par les gates existantes : tests d'architecture dans la suite unitaire sur .NET, ESLint
+   `boundaries/*` sur TypeScript, `import-linter` dans l'étape de lint sur Python.
 
 ## Étendre une phase
 
@@ -85,13 +100,13 @@ Exécutez un cycle complet du pipeline avec votre nouvel agent pour vérifier qu
 
 ### Supprimer ou affaiblir un gate
 
-Chaque gate protège un invariant précis (voir le [détail des 46 gates]({{ "/fr/reference/gates" | relative_url }})). Supprimer un gate signifie que la phase suivante démarrera sans garantie que les critères de la phase précédente sont remplis.
+Chaque gate protège un invariant précis (voir le [détail des 49 gates]({{ "/fr/reference/gates" | relative_url }})). Supprimer un gate signifie que la phase suivante démarrera sans garantie que les critères de la phase précédente sont remplis.
 
 | Action | Risque | Ce qui disparaît |
 |--------|--------|-----------------|
 | Affaiblir le DoR en DISCUSS (G7) | Stories mal définies en DESIGN | Vérification du DoR (Definition of Ready) |
 | Supprimer la règle de dépendance en DESIGN (G3) | Architecture non validée avant les tests | Détection des violations de Clean Architecture |
-| Abaisser le seuil de mutation en DELIVER (G6) | Tests de surface uniquement | Détection des tests qui ne testent pas vraiment |
+| Abaisser le seuil de mutation dans la CI du projet (ex-G6 de DELIVER) | Tests de surface uniquement | Détection des tests qui ne testent pas vraiment |
 
 ### Désactiver une lentille de revue
 
@@ -101,7 +116,7 @@ Les 4 lentilles couvrent des angles complémentaires. Désactiver l'une d'elles 
 |-------------------|------------|
 | `architecture-boundaries` | Les violations de frontières architecturales passent en PR humaine |
 | `test-integrity` | Les tests de façade (qui passent sans tester) ne sont pas détectés |
-| `quality-gates` | Les seuils de qualité (mutation, coverage) ne sont pas vérifiés |
+| `quality-gates` | Les gates d'évidence (tests, build, lint, intégrité RED→GREEN, convention de commit, captures d'écran) ne sont pas vérifiées |
 | `cold-reader` | La lisibilité du code n'est pas vérifiée : le prochain développeur sera perdu |
 
 ### Passer un reviewer en mode écriture (violer CQS)

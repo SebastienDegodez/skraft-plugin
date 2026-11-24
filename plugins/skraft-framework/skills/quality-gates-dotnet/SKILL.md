@@ -1,6 +1,6 @@
 ---
 name: quality-gates-dotnet
-description: Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Every gate is captured once, after the story's last work commit. Provides the concrete `dotnet` commands and how their outputs map onto the tech-agnostic schema. Mutation (G6) never runs in a delivery; the developer runs it through `/skraft-mutation`.
+description: "Use when the active repository is a .NET solution (`.sln` / `.csproj` present) and the software-engineer must produce falsifiable evidence for the quality gates. Every gate is captured once, after the story's last work commit, into a Git-ignored directory. Provides the concrete `dotnet` commands and how their outputs map onto the tech-agnostic schema. Architecture, coverage and mutation never run in a delivery: the project's CI runs them."
 ---
 
 # Quality Gates — .NET Adapter
@@ -23,18 +23,19 @@ If multiple stacks coexist, run each adapter and concatenate gate entries.
 .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/
 ```
 
-Throughout this file, `$EV` is shorthand for that directory — one per story, never shared.
+Throughout this file, `$EV` is shorthand for that directory — one per story, never shared,
+ignored by Git (`.copilot-tracking/skraft-plans/*/evidence/` in `.gitignore`), never committed.
 `<skill>` is this skill's folder, the one holding this SKILL.md: every script below ships in
 `<skill>/scripts/`, never in the consumer repository. `capture.mjs` runs a command without a
 shell and writes `<name>.stdout` (stdout and stderr), `<name>.exit` and `<name>.stdout.sha256`
 into `$EV`, creating it; it exits with the command's code, in bash and PowerShell alike. Log references drop the `.copilot-tracking/skraft-plans/{projectSlug}/`
 prefix: `evidence/{date}/{story}/qg-tests.stdout`.
 
-## G1 / G2 — Tests pass
+## test.acceptance / test.unit — Tests pass
 
-Run the full suite once and partition the results into two gate entries by
-filtering the produced TRX, OR run the acceptance project alone for G1 and the
-full suite for G2 (recommended on small repos).
+Run the full suite once; both gates cite the same capture. The full suite includes the
+`*.ArchitectureTests` project (NetArchTest / ArchUnitNET) when the repository has one: a broken
+architecture rule fails `test.unit`.
 
 ```bash
 node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-tests -- dotnet test --nologo --logger "trx;LogFileName=qg-tests.trx" --results-directory "$EV"
@@ -50,37 +51,18 @@ Populate the contract:
 - `metrics.tests_total` / `_passed` / `_failed` parsed from the TRX `<ResultSummary outcome="..." />`
   attribute and `<Counters total="..." passed="..." failed="..." />`
 
-## G3 — Build passes
-
-Implicit in `dotnet test` for most repos. If the team wants an explicit gate:
+## build.compile — Build passes
 
 ```bash
 node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-build -- dotnet build --nologo --no-incremental
 ```
 
-## G4 — Static analysis
+## build.lint — Static analysis
 
 Use the analyzers wired into the build (Roslyn analyzers, `TreatWarningsAsErrors=true`).
-If the build is clean, G4 inherits its evidence from G3 and sets
-`stdout_ref`/`exit_code_ref` to the G3 files. No fresh command needed.
+`build.lint` cites the `build.compile` files. No fresh command needed.
 
-## G5 — Architecture rules
-
-If the repo carries a `*.ArchitectureTests` project (NetArchTest / ArchUnitNET):
-
-```bash
-node "<skill>/scripts/capture.mjs" --evidence "$EV" --name qg-arch -- dotnet test --nologo --filter "FullyQualifiedName~Architecture" --logger "trx;LogFileName=qg-arch.trx" --results-directory "$EV"
-```
-
-If absent, mark G5 `status: "not_applicable"` with `rationale: "no architecture tests project"`.
-
-## G6 — Mutation score
-
-Never run in a delivery. This adapter runs no mutation tool or gate and ships no mutation
-config: record G6 `not_run` with the rationale `G6 not run: mutation testing runs outside the
-pipeline; the developer runs /skraft-mutation.`, never `pass`, and tell the developer.
-
-## G7 — No mocks in Domain/Application
+## test.no-mocks-core — No mocks in Domain/Application
 
 ```bash
 node "<skill>/scripts/no-mocks-in-core.mjs" --root . --evidence "$EV"
@@ -90,71 +72,60 @@ The script scans every `*.Domain` and `*.Application` project at any depth, plus
 `*.Domain.*Tests`, `*.Application.*Tests` and `*.UnitTests` projects, for mocking
 frameworks (Moq, NSubstitute, FakeItEasy, AutoMoq). It writes `qg-mocks.stdout` (one hit
 per line, empty when clean), `.exit` and `.stdout.sha256`; its exit is the verdict.
-Populate G7 with `status: "pass"` only on exit 0; `stdout_ref` = `evidence/{date}/{story}/qg-mocks.stdout`.
+Record `status: "pass"` only on exit 0; `stdout_ref` = `evidence/{date}/{story}/qg-mocks.stdout`.
 
-## G11 — Line coverage of Domain and Application
-
-```bash
-node "<skill>/scripts/coverage-core.mjs" --root . --evidence "$EV"
-```
-
-The script runs the solution's tests once with the XPlat Code Coverage collector
-(`coverlet.collector`, present in the `dotnet new xunit` template; add it to a test project
-that lacks it), sums the Cobertura line counts of every `*.Domain` and `*.Application`
-package, and exits non-zero below 100%, when a test fails, or when no core package was
-measured. The bar lives in the script; `--threshold` is refused. Populate G11 with its
-`command_executed`, `stdout_ref` / `exit_code_ref` = `evidence/{date}/{story}/qg-coverage.stdout` /
-`.exit` and `stdout_sha256` from `qg-coverage.stdout.sha256`.
-
-## G8 — Conventional commits
+## commit.convention — Conventional commits
 
 Already enforceable from the Git tree alone — no fresh tool run. The producer fills
-`commits_covered[].subject` from `git log --format='%s' <range>`; the lens checks
-each full message against the contract's G8 rules.
+`commits_covered[].subject` from `git log --format='%s' <range>`; `qg-verify` and the lens
+check each full message against the contract's `commit.convention` rules.
 
-## G9 — Test integrity (RED→GREEN snapshots)
+## test.integrity — RED→GREEN integrity
 
 One cycle per scenario: its acceptance test file at the `test` commit that holds it RED and at
-the scenario's green commit. Write both snapshots at the end of the story, from those commits:
+the scenario's green commit. The producer records `test_files`, `red_commit` and `green_commit`;
+`qg-verify` reads both versions with `git show` and fails the gate if any line was removed or
+mutated (only additions are allowed — the Iron Rule of Tests). No snapshot is written.
 
-```bash
-node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name red-1-SomeAcceptanceTests.cs --rev <test commit> --file tests/MonAssurance.UnitTests/Features/Eligibilite/SomeAcceptanceTests.cs
-node "<skill>/scripts/snapshot.mjs" --evidence "$EV" --name green-1-SomeAcceptanceTests.cs --rev <green commit> --file tests/MonAssurance.UnitTests/Features/Eligibilite/SomeAcceptanceTests.cs
-```
+## evidence.screenshots — Frontend stories
 
-`snapshot.mjs` writes the exact bytes of `git show <rev>:<file>` (`--rev`, default `HEAD`) into
-`$EV/snapshots/`; a shell redirection would let PowerShell re-encode them.
+A story whose commits touch a `@visual` scenario, `tests/e2e/`, a `package.json` declaring
+`react` or a `playwright.config.*` records at least one screenshot taken by
+`playwright-evidence`. Pass each PNG with `--screenshot`; `qg-collect` copies it into
+`$EV/screenshots/` and records its sha256.
 
-The producer records `red_commit`, `green_commit`, and the two snapshot paths in
-the contract. The lens diffs the two snapshots and FAILS G9 if any line was
-removed or mutated in a pre-existing assertion (only additions are allowed —
-that is the Iron Rule of Tests, mechanically verifiable).
+## Not run by this adapter
+
+Architecture (`arch.boundaries`), coverage (`ci.coverage`) and mutation (`ci.mutation`) are not
+pipeline gates. Coverage at 100% of Domain and Application and the mutation step run in the
+project's CI; the developer runs `/skraft-mutation` by hand. Never record them in the log.
 
 ## Producer flow at the end of the story
 
-One command runs the whole flow below — every gate, the snapshots, `commits_covered`, the log,
-its evidence-only commit and `qg-verify` — and exits with `qg-verify`'s verdict:
+One command runs the whole flow below — every gate, `commits_covered`, the log and `qg-verify` —
+and exits with `qg-verify`'s verdict. It commits nothing:
 
 ```bash
-node "<skill>/scripts/qg-collect.mjs" --root . --evidence "$EV" --story {story} --feature {feature} \
+node "<skill>/scripts/qg-collect.mjs" --root . --evidence "$EV" --story {story} \
   --base {DELIVER baseSha} \
-  --cycle 1:{red sha}:{green sha}:{acceptance test file} --cycle 2:…
+  --cycle 1:{red sha}:{green sha}:{acceptance test file} --cycle 2:… \
+  [--screenshot {png} …]
 ```
 
 One `--cycle` per scenario that has a green commit, numbered by its rank in the plan; its red is
-the `test` commit holding its acceptance test. It prints one line per gate, then the verdict. A
-`fail` or `inconclusive` is yours to fix: fix the code or the cycles, then run it again. By hand,
-the same flow is:
+the `test` commit holding its acceptance test. It refuses an `$EV` Git does not ignore. It
+prints one line per gate, then the verdict. A `fail` or `inconclusive` is yours to fix: fix the
+code or the cycles, then run it again. By hand, the same flow is:
 
-1. Run G1/G2, G3 (if separate), G4 (if separate), G5, G7, G11 —
-   each through `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
-2. For each scenario, write the RED + GREEN snapshots with `snapshot.mjs --rev`.
+1. `git check-ignore -q "$EV"` must succeed; otherwise add `.copilot-tracking/skraft-plans/*/evidence/`
+   to `.gitignore` in a work commit.
+2. Run `test.acceptance`/`test.unit`, `build.compile`, `test.no-mocks-core` — each through
+   `capture.mjs` or its script, which write stdout, exit code and hash into `$EV`.
 3. `repo_root_rev = git rev-parse HEAD` — the last work commit.
 4. Build `commits_covered[]` from `git log --format='%H%x09%s' {DELIVER baseSha}..HEAD` and
    `git show --name-only --format= <sha>` per commit: every commit since DELIVER started.
-5. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v6).
-6. Commit `$EV` alone: `git add "$EV" && git commit -s -m 'chore({feature}): record quality evidence for {story}'`.
-7. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
+5. Assemble `$EV/qg-{story}.json` per `quality-gates-evidence-contract` (v7).
+6. `node "<skill>/scripts/qg-verify/cli/qg-verify.mjs" --log "$EV/qg-{story}.json"` must print
    `"verdict": "pass"`; otherwise fix the gate or the log, never the verifier's input.
 
 If a tool is unavailable in the environment (no SDK), the

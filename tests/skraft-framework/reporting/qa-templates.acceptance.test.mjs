@@ -35,11 +35,11 @@ function fixture(kind = 'forecast', language = 'en') {
     ['qa/changes.md', '# Changes\n\n- Retain basket in src/basket.mjs.'],
     ['qa/tests.stdout', stdout], ['qa/tests.exit', '0\n'],
     ['qa/quality.json', JSON.stringify({
-      $schema: 'quality-gates-evidence/v3', story: data.story,
+      $schema: 'quality-gates-evidence/v7', story: data.story,
       repo_root_rev: revision, produced_at: '2026-09-19T10:00:00Z',
       producer: 'software-engineer', tech_adapter: 'fixture-runner',
       commits_covered: [], test_integrity: { cycles: [] },
-      gates: [{ id: 'G1', label: 'Basket test', status: 'pass',
+      gates: [{ id: 'test.acceptance', label: 'Basket test', status: 'pass',
         command_executed: 'node --test tests/basket.test.mjs',
         stdout_ref: 'qa/tests.stdout', exit_code_ref: 'qa/tests.exit',
         stdout_sha256: hashText(stdout), stdout_tail: stdout,
@@ -96,9 +96,9 @@ for (const kind of ['forecast', 'outcome']) {
       assert.doesNotMatch(markdown, /Basket retained locally|NEEDS_REWORK/)
     } else {
       assert.equal(slot('actualImpact'), data.impact.actual)
-      assert.match(slot('gates'), /\| G1 \| Basket test \| pass \|/)
+      assert.match(slot('gates'), /\| test\.acceptance \| Basket test \| pass \|/)
       assert.match(slot('gates'), /tests_passed: 1/)
-      assert.match(slot('gates'), /\| G2 \|\s*\| UNVERIFIED \|/)
+      assert.match(slot('gates'), /\| test\.unit \|\s*\| UNVERIFIED \|/)
       assert.match(slot('review'), /NEEDS_REWORK: remaining gates are not recorded\./)
       assert.match(slot('changes'), /Retain basket in src\/basket\.mjs\./)
     }

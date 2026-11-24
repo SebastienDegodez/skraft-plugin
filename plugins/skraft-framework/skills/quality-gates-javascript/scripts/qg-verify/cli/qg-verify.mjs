@@ -46,7 +46,7 @@ const recordedBase = async () => {
 const result = await verifyEvidenceLog({
   logPath,
   base: values.base ?? (await recordedBase()),
-  files: { read: (path) => readFile(join(root, path), 'utf8') },
+  files: { read: (path) => readFile(join(root, path), 'utf8'), readBytes: (path) => readFile(join(root, path)) },
   git: createGitRepository({ cwd: root }),
 })
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)

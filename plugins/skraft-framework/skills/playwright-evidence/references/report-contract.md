@@ -91,10 +91,12 @@ Example outcome (illustrative refs; replace with actual returned paths):
 
 Missing refs remain missing, never fabricated to satisfy rendering. Keep canonical
 quality evidence (`quality-gates-evidence-contract`) and
-quality bar (`skraft-quality-bar`) authoritative: current v3
-includes G11; legacy v1/v2 stay readable, missing gates never pass. Renderer local
-proof checks are distinct from recorded reviewer verdict, particularly Git checks
-G8/G9. A final report has no verdict of its own and cannot overrule review.
+quality bar (`skraft-quality-bar`) authoritative: current v7 names its gates
+`type.description` and carries no architecture, coverage or mutation row; legacy v1–v6
+stay readable with their `G<N>` ids, missing gates never pass. Renderer local proof
+checks are distinct from recorded reviewer verdict, particularly Git checks
+`commit.convention`/`test.integrity` (G8/G9 before v7) and screenshot hashes
+(`evidence.screenshots`, verified by `qg-verify`). A final report has no verdict of its own and cannot overrule review.
 
 ## Publication handoff ownership
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// G7 for Python: no mocking library in the Domain/Application sources (every source under a
+// test.no-mocks-core for Python: no mocking library in the Domain/Application sources (every source under a
 // folder whose last word is domain or application), nor in the unit test package. Prints one
 // hit per line; empty on pass.
 import { existsSync, realpathSync } from 'node:fs'

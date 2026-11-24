@@ -1,29 +1,27 @@
 #!/usr/bin/env node
-// Every quality gate of a .NET story in one command: runs G1–G5, G7 and G11, records G6
-// `not_run` (mutation runs outside the pipeline, through /skraft-mutation), writes the G9
-// snapshots, lists the covered commits, assembles the evidence log (contract v6), commits the
-// evidence directory alone and runs qg-verify on it. Exit: qg-verify's (0 pass, 1 fail,
-// 2 inconclusive), or 2 on a usage error.
-//   node qg-collect.mjs --root . --evidence <dir> --story <story> --feature <scope> --base <sha>
+// Every quality gate of a .NET story in one command: runs the tests, the build and the
+// no-mocks scan, copies and hashes the frontend screenshots, lists the covered commits,
+// assembles the evidence log (contract v7) in the Git-ignored evidence directory and runs
+// qg-verify on it. Nothing is committed. Exit: qg-verify's (0 pass, 1 fail, 2 inconclusive),
+// or 2 on a usage error.
+//   node qg-collect.mjs --root . --evidence <dir> --story <story> --base <sha>
 //     --cycle <k>:<red sha>:<green sha>:<acceptance test file> [--cycle …]
-//     [--solution <file>] [--no-commit]
+//     [--screenshot <png> …] [--solution <file>]
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { capture } from './capture.mjs'
-import { runCoverage } from './coverage-core.mjs'
-import { absoluteDir, dotnetCommand, fromRoot, isEntry, main, parseArguments, usageError } from './dotnet-toolchain.mjs'
+import { absoluteDir, absoluteFile, dotnetCommand, fromRoot, isEntry, main, parseArguments, sha256File, usageError } from './dotnet-toolchain.mjs'
 import { runNoMocks } from './no-mocks-in-core.mjs'
-import { snapshot } from './snapshot.mjs'
 
-const USAGE = 'usage: qg-collect.mjs --root <repo> --evidence <dir> --story <story> --feature <scope> --base <sha> --cycle <k>:<red>:<green>:<file> [--cycle …] [--solution <file>] [--no-commit]'
+const USAGE = 'usage: qg-collect.mjs --root <repo> --evidence <dir> --story <story> --base <sha> --cycle <k>:<red>:<green>:<file> [--cycle …] [--screenshot <png> …] [--solution <file>]'
 const HERE = dirname(fileURLToPath(import.meta.url))
-// G6 is never run by the pipeline: the developer runs /skraft-mutation.
-export const MUTATION_NOT_RUN = 'G6 not run: mutation testing runs outside the pipeline; the developer runs /skraft-mutation.'
+export const IGNORE_LINE = '.copilot-tracking/skraft-plans/*/evidence/'
 
 const git = (root, args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trimEnd()
+const ignored = (root, path) => spawnSync('git', ['-C', root, 'check-ignore', '-q', '--', path]).status === 0
 const read = (path) => (existsSync(path) ? readFileSync(path, 'utf8') : '')
 // The last 40 lines, verbatim: a suffix of the captured file, as qg-verify checks it.
 const tail = (text) => {
@@ -64,57 +62,52 @@ async function runDotnet(evidence, root, name, args) {
 
 export async function collect(argv) {
 	const input = parseArguments(argv, {
-		values: ['root', 'evidence', 'story', 'feature', 'base', 'solution'],
-		repeated: ['cycle'], flags: ['no-commit'], usage: USAGE,
+		values: ['root', 'evidence', 'story', 'base', 'solution'],
+		repeated: ['cycle', 'screenshot'], usage: USAGE,
 	})
-	for (const name of ['root', 'evidence', 'story', 'feature', 'base']) if (!input[name]) throw usageError(`--${name} is required\n${USAGE}`)
+	for (const name of ['root', 'evidence', 'story', 'base']) if (!input[name]) throw usageError(`--${name} is required\n${USAGE}`)
 	if (input.cycle.length === 0) throw usageError(`one --cycle per delivered scenario is required\n${USAGE}`)
 	const root = absoluteDir(input.root)
 	if (!root) throw usageError('repository root not found')
 	const evidence = fromRoot(root, input.evidence)
 	const repoPath = relative(root, evidence).split('\\').join('/')
+	if (!ignored(root, repoPath)) throw usageError(`${repoPath} is not ignored by Git: add ${IGNORE_LINE} to .gitignore in a work commit`)
 	const ref = repoPath.slice(Math.max(0, repoPath.lastIndexOf('evidence/')))
 	const solution = input.solution ?? readdirSync(root).filter((name) => /\.(sln|slnx)$/.test(name))[0]
 	if (!solution) throw usageError('no solution at the root: select one with --solution')
 	const cycles = input.cycle.map(parseCycle)
+	const pictures = input.screenshot.map((path) => absoluteFile(root, path) ?? (() => { throw usageError(`--screenshot ${path} not found`) })())
 	const rev = git(root, ['rev-parse', 'HEAD'])
 
 	const testsCommand = await runDotnet(evidence, root, 'qg-tests', ['test', solution, '--nologo', '--logger', 'trx;LogFileName=qg-tests.trx', '--results-directory', evidence])
 	const buildCommand = await runDotnet(evidence, root, 'qg-build', ['build', solution, '--nologo', '--no-incremental'])
-	const archCommand = await runDotnet(evidence, root, 'qg-arch', ['test', solution, '--nologo', '--filter', 'FullyQualifiedName~Architecture', '--logger', 'trx;LogFileName=qg-arch.trx', '--results-directory', evidence])
 	runNoMocks(['--root', root, '--evidence', evidence])
-	runCoverage(['--root', root, '--evidence', evidence, '--solution', solution])
 
 	const testsMetrics = trxMetrics(read(join(evidence, 'qg-tests.trx')))
-	const archMetrics = trxMetrics(read(join(evidence, 'qg-arch.trx')))
-	const tests = gateFrom(evidence, ref, 'G1', 'Acceptance test(s) pass', 'qg-tests', testsCommand, testsMetrics ? { metrics: testsMetrics } : {})
-	const build = gateFrom(evidence, ref, 'G3', 'Build passes', 'qg-build', buildCommand)
-	const mutation = { id: 'G6', label: 'Mutation score meets the bar', status: 'not_run', rationale: MUTATION_NOT_RUN }
+	const tests = gateFrom(evidence, ref, 'test.acceptance', 'Acceptance test(s) pass', 'qg-tests', testsCommand, testsMetrics ? { metrics: testsMetrics } : {})
+	const build = gateFrom(evidence, ref, 'build.compile', 'Build passes', 'qg-build', buildCommand)
 	const gates = [
 		tests,
-		{ ...tests, id: 'G2', label: 'All unit tests pass' },
+		{ ...tests, id: 'test.unit', label: 'All unit tests pass' },
 		build,
-		{ ...build, id: 'G4', label: 'Static analysis pass' },
-		archMetrics?.tests_total === 0
-			? { id: 'G5', label: 'Architecture rules pass', status: 'not_applicable', rationale: 'no architecture test in the solution' }
-			: gateFrom(evidence, ref, 'G5', 'Architecture rules pass', 'qg-arch', archCommand, archMetrics ? { metrics: archMetrics } : {}),
-		mutation,
-		gateFrom(evidence, ref, 'G7', 'No mocks in Domain/Application core', 'qg-mocks', `node ${join(HERE, 'no-mocks-in-core.mjs')} --root . --evidence ${repoPath}`),
-		{ id: 'G8', label: 'Conventional commit policy', status: 'pass' },
-		{ id: 'G9', label: 'No test tampering (RED→GREEN integrity)', status: 'pass' },
-		gateFrom(evidence, ref, 'G11', 'Line coverage meets the bar', 'qg-coverage', `node ${join(HERE, 'coverage-core.mjs')} --root . --evidence ${repoPath}`),
+		{ ...build, id: 'build.lint', label: 'Static analysis pass' },
+		gateFrom(evidence, ref, 'test.no-mocks-core', 'No mocks in Domain/Application core', 'qg-mocks', `node ${join(HERE, 'no-mocks-in-core.mjs')} --root . --evidence ${repoPath}`),
+		{ id: 'commit.convention', label: 'Conventional commit policy', status: 'pass' },
+		{ id: 'test.integrity', label: 'No test tampering (RED→GREEN integrity)', status: 'pass' },
 	]
+	if (pictures.length > 0) {
+		mkdirSync(join(evidence, 'screenshots'), { recursive: true })
+		const screenshots = pictures.map((path) => {
+			const target = join(evidence, 'screenshots', basename(path))
+			if (absoluteFile(root, target) !== path) copyFileSync(path, target)
+			return { ref: `${ref}/screenshots/${basename(path)}`, sha256: sha256File(path) }
+		})
+		gates.push({ id: 'evidence.screenshots', label: 'Frontend screenshots captured', status: 'pass', screenshots })
+	}
 
-	const integrity = cycles.map(({ cycle, red, green, file }) => {
-		const name = basename(file)
-		snapshot({ evidence, name: `red-${cycle}-${name}`, file, rev: red, root })
-		snapshot({ evidence, name: `green-${cycle}-${name}`, file, rev: green, root })
-		return {
-			cycle, test_files: [file],
-			red_commit: git(root, ['rev-parse', red]), green_commit: git(root, ['rev-parse', green]),
-			red_snapshot_ref: `${ref}/snapshots/red-${cycle}-${name}`, green_snapshot_ref: `${ref}/snapshots/green-${cycle}-${name}`,
-		}
-	})
+	const integrity = cycles.map(({ cycle, red, green, file }) => ({
+		cycle, test_files: [file], red_commit: git(root, ['rev-parse', red]), green_commit: git(root, ['rev-parse', green]),
+	}))
 	const shas = git(root, ['rev-list', '--reverse', `${input.base}..${rev}`]).split('\n').filter(Boolean)
 	const commits = shas.map((sha) => ({
 		sha, subject: git(root, ['log', '-1', '--format=%s', sha]),
@@ -122,17 +115,13 @@ export async function collect(argv) {
 	}))
 
 	const log = {
-		$schema: 'quality-gates-evidence/v6', story: input.story, produced_at: new Date().toISOString(),
+		$schema: 'quality-gates-evidence/v7', story: input.story, produced_at: new Date().toISOString(),
 		producer: 'software-engineer', tech_adapter: 'quality-gates-dotnet', repo_root_rev: rev,
 		commits_covered: commits, gates, test_integrity: { cycles: integrity },
 	}
-	const logPath = join(evidence, `qg-${input.story}.json`)
-	writeFileSync(logPath, `${JSON.stringify(log, null, 2)}\n`)
+	writeFileSync(join(evidence, `qg-${input.story}.json`), `${JSON.stringify(log, null, 2)}\n`)
 	process.stdout.write(gates.map((gate) => `${gate.id} ${gate.status}`).join('\n') + '\n')
-	if (input.flags.has('no-commit')) return 0
 
-	git(root, ['add', '--', repoPath])
-	git(root, ['commit', '--quiet', '-s', '-m', `chore(${input.feature}): record quality evidence for ${input.story}`])
 	const verify = spawnSync(process.execPath, [join(HERE, 'qg-verify/cli/qg-verify.mjs'), '--log', `${repoPath}/qg-${input.story}.json`, '--root', root, '--base', input.base], { cwd: root, encoding: 'utf8' })
 	process.stdout.write(verify.stdout ?? '')
 	process.stderr.write(verify.stderr ?? '')

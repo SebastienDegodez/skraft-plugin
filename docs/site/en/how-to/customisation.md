@@ -15,7 +15,7 @@ SKRAFT is a framework, not a straitjacket. Every component is designed to be ada
 | Level | What | Examples | Citation |
 |-------|------|----------|----------|
 | **L1 — Surface** | Prompt texts, vocabulary, business glossary | Rename labels, adapt story templates, translate messages | Evans (2003): ubiquitous language must reflect the domain |
-| **L2 — Cycles** | Phase depth, quality thresholds, reviewer iterations | Adjust mutation score floor, change retry count, configure Walking Skeleton depth | Beck (2004): scope, time, cost, and quality are variables to manage |
+| **L2 — Cycles** | Phase depth, quality thresholds, reviewer iterations | Adjust the mutation score floor of the project's CI, change retry count, configure Walking Skeleton depth | Beck (2004): scope, time, cost, and quality are variables to manage |
 | **L3 — Invariants** | Artifact structure, inter-agent contracts, CQS | Modify `state.json` format, change verdict protocol | Martin (2017): architecture protects use cases |
 
 > « A model is a selectively simplified and consciously structured form of knowledge. »
@@ -30,12 +30,27 @@ These constraints are non-negotiable. Each invariant is defended by an academic 
 | Invariant | Why | Reference |
 |-----------|-----|-----------|
 | Acceptance tests before code | BDD scenarios define expected behaviour before any implementation | Adzic, G., *Specification by Example*, 2011 |
-| Mutation score floor | Line coverage is insufficient — mutation testing verifies actual test effectiveness | Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011 |
+| Mutation score floor, run by the project's CI | Line coverage is insufficient — mutation testing verifies actual test effectiveness | Jia, Y. & Harman, M., *An Analysis and Survey of the Development of Mutation Testing*, 2011 |
 | Reviewer read-only (CQS) | Asking a question must not change the answer — the reviewer never modifies artifacts | Meyer, B., *Object-Oriented Software Construction, 2nd ed.*, 1997 |
 | One story = one Use Case | Each pipeline pass treats exactly one Use Case, no batching | Cockburn, A., *Writing Effective Use Cases*, 2001 |
 | Walking Skeleton first | The first iteration cuts through all layers end to end | Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009 |
 | Outside-In TDD | Tests start from observable behaviour and descend to internal details | Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009 |
 | Object Calisthenics | Design constraints applied to business code to enforce structural quality | Bay, J., *Object Calisthenics*, 2008 |
+
+## Project prerequisites
+
+DELIVER expects two things from the consumer project:
+
+1. **Git-ignored evidence.** The project's `.gitignore` holds the line
+   `.copilot-tracking/skraft-plans/*/evidence/`. Every evidence log, capture and screenshot
+   lives there and is never committed; `qg-verify` fails a log whose evidence Git tracks
+   (`EVIDENCE_COMMITTED`). If the line is missing, the software engineer appends it in a work
+   commit before the first capture.
+2. **Coverage and mutation in the project's CI.** The pipeline runs neither: the 100% line
+   coverage on Domain and Application (no exclusion) and the mutation bar are steps of the
+   project's CI. Architecture rules ride on the existing gates: architecture tests in the unit
+   suite on .NET, ESLint `boundaries/*` on TypeScript, `import-linter` in the lint step on
+   Python.
 
 ## Extending a phase
 
@@ -85,13 +100,13 @@ Run a complete pipeline cycle with your new agent to verify that:
 
 ### Removing or weakening a gate
 
-Each gate protects a specific invariant (see the [detail of the 46 gates]({{ "/en/reference/gates" | relative_url }})). Removing a gate means the next phase will start without guaranteeing that the previous phase's criteria are met.
+Each gate protects a specific invariant (see the [detail of the 49 gates]({{ "/en/reference/gates" | relative_url }})). Removing a gate means the next phase will start without guaranteeing that the previous phase's criteria are met.
 
 | Action | Risk | What disappears |
 |--------|------|-----------------|
 | Weaken the DoR in DISCUSS (G7) | Poorly-defined stories reach DESIGN | DoR (Definition of Ready) verification |
 | Remove the dependency rule in DESIGN (G3) | Architecture unvalidated before tests | Detection of Clean Architecture violations |
-| Lower the mutation threshold in DELIVER (G6) | Surface-only tests | Detection of tests that do not actually test |
+| Lower the mutation threshold in the project's CI (former DELIVER G6) | Surface-only tests | Detection of tests that do not actually test |
 
 ### Disabling a review lens
 
@@ -101,7 +116,7 @@ The 4 lenses cover complementary angles. Disabling one of them creates a blind s
 |--------------|------------|
 | `architecture-boundaries` | Architecture boundary violations reach human PR |
 | `test-integrity` | Façade tests (that pass without testing) are not detected |
-| `quality-gates` | Quality thresholds (mutation, coverage) are not checked |
+| `quality-gates` | Evidence gates (tests, build, lint, RED→GREEN integrity, commit convention, screenshots) are not checked |
 | `cold-reader` | Code readability is not checked: the next developer will be lost |
 
 ### Putting a reviewer in write mode (violating CQS)

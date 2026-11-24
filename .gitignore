@@ -83,3 +83,6 @@ session-state/
 
 # Local-loop baseline cache: frozen draws, never a publishable verdict.
 eval-baseline-cache/
+
+# SKRAFT DELIVER evidence (quality-gates-evidence/v7): never committed
+.copilot-tracking/skraft-plans/*/evidence/

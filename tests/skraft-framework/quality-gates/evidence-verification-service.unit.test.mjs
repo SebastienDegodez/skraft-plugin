@@ -124,3 +124,33 @@ test('only real SHAs and cycles reach git; a reference outside evidence/ is read
   assert.deepEqual(commitCalls, ['aaaaaaa'])
   assert.deepEqual(reads, [LOG, 'other/out.txt', 'track/skraft-plans/p/evidence/d/s/exit'])
 })
+
+test('v7: screenshots are hashed from bytes, frontend is read at repo_root_rev, tracked evidence is asked of git', async () => {
+  const dir = 'track/skraft-plans/p/evidence/d/s'
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0xff])
+  const named = ['test.acceptance', 'test.unit', 'build.compile', 'build.lint']
+  const log = {
+    $schema: 'quality-gates-evidence/v7', story: 's', produced_at: 't', tech_adapter: 'x', repo_root_rev: 'aaaaaaa',
+    commits_covered: [{ sha: 'aaaaaaa', subject: 'feat(s): x', files_changed: ['web/package.json'] }],
+    gates: named.map((id) => ({ id, label: id, status: 'pass', stdout_ref: `evidence/d/s/${id}.out`, stdout_sha256: sha256('ok'), exit_code_ref: `evidence/d/s/${id}.exit` }))
+      .concat([{ id: 'test.no-mocks-core', label: 'm', status: 'pass', stdout_ref: 'evidence/d/s/mocks.out', stdout_sha256: sha256('') },
+        { id: 'commit.convention', label: 'c', status: 'pass' }, { id: 'test.integrity', label: 'c', status: 'pass' },
+        { id: 'evidence.screenshots', label: 's', status: 'pass', screenshots: [{ ref: 'evidence/d/s/screenshots/home.png', sha256: createHash('sha256').update(png).digest('hex') }] }]),
+    test_integrity: { cycles: [{ cycle: 1, test_files: ['t.cs'], red_commit: 'bbbbbbb', green_commit: 'aaaaaaa' }] },
+  }
+  const entries = { [LOG]: JSON.stringify(log), [`${dir}/mocks.out`]: '' }
+  for (const id of named) { entries[`${dir}/${id}.out`] = 'ok'; entries[`${dir}/${id}.exit`] = '0\n' }
+  const files = { ...filesOf(entries), readBytes: async (path) => { if (path === `${dir}/screenshots/home.png`) return png; throw new Error('ENOENT') } }
+  const tracked = []
+  const git = gitOf({
+    commit: () => ({ exists: true, subject: 'feat(s): x', message: 'feat(s): x\n\nSigned-off-by: E <e@x>', files: ['web/package.json'] }),
+    show: (sha, path) => (path === 'web/package.json' ? '{"dependencies":{"react":"19"}}' : sha === 'bbbbbbb' ? 'a\n' : 'a\nb\n'),
+    tracked: (path) => { tracked.push(path); return [] },
+  })
+  assert.deepEqual(await verifyEvidenceLog({ logPath: LOG, files, git }), { verdict: 'pass', findings: [] })
+  assert.deepEqual(tracked, [dir])
+
+  const withoutShots = { ...log, gates: log.gates.filter((gate) => gate.id !== 'evidence.screenshots') }
+  const result = await verifyEvidenceLog({ logPath: LOG, files: { ...files, ...filesOf({ ...entries, [LOG]: JSON.stringify(withoutShots) }) }, git })
+  assert.deepEqual(result.findings.map((f) => f.code), ['SCREENSHOTS_MISSING'])
+})

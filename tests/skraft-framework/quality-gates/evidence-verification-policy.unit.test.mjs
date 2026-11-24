@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { evidenceReferences, onlyAdditions, verifyEvidence } from '../../../plugins/skraft-framework/src/domain/evidence-verification-policy.mjs'
+import { evidenceReferences, frontendProbes, frontendSignals, onlyAdditions, verifyEvidence } from '../../../plugins/skraft-framework/src/domain/evidence-verification-policy.mjs'
 
 // A v4 log whose every claim checks out against `facts`; each test breaks one claim.
 const file = (content, sha256 = `sha-${content}`) => ({ content, sha256 })
@@ -259,4 +259,87 @@ test('v6 G6 may be not_run, like v5', () => {
   assert.deepEqual(codes(result), ['G6_NOT_RUN'])
   assert.equal(only(run((l) => { v6(l); l.gates[1] = { id: 'G2', label: 'u', status: 'not_run' } })).detail, 'G2 status not_run is not pass, fail or not_applicable')
   assert.equal(only(run((l) => { v6(l); l.gates[5] = { id: 'G6', label: 'm', status: 'skipped' } })).detail, 'G6 status skipped is not pass, fail or not_applicable (or not_run)')
+})
+
+// v7: `type.description` ids, no architecture/coverage/mutation, no snapshot, evidence kept out of Git.
+const v7Log = () => ({
+  $schema: 'quality-gates-evidence/v7', story: 's', produced_at: 't', tech_adapter: 'quality-gates-dotnet', repo_root_rev: 'aaaaaaa',
+  commits_covered: [{ sha: 'aaaaaaa', subject: 'feat(s): x', files_changed: ['src/a.cs'] }],
+  gates: [
+    passing('test.acceptance', 'g1'), passing('test.unit', 'g2'), passing('build.compile', 'g3'), passing('build.lint', 'g4'),
+    { id: 'test.no-mocks-core', label: 'mocks', status: 'pass', stdout_ref: 'ev/mocks.out', stdout_sha256: 'sha-' },
+    { id: 'commit.convention', label: 'c', status: 'pass' }, { id: 'test.integrity', label: 'c', status: 'pass' },
+  ],
+  test_integrity: { cycles: [{ cycle: 1, test_files: ['t.cs'], red_commit: 'bbbbbbb', green_commit: 'aaaaaaa' }] },
+})
+const shot = { ref: 'ev/shots/home.png', sha256: 'png-sha' }
+const screenshots = (list = [shot]) => ({ id: 'evidence.screenshots', label: 'Screenshots', status: 'pass', screenshots: list })
+const runV7 = (breakLog = () => {}, breakFacts = () => {}) => {
+  const log = v7Log(); const facts = baseFacts()
+  facts.files = new Map([...facts.files].filter(([ref]) => !['ev/r.cs', 'ev/g.cs', 'ev/red.out', 'ev/red.exit'].includes(ref)))
+  facts.git.trackedEvidence = []
+  facts.screenshots = new Map([[shot.ref, { sha256: shot.sha256 }]])
+  facts.frontend = []
+  breakLog(log); breakFacts(facts)
+  return verifyEvidence(log, facts)
+}
+
+test('a v7 log with no committed evidence and no snapshot passes', () => {
+  assert.deepEqual(runV7(), { verdict: 'pass', findings: [] })
+})
+
+test('v7 refuses committed evidence and an evidence commit on top of the log', () => {
+  assert.deepEqual(only(runV7(() => {}, (f) => { f.git.trackedEvidence = ['tracking/evidence/d/s/qg-s.json'] })), { severity: 'fail', code: 'EVIDENCE_COMMITTED', detail: 'evidence is tracked by Git: tracking/evidence/d/s/qg-s.json' })
+  const evidenceOnlyHead = (f) => { f.git.head = 'ccccccc'; f.git.headParent = 'aaaaaaa'; f.git.headFiles = ['tracking/evidence/d/s/qg-s.json'] }
+  assert.deepEqual(only(runV7(() => {}, evidenceOnlyHead)), { severity: 'inconclusive', code: 'REVISION_STALE', detail: 'repo_root_rev aaaaaaa is not HEAD' })
+})
+
+test('v7 gate set: retired and legacy ids are not v7 gates', () => {
+  assert.deepEqual(only(runV7((l) => { l.gates = l.gates.filter((g) => g.id !== 'build.lint') })), { severity: 'inconclusive', code: 'GATE_MISSING', detail: 'build.lint is absent from the log', gate: 'build.lint' })
+  for (const id of ['ci.coverage', 'ci.mutation', 'arch.boundaries', 'G5']) {
+    assert.deepEqual(only(runV7((l) => { l.gates.push(passing(id, 'g1')) })), { severity: 'inconclusive', code: 'GATE_UNKNOWN', detail: `${id} is not a v7 gate`, gate: id })
+  }
+  assert.deepEqual(codes(runV7((l) => { l.gates[1] = { id: 'test.unit', label: 'u', status: 'not_run', rationale: 'x' } })), ['STATUS_INVALID'])
+})
+
+test('v7 named gates keep the stdout, exit and empty-scan checks', () => {
+  assert.deepEqual(only(runV7(() => {}, (f) => { f.files.set('ev/g2.exit', file('1')) })), { severity: 'fail', code: 'EXIT_CONTRADICTS_STATUS', detail: 'test.unit passes but its runner exited 1', gate: 'test.unit' })
+  assert.deepEqual(only(runV7(() => {}, (f) => { f.files.set('ev/mocks.out', file('using Moq;', 'sha-')) })), { severity: 'fail', code: 'MOCKS_FOUND', detail: 'test.no-mocks-core passes but ev/mocks.out lists mocking symbols', gate: 'test.no-mocks-core' })
+  assert.equal(only(runV7((l) => { l.commits_covered[0].subject = 'feat(s): y' })).gate, 'commit.convention')
+})
+
+test('v7 test integrity reads every test file from Git at RED and GREEN', () => {
+  assert.deepEqual(only(runV7(() => {}, (f) => { f.git.shows.set('aaaaaaa:t.cs', 'b\n') })), { severity: 'fail', code: 'TEST_TAMPERED', detail: 'cycle 1 removed or changed a line of t.cs between RED and GREEN', gate: 'test.integrity' })
+  assert.deepEqual(only(runV7(() => {}, (f) => { f.git.shows.delete('bbbbbbb:t.cs') })), { severity: 'inconclusive', code: 'TEST_FILE_UNRESOLVED', detail: 'cycle 1 t.cs does not resolve at its RED and GREEN commits', gate: 'test.integrity' })
+  assert.equal(only(runV7((l) => { l.test_integrity.cycles[0].test_files.push('u.cs') })).code, 'TEST_FILE_UNRESOLVED')
+  assert.equal(only(runV7((l) => { delete l.test_integrity.cycles[0].test_files })).code, 'TEST_FILE_MISSING')
+})
+
+test('v7 frontend story without screenshot fails', () => {
+  const frontend = (f) => { f.frontend = ['tests/e2e/home.spec.ts'] }
+  assert.deepEqual(only(runV7(() => {}, frontend)), { severity: 'fail', code: 'SCREENSHOTS_MISSING', detail: 'frontend story (tests/e2e/home.spec.ts) records no screenshot', gate: 'evidence.screenshots' })
+  assert.equal(only(runV7((l) => { l.gates.push({ id: 'evidence.screenshots', label: 's', status: 'not_applicable', rationale: 'no UI' }) }, frontend)).code, 'SCREENSHOTS_MISSING')
+  assert.equal(only(runV7((l) => { l.gates.push(screenshots([])) }, frontend)).code, 'SCREENSHOTS_MISSING')
+  assert.deepEqual(runV7((l) => { l.gates.push(screenshots()) }, frontend), { verdict: 'pass', findings: [] })
+})
+
+test('v7 screenshots are checked byte for byte', () => {
+  assert.deepEqual(only(runV7((l) => { l.gates.push(screenshots([{ ...shot, sha256: 'other' }])) })), { severity: 'inconclusive', code: 'SCREENSHOT_HASH_MISMATCH', detail: 'screenshot sha256 differs from ev/shots/home.png', gate: 'evidence.screenshots' })
+  assert.equal(only(runV7((l) => { l.gates.push(screenshots([{ ref: 'ev/shots/none.png', sha256: 'x' }])) })).code, 'SCREENSHOT_MISSING')
+  assert.equal(only(runV7((l) => { l.gates.push(screenshots([])) })).code, 'SCREENSHOTS_EMPTY')
+  assert.equal(runV7((l) => { l.gates.push({ id: 'evidence.screenshots', label: 's', status: 'not_applicable', rationale: 'no UI' }) }).verdict, 'pass')
+})
+
+test('a v6 log still verifies with its G* gates and snapshots', () => {
+  assert.deepEqual(run((l) => { v6(l); l.gates[5] = notRun('mutation runs outside the pipeline') }).verdict, 'pass')
+})
+
+test('frontendSignals: e2e tests, Playwright config, React manifests and @visual scenarios', () => {
+  const contents = {
+    'web/package.json': '{"dependencies":{"react":"^19"}}', 'api/package.json': '{"dependencies":{"express":"^5"}}',
+    'broken/package.json': '{ "react": "19", ', 'features/home.feature': '@visual\nFeature: Home', 'features/api.feature': '@visualize\nFeature: x',
+  }
+  const paths = ['tests/e2e/a.spec.ts', 'web/playwright.config.ts', 'web/package.json', 'api/package.json', 'broken/package.json', 'features/home.feature', 'features/api.feature', 'src/a.cs', 'deleted/package.json']
+  assert.deepEqual(frontendSignals(paths, (path) => contents[path]), ['tests/e2e/a.spec.ts', 'web/playwright.config.ts', 'web/package.json', 'broken/package.json', 'features/home.feature'])
+  assert.deepEqual(frontendProbes(paths), ['web/package.json', 'api/package.json', 'broken/package.json', 'features/home.feature', 'features/api.feature', 'deleted/package.json'])
 })
