@@ -29,11 +29,11 @@
 | {{#file:path_from_repository_root}} | architecture / PRD | {{rules / outranked by}} | {{requirement_ids}} | {{story_or_requirement_or_extension}} |
 
 ## Key discoveries
-{{patterns_examples_pitfalls}}
+- {{finding}} ({{#file:path_from_repository_root:start-end}} | {{url}} | deduction)
 
 ## Evaluated approaches
 ### {{approach_A}} (recommended)
-- Rationale, evidence, references, impact.
+- Rationale, evidence (a deduction says it is one), references, impact.
 ### {{approach_B}} (rejected)
 - Reason for rejection with evidence.
 

@@ -16,7 +16,7 @@ const copilotTools = new Set([
 
 // https://code.claude.com/docs/en/tools-reference
 // https://code.claude.com/docs/en/sub-agents#restrict-which-tools-a-subagent-can-use
-const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'TaskOutput', 'TaskStop', 'Agent', 'Skill'])
+const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'TaskOutput', 'TaskStop', 'Agent', 'Skill', 'WebFetch'])
 // skraft's own MCP server needs no live inventory: `drivers/cli/mcp-tools.mjs` is the inventory,
 // and each host names those tools as `docs/v2/host-verification.md` measured it. By name only: a
 // wildcard over this server would hand an agent every tool the engine ever adds.
