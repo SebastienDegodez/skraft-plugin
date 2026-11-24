@@ -30,6 +30,8 @@ ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Rej
 
 {Describe the situation and forces that led to this decision. What problem were you solving? What constraints were in play? What quality attributes or business requirements created the tension?}
 
+**Decision drivers, ranked:** 1. {the force, quality attribute or constraint that matters most} 2. {…}
+
 ## Decision
 
 {State the decision clearly and directly. One paragraph. Start with "We will..." or "We have decided to...". Do not explain why here — that belongs in Context and Alternatives Rejected. Name technologies or families, never a version.}
@@ -52,7 +54,11 @@ ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Rej
 | Alternative | Reason rejected |
 |---|---|
 | {option A} | {specific reason — not a strawman} |
-| {option B} | {specific reason — not a strawman} |
+| {option B} | {specific reason, naming the driver it loses on — not a strawman} |
+
+## Confirmation
+
+{The architecture test, rule or fitness check that fails when the code departs from this decision, in any stack. None possible: "None possible, because …".}
 ```
 
 ---
@@ -112,6 +118,10 @@ We will apply simple CQRS: separate command handlers (mutate state, raise domain
 | Single CRUD model (no CQRS) | Would mix mutation and query concerns; the domain model would need to expose display-optimised navigation properties, polluting the aggregate |
 | Full CQRS with separate event store + read database | Over-engineering for current scale; no temporal query requirement exists yet; adds operational complexity before it is needed |
 | CQRS with in-memory projections | Projections lost on restart; no persistence guarantee for the read model |
+
+## Confirmation
+
+An architecture test fails when a query handler depends on the eligibility aggregate, or a command handler returns a read model.
 ```
 
 ---
@@ -171,6 +181,10 @@ We will not apply Event Sourcing to the `PolicyRenewalAggregate`. State will be 
 |---|---|
 | Apply Event Sourcing to PolicyRenewalAggregate | No story requires temporal queries or history-based invariants; the audit trail is handled by a dedicated context; over-engineering for current scope |
 | Hybrid: event-sourced for audit events only | Mixing state-based and event-based storage in the same aggregate adds complexity without benefit |
+
+## Confirmation
+
+An architecture test fails when a type of `PolicyContext` depends on an event store.
 ```
 
 ---

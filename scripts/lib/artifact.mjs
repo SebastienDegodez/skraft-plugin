@@ -34,7 +34,7 @@ export const ARTIFACTS = {
       'decision',
       'consequences',
     ],
-    optional: ['ratifiedBy', 'supersedes', 'supersedesLink', 'alternatives'],
+    optional: ['ratifiedBy', 'supersedes', 'supersedesLink', 'alternatives', 'confirmation'],
   },
   'review-verdict': {
     template: 'plugins/skraft-framework/assets/templates/review-verdict.template.md',

@@ -30,3 +30,7 @@ ratified_by: {{ratifiedBy}}
 ## Alternatives rejected
 {{{alternatives}}}
 {{/alternatives}}
+{{#confirmation}}
+## Confirmation
+{{{confirmation}}}
+{{/confirmation}}

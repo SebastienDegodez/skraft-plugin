@@ -41,6 +41,8 @@ ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Rej
 
 {Describe the situation and the forces that led to this decision. What problem were you solving? What constraints were in play? Why was a decision needed at all?}
 
+**Decision drivers, ranked:** 1. {the force, quality attribute or constraint that matters most} 2. {…}
+
 ## Decision
 
 {State the decision clearly and directly. Start with "We will..." or "We have decided to...". One paragraph, maximum. Avoid explaining why here — that belongs in Context and Alternatives.}
@@ -64,6 +66,10 @@ ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Rej
 |---|---|
 | {option A} | {why not chosen — specific, not a strawman} |
 | {option B} | {why not chosen — specific, not a strawman} |
+
+## Confirmation
+
+{The architecture test, rule or fitness check that fails when the code departs from this decision, in any stack. None possible: "None possible, because …".}
 ```
 
 ### Filled Example — Auto Insurance Domain
@@ -83,6 +89,8 @@ The project's baseline is CQS at the method level: every use case is implemented
 Three cross-cutting concerns have appeared on multiple handlers and are starting to be copied by hand: input validation, structured logging around every dispatch, and a unit-of-work boundary around command execution. Implementing each of these as a per-handler decorator wired manually in DI does not scale: the registration code becomes a `switch` over handler types and new behaviors require touching every registration site.
 
 A dispatch bus (`ICommandBus` / `IQueryBus`) lets us wrap handler invocation in an ordered pipeline of behaviors registered once. The handler implementations themselves remain unchanged — the bus is a structural addition over an unchanged CQS surface.
+
+**Decision drivers, ranked:** 1. one place per cross-cutting behaviour 2. handlers and their registration unchanged 3. a direct call path
 
 ## Decision
 
@@ -112,6 +120,10 @@ We will introduce a command bus and a query bus in the Application layer; the AP
 | Add the behaviors as plain decorators registered per handler in DI, without a bus | Equivalent runtime semantics, but the registration code grows as O(handlers × behaviors) instead of O(behaviors); pipeline order is implicit in registration order across N call sites |
 | Use a third-party mediator library | Adds an external dependency for a thin abstraction this project can own in ~50 lines; the library's full surface (notifications, request/response, streams) is wider than needed |
 | Full CQRS with separate read/write data stores | Out of scope of this ADR — that decision concerns the data tier, not the dispatch tier, and would warrant its own ADR if the read load required it |
+
+## Confirmation
+
+An architecture test fails when a type of the API layer depends on a handler interface rather than on the command bus or the query bus.
 ```
 
 ---
@@ -335,6 +347,13 @@ Reason: Q4 — anticipation: the shapes are identical today and no story asks th
 Destination: none; reuse the upstream shape
 ```
 
+### Drafting an ELIGIBLE candidate
+
+1. Before any option, rank the decision drivers in Context: the forces, quality attributes and constraints this choice serves, most important first.
+2. Judge each option against those drivers, in their order; the reason an alternative is rejected names the driver it loses on.
+3. Each row of `Alternatives Rejected` is an approach the research document evaluated, or says why it is new to it.
+4. `## Confirmation` names the architecture test, rule or fitness check that proves the decision holds, by what it checks, never by its file; "None possible, because …" when none can, never left out.
+
 Every candidate carries a `Destination: <document> § <section>`; a `NOT ELIGIBLE` choice is written in place there. Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: DOC-AS-ADR (Q0, Q0b, Q1b), ADR-INFLATION (Q1, Q3), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
 
 ---
@@ -379,7 +398,8 @@ Before writing the final ADR, verify:
 - [ ] **Context explains the why** — the forces that made this decision necessary are described
 - [ ] **Consequences include negatives** — no decision is trade-off-free; if you can't name a downside, keep thinking
 - [ ] **Alternatives are genuine** — rejected alternatives are real options that were seriously considered, not strawmen
-- [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set"
+- [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set", against the ranked drivers
+- [ ] **Confirmation** — the check that fails when the code departs from the decision, or why none is possible
 - [ ] **Status is set** — `Proposed` when drafting, `Accepted` when ratified
 - [ ] **Supersession is linked** — if this supersedes another ADR, both are updated: the old one's status, the new one's `Supersedes:` line
 - [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values and Value Object inventories go in the DESIGN details.
