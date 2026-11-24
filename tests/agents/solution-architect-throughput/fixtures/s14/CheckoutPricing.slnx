@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CheckoutPricing.Api/CheckoutPricing.Api.csproj" />
+    <Project Path="src/CheckoutPricing.Application/CheckoutPricing.Application.csproj" />
+    <Project Path="src/CheckoutPricing.Domain/CheckoutPricing.Domain.csproj" />
+    <Project Path="src/CheckoutPricing.Infrastructure/CheckoutPricing.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CheckoutPricing.IntegrationTest/CheckoutPricing.IntegrationTest.csproj" />
+    <Project Path="tests/CheckoutPricing.UnitTest/CheckoutPricing.UnitTest.csproj" />
+  </Folder>
+</Solution>

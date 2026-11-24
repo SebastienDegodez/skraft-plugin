@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-08-07T09:25:00.000Z",
+  "revision": null,
+  "scannedFiles": 5,
+  "commitments": [
+    {
+      "commitment": "cqrs-bus",
+      "label": "CQRS + dispatch bus",
+      "detected": false,
+      "hitCount": 0,
+      "hits": []
+    },
+    {
+      "commitment": "event-sourcing",
+      "label": "Event Sourcing",
+      "detected": false,
+      "hitCount": 0,
+      "hits": []
+    },
+    {
+      "commitment": "saga",
+      "label": "Saga / Process Manager",
+      "detected": false,
+      "hitCount": 0,
+      "hits": []
+    }
+  ],
+  "manualReview": [
+    "Anti-Corruption Layer",
+    "Bounded-context split or merge",
+    "Aggregate crossing an existing boundary"
+  ]
+}
