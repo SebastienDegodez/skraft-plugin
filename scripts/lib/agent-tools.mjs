@@ -27,6 +27,16 @@ const historicalTools = new Map([
   ['TaskOutput', 'TaskOutput was removed in Claude Code 2.1.277; use Read on the background output file on newer versions.'],
 ])
 
+// An agent that runs cells in skraft_repl ends a stuck kernel with skraft_repl_reset: the one
+// is never granted without the other.
+const skraftReference = (client, name) => (client === 'claude' ? `mcp__plugin_skraft_skraft__${name}` : `skraft/${name}`)
+
+function requireReplReset(tools, client) {
+  if (tools.includes(skraftReference(client, 'skraft_repl')) && !tools.includes(skraftReference(client, 'skraft_repl_reset'))) {
+    throw new Error('tools: names skraft_repl without skraft_repl_reset')
+  }
+}
+
 function splitTools(value) {
   const tools = []
   let start = 0
@@ -59,6 +69,7 @@ export function validateAgentTools(content, { client, agentIds = [] }) {
     throw new Error('tools: expected tool names as a YAML list or comma-separated string')
   }
   if (new Set(tools).size !== tools.length) throw new Error('tools: duplicate reference')
+  requireReplReset(tools, client)
   const externalTools = []
   const compatibilityWarnings = []
   for (const tool of tools) {

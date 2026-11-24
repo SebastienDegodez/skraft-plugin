@@ -78,8 +78,8 @@ Le calcul exact du verdict : [Gates](../../reference/gates.md#review-run).
 
 ## Les lentilles de DELIVER en pratique
 
-En DELIVER, les gates de commandes passent d'abord ; viennent ensuite les lentilles, chacune
-indépendante et sur un angle différent.
+En DELIVER, les lentilles sont chacune
+indépendantes et sur un angle différent ; `quality-gates` lit les exécutions tracées de gates de la tentative.
 
 | Lentille | Ce qu'elle vérifie |
 | --- | --- |

@@ -1,6 +1,6 @@
 ---
 title: "DELIVER"
-description: "Pourquoi DELIVER passe le contrat au vert un scénario et un commit vérifié à la fois, fait relire le code, et laisse le mutation testing au développeur."
+description: "Pourquoi un seul passage DELIVER passe le contrat au vert en un seul commit, fait relire le code et laisse la mutation au développeur."
 persona: software-engineer
 phase: deliver
 hide_table_of_contents: true
@@ -10,40 +10,41 @@ import FlowFigure from '@site/src/components/FlowFigure';
 
 # DELIVER
 
-Faire passer le contrat au vert un scénario à la fois, chacun en un commit prouvé, puis faire
-relire le code. Tester les tests reste l'affaire du développeur.
+Faire passer le contrat au vert en un seul passage et un seul commit,
+puis faire relire le code. Tester les tests reste l'affaire du développeur.
 
 ## Pourquoi cette phase existe
 
 Le code est le seul artefact qui part en production. DELIVER le fait naître du contrat que
-DISTILL a laissé en échec, un scénario à la fois : le `software-engineer` avance en
-**Outside-In TDD**, du test d'acceptation du scénario vers les tests unitaires, puis vers le code
-([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Il tourne la boucle interne
-rouge → vert → refactor sans la commiter, puis commite une fois, quand le scénario passe : un
-`feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
+DISTILL a laissé en échec, en un seul passage, en travaillant les groupes dans l'ordre du plan d'implémentation : le
+`software-engineer` avance en **Outside-In TDD**, des tests d'acceptation du groupe vers les tests
+unitaires, puis vers le code ([Freeman & Pryce, 2009](../../reference/citations.mdx#cite-freeman-goos-2009)). Il
+tourne la boucle interne rouge → vert → refactor sans la commiter, puis commite une seule fois, quand
+tous les groupes passent : un `feat(…)` enchaîné à la commande de test, `<test> && git add <fichiers> && git commit …`.
 
-Le moteur ne croit pas l'agent sur parole. Le rouge de DISTILL a été rejoué et prouvé ; le vert de
-DELIVER est rejoué aussi, et le [juge du rejeu](pathname:///dashboard/#agent-replay-judge) lit le
-log du rejeu à côté de celui du rouge : les tests d'acceptation du scénario doivent y passer, le
-[walking skeleton](../deep-dive/walking-skeleton.md) aussi, et aucun test ne doit échouer ni être
-sauté. Le test d'abord ([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans
-l'historique git, pas une promesse : pour chaque scénario, un commit rouge de son test
-d'acceptation, puis un commit vert.
+Le moteur ne lance aucun test. Il vérifie l'historique git : un commit rouge de chaque test
+d'acceptation, puis un seul commit vert, quoi que nomme son sujet, ne touchant pas aux tests d'acceptation ; un
+deuxième est refusé (`green-split`). Le tableau de groupes du plan d'implémentation est l'ordre de travail, non un nombre de commits. La commande qui commite un vert est
+enchaînée à la commande de test : le commit n'existe que si les tests passent ; la revue DISTILL et
+la revue DELIVER lisent le reste. Le test d'abord
+([Beck, 2003](../../reference/citations.mdx#cite-beck-tdd-2003)) devient un fait dans l'historique git, pas une
+promesse.
 
 :::info[☕ Fil rouge — Starbucks *(exemple illustratif)*]
 
-S1 entre, rouge, à côté du walking skeleton rouge. DELIVER complète la chaîne du point d'entrée
-de commande jusqu'à la base, implémente le paiement et l'attribution des points et les fait
-passer tous deux au vert en un commit ; DISTILL écrit ensuite le test en échec de S2, la boisson indisponible, et
-DELIVER le fait passer au vert. Les gates passent, la revue relit le code, et le code part en pull
+S1 et S2 entrent, rouges, à côté du walking skeleton rouge. DELIVER complète la chaîne du point
+d'entrée de commande jusqu'à la base, implémente le paiement et l'attribution des points et fait
+passer S1 et le walking skeleton au vert, et S2, la boisson indisponible, avec eux, en un seul commit. Les exécutions tracées de gates de l'ingénieur sont lues par la revue, qui relit aussi le code, et le code part en pull
 request. Que les tests protègent réellement la règle de fidélité, la **mutation** que lance le
 développeur l'atteste.
 :::
 
-## Un scénario, un commit vert
+## Un seul passage, un seul commit vert
 
 Un cycle TDD commité coûte deux commits, et un agent paie chacun en tours : lancer les tests, lire
-leur sortie, écrire le message. Par scénario, DELIVER ne commite qu'une fois. Les tests
+leur sortie, écrire le message. DELIVER ne commite qu'une fois pour l'histoire, et l'ingénieur livre tous les groupes en un
+passage : il lit les plans et lance une fois tous les tests d'acceptation, puis travaille les groupes dans l'ordre
+du plan, sans rien commiter avant que tous les tests d'acceptation et toute la suite passent. Les tests
 unitaires de la boucle interne s'écrivent toujours d'abord ; ils partent dans le vert, et la
 lentille test-integrity de la revue les lit. Qu'ils détecteraient une erreur, la mutation que
 lance le développeur le prouve.
@@ -51,38 +52,48 @@ lance le développeur le prouve.
 Trois règles gardent ce commit unique honnête :
 
 - **Les tests d'acceptation sont un oracle immuable.** DISTILL les a écrits, walking skeleton
-  compris ; le vert ne les change jamais, hors du squelette qu'ils appellent. Le vert de S1 fait
-  passer le test d'acceptation de S1 et le walking skeleton ; chaque vert suivant garde le walking
-  skeleton au vert. Un test ajusté au code ne prouve rien, donc
+  compris ; le vert ne les change jamais, hors du squelette qu'ils appellent. Le vert fait passer
+  tous les tests d'acceptation et le walking skeleton. Un test ajusté au code ne prouve rien, donc
   un test faux retourne à DISTILL : l'ingénieur s'arrête en le nommant.
-- **Un scénario appartient à un seul composant.** Son vert ne change aucun autre composant ; un
-  changement nécessaire ailleurs est un scénario qui manque.
-- **Le commit suit le test, en bash.** Le brief donne la commande exacte, si bien que le commit
+- **Le vert ne construit que les scénarios de l'histoire.** Il n'écrit aucun comportement qu'aucun scénario ne demande,
+  et ne change un autre composant que là où un groupe en a besoin.
+- **Le commit suit le test.** Le brief donne la commande exacte, pour sh ou PowerShell 7 et pour
+  Windows PowerShell 5.1, si bien que le commit
   n'a lieu que si les tests passent. Le rouge de DISTILL n'est jamais enchaîné ainsi : seule la
   lecture de la sortie distingue une erreur de build de l'échec attendu.
 
-Une fois le dernier scénario au vert, les gates passent. Un passage que renvoient les gates ou la
-revue travaille sur toute la story avec le cycle classique : un rouge, puis la correction ; sur un
-passage que les gates ont renvoyé, leur échec tient lieu du rouge.
+Une fois le vert commité, l'ingénieur lance les gates restantes et soumet la tentative. Un run dont le journal
+contient les dispatches DELIVER par groupe d'une alpha V2 antérieure n'est pas repris : relancez-le. Un passage que renvoie la
+revue travaille sur toute la story : chaque cycle est un commit `feat` ou `fix` qui
+porte son test et son code, une fois vert, sans commit `test` à part.
 
-## L'ordre : gates, puis revue
+## L'ordre : gates tracées, puis revue
 
 <FlowFigure flow="deliver" />
 
-Les gates de commandes passent d'abord : elles sont rapides, déterministes, et un build rouge
-n'a pas besoin d'un relecteur. Viennent ensuite les lentilles de la revue DELIVER : intégrité des
-tests, frontières d'architecture, lisibilité à froid, et, quand le changement en touche, fidélité
-des mocks et des contrats. Une reprise demandée par la revue repart par `deliver` et les gates.
+Le moteur ne lance aucune gate. L'ingénieur logiciel lance chaque gate (`build`, `format`, `lint`,
+`test`, `architecture`, `coverage`) de chaque composant que l'histoire a modifié par l'outil MCP
+`skraft_repl` (`gate(name, command, { cwd })`, voir [Le REPL](../../reference/repl.md)) ;
+l'exécution de la ligne de commit est l'exécution `test`, et une gate sans commande pour le composant
+se déclare avec `absent`, comme la ligne `no command` du brief le donne. Le moteur ne refuse aucune tentative pour ces exécutions. Il journalise
+`evidence.checked` pour les exécutions dont la trace se lit jusqu'à ses signatures, sinon le code de ce qui l'a cassée, et remet la trace ou ce code à la revue DELIVER
+([Gates](../../reference/gates.md#command-gates)).
 
-L'engineer lance les mêmes commandes avant de rendre la main. Son brief liste les commandes de
-gates de chaque composant qu'il peut modifier, mutation exclue (elle revient au développeur), avec la base du run à la place de
-`{baseSha}`, et lui demande de corriger chaque échec avant d'écrire son résultat, à une passe de
-reprise aussi. L'étape des gates reste le contrôle ; le brief évite la passe que coûterait un
-échec de format ou de build découvert là seulement. Avant d'écrire son résultat il appelle aussi
-`skraft_precheck`, qui lance sur ce qu'il a écrit les contrôles mécaniques de sa propre remise — un
-fichier modifié hors de son périmètre d'écriture, un changement laissé non committé — et rend
-chaque anomalie avec le contrôle qui l'a trouvée. Ce précontrôle ne lit aucun de ses commits et
-n'approuve rien : la remise relance ces contrôles, les commits en plus.
+Viennent ensuite les lentilles de la revue DELIVER : intégrité des tests, frontières
+d'architecture, lisibilité à froid, `quality-gates` et, quand le changement en touche, fidélité des mocks et des
+contrats. La lentille `quality-gates` lit la trace et signale, par composant et par gate, une exécution
+manquante, en échec, pas sur le dernier commit ou démarrée sur un arbre sale (hors l'exécution de la ligne de commit) ;
+une gate déclarée `absent` avec une raison est acceptée, jamais `test`. Une reprise demandée par la revue repart par `deliver`. Le software engineer lance la commande e2e
+d'un front end comme une gate, en dernier, sur son commit final. Après la revue, l'étape des
+visuels lit ce run tracé et les captures que liste son manifeste au lieu de le lancer : sur GitHub
+gh les joint à la pull request, sur Azure DevOps elles sont commitées sur la branche et liées à leur
+commit. Puis viennent le `pr-writer` et la publication.
+
+Les preuves QA du run, son plan de test, le résultat de chaque scénario et ses captures,
+appartiennent au moteur : il les rend à partir du journal et de la trace dans la pull request et
+`qa-report.md`. Un scénario n'est réussi que si son test d'acceptation est toujours celui de son
+commit red, qu'un green a livré son groupe et que toute la suite de son composant est passée sur le
+commit final ; ce qui manque n'est pas prouvé, et livré n'est pas déployé ([Joindre les preuves QA](../../how-to/attach-screenshots.md)).
 
 ### Pourquoi la mutation revient au développeur
 
@@ -92,20 +103,17 @@ dit si une suite verte détecterait une erreur, et c'est aussi l'étape la plus 
 story puisse payer.
 
 Jusqu'à la version 2.0.0-alpha.18, elle passait juste après les gates, avant la revue, puis de
-nouveau plusieurs fois : après chaque passe de correction des survivants, après chaque reprise
-demandée par la revue. À partir de 2.0.0-alpha.19, elle passait **une fois, en dernier**, sur le
-code que la revue avait approuvé, et un échec menait à une proposition par fichier de survivants
-et à une question `mutation-plan`. Même ainsi, elle restait l'étape la plus lente de chaque run,
-elle demandait une configuration de mutation que skraft écrivait pour le développeur, et ses
-survivants arrêtaient le run sur une question, tout à la fin.
+nouveau plusieurs fois. C'était l'étape la plus lente de chaque run, elle demandait une
+configuration de mutation que skraft écrivait pour le développeur, et ses survivants arrêtaient le
+run sur une question, tout à la fin.
 
-Le pipeline de la story ne la lance donc plus. Le développeur choisit l'outil, écrit sa
-configuration et la lance quand il le décide, à part du pipeline de la story : skraft donne à ce
-run un workflow à lui, `workflows/mutation.skraft.dot`, avec son propre journal. La commande peut
-rendre son score déjà calculé ([Le résultat de mutation](../../reference/skraft-config.md#mutation-result)),
-et les survivants d'un périmètre sous la barre vont à une proposition, au choix du développeur,
-puis à un kill. Le seuil ne bouge
-pas : 80 % sur le cœur et 80 % sur la frontière, jugés à part, fixés par `skraft-quality-bar`.
+Ni le pipeline de la story ni le moteur ne la lancent donc. Le mutation testing est une recette de
+la session du développeur, le skill `skraft-mutation` : il lance la `commands.mutation` du composant
+dans Bash, lit le rapport, juge chaque périmètre au seuil sur les fichiers que la branche a
+modifiés, et tue les survivants par des tests ([Lancer la mutation](../../how-to/run-mutation.md)).
+La commande peut rendre son score déjà calculé ([Le résultat de mutation](../../reference/skraft-config.md#mutation-result)).
+Le seuil ne bouge pas : 80 % sur le cœur et 80 % sur la frontière, jugés à part, fixés par
+`skraft-quality-bar`.
 
 Un mutant survivant n'a toujours pas une seule bonne réponse. Il finit de l'une de trois façons :
 
@@ -133,8 +141,8 @@ et [Contract testing](../deep-dive/contract-testing.md).
 
 ## Les compromis
 
-- **La boucle interne ne laisse aucune trace dans l'historique.** Seuls le rouge et le vert de
-  chaque scénario sont commités ; personne ne voit échouer les tests unitaires écrits entre les
+- **La boucle interne ne laisse aucune trace dans l'historique.** Seuls le rouge de l'histoire et
+  son vert sont commités ; personne ne voit échouer les tests unitaires écrits entre les
   deux. La revue les juge.
 - **Une story peut partir sans run de mutation.** Le pipeline ne prouve plus que les tests
   détecteraient une erreur ; le run du développeur le fait, quand il le lance.

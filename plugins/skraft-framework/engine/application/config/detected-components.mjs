@@ -22,13 +22,13 @@ const DEPENDENCIES = 'node_modules'
 
 /**
  * The projects under the starts whose root no component holds yet, each named after its folder
- * with a name no component holds yet; with its mutation command only when `mutation` asks for it.
+ * with a name no component holds yet.
  * @param {Workspace} workspace @param {string[]} starts
  * @param {Array<{ name: string, root: string }>} components already listed
- * @param {{ workingCopyName: string, mutation: boolean }} request
+ * @param {{ workingCopyName: string }} request
  * @returns {Promise<ProposedComponent[]>}
  */
-export const newComponents = async (workspace, starts, components, { workingCopyName, mutation }) => {
+export const newComponents = async (workspace, starts, components, { workingCopyName }) => {
   const roots = new Set(components.map((component) => component.root))
   const names = new Set(components.map((component) => component.name))
   /** @type {ProposedComponent[]} */
@@ -36,37 +36,21 @@ export const newComponents = async (workspace, starts, components, { workingCopy
   for (const found of await projectsUnder(workspace, starts)) {
     if (roots.has(found.root)) continue
     roots.add(found.root)
-    const commands = mutation ? found.commands : withoutMutation(found.commands)
-    added.push(await proposedComponent(workspace, { ...found, commands }, claimName(componentName(folderName(found.root, workingCopyName)), names)))
+    added.push(await proposedComponent(workspace, found, claimName(componentName(folderName(found.root, workingCopyName)), names)))
   }
   return added
 }
 
-/** The commands but mutation, which a developer declares when they choose to mutate. @param {Record<string, string>} commands */
-const withoutMutation = ({ mutation: _mutation, ...commands }) => commands
-
 /**
- * The mutation command init proposes for the project at a root: null when the root holds no
- * project, or a project of a stack with no mutation tool skraft knows.
- * @param {Workspace} workspace @param {string} root
- * @returns {Promise<string | null>}
- */
-export const mutationCommandAt = async (workspace, root) => {
-  const entries = await workspace.list(root)
-  if (entries === null) return null
-  return (await detectAt(workspace, root, entries))?.commands.mutation ?? null
-}
-
-/**
- * One component as init writes it: its project, and the pairs its folders show. A project whose
+ * One component as init writes it: its project, no command, and the pairs its folders show. A project whose
  * folders show no pair is written without `bdd`, which leaves the question open: `/skraft-init`
  * asks it, and a run is refused until it is answered.
  * @param {Workspace} workspace @param {FoundProject} found @param {string} name
  * @returns {Promise<ProposedComponent>}
  */
-const proposedComponent = async (workspace, { root, stack, paths, commands }, name) => {
+const proposedComponent = async (workspace, { root, stack, paths }, name) => {
   const bdd = await bddPairs(workspace, root)
-  return { name, root, stack, paths, commands, ...(bdd.length === 0 ? {} : { bdd }) }
+  return { name, root, stack, paths, commands: {}, ...(bdd.length === 0 ? {} : { bdd }) }
 }
 
 /** @param {string} root @param {string} workingCopyName the name of the folder `.` */

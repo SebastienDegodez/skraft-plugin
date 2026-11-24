@@ -1,0 +1,297 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { createRepl } from '../../../../plugins/skraft-framework/engine/application/repl/repl-usecase.mjs'
+import { InMemoryRunLock } from '../support/in-memory-host.mjs'
+import { HasherDigests, InMemoryOrphans, ScriptedKernelHost, ScriptedLauncher } from '../support/in-memory-repl.mjs'
+import { agent, green, nominal, scripted, SLUG } from '../support/pipeline-host.mjs'
+
+const TRACE = `${SLUG}/logs/runs/deliver-1-1/runs.jsonl`
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
+
+/** A delivery attempt whose software engineer works as `work` says, with the REPL scripted by the test. */
+const delivery = ({ work, kernels = new ScriptedKernelHost(), launcher = new ScriptedLauncher(), commits = true }) => {
+  const host = scripted({}, (it) => [...nominal(it).map((behaviour, index) => (index !== 3 ? behaviour : agent({ trace: false, work: async (repos) => { await work(repl, host, repos); if (commits) green(SLUG, 'Checkout', '')(repos) } })(it))), () => ({ ok: false, unavailable: true, text: '' })])
+  host.deps.repl = { root: '/work', kernels, launcher, orphans: new InMemoryOrphans(), locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: 100, created: 'server-start' }, budgetMs: 40, digests: new HasherDigests(host.deps.hasher) }
+  const repl = createRepl(host.deps, { entry: null, reaped: false })
+  return { host, kernels, launcher }
+}
+
+/** The lines of the trace, parsed, with the signature each carries. @param {any} host */
+const traced = (host) => host.tracking.files.get(TRACE).split('\n').filter(Boolean).map((line) => JSON.parse(line))
+
+/** A signature as the engine checks it: the HMAC of the line without its sig under the run's key. @param {any} host @param {string} line */
+const signatureHolds = async (host, line) => {
+  const { sig, ...rest } = JSON.parse(line)
+  const keyId = host.events()[0].keyId
+  return (await host.deps.hasher.hmacSha256(await host.deps.journalKeys.read(keyId), JSON.stringify(rest))) === sig
+}
+
+test('every run writes a line when it starts and a line when it ends, with what the program did, and its log beside them', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('gate', async ({ run }) => { await run('dotnet test', { cwd: 'api', gate: 'test', label: 'unit', timeout: 120 }) })
+  const launcher = new ScriptedLauncher({ outputs: { 'dotnet test': { exitCode: 3, text: 'Failed: 1\n' } } })
+  const { host } = delivery({ kernels, launcher, work: async (repl) => { await repl.call({ code: 'gate' }) } })
+
+  await host.start()
+
+  const [started, ended] = traced(host)
+  assert.deepEqual([started.type, started.run, started.cell, started.command, started.cwd, started.gate, started.label], ['start', 1, 1, 'dotnet test', 'api', 'test', 'unit'])
+  assert.deepEqual(
+    [ended.type, ended.run, ended.argv, ended.shell, ended.cwd, ended.gate, ended.label, ended.exitCode, ended.signal, ended.timedOut, ended.killed, ended.started, ended.bytes, ended.cut, ended.log],
+    ['run', 1, ['sh', '-c', 'dotnet test'], 'sh', 'api', 'test', 'unit', 3, null, false, false, true, 10, false, `logs/runs/deliver-1-1/1.log`],
+  )
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`), 'Failed: 1\n')
+  assert.equal(ended.sha256, await host.deps.hasher.sha256('Failed: 1\n'))
+  assert.equal(traced(host).length, 2)
+  assert.equal(host.tracking.rewrites.get(TRACE) ?? 0, 0, 'each line is appended: the trace is never written again whole')
+})
+
+test('a trace line that cannot be written is told at the head of each next result, naming the run\'s unexpected.log and never the exception', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('gate', async ({ run }) => { await run('npm test', { gate: 'test' }) })
+  const answers = []
+  const { host } = delivery({ kernels, launcher: new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } }), work: async (repl, one) => {
+    const tracking = one.tracking
+    one.deps.files = {
+      read: (slug, path) => tracking.read(slug, path), list: (slug, folder) => tracking.list(slug, folder), write: (slug, path, text) => tracking.write(slug, path, text), location: (slug, path) => tracking.location(slug, path),
+      appendText: async (slug, path, text) => {
+        if (path.endsWith('runs.jsonl')) throw new Error('EACCES: permission denied, open /secret/runs.jsonl')
+        return tracking.appendText(slug, path, text)
+      },
+    }
+    answers.push(await repl.call({ code: 'gate' }), await repl.call({ code: '1' }))
+    one.deps.files = tracking
+  } })
+
+  await host.start()
+
+  const notice = `repl-trace-failed: a line of the trace of this attempt could not be written, so the trace is incomplete; the error is in /work/.copilot-tracking/skraft-plans/${SLUG}/logs/unexpected.log`
+  assert.deepEqual(answers.map(({ text }) => text.split('\n')[0]), [notice, notice])
+  assert.equal(answers.some(({ text }) => text.includes('EACCES')), false)
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /EACCES/)
+})
+
+test('each line carries the signature of the run\'s journal key, and a line edited afterwards no longer does', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('gate', async ({ run }) => { await run('npm test', { gate: 'test' }) })
+  const { host } = delivery({ kernels, launcher: new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } }), work: async (repl) => { await repl.call({ code: 'gate' }) } })
+
+  await host.start()
+
+  const lines = host.tracking.files.get(TRACE).split('\n').filter(Boolean)
+  assert.deepEqual(await Promise.all(lines.map((line) => signatureHolds(host, line))), [true, true])
+  assert.equal(await signatureHolds(host, lines[1].replace('"exitCode":0', '"exitCode":1')), false)
+})
+
+test('the line of a run holds Git\'s HEAD before and after it, so that a commit made while it ran shows, and whether the tree was clean when it started', async () => {
+  const kernels = new ScriptedKernelHost()
+  let during = null
+  const { host, launcher } = delivery({
+    kernels,
+    commits: false,
+    work: async (repl, one, { git }) => {
+      kernels.script.set('clean', async ({ run }) => { const pending = run('mvn verify', { gate: 'test' }); await sleep(5); green(SLUG, 'Checkout', '')({ git }); during = await git.head('.'); launcher.started[0].program.finish(); await pending })
+      kernels.script.set('dirty', async ({ run }) => { git.change('src/Dirty.cs'); const pending = run('mvn verify', { gate: 'test' }); await sleep(5); launcher.started[1].program.finish(); await pending })
+      kernels.script.set('tracking-only', async ({ run }) => { git.revert('src/Dirty.cs'); git.change('.copilot-tracking/skraft-plans/checkout/logs/x.log'); const pending = run('mvn verify', { gate: 'test' }); await sleep(5); launcher.started[2].program.finish(); await pending })
+      await repl.call({ code: 'clean' })
+      await repl.call({ code: 'dirty' })
+      await repl.call({ code: 'tracking-only' })
+      git.revert('src/Dirty.cs', '.copilot-tracking/skraft-plans/checkout/logs/x.log')
+    },
+  })
+
+  await host.start()
+
+  const ended = traced(host).filter(({ type }) => type === 'run')
+  assert.deepEqual(ended.map(({ clean }) => clean), [true, false, true])
+  assert.equal(ended[0].headAfter, during)
+  assert.notEqual(ended[0].headBefore, during)
+  assert.equal(ended[1].headBefore, during, 'the next run starts on the commit the first one made')
+  assert.equal(ended[1].headAfter, during)
+})
+
+test('the gates a cell runs before its commit line are traced on the commit that line starts from, in its cell (numbered across a reset), before it: what the lens takes for that commit\'s gates', async () => {
+  const kernels = new ScriptedKernelHost()
+  const { host, launcher } = delivery({
+    kernels,
+    commits: false,
+    work: async (repl, one, { git }) => {
+      kernels.script.set('warm-up', async () => {})
+      kernels.script.set('gates then commit', async ({ run }) => {
+        git.change('src/Checkout.cs')
+        for (const [at, gate] of ['build', 'format', 'lint', 'architecture'].entries()) { const pending = run(`npm run ${gate}`, { gate }); await sleep(2); launcher.started[at].program.finish(); await pending }
+        const line = run('npm test && git commit', { gate: 'test', label: 'green' })
+        await sleep(2)
+        green(SLUG, 'Checkout', '')({ git })
+        launcher.started[4].program.finish()
+        await line
+      })
+      await repl.call({ code: 'warm-up' })
+      await repl.reset()
+      await repl.call({ code: 'gates then commit' })
+    },
+  })
+
+  await host.start()
+
+  const ended = traced(host).filter(({ type }) => type === 'run')
+  const line = ended.at(-1)
+  assert.deepEqual(ended.map(({ run, cell, gate, label }) => [run, cell, gate, label]), [[1, 2, 'build', null], [2, 2, 'format', null], [3, 2, 'lint', null], [4, 2, 'architecture', null], [5, 2, 'test', 'green']])
+  assert.deepEqual(ended.slice(0, 4).map(({ clean, headBefore, headAfter }) => [clean, headBefore, headAfter]), Array.from({ length: 4 }, () => [false, line.headBefore, line.headBefore]))
+  assert.notEqual(line.headAfter, line.headBefore)
+})
+
+test('the awaited handle gives the HEAD the run ended on, the very value its line holds', async () => {
+  const kernels = new ScriptedKernelHost()
+  let awaited = null
+  const { host, launcher } = delivery({
+    kernels,
+    commits: false,
+    work: async (repl, one, { git }) => {
+      kernels.script.set('commit', async ({ run }) => { const pending = run('mvn verify', { gate: 'test' }); await sleep(5); green(SLUG, 'Checkout', '')({ git }); launcher.started[0].program.finish(); awaited = await pending })
+      await repl.call({ code: 'commit' })
+    },
+  })
+
+  await host.start()
+
+  const ended = traced(host).find(({ type }) => type === 'run')
+  assert.notEqual(ended.headAfter, ended.headBefore)
+  assert.equal(awaited.head, ended.headAfter)
+})
+
+test('a run\'s output past the limit of its log keeps its first and last halves around a marker, cut on whole characters, and the trace says it was cut', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('noisy', async ({ run }) => { await run('npm test') })
+  const text = `a${'é'.repeat(6)}zzzz${'é'.repeat(4)}b`
+  const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0, text } } })
+  const { host } = delivery({ kernels, launcher, work: async (repl, one) => {
+    one.deps.repl.logLimitBytes = 16
+    await repl.call({ code: 'noisy' })
+  } })
+
+  await host.start()
+
+  const log = host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`)
+  const [, ended] = traced(host)
+  assert.equal(log, 'aééé\n… the output was cut here: the log keeps its first and last halves …\néééb')
+  assert.deepEqual([ended.cut, ended.bytes, ended.sha256], [true, Buffer.byteLength(text), await host.deps.hasher.sha256(log)])
+})
+
+test('run ids go on across the kernels of an attempt: a run after a reset or a crash takes the next id, and the logs of earlier runs stay as they were', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('test', async ({ run }) => { await run('npm test') })
+  kernels.script.set('lint', async ({ run }) => { await run('npm run lint') })
+  const launcher = new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0, text: 'first\n' }, 'npm run lint': { exitCode: 0, text: 'second\n' } } })
+  const { host } = delivery({ kernels, launcher, work: async (repl) => {
+    await repl.call({ code: 'test' })
+    await repl.reset()
+    await repl.call({ code: 'lint' })
+    kernels.kernels.at(-1).die('crashed')
+    await repl.call({ code: 'test' })
+  } })
+
+  await host.start()
+
+  const ended = traced(host).filter(({ type }) => type === 'run')
+  assert.deepEqual(ended.map(({ run }) => run), [1, 2, 3])
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`), 'first\n')
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/2.log`), 'second\n')
+  assert.equal(ended[0].sha256, await host.deps.hasher.sha256('first\n'))
+})
+
+test('each cell keeps its code in cell-<n>.mjs beside the trace, written before it runs, and the numbering goes on after a reset', async () => {
+  const kernels = new ScriptedKernelHost()
+  const CELL = (n) => `${SLUG}/logs/runs/deliver-1-1/cell-${n}.mjs`
+  let seenWhileRunning = null
+  kernels.script.set('await run("npm test")', async () => { seenWhileRunning = host.tracking.files.get(CELL(1)) ?? null })
+  kernels.script.set('lib.e2e.only("S2")', async () => {})
+  kernels.script.set('1 + 1', async () => {})
+  const { host } = delivery({ kernels, work: async (repl) => {
+    await repl.call({ code: 'await run("npm test")' })
+    await repl.call({ code: 'lib.e2e.only("S2")' })
+    await repl.reset()
+    await repl.call({ code: '1 + 1' })
+  } })
+
+  await host.start()
+
+  assert.equal(seenWhileRunning, 'await run("npm test")')
+  assert.deepEqual([1, 2, 3].map((n) => host.tracking.files.get(CELL(n))), ['await run("npm test")', 'lib.e2e.only("S2")', '1 + 1'])
+})
+
+test('a cell refused as busy keeps no file, and the trace numbers a cell as its file does, across a reset and two calls at once', async () => {
+  const kernels = new ScriptedKernelHost()
+  const CELL = (n) => `${SLUG}/logs/runs/deliver-1-1/cell-${n}.mjs`
+  kernels.script.set('slow', async () => { await sleep(400) })
+  kernels.script.set('gate', async ({ run }) => { await run('npm test', { gate: 'test' }) })
+  const answers = []
+  const { host } = delivery({ kernels, launcher: new ScriptedLauncher({ outputs: { 'npm test': { exitCode: 0 } } }), work: async (repl, one) => {
+    answers.push(await repl.call({ code: 'slow' }), await repl.call({ code: 'refused while slow runs' }))
+    await repl.reset()
+    // A cell's code takes a while to keep: the second call arrives while the first one's is written.
+    const tracking = one.tracking
+    one.deps.files = Object.assign(Object.create(tracking), { write: async (slug, path, text) => { if (path.endsWith('.mjs')) await sleep(20); return tracking.write(slug, path, text) } })
+    answers.push(...(await Promise.all([repl.call({ code: 'gate' }), repl.call({ code: 'refused at once' })])))
+    one.deps.files = tracking
+  } })
+
+  await host.start()
+
+  assert.deepEqual(answers.map(({ code }) => code), [null, 'repl-busy', null, 'repl-busy'])
+  assert.deepEqual([1, 2, 3].map((n) => host.tracking.files.get(CELL(n)) ?? null), ['slow', 'gate', null])
+  assert.deepEqual(traced(host).map(({ type, cell }) => [type, cell]), [['start', 2], ['run', 2]])
+})
+
+test('a cell whose code cannot be kept still runs, and its result says the trace is incomplete, naming the run\'s unexpected.log', async () => {
+  const kernels = new ScriptedKernelHost()
+  let ran = false
+  kernels.script.set('work', async () => { ran = true })
+  const answers = []
+  const { host } = delivery({ kernels, work: async (repl, one) => {
+    const tracking = one.tracking
+    one.deps.files = {
+      read: (slug, path) => tracking.read(slug, path), list: (slug, folder) => tracking.list(slug, folder), appendText: (slug, path, text) => tracking.appendText(slug, path, text), location: (slug, path) => tracking.location(slug, path),
+      write: async (slug, path, text) => {
+        if (path.endsWith('.mjs')) throw new Error('ENOSPC: no space left on device, open /secret/cell-1.mjs')
+        return tracking.write(slug, path, text)
+      },
+    }
+    answers.push(await repl.call({ code: 'work' }))
+    one.deps.files = tracking
+  } })
+
+  await host.start()
+
+  assert.equal(ran, true)
+  assert.equal(answers[0].text.split('\n')[0], `repl-trace-failed: a line of the trace of this attempt could not be written, so the trace is incomplete; the error is in /work/.copilot-tracking/skraft-plans/${SLUG}/logs/unexpected.log`)
+  assert.equal(answers[0].text.includes('ENOSPC'), false)
+  assert.match(host.tracking.files.get(`${SLUG}/logs/unexpected.log`), /ENOSPC/)
+})
+
+test('a run refused before it started, and a program that could not start, are lines too, with started false', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('bad', async ({ run }) => { await run('npm test', { timeout: 0, gate: 'test' }) })
+  const { host } = delivery({ kernels, work: async (repl) => { await repl.call({ code: 'bad' }) } })
+
+  await host.start()
+
+  const ended = traced(host).filter(({ type }) => type === 'run')
+  assert.deepEqual(ended.map(({ run, started, exitCode, gate }) => [run, started, exitCode, gate]), [[1, false, null, 'test']])
+  assert.equal(host.tracking.files.get(`${SLUG}/logs/runs/deliver-1-1/1.log`), '')
+})
+
+test('a gate the cell declares absent is a line with its component and its reason, and one with no reason is none', async () => {
+  const kernels = new ScriptedKernelHost()
+  kernels.script.set('absent', async () => {
+    const { events } = kernels.kernels.at(-1)
+    events.onAbsent({ gate: 'coverage', component: 'api', reason: 'AGENTS.md names no coverage command', cell: 1 })
+    events.onAbsent({ gate: 'architecture', component: 'api', reason: '   ', cell: 1 })
+    await sleep(5)
+  })
+  const { host } = delivery({ kernels, work: async (repl) => { await repl.call({ code: 'absent' }) } })
+
+  await host.start()
+
+  assert.deepEqual(traced(host).map(({ type, gate, component, reason }) => [type, gate, component, reason]), [['absent', 'coverage', 'api', 'AGENTS.md names no coverage command']])
+})

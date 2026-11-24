@@ -129,7 +129,7 @@ panier. Le plan de test les liste en S1 et S2. Le concepteur écrit d'abord le w
 test simple qui commande par le vrai point d'entrée et vérifie le statut de la réponse, sa forme
 et le reçu que nomme S1, avec le squelette de la chaîne qu'il traverse, et les commite **en
 échec**. À son passage suivant, il écrit le test d'acceptation de S1, le binding du Gherkin par le
-cas d'usage, et le commite en échec lui aussi. Le moteur rejoue chaque test pour vérifier qu'il
+cas d'usage, et le commite en échec lui aussi. Le lancement du designer montre que chacun
 échoue sur une assertion. Après la revue, une personne lit les deux scénarios, le walking
 skeleton et le test de S1, et les approuve.
 
@@ -141,10 +141,10 @@ skeleton et le test de S1, et les approuve.
 ### Étape 6 — DELIVER : implémenter, guidé par les tests
 
 Le `software-engineer` rend S1 vert en **Outside-In TDD** : tests unitaires d'abord, puis le
-code, puis un commit vert, que le moteur rejoue : le test d'acceptation de S1 et le walking
+code, puis un commit vert : le test d'acceptation de S1 et le walking
 skeleton y passent tous deux. DISTILL écrit ensuite le test en échec de S2, et
-l'ingénieur le rend vert de la même façon. Le moteur lance les gates (build, tests, architecture,
-couverture), puis la revue DELIVER relit le code. Que les tests attraperaient une erreur dans la
+l'ingénieur le rend vert de la même façon. L'ingénieur lance les gates (build, tests, architecture,
+couverture) par `skraft_repl` et le moteur journalise leurs exécutions tracées, puis la revue DELIVER relit le code et ces exécutions. Que les tests attraperaient une erreur dans la
 règle de fidélité, la **mutation** que lance le développeur le montre, à part du pipeline.
 
 - **Ce qui entre :** le walking skeleton rouge + le test d'acceptation rouge de S1 + le plan.
@@ -164,7 +164,7 @@ d'ingénierie, sans perdre son contexte :
 | RESEARCH | Document de recherche cité + recommandation |
 | DESIGN | ADR ratifié (paiement via ACL) + modèle d'événements |
 | DISTILL | Scénarios Gherkin S1, S2 + walking skeleton rouge + test d'acceptation rouge de S1 |
-| DELIVER | Un commit rouge et un vert par scénario + code revu + pull request |
+| DELIVER | Un seul commit vert pour toute l'histoire, les groupes travaillés dans l'ordre du plan, après le rouge unique de DISTILL + code revu + pull request |
 
 Chaque artefact est devenu le **contexte** de l'étape suivante, et chaque relais est resté
 relisible : ce qui n'était pas écrit n'a pas été transmis.

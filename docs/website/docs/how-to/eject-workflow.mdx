@@ -19,7 +19,7 @@ and keep it up to date with the plugin.
 
 | To adapt… | Command | File written |
 |---|---|---|
-| the pipeline (phases, DESIGN and DISTILL reviews, gates, publication) | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
+| the pipeline (phases, DESIGN and DISTILL reviews, DELIVER and its review, publication) | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
 | the DELIVER review, also run by `skraft review --pr` | `skraft workflow eject review` | `.skraft/review.skraft.dot` |
 
 ```text
@@ -39,15 +39,13 @@ Some common edits, in `.skraft/pipeline.skraft.dot`:
 
 | To… | Write |
 |---|---|
-| skip the locked gates (`gates`) | `unlock="<reason>"` on the node, which stays in place: `gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"]` |
-| run mutation in the pipeline, which the plugin's leaves to the developer | a `mutation [shape=parallelogram, gate="mutation", goal_gate=true, phase="DELIVER"]` node between the gates and the review: `gates -> mutation [label="PASS"]`, `mutation -> deliver_review [label="PASS"]`, `mutation -> deliver [label="FAIL", max_visits=3]` |
 | allow more rework on a loop | change `max_visits` on the back edge: `design_review -> design [label="NEEDS_REWORK", max_visits=5]` |
 | remove a lens that is not mandatory | delete its `shape=note` node and its two edges |
 | add a lens of the team | [Add a lens to a review](./customise-review.md) |
 | add a step run by a repository agent | [Add a repository agent to the pipeline](./add-repository-agent.md) |
 | change an agent's model family | `model="<family>"` on its node ([Choose the agents' models](./choose-models.md)) |
 
-The reason of an `unlock` is carried into the run's journal and pull request. The reviews' fan-ins,
+The pipeline holds no gate node: the software engineer runs the gates through `skraft_repl`, and mutation is a recipe of your session ([Run mutation](./run-mutation.md)). The reviews' fan-ins,
 the `deliver_review` call and, in the review, `verdict`, `test_integrity` and
 `architecture_boundaries` are mandatory: no copy can remove or bypass them.
 
@@ -58,11 +56,11 @@ $ skraft workflow check
 $ skraft workflow diff
 ```
 
-Expected result, for skipped gates:
+Expected result, for a loop given more rework:
 
 ```text
-.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH; gates is unlocked and skipped: the team runs the gates in its own CI
-~ node gates: unlock none → the team runs the gates in its own CI
+.skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH
+~ edge design_review -> design: max_visits 2 → 5
 .skraft/pipeline.skraft.dot: 1 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 
@@ -74,7 +72,7 @@ After the plugin is updated, `diff` reports the version gap on its first line:
 
 ```text
 skraft_version 2.0.0-alpha.17 → 2.0.0-alpha.19
-~ edge gates -> deliver: max_visits 2 → 3
+~ edge deliver_review -> deliver: max_visits 2 → 3
 .skraft/pipeline.skraft.dot carries skraft_version 2.0.0-alpha.17, this plugin is 2.0.0-alpha.19; 1 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 
@@ -98,8 +96,7 @@ Delete the copy (`.skraft/pipeline.skraft.dot` or `.skraft/review.skraft.dot`) a
 | Message | Action |
 |---|---|
 | `.skraft/pipeline.skraft.dot already exists; edit it, or remove it` | Edit the existing copy, or rename it before copying (step 4). |
-| `locked node gates is missing; keep it with unlock="<reason>" to skip it` | Put the node back and add `unlock="<reason>"`. |
-| `<node> reaches the exit without passing gates; keep the run going through gates, or skip gates with unlock="<reason>"` | A node added after the gates bypasses them: place it before `gates`. |
+| `a gate node is gone: skraft runs no gate. …` (or `goal_gate`, `locked`, `unlock`, `each`, `proposal` `is gone …`) | The copy was ejected before the engine dropped its gates and its mutation: remove the node or the attribute, with its PASS and FAIL edges; `skraft workflow diff` shows the plugin's pipeline ([Retired attributes](../reference/workflow-dot.mdx#retired-attributes)). |
 | `loop a -> b -> a has no max_visits` | Add `max_visits` on an edge of the loop. |
 | `mandatory node … is missing; this node is mandatory and cannot be removed` | Put the mandatory node back. |
 | `the workflow has no node <id> any more; restore the workflow the run started with` | A run in progress was on the removed node: put the node back until that run finishes, or start a new slug. |
@@ -107,7 +104,7 @@ Delete the copy (`.skraft/pipeline.skraft.dot` or `.skraft/review.skraft.dot`) a
 ## Next steps {/* #next-steps */}
 
 - [The DOT workflow](../reference/workflow-dot.mdx) — syntax, validity rules,
-  [locked](../reference/workflow-dot.mdx#locked-nodes) and
+  [retired attributes](../reference/workflow-dot.mdx#retired-attributes) and
   [mandatory nodes](../reference/workflow-dot.mdx#mandatory-nodes).
 - [`skraft workflow`](../reference/cli-maintenance.md) — output and exit codes.
 - [Adapting skraft: what each setting costs](../explanation/customisation-trade-offs.md)

@@ -27,9 +27,9 @@ One comment per run, on the story's issue. The run finds it again by a hidden ma
 
 ### Facts <!-- #progress-facts -->
 
-- **Holds**: `Reviews: <step> <outcome> (N passes), ...` or `Reviews: none yet.`; `Quality gates:` with one line per gate, `<component>/<gate> <status>[, N surviving mutants] · <evidence>`; `Pull request: <url>[ (updated)]`; `Total: N attempts, N retries, <time>, cost <cost>`, followed by a note that the cost is approximate; where the run report and the evidence are, in the working copy under the run's tracking folder.
-- **Read it to**: judge the run without opening the pull request: which reviews passed and how many passes they took, which gates are green, what the run cost.
-- **Act when**: a gate is not green or has surviving mutants, or a review took several passes. The pull request is described in [Pull request and review comment](./pull-request.md).
+- **Holds**: `Reviews: <step> <outcome> (N passes), ...` or `Reviews: none yet.`; `Quality evidence:` with one line per gate run, `<component>/<gate> run <n> · <evidence>`; `Pull request: <url>[ (updated)]`; `Total: N attempts, N retries, <time>, cost <cost>`, followed by a note that the cost is approximate; where the run report and the evidence are, in the working copy under the run's tracking folder.
+- **Read it to**: judge the run without opening the pull request: which reviews passed and how many passes they took, which gate runs the evidence stands on, what the run cost.
+- **Act when**: a gate you expected has no run in the evidence, or a review took several passes. The pull request is described in [Pull request and review comment](./pull-request.md).
 
 ### Steps <!-- #progress-steps -->
 

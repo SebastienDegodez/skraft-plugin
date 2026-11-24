@@ -8,36 +8,33 @@ import { instructionOf } from '../decisions/questions.mjs'
  * @typedef {{
  *   visit: number, attempt: number, phase: string, agent: string | null, gates: string[] | null,
  *   question: string | null, outputs: string[], missing: string[], feedback: string[], instruction: string | null,
- *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, heads: Head[], group: number | null,
+ *   sentBy: 'review' | 'ask' | 'answer' | null, heads: Head[],
  * }} OpenAttempt
  *   sentBy: the kind of node whose failures or refusal opened this visit, null otherwise;
- *   instruction: the human's answer to a block that opened this visit, apart from its feedback; group:
- *   which of the visit's groups of surviving mutants the attempt works on, from 1.
+ *   instruction: the human's answer to a block that opened this visit, apart from its feedback.
  * @typedef {{
- *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[],
- *   sentBy: 'gate' | 'review' | 'ask' | 'answer' | null, redByGateFailure: boolean,
- *   groups: Group[],
+ *   visit: number, attempt: number, outputs: string[], documents: string[], heads: Head[], firstHeads: Head[], gates: string[] | null,
+ *   sentBy: 'review' | 'ask' | 'answer' | null,
  *   open: OpenAttempt | null, last: RunEvent | null, previous: RunEvent | null,
  * }} NodeState
  *   visit: how many times the run entered the node; attempt: within that visit. outputs: the
  *   paths of the node's first dispatch, which every later one reuses. documents: every document of
  *   the tracking folder the node's attempts wrote, outputs included. heads: the first
- *   attempt's of this visit. sentBy: what sent the run back into this visit, kept for each of
- *   its attempts. redByGateFailure: this visit started on gate failures, which stand for its red
- *   commit; a visit the review or a human refusal opened has no failing test, so its agent
- *   commits a red one, as does a visit a human's choice opened. groups: the surviving mutants this visit works on, one dispatch per file,
- *   or the story's scenarios, one visit each.
- * @typedef {import('../gates/mutation-report.mjs').SurvivorGroup | import('../pipeline/scenarios.mjs').StoryScenario} Group
- * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[], command: 'test' | 'e2e' }} Oracle
- *   the red commit of a scenario's acceptance test: files relative to the working copy; command:
- *   the command whose replay proved it, which its green replays too.
+ *   attempt's of this visit; firstHeads: those of the node's first visit, from which a delivery
+ *   reopened after a block lists the commits of the earlier visits' attempts. sentBy: what sent
+ *   the run back into this visit, kept for each of its attempts. gates: the gates a step of an earlier engine ran, kept to tell a retired node.
+ * @typedef {{ scenario: number, sha: string, subject: string, component: string, files: string[] }} Oracle
+ *   the red commit holding a scenario's acceptance test: files relative to the working copy.
  * @typedef {{
  *   list: import('../pipeline/scenarios.mjs').StoryScenario[], exemption: import('../pipeline/scenarios.mjs').Exemption,
- *   oracles: Record<number, Oracle>, skeleton: Oracle | null, delivered: number,
+ *   groups: import('../pipeline/scenarios.mjs').DeliveryGroup[],
+ *   oracles: Record<number, Oracle>, skeleton: Oracle | null, reds: Oracle[], delivered: number,
  * }} Scenarios
- *   the story's scenarios as the last plan the acceptance designer wrote lists them, the red of
- *   each scenario's acceptance test, the red of the walking skeleton the plan's pass committed
- *   (null for a story exempt of one), and how many scenarios a green made pass since.
+ *   the story's scenarios as the last plan the acceptance designer wrote lists them, the groups
+ *   its implementation plan delivers them in, the one red holding every scenario's acceptance
+ *   test (kept by scenario), the same red as the walking skeleton's (null for a story exempt of
+ *   one), every red of acceptance tests any plan recorded (kept past a REVISE: the files no green
+ *   changes), and delivered: the last group a delivery pass made pass, 0 while none did.
  *   last and previous: this visit's last two step.recorded.
  * @typedef {{
  *   key: string, kind: import('../decisions/questions.mjs').QuestionKind, step: string, visit: number,
@@ -57,8 +54,6 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   last: RunEvent | null,
  *   traversals: Record<string, number>,
  *   phaseStarted: Record<string, string>,
- *   replayMs: Record<string, number>,
- *   replayWarned: string[],
  *   finished: RunEvent | null,
  *   stopped: RunEvent | null,
  *   attempts: number,
@@ -68,8 +63,8 @@ import { instructionOf } from '../decisions/questions.mjs'
  *   scenarios: Scenarios | null,
  * }} RunState
  *   last: the run's last step.recorded; traversals: how often each edge `from->to` was taken;
- *   phaseStarted: when the first step of each phase started; replayMs: time spent replaying
- *   red commits, per phase. questions: by key; question: the last one asked whose answer is not
+ *   phaseStarted: when the first step of each phase started
+ *   questions: by key; question: the last one asked whose answer is not
  *   acted on yet (a step recorded after it, or a RETRY, acts on it).
  */
 
@@ -115,12 +110,9 @@ const untraversed = () => ({
   traversals: {},
 })
 
-/** @returns {Pick<RunState, 'phaseStarted' | 'replayMs' | 'replayWarned'>} */
+/** @returns {Pick<RunState, 'phaseStarted'>} */
 const untimed = () => ({
   phaseStarted: {},
-  replayMs: {},
-  // Stryker disable next-line ArrayDeclaration: no phase is named like the placeholder
-  replayWarned: [],
 })
 
 /** @returns {Pick<RunState, 'finished' | 'stopped' | 'attempts' | 'costUsd' | 'questions' | 'question' | 'scenarios'>} */
@@ -161,6 +153,7 @@ const enteredNode = (before, event) => {
     attempt: event.attempt,
     outputs: before?.outputs ?? open.outputs,
     documents: before?.documents ?? [],
+    firstHeads: before?.firstHeads ?? open.heads,
     ...thisVisit(before, open, event),
     previous: null,
   }
@@ -177,7 +170,6 @@ const openAttempt = (event) => ({
   feedback: event.feedback,
   ...causeOf(event),
   heads: event.heads,
-  group: event.group ?? null,
 })
 
 /** What opened the attempt's visit: the kind of node, a human's instruction. @param {RunEvent} event */
@@ -190,21 +182,12 @@ const nodeOf = (event) => ({ agent: event.agent ?? null, gates: event.gates ?? n
  * A new visit starts from the attempt's heads and feedback; a later attempt keeps the visit's.
  * @param {NodeState | undefined} before @param {OpenAttempt} open
  * @param {RunEvent} event the step.started of the attempt
- * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'redByGateFailure' | 'groups' | 'open' | 'last'>}
+ * @returns {Pick<NodeState, 'heads' | 'sentBy' | 'gates' | 'open' | 'last'>}
  */
 const thisVisit = (before, open, event) => {
-  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, redByGateFailure: redByGates(open.feedback, open.sentBy), groups: event.groups ?? [], open, last: null }
-  return { heads: before.heads, sentBy: before.sentBy, redByGateFailure: before.redByGateFailure, groups: before.groups, open, last: before.last }
+  if (before?.visit !== open.visit) return { heads: open.heads, sentBy: open.sentBy, gates: open.gates, open, last: null }
+  return { heads: before.heads, sentBy: before.sentBy, gates: open.gates, open, last: before.last }
 }
-
-/**
- * Whether the failures that opened a visit stand for its red commit: the gates' do; a review's
- * findings, a human's refusal or choice name no failing test.
- * @param {string[] | undefined} feedback @param {OpenAttempt['sentBy']} sentBy
- */
-export const redByGates = (feedback, sentBy) => (feedback?.length ?? 0) > 0 && !NO_RED.includes(String(sentBy))
-
-const NO_RED = Object.freeze(['review', 'ask', 'answer'])
 
 /** @param {RunState} run @param {RunEvent} event */
 const recorded = (run, event) => {
@@ -212,7 +195,7 @@ const recorded = (run, event) => {
   node.previous = node.last
   node.last = event
   node.documents = [...new Set([...node.documents, ...(event.documents ?? [])])]
-  addTotals(run, event, /** @type {OpenAttempt} */ (node.open).phase)
+  addTotals(run, event)
   node.open = null
   run.last = event
   run.traversals[edgeKey(event.step, event.next)] = (run.traversals[edgeKey(event.step, event.next)] ?? 0) + 1
@@ -221,23 +204,27 @@ const recorded = (run, event) => {
 }
 
 /**
- * The story's scenarios after a step: a plan the acceptance designer wrote starts them over,
- * keeping no red but the walking skeleton and the one it records; a red of an acceptance test is kept by scenario; a
- * green counts its scenario delivered.
+ * The story's scenarios after a step: a plan the acceptance designer wrote starts them over with
+ * the red it records, kept by scenario; a green counts its group delivered.
  * @param {Scenarios | null} scenarios @param {RunEvent} event @returns {Scenarios | null}
  */
 const scenariosAfter = (scenarios, event) => {
-  const planned = event.scenarios ? { list: event.scenarios, exemption: event.exemption, oracles: {}, skeleton: event.skeleton ?? null, delivered: 0 } : scenarios
+  const planned = event.scenarios ? plannedFrom(event, scenarios?.reds ?? []) : scenarios
   if (planned === null) return null
-  return { ...planned, oracles: withOracle(planned.oracles, event.oracle), delivered: Math.max(planned.delivered, event.green?.scenario ?? 0) }
+  return { ...planned, oracles: withOracles(planned.oracles, event.oracles), reds: withReds(planned.reds, event.oracles), delivered: Math.max(planned.delivered, event.green?.group ?? 0) }
 }
 
-/** @param {Record<number, Oracle>} oracles @param {Oracle | undefined} oracle */
-const withOracle = (oracles, oracle) => (oracle ? { ...oracles, [oracle.scenario]: oracle } : oracles)
+/** A plan a step recorded, which starts the story's scenarios over, the reds of earlier plans kept. @param {RunEvent} event @param {Oracle[]} reds @returns {Scenarios} */
+const plannedFrom = (event, reds) => ({ list: event.scenarios, exemption: event.exemption, groups: event.groups ?? [], oracles: {}, skeleton: event.skeleton ?? null, reds, delivered: 0 })
 
-/** What a recorded step adds to the run's replay time and cost. @param {RunState} run @param {RunEvent} event @param {string} phase */
-const addTotals = (run, event, phase) => {
-  if (typeof event.replayMs === 'number') run.replayMs[phase] = (run.replayMs[phase] ?? 0) + event.replayMs
+/** The reds recorded so far and the one a plan's pass just recorded, each once. @param {Oracle[]} reds @param {Oracle[] | undefined} recorded */
+const withReds = (reds, recorded = []) => [...reds, ...recorded.filter(({ sha }) => !reds.some((red) => red.sha === sha)).slice(0, 1)]
+
+/** @param {Record<number, Oracle>} oracles @param {Oracle[] | undefined} recorded */
+const withOracles = (oracles, recorded = []) => (recorded.length === 0 ? oracles : { ...oracles, ...Object.fromEntries(recorded.map((oracle) => [oracle.scenario, oracle])) })
+
+/** What a recorded step adds to the run's cost. @param {RunState} run @param {RunEvent} event */
+const addTotals = (run, event) => {
   if (typeof event.cost === 'number') run.costUsd = (run.costUsd ?? 0) + event.cost
 }
 
@@ -289,11 +276,6 @@ const closed = (run, event) => {
 }
 
 /** @param {RunState} run @param {RunEvent} event */
-const replaySlow = (run, event) => {
-  run.replayWarned.push(event.phase)
-}
-
-/** @param {RunState} run @param {RunEvent} event */
 const finished = (run, event) => {
   run.finished = event
 }
@@ -304,7 +286,6 @@ const ON_EVENT = Object.freeze({
   'step.started': started_,
   'step.recorded': recorded,
   'phase.closed': closed,
-  'tdd.replay-slow': replaySlow,
   'question.asked': asked,
   'question.answered': answered,
   'run.finished': finished,

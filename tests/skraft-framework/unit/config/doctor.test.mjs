@@ -27,7 +27,7 @@ const doctor = ({ components = [API, WEB], config = {}, machine = new ScriptedMa
 /** Without models in any file: Claude Code has the plugin's aliases, Copilot no model at all. */
 const BY_DEFAULT = [
   { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
-  { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches), economy (1 dispatch); these run on the session's model" },
+  { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (3 dispatches), implementer (2 dispatches), economy (1 dispatch); these run on the session's model" },
 ]
 
 /** The infrastructure lines of API and of WEB mocking with Microcks, and the runtime that answers. */
@@ -91,7 +91,7 @@ test('doctor names where each runner reads a component\'s scenarios, fails on a 
 
 const failures = (report) => report.checks.filter((check) => check.status === 'fail').map(({ subject, detail }) => `${subject}: ${detail}`)
 
-test('every program found and the forge reachable: doctor passes without running any command of a component, asks the container runtime whether it answers, and shows the infrastructure of each component\'s tests', async () => {
+test('the forge is reachable: doctor passes and lists every command of a component without starting one, and shows the infrastructure of each component\'s tests', async () => {
   const { machine, doctor: check } = doctor({ components: [API, MICROCKS_WEB] })
 
   const report = await check.check()
@@ -102,49 +102,19 @@ test('every program found and the forge reachable: doctor passes without running
       { subject: 'node', status: 'ok', detail: 'Node v22.11.0' },
       { subject: 'config', status: 'ok', detail: '2 components: api, web' },
       { subject: 'forge', status: 'ok', detail: 'github, deduced from the Git remote' },
-      { subject: 'api/build', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
-      { subject: 'api/test', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
-      { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
-      { subject: 'web/test', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
-      { subject: 'web/e2e', status: 'ok', detail: 'npx → /usr/local/bin/npx' },
-      { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; no mutation run on feat/checkout yet: skraft mutation starts one' },
+      { subject: 'screenshots', status: 'ok', detail: 'attached to the pull request by the forge\'s client' },
+      { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo (listed; skraft_repl starts it, never skraft)' },
+      { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo --logger trx (listed; skraft_repl starts it, never skraft)' },
+      { subject: 'api/mutation', status: 'ok', detail: 'dotnet stryker --since:{baseSha} (listed; skraft_repl starts it, never skraft)' },
+      { subject: 'web/test', status: 'ok', detail: 'npx vitest run --reporter=junit (listed; skraft_repl starts it, never skraft)' },
+      { subject: 'web/e2e', status: 'ok', detail: 'npx playwright test (listed; skraft_repl starts it, never skraft)' },
       ...INFRASTRUCTURE,
-      DOCKER,
       ...BY_DEFAULT,
       NO_SDK,
     ],
   })
-  assert.deepEqual(machine.lines(), ['. $ docker info'])
+  assert.deepEqual(machine.lines(), [])
 })
-
-test('doctor names the container runtime that answers when a component\'s policy runs a container, docker first, else warns that Microcks and Testcontainers scenarios will be indeterminate, never failing; it asks none when no policy runs one', async () => {
-  const INDETERMINATE = 'the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs'
-  const runtimeOn = async ({ installed = ['dotnet', 'npx'], exits = {}, components = [API, WEB] } = {}) => {
-    const machine = new ScriptedMachine({ installed, exits })
-    const report = await doctor({ components, machine }).doctor.check()
-    return { ok: report.ok, checks: report.checks.filter(({ subject }) => subject === 'container-runtime'), asked: machine.runs.filter(({ argv }) => argv[1] === 'info') }
-  }
-  const asked = (...runtimes) => runtimes.map((runtime) => ({ argv: [runtime, 'info'], cwd: '.', timeoutMs: 15_000 }))
-  const warned = (detail) => [{ subject: 'container-runtime', status: 'warn', detail: `${detail}; ${INDETERMINATE}` }]
-
-  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker', 'podman'] }), { ok: true, checks: [DOCKER], asked: asked('docker') })
-  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'podman'] }), { ok: true, checks: [{ subject: 'container-runtime', status: 'ok', detail: 'podman answers podman info' }], asked: asked('podman') })
-  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker', 'podman'], exits: { '. $ docker info': 1 } }), { ok: true, checks: [{ subject: 'container-runtime', status: 'ok', detail: 'podman answers podman info' }], asked: asked('docker', 'podman') })
-  assert.deepEqual(await runtimeOn(), { ok: true, checks: warned('neither docker nor podman is on the PATH'), asked: [] })
-  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker'], exits: { '. $ docker info': null } }), { ok: true, checks: warned('docker does not answer docker info'), asked: asked('docker') })
-  assert.deepEqual(await runtimeOn({ installed: ['dotnet', 'npx', 'docker', 'podman'], exits: { '. $ docker info': 1, '. $ podman info': 125 } }), {
-    ok: true, checks: warned('docker does not answer docker info, podman does not answer podman info'), asked: asked('docker', 'podman'),
-  })
-
-  const inProcess = { ...API, mocking: { strategy: 'inprocess' }, infrastructure: { internalGateway: { walkingSkeleton: 'in-memory' } } }
-  const msw = { ...WEB, infrastructure: { frontToBack: { e2e: 'msw' } } }
-  assert.deepEqual(await runtimeOn({ components: [inProcess, msw] }), { ok: true, checks: [], asked: [] })
-  const quiet = await doctor({ components: [inProcess, msw], machine: new ScriptedMachine({ installed: ['dotnet', 'npx', 'docker'] }) }).doctor.check()
-  assert.deepEqual(quiet.checks.slice(-4).map(({ subject }) => subject), ['infrastructure', 'models/claude-code', 'models/copilot', 'vscode'], 'the infrastructure lines lead straight to the models')
-  assert.deepEqual((await runtimeOn({ components: [inProcess, WEB] })).checks, warned('neither docker nor podman is on the PATH'), 'one component whose end-to-end run uses Microcks is enough')
-  assert.deepEqual((await runtimeOn({ components: [{ ...API, mocking: { strategy: 'inprocess' } }, msw] })).checks, warned('neither docker nor podman is on the PATH'), 'a walking skeleton on Testcontainers is enough')
-})
-
 test('doctor says how VS Code runs the pipeline: through the Copilot SDK the Copilot CLI ships, else the agent loop, configuration or not', async () => {
   const sdk = '/home/dev/.copilot/pkg/darwin-arm64/1.0.102-1/copilot-sdk'
   const found = new InMemoryCopilotSdk({ found: true, version: '1.0.102-1', sdk, cli: '/home/dev/.copilot/pkg/darwin-arm64/1.0.102-1/index.js' })
@@ -177,56 +147,28 @@ test('doctor names the forge a run uses and what chose it, and warns of what thi
   assert.deepEqual(await forgeOn({ codeHost: new InMemoryCodeHost({ unavailable: SIGNED_OUT }) }), [true, { subject: 'forge', status: 'warn', detail: `github, deduced from the Git remote: ${SIGNED_OUT}` }])
 })
 
-test('a command not found is named with the component and the command to change', async () => {
-  const { doctor: check } = doctor({ machine: new ScriptedMachine({ installed: ['docker', 'npx'] }) })
+/** The doctor's verdict and its screenshots line, for a working copy with a front end. */
+const screenshotsOn = async (codeHost, components = [API, MICROCKS_WEB]) => {
+  const report = await doctor({ components, codeHost }).doctor.check()
+  return [report.ok, report.checks.filter(({ subject }) => subject === 'screenshots')]
+}
+
+test('doctor says how a front end\'s screenshots reach the pull request, and warns, never failing, when the forge\'s client cannot show them', async () => {
+  const NO_ATTACH = 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots'
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost({ screenshotsBlocked: NO_ATTACH })), [true, [{ subject: 'screenshots', status: 'warn', detail: NO_ATTACH }]])
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost({ attachesFiles: false })), [true, [{ subject: 'screenshots', status: 'ok', detail: 'committed on the working branch and linked at their commit' }]])
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost(), [API]), [true, []])
+  assert.deepEqual(await screenshotsOn(new InMemoryCodeHost({ unavailable: SIGNED_OUT })), [true, []])
+})
+
+test('doctor never looks a command\'s program up: with no program installed, every command that parses passes', async () => {
+  const { machine, doctor: check } = doctor({ machine: new ScriptedMachine({ installed: [] }) })
 
   const report = await check.check()
 
-  assert.equal(report.ok, false)
-  assert.deepEqual(failures(report), [
-    'api/build: command not found: dotnet (from services/payment-api); install it or change commands.build in skraft-config.json',
-    'api/test: command not found: dotnet (from services/payment-api); install it or change commands.test in skraft-config.json',
-    'api/mutation: command not found: dotnet (from services/payment-api); install it or change commands.mutation in skraft-config.json',
-  ])
+  assert.deepEqual(failures(report), [])
+  assert.deepEqual(machine.lines(), [])
 })
-
-test('--run starts every command but mutation, the developer\'s to run, once from its component root, with the base, and names the one that fails with the log of its output', async () => {
-  const machine = new ScriptedMachine({ exits: { '../payment-web $ npx playwright test': 1 } })
-  const sourceControl = new InMemorySourceControl({
-    '.': { top: '.', mergeBases: { main: 'a1' } },
-    'services/payment-api': { top: '.', mergeBases: { main: 'a1' } },
-    '../payment-web': { top: '../payment-web', mergeBases: { main: 'w1' } },
-  })
-  const { doctor: check, workspace } = doctor({ machine, sourceControl })
-
-  const report = await check.check({ run: true })
-
-  assert.deepEqual(machine.lines(), [
-    'services/payment-api $ dotnet build --nologo',
-    'services/payment-api $ dotnet test --nologo --logger trx',
-    '../payment-web $ npx vitest run --reporter=junit',
-    '../payment-web $ npx playwright test',
-    '. $ docker info',
-  ])
-  assert.deepEqual(report.checks.slice(2).filter(({ subject }) => subject !== 'infrastructure'), [
-    { subject: 'forge', status: 'ok', detail: 'github, deduced from the Git remote' },
-    { subject: 'api/build', status: 'ok', detail: 'dotnet build --nologo passed' },
-    { subject: 'api/test', status: 'ok', detail: 'dotnet test --nologo --logger trx passed' },
-    { subject: 'api/mutation', status: 'ok', detail: 'dotnet → /usr/local/bin/dotnet' },
-    { subject: 'web/test', status: 'ok', detail: 'npx vitest run --reporter=junit passed' },
-    { subject: 'web/e2e', status: 'fail', detail: 'npx playwright test exited 1; its output is in .copilot-tracking/skraft-doctor/web/e2e.log' },
-    { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; no mutation run on feat/checkout yet: skraft mutation starts one' },
-    DOCKER,
-    ...BY_DEFAULT,
-    NO_SDK,
-  ])
-  assert.equal(
-    await workspace.read('.copilot-tracking/skraft-doctor/web/e2e.log'),
-    '$ npx playwright test\ncwd: ../payment-web\nresult: exited 1\n--- stdout\nnpx playwright test output\n\n--- stderr\nit failed\n\n',
-  )
-  assert.equal(await workspace.read('.copilot-tracking/skraft-doctor/web/test.log'), '$ npx vitest run --reporter=junit\ncwd: ../payment-web\nresult: exited 0\n--- stdout\nnpx vitest run --reporter=junit output\n\n--- stderr\n\n')
-})
-
 test('the families an ejected workflow names count, and those with no model for a host are a warning, not a failure', async () => {
   const workflow = edit(withLenses(BUILT_IN_WORKFLOW, 'design_review', ['consistency@gpt-luna', 'architecture-compliance', 'fitness@planner']),
     ['design_review [shape=tripleoctagon, mandatory=true]', 'design_review [shape=tripleoctagon, mandatory=true, refuter="kimi"]'],
@@ -238,7 +180,7 @@ test('the families an ejected workflow names count, and those with no model for 
 
   assert.deepEqual(await modelChecks(models({ frontier: { 'claude-code': null } })), [
     { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for planner (2 dispatches), frontier (5 dispatches); these run on the agent file's model" },
-    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (2 dispatches), reviewer (6 dispatches), kimi (1 dispatch), implementer (2 dispatches), frontier (5 dispatches), standard (1 dispatch), economy (1 dispatch); these run on the session's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (2 dispatches), reviewer (7 dispatches), kimi (1 dispatch), implementer (2 dispatches), frontier (5 dispatches), standard (1 dispatch), economy (1 dispatch); these run on the session's model" },
   ])
   const mapped = await doctor({ components: [API, WEB], files, config: models({ economy: copilot, standard: copilot, frontier: copilot }) }).doctor.check()
   assert.equal(mapped.ok, true)
@@ -249,45 +191,6 @@ test('the families an ejected workflow names count, and those with no model for 
   const unreadable = await doctor({ components: [API, WEB], files: { ...FOLDERS, '.skraft/pipeline.skraft.dot': 'digraph {}' }, config: models({}) }).doctor.check()
   assert.deepEqual(unreadable.checks.filter(({ subject }) => subject.startsWith('models')), [])
 })
-
-test('python is found in the component\'s virtual environment, else as python3, and doctor says where it looked when it is nowhere', async () => {
-  const PY = { name: 'py', root: 'services/py', stack: 'python', bdd: false, mocking: { strategy: 'inprocess' }, commands: { test: 'python -m pytest -q' } }
-  const files = { 'services/py/pyproject.toml': '' }
-  const sourceControl = new InMemorySourceControl({ '.': { top: '.', mergeBases: { main: 'a1' } }, 'services/py': { top: '.', mergeBases: { main: 'a1' } } })
-  const venv = doctor({ components: [PY], files, sourceControl, machine: new ScriptedMachine({ installed: ['python', 'services/py/.venv/Scripts/python.exe'] }) })
-  const python3 = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: ['python3'] }) })
-  const nowhere = doctor({ components: [PY], files, machine: new ScriptedMachine({ installed: [] }) })
-
-  assert.deepEqual((await venv.doctor.check()).checks[3], { subject: 'py/test', status: 'ok', detail: 'python → /work/services/py/.venv/Scripts/python.exe' })
-  assert.deepEqual((await python3.doctor.check()).checks[3], { subject: 'py/test', status: 'ok', detail: 'python → /usr/local/bin/python3' })
-  assert.deepEqual(failures(await nowhere.doctor.check()), [
-    'py/test: command not found: python (from services/py; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3); install it or change commands.test in skraft-config.json',
-  ])
-
-  const ran = await venv.doctor.check({ run: true })
-  assert.deepEqual(ran.checks[3], { subject: 'py/test', status: 'ok', detail: '.venv/Scripts/python.exe -m pytest -q passed' })
-  assert.deepEqual(venv.machine.lines(), ['services/py $ .venv/Scripts/python.exe -m pytest -q'])
-})
-
-test('--run names a command found on the machine that cannot be started, with the host\'s error', async () => {
-  const { doctor: check } = doctor({ components: [WEB], runner: new ScriptedMachine({ installed: [] }) })
-
-  const report = await check.check({ run: true })
-
-  assert.deepEqual(failures(report), ['web/test: command not found: npx', 'web/e2e: command not found: npx'])
-})
-
-test('--run without a base cannot start a {baseSha} command and says why', async () => {
-  const { doctor: check } = doctor({ components: [API], sourceControl: new InMemorySourceControl({ 'services/payment-api': { top: '.', mergeBases: {} } }) })
-
-  const report = await check.check({ run: true })
-
-  assert.deepEqual(failures(report), [
-    'base: component api (.) has no merge base with main; set baseBranch in skraft-config.json or pass --base <ref>',
-    'api/mutation: "dotnet stryker --since:{baseSha}" uses {baseSha} but the run has no base for this repository',
-  ])
-})
-
 test('a component asking for skills found nowhere is a warning naming them after its commands, never a failure: Java has no mocking or contract testing skill, JavaScript no mocking skill, TypeScript no contract testing skill', async () => {
   const orders = { name: 'orders', root: 'orders', stack: 'java', bdd: false, contractTesting: true, commands: { test: 'mvn test' } }
   const admin = { name: 'admin', root: 'admin', stack: 'javascript', bdd: false, commands: { test: 'npm test' } }
@@ -303,7 +206,6 @@ test('a component asking for skills found nowhere is a warning naming them after
     'orders/test ok', 'orders warn',
     'admin/test ok', 'admin warn',
     'shop/test ok', 'shop warn',
-    'mutation ok',
   ])
   assert.deepEqual(report.checks.filter(({ status, subject }) => status === 'warn' && !subject.startsWith('models')), [
     { subject: 'orders', status: 'warn', detail: 'skills found nowhere, in the plugin or the working copy: mocking-microcks-java, contract-testing-java; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop' },
@@ -321,27 +223,6 @@ test('no configuration, an empty one, an invalid one, a missing root or an old N
   assert.deepEqual(failures(await doctor({ files: { '../payment-web/package.json': '{}' }, components: [{ ...API, mocking: { strategy: 'inprocess' } }] }).doctor.check()), ['api: root services/payment-api is not a folder'])
   assert.deepEqual(failures(await doctor({ node: 'v20.18.0' }).doctor.check()), ['node: Node v20.18.0; skraft needs Node 22 or later'])
 })
-
-test('a command with shell syntax, or that sets variables before its program, is reported before any program is looked for; a program whose name holds = is looked for', async () => {
-  const commands = { test: 'npm test > out.txt', lint: 'NODE_ENV=test DEBUG= npx eslint .', build: 'CI=true', e2e: './e2e=smoke.sh' }
-  const { doctor: check } = doctor({ components: [{ ...WEB, commands }] })
-
-  assert.deepEqual(failures(await check.check()), [
-    'web/build: "CI=true" sets CI before its program, which no shell reads; put the variables and the command in a script and call the script',
-    'web/lint: "NODE_ENV=test DEBUG= npx eslint ." sets NODE_ENV, DEBUG before its program, which no shell reads; put the variables and the command in a script and call the script',
-    'web/test: "npm test > out.txt" uses shell syntax (>); put the steps in a script and call the script',
-    'web/e2e: command not found: ./e2e=smoke.sh (from ../payment-web); install it or change commands.e2e in skraft-config.json',
-  ])
-})
-
-test('a component with no gate command, mutation, the developer\'s, aside, or a --base that is not a ref, fails the doctor', async () => {
-  const { doctor: check } = doctor({ components: [{ ...WEB, commands: { e2e: 'npx playwright test', mutation: 'npx stryker run' } }] })
-  assert.deepEqual(failures(await check.check()), ['web: no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json'])
-
-  const flagged = doctor({ components: [{ ...API, mocking: { strategy: 'inprocess' } }] })
-  assert.deepEqual(failures(await flagged.doctor.check({ run: true, base: '--independent' }))[0], 'base: --base must be a git ref: text with no blank that does not start with -')
-})
-
 /** The journal of the branch's mutation run: started, then `events`, each written as the engine writes it. */
 const mutationJournal = (events, slug = 'feat-checkout') => {
   const runs = new InMemoryTracking({ root: '/work/.copilot-tracking/skraft-mutation' })
@@ -351,22 +232,3 @@ const mutationJournal = (events, slug = 'feat-checkout') => {
 
 /** The doctor's mutation line. */
 const mutationLine = async (options) => (await doctor(options).doctor.check()).checks.find(({ subject }) => subject === 'mutation')
-
-test('doctor tells which components declare a mutation command, and the last mutation run of the branch with its verdict; a failed one is worth knowing, never a failure', async () => {
-  const ran = (status, scores) => ({ type: 'gate.ran', gate: 'mutation', status, scores })
-
-  assert.deepEqual(await mutationLine({ components: [WEB] }), { subject: 'mutation', status: 'ok', detail: 'no component declares a mutation command; /skraft-init mutation declares one per component' })
-  assert.deepEqual(await mutationLine({ components: [API, { ...WEB, commands: { ...WEB.commands, mutation: 'npx stryker run' } }], mutationRuns: mutationJournal([
-    ran('pass', [{ scope: 'global', bar: 80, score: 91.4, counted: 12, survivors: [] }]), { type: 'run.finished', status: 'completed' },
-  ]) }), { subject: 'mutation', status: 'ok', detail: 'api, web declare a mutation command; last run on feat/checkout: mutation passed (global 91 %), ended' })
-  assert.deepEqual(await mutationLine({ mutationRuns: mutationJournal([
-    ran('fail', [{ scope: 'core', bar: 80, score: 70, counted: null, survivors: ['src/Pay.cs:3 x survived'] }, { scope: 'boundary', bar: 80, score: 85, counted: null, survivors: [] }]),
-    { type: 'step.started', step: 'kill_proposal' },
-  ]) }), { subject: 'mutation', status: 'warn', detail: 'api declares a mutation command; last run on feat/checkout: mutation failed (core 70 % < 80 %, boundary 85 %), going on' })
-  assert.deepEqual(await mutationLine({ mutationRuns: mutationJournal([ran('fail', null), { type: 'run.stopped', code: 'stopped' }]) }),
-    { subject: 'mutation', status: 'warn', detail: 'api declares a mutation command; last run on feat/checkout: mutation failed with no score, stopped' })
-  assert.deepEqual(await mutationLine({ mutationRuns: mutationJournal([]) }),
-    { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; last run on feat/checkout: mutation not judged yet, going on' })
-  assert.deepEqual(await mutationLine({ sourceControl: new InMemorySourceControl({}, { branch: null }) }),
-    { subject: 'mutation', status: 'ok', detail: 'api declares a mutation command; HEAD is on no branch: no mutation run to show' })
-})

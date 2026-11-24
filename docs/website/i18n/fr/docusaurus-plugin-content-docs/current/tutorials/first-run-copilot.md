@@ -46,7 +46,7 @@ $ git init -b main
 ```
 
 Le script `test` affiche chaque test et la raison de son échec sur la sortie standard, que le
-juge du rejeu lit quand le moteur rejoue un commit.
+designer d'acceptation lit quand il lance les tests d'acceptation.
 
 `web/src/cart.js` :
 
@@ -103,8 +103,9 @@ Dans la suite, `skraft …` veut dire cette commande complète, ou la commande `
 
 ![Terminal : skraft init répond « skraft-config.json: web (javascript, web) »](/img/screenshots/shared/terminal-init.svg)
 
-*Figure 1 — Un composant, `web`, avec ses commandes `test` et `mutation`, est écrit dans
-`skraft-config.json`. Le pipeline lance `test` ; `mutation` est à vous de la lancer.*
+*Figure 1 — Un composant, `web`, est écrit dans `skraft-config.json`, sans commande : écrivez-y
+son `"commands": { "test": "npm test" }`. L'ingénieur lance `test` par `skraft_repl` ; `mutation` est à vous de
+l'écrire et de la lancer.*
 
 Un run qui publie ne démarre que sur une configuration dont les consentements de publication sont
 réglés : répondez-y maintenant, dans `skraft-config.json`. Ce dépôt n'a pas de remote, donc
@@ -115,7 +116,7 @@ refusez les deux :
   "publish": {
     "pullRequest": false,
     "visuals": false,
-    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+    "questionVersions": { "pullRequest": 2, "visuals": 2 }
   },
   "components": [ … ]
 }
@@ -215,11 +216,11 @@ passe `Accepted` et le commite : `docs(adr): ratify ADR-001`.
 Une fois que les quatre lentilles de DISTILL ont approuvé les scénarios, le walking skeleton en
 échec et le test d'acceptation en échec de S1, Copilot pose une question de plus, d'en-tête
 **Scenarios** : elle nomme chaque scénario de la story dans l'ordre où DELIVER les construit, S1
-marqué walking skeleton, le commit du walking skeleton et le commit du test de S1. Ouvrez le plan
+marqué walking skeleton, les groupes que DELIVER fait passer et le commit des tests d'acceptation. Ouvrez le plan
 de test sous `.copilot-tracking/skraft-plans/checkout/details/` et ces commits, lisez-les, puis choisissez **APPROVED** dans le chat.
 
-Le run continue ensuite sans vous : un scénario à la fois, un commit vert que le moteur rejoue,
-puis le test en échec du scénario suivant ; puis les gates, la revue DELIVER, et la description de
+Le run continue ensuite sans vous : un seul passage du software engineer, un seul commit vert pour tous les groupes de scénarios,
+travaillés dans l'ordre du plan ; puis la revue DELIVER, qui lit les exécutions tracées de gates, et la description de
 la pull request. Le journal de `/workflows` se termine ainsi :
 
 ![Journal du workflow skraft-pipeline : phase PUBLISH, pr-writer, la pull request non ouverte car publish.pullRequest vaut false, PUBLISH closed, puis checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)

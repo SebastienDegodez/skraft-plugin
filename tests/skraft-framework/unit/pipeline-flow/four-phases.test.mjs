@@ -2,6 +2,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, nominal, pipelineHost, REFS_42, RESEARCH_TEMPLATE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 
+const EVIDENCE = "- Evidence: before the commit line, run the gates of each component you changed in one `skraft_repl` cell, with `gate(name, command, { cwd: <the component's root> })`, in this order: `build`, `format`, `lint`, `architecture`, `await` each before the next, never in parallel, and for a gate whose line above says `no command`, its `absent(…)` call as that line gives it, never a skipped gate; the last of these cells ends with the commit line, `run(line, { gate: 'test', label: 'green' })`, the run of `test` that commits. Fix every gate failure before the commit line, then run the cell again; no `style` commit. Then, on that commit and a clean tree, run `coverage`, or its `absent(…)` call, and `e2e` last when listed. The DELIVER review reports a gate of a component you changed with no passing traced run for that commit, unless you declared it with `absent(gate, component, reason)`; `test` is never absent. Await or kill every run before your result."
+
+/** The brief line of a gate the component names no command for: the exact call the engineer makes. */
+const absentLine = (component, gate) => `- ${component}: ${gate}: no command → absent('${gate}', '${component}', 'no command in skraft-config.json')`
+/** The gate lines of the API component, which names a command for build and test only. */
+const API_GATES = ['- api: build: dotnet build', absentLine('api', 'format'), absentLine('api', 'lint'), '- api: test: dotnet test', absentLine('api', 'architecture'), absentLine('api', 'coverage')]
+
 const RESEARCH = 'research/2026-10-11/checkout-research.md'
 const MATRIX = 'details/2026-10-11/consistency-matrix-checkout.md'
 const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
@@ -20,7 +27,7 @@ const POLICY = Object.freeze([
   '- Before you write your result, check your outputs against every gate of /plugin/skills/acceptance-review-criteria/SKILL.md, the gates the review of your phase judges them by, and fix each one they fail.',
 ])
 
-test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the gates and the delivery review closing it, then PUBLISH writes the pull request', async () => {
+test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the traced gate runs and the delivery review closing it, then PUBLISH writes the pull request', async () => {
   const scratchAtDispatch = []
   const host = scripted({}, (it) => nominal(it, REFS_42).map((behaviour, index) => async (dispatch) => {
     scratchAtDispatch.push(await it.tracking.list(SLUG, '.tmp'))
@@ -47,8 +54,7 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     `solution-researcher plugin skraft ${SLUG} · research · attempt 1`,
     `solution-architect plugin skraft ${SLUG} · design · attempt 1`,
     `acceptance-designer plugin skraft ${SLUG} · distill · attempt 1`,
-    `acceptance-designer plugin skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`,
-    `software-engineer plugin skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`,
+    `software-engineer plugin skraft ${SLUG} · deliver · attempt 1`,
     `pr-writer plugin skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.deepEqual(host.types(), [
@@ -57,13 +63,11 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     'step.started', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
-    'step.started', 'commits.checked', 'step.recorded',
-    'step.started', 'commits.checked', 'step.recorded',
+    'step.started', 'commits.checked', 'evidence.checked', 'step.recorded',
     'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'question.asked', 'question.answered', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
-    'step.started', 'commits.checked', 'step.recorded',
-    'step.started', 'gate.ran', 'gate.ran', 'step.recorded',
-    'step.started', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
+    'step.started', 'commits.checked', 'evidence.checked', 'step.recorded',
+    'step.started', 'review.lens', 'review.lens', 'review.lens', 'review.lens', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
     'step.started', 'step.recorded',
     'step.started', 'step.recorded', 'phase.closed', 'issue.comment-skipped',
@@ -80,12 +84,10 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     ['design', 'done', null, 'design_review'],
     ['design_review', 'approved', null, 'adr'],
     ['adr', 'skipped', null, 'distill'],
-    ['distill', 'done', null, null],
     ['distill', 'done', null, 'distill_review'],
     ['distill_review', 'approved', null, 'scenario_review'],
     ['scenario_review', 'answered', null, 'deliver'],
-    ['deliver', 'done', null, 'gates'],
-    ['gates', 'pass', null, 'deliver_review'],
+    ['deliver', 'done', null, 'deliver_review'],
     ['deliver_review', 'approved', null, 'visuals'],
     ['visuals', 'skipped', null, 'pr_writer'],
     ['pr_writer', 'done', null, 'publish'],
@@ -98,11 +100,10 @@ test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the ga
     'phase DESIGN', `${SLUG}: solution-architect, attempt 1 — planner · frontier · opus`,
     `${SLUG}: design_review (consistency, architecture-compliance, fitness) — reviewer · economy · haiku`, `${SLUG}: design_review APPROVED: every lens passed`,
     `${SLUG}: adr RATIFIED (no Proposed ADR to ratify)`, `${SLUG}: DESIGN closed`,
-    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · sonnet`, `${SLUG}: distill judges the red commit root-2 — standard · sonnet`,
-    `${SLUG}: acceptance-designer, pass 2, attempt 1 — implementer · standard · sonnet`, `${SLUG}: distill judges the red commit root-3 — standard · sonnet`,
+    'phase DISTILL', `${SLUG}: acceptance-designer, attempt 1 — implementer · standard · sonnet`,
     `${SLUG}: distill_review (coverage, business-alignment, testability, boundary-enforcement) — reviewer · economy · haiku`, `${SLUG}: distill_review APPROVED: every lens passed`, `${SLUG}: scenario_review APPROVED`, `${SLUG}: DISTILL closed`,
-    'phase DELIVER', `${SLUG}: software-engineer, attempt 1 — implementer · standard · sonnet`, `${SLUG}: deliver judges the green commit root-4 — standard · sonnet`, `${SLUG}: gates (build, format, lint, test, architecture, coverage)`,
-    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`, `${SLUG}: deliver_review APPROVED: every lens passed`,
+    'phase DELIVER', `${SLUG}: software-engineer, attempt 1 — implementer · standard · sonnet`,
+    `${SLUG}: deliver_review (test-integrity, architecture-boundaries, cold-reader, quality-gates, mock-fidelity, contract-fidelity) — reviewer · economy · haiku`, `${SLUG}: deliver_review APPROVED: every lens passed`,
     `${SLUG}: visuals: no component of skraft-config.json is a front end (stack react, or an e2e command)`, `${SLUG}: DELIVER closed`,
     'phase PUBLISH', `${SLUG}: pr-writer, attempt 1 — economy · haiku`, `${SLUG}: publish: pull request not opened: skraft-config.json sets publish.pullRequest to false; pull-request.md holds its description, and skraft publish opens it once that is fixed`, `${SLUG}: PUBLISH closed`,
 
@@ -114,7 +115,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
 
   await host.start({ story: { issue: 42, title: 'Pay by card' } })
 
-  const [research, design, , , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
+  const [research, design, , deliver] = host.agentRunner.dispatches.map((dispatch) => dispatch.prompt)
   assert.equal(research, [
     '## Skraft dispatch: solution-researcher (RESEARCH)',
     '- Story: #42 — Pay by card',
@@ -151,7 +152,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- CONTRIBUTING.md',
     '- AGENTS.md',
   ].join('\n'))
-  const [distillRed, firstRed] = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill').map((event) => event.commits[0].sha.slice(0, 7))
+  const [distillRed] = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill').map((event) => event.commits[0].sha.slice(0, 7))
   assert.equal(deliver, [
     '## Skraft dispatch: software-engineer (DELIVER)',
     '- Story: #42 — Pay by card',
@@ -166,7 +167,7 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     `- ${TRACKING}/${TEST_PLAN}`,
     '- Fill each output in place; keep the path, create no other copy:',
     `- ${TRACKING}/${CHANGE_LOG}`,
-    `- Write your result as JSON to ${TRACKING}/results/deliver-1-g1-1.json: ${RESULT_SHAPE}`,
+    `- Write your result as JSON to ${TRACKING}/results/deliver-1-1.json: ${RESULT_SHAPE}`,
     `- Send what the commands you run print to files under ${TRACKING}/logs/, and keep your temporary files under ${TRACKING}/.tmp/; write no file outside the working copy, the system's temporary folder included.`,
     '- Change nothing outside these paths of the working copy; the engine refuses the step otherwise:',
     `- .copilot-tracking/skraft-plans/${SLUG}`,
@@ -177,16 +178,19 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test',
     '- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.',
     '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
-    '- Scenario: 1 of 1 — "Customer pays by card" (component api, tags @walking-skeleton)',
-    '- Acceptance tests DISTILL committed, which you never change (a wrong one: stop blocked, naming it):',
-    `- ${firstRed} "test(checkout): scenario 1": tests/Acceptance/S1AcceptanceTests.cs`,
+    '- Groups, in the order you work them; their code and their unit tests go in one green commit (a group whose acceptance tests already pass needs no code: name the scenario whose code makes them pass on the change-log line):',
+    '- 1 of 1 — S1 "Customer pays by card" (component api, tags @walking-skeleton)',
+    '- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):',
     `- ${distillRed} "test(checkout): acceptance of the card payment": tests/Acceptance/CheckoutAcceptanceTests.cs`,
-    `- The walking skeleton ${distillRed} passes at your commit too, beside this scenario's acceptance test.`,
-    '- Make it pass with outside-in TDD, unit tests included, and commit nothing until it passes; change no file of another component than api.',
-    '- Once it passes, commit once, in bash (never PowerShell), naming each file you changed:',
-    '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): customer pays by card" -m "Refs: #42"',
-    '- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:',
-    '- api: build: dotnet build; test: dotnet test',
+    '- The walking skeleton passes in that commit, with every acceptance test and the whole suite.',
+    "- Deliver every group in this one pass, in this order, with outside-in TDD, unit tests included, and commit nothing until every acceptance test and the whole suite pass; change another component than the groups' own only where a group needs it, in the same commit. The pass ends when that one commit is made, or on a blocker.",
+    '- Commit once, naming each file you changed; in sh or PowerShell 7:',
+    '  dotnet test && git add <each file you changed> && git commit -s -m "feat(checkout): S1 <the rules of the story, as your implementation plan names them>" -m "Refs: #42"',
+    '  in Windows PowerShell 5.1:',
+    '  dotnet test; if ($?) { git add <each file you changed>; if ($?) { git commit -s -m "feat(checkout): S1 <the rules of the story, as your implementation plan names them>" -m "Refs: #42" } }',
+    '- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:',
+    ...API_GATES,
+    EVIDENCE,
   ].join('\n'))
   assert.ok(host.agentRunner.dispatches[2].prompt.endsWith([
     `- .copilot-tracking/skraft-plans/${SLUG}`,
@@ -197,26 +201,20 @@ test('each agent is told its story, inputs, outputs, result file and the paths i
     '- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test',
     '- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.',
     '- End every commit body with `Refs: #42`; never close the issue in a commit: the pull request closes it.',
-    '- Scenarios: write every scenario of the story, each tagged `@pending`, then list them in your test plan under a `## Scenarios` heading, as the table',
-    '  `| # | Scenario | Component | Tags |`, one row per scenario, S1, S2, … in the order DELIVER builds them, each in the component where its test lives.',
+    '- Scenarios: write every scenario of the story, then list them in your test plan under a `## Scenarios` heading, as the table',
+    '  `| # | Scenario | Component | Tags |`, one row per scenario, S1, S2, …, each in the component where its test lives.',
     '  S1 is the scenario the walking skeleton walks, tagged `@walking-skeleton`, in a back-end component; a story with no new entry point writes instead',
     '  `Walking skeleton exemption: library`, `refactoring` or `docs-only` under the table, and tags no scenario `@walking-skeleton`.',
+    '- Groups: in your implementation plan, the table `| Group | Scenarios | Rule | … |`, one row per group DELIVER works, in its order:',
+    '  the scenarios one rule of the story makes pass together (`S1, S2` or `S3–S5`), every scenario once, S1 in group 1.',
     '- Write the failing walking skeleton, a plain test with no Gherkin in the integration tests of S1\'s component: it enters by the real entry point,',
-    '  crosses the chain the production wiring builds, asserts the response\'s status, its shape and one value S1 names, and no other rule;',
-    '  with it, the skeleton of every class of that chain it lacks, each returning an empty value. Write no binding of a scenario:',
-    '  the acceptance test of S1 gets its own pass next. A story exempt of a walking skeleton writes none and commits its `.feature` files as `docs(<story>): …`.',
-    '- Run the walking skeleton once and read its output: it fails on an assertion. Then commit it, the skeleton of the chain and the scenarios in one commit, exactly:',
-    '  git commit -s -m "test(checkout): walking skeleton of <the title of S1, as your test plan writes it>" -m "Refs: #42"',
+    '  crosses the chain the production wiring builds, asserts the response\'s status, its shape and one value S1 names, and no other rule.',
+    '- Write the failing acceptance test of every scenario, the binding of its Gherkin entering by its use case, each test\'s name starting with its',
+    '  scenario\'s number (`S1_…`, `test_s1_…`); with them, the skeleton of every class they call, each returning an empty value.',
+    `- Run the acceptance tests once through \`skraft_repl\`, as \`gate('test', <the component\'s test command>, { cwd, label: 'red' })\`, and read its output: every acceptance test and the walking skeleton fail, each on its assertion. Then commit them, the skeleton they call and the scenarios in one commit, exactly:`,
+    '  git commit -s -m "test(checkout): acceptance tests S1–S<n>, n the last scenario of your test plan" -m "Refs: #42"',
     ...POLICY,
   ].join('\n')), host.agentRunner.dispatches[2].prompt)
-  assert.ok(host.agentRunner.dispatches[3].prompt.endsWith([
-    '- Scenario: 1 of 1 — "Customer pays by card" (component api, tags @walking-skeleton)',
-    '- Write the failing acceptance test of this scenario only, the binding of its Gherkin entering by its use case, beside the earlier ones, and extend the skeleton',
-    '  it calls; remove `@pending` from this scenario alone; change no test of an earlier scenario nor the walking skeleton, write none for a later one, never skip one.',
-    '- Run the test once and read its output: it fails on an assertion. Then commit the test and the skeleton in one commit, exactly:',
-    '  git commit -s -m "test(checkout): customer pays by card" -m "Refs: #42"',
-    ...POLICY,
-  ].join('\n')), host.agentRunner.dispatches[3].prompt)
 })
 
 test('the step journals its outputs, its result file and where each repository stood', async () => {
@@ -340,14 +338,14 @@ test('an agent the host cannot start stops the run without spending the attempt;
   assert.equal(host.events().filter((event) => event.type === 'step.started' && event.step === 'research').length, 1)
 })
 
-test('an agent that stops without finishing stops the run; one that answers nothing but did its work goes on', async () => {
-  const host = scripted({}, () => [() => ({ ok: false, text: '', error: 'aborted by the user' })])
+test('an agent a person stops without finishing stops the run; one that answers nothing but did its work goes on', async () => {
+  const host = scripted({}, () => [() => ({ ok: false, text: '', interrupted: true, error: 'aborted by the user' })])
 
   const outcome = await host.start()
 
   assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-failed', reason: 'solution-researcher stopped without finishing: aborted by the user' })
   assert.deepEqual(host.types(), ['run.started', 'step.started', 'run.stopped'])
-  host.agentRunner.behaviours.push(() => ({ ok: false, text: '' }))
+  host.agentRunner.behaviours.push(() => ({ ok: false, text: '', interrupted: true }))
   assert.equal((await host.run()).reason, 'solution-researcher stopped without finishing: no answer')
 
   host.agentRunner.behaviours.push(agent({ answer: { ok: false, text: '' } })(host), () => ({ ok: false, unavailable: true, text: '' }))
@@ -381,7 +379,7 @@ test('a run resumed once done dispatches nothing and writes nothing', async () =
   const again = await host.run()
 
   assert.deepEqual(again, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed' })
-  assert.equal(host.agentRunner.dispatches.length, 6)
+  assert.equal(host.agentRunner.dispatches.length, 5)
   assert.deepEqual(await host.tracking.lines(SLUG), lines)
 })
 
@@ -444,23 +442,23 @@ test('a configuration that became invalid stops the run before anything is dispa
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
-test('the engineer works on every component, each with its test command when it has one and the gate commands it runs before its result, mutation and other commands left out, a path list left out being the whole root', async () => {
+test('the engineer works on every component, each with its test command when it has one and each gate it runs before its result with its command or, without one, the exact absent call that declares it, a front end\'s e2e command last among them and mutation left out, a path list left out being the whole root', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', mocking: { strategy: 'inprocess' }, bdd: false, paths: { src: ['src'], tests: ['src'] }, commands: { lint: 'npx eslint .' } }
   const host = scripted({ components: [API, WEB] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
 
   await host.start()
 
-  const deliver = host.agentRunner.dispatches[4].prompt
+  const deliver = host.agentRunner.dispatches[3].prompt
   assert.ok(deliver.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)\n- ../web/* (the files right in the root of web)\n- Components:\n- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test\n- web: ../web (react), mocking: inprocess, contract testing: off, bdd: off\n`), deliver)
   assert.ok(host.agentRunner.dispatches[2].prompt.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- tests\n- ../web/src\n- ./* (the files right in the root of api)`))
-  assert.ok(deliver.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test\n- web: lint: npx eslint .`), deliver)
+  assert.ok(deliver.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n${[...API_GATES, absentLine('web', 'build'), absentLine('web', 'format'), '- web: lint: npx eslint .', absentLine('web', 'architecture'), absentLine('web', 'coverage')].join('\n')}\n${EVIDENCE}`), deliver)
 
-  const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
+  const partial = scripted({ components: [{ ...API, paths: { src: ['src'] } }, { ...WEB, paths: { tests: ['src'] }, commands: { e2e: 'npx playwright test', mutation: 'npx stryker run' } }] }, (it) => [agent()(it), agent()(it), agent()(it), () => ({ ok: false, unavailable: true, text: '' })])
   await partial.start()
-  const [distill, , engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
+  const [distill, engineer] = partial.agentRunner.dispatches.slice(2).map((dispatch) => dispatch.prompt)
   assert.ok(distill.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), distill)
   assert.ok(engineer.includes(`- .copilot-tracking/skraft-plans/${SLUG}\n- src\n- .\n- ../web\n- ../web/src\n- ./* (the files right in the root of api)`), engineer)
-  assert.ok(engineer.endsWith(`- Gate commands: before you write your result, run those of each component you changed, from its root, and fix every failure; the gates step runs them next and sends a failure back as a new pass:\n- api: build: dotnet build; test: dotnet test`), engineer)
+  assert.ok(engineer.endsWith(`- Gate commands: run those of each component you changed, from its root, through skraft_repl, and fix every failure; the DELIVER review reads the traced runs of your attempt:\n${[...API_GATES, ...['build', 'format', 'lint', 'architecture', 'coverage'].map((gate) => absentLine('web', gate)), '- web: e2e: npx playwright test'].join('\n')}\n${EVIDENCE}`), engineer)
 })
 
 test('the test and gate commands the engineer is given have the run\'s base in place of {baseSha}', async () => {
@@ -468,6 +466,6 @@ test('the test and gate commands the engineer is given have the run\'s base in p
 
   await host.start()
 
-  assert.ok(host.agentRunner.dispatches[4].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test --filter Since=root-0\n'))
-  assert.ok(host.agentRunner.dispatches[4].prompt.endsWith('\n- api: test: dotnet test --filter Since=root-0'), host.agentRunner.dispatches[4].prompt)
+  assert.ok(host.agentRunner.dispatches[3].prompt.includes('- api: . (dotnet), mocking: inprocess, contract testing: off, bdd: off, tests: dotnet test --filter Since=root-0\n'))
+  assert.ok(host.agentRunner.dispatches[3].prompt.endsWith(`\n- api: test: dotnet test --filter Since=root-0\n${absentLine('api', 'architecture')}\n${absentLine('api', 'coverage')}\n${EVIDENCE}`), host.agentRunner.dispatches[3].prompt)
 })

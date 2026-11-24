@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, API, finding, green, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, reworkCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { opening, section } from '../support/description.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
@@ -37,7 +37,7 @@ test('every lens of each phase passing approves the phase, and the run goes on t
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map(({ agent: id }) => id)), [
     ['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'],
     ['coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens'],
-    ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens'],
+    ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens'],
   ])
   assert.deepEqual(lensLabels(host).slice(0, 3), [
     `consistency-lens plugin skraft ${SLUG} · design_review · consistency · attempt 1`,
@@ -119,7 +119,7 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     '- Write no file, change nothing, start no agent.',
     ...answer('cold-reader'),
   ].join('\n'))
-  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing, BDD, gates that passed)': 'components' }
+  const KIND = { 'Review context (story, project rules, who wrote which document)': 'overview', 'Documents of this phase': 'outputs', 'Documents of the story and of the other phases': 'context', 'Paths those changes touch (a path with no section in the patch is a new file': 'files', 'Components (stack, mocking strategy, contract testing, BDD, gates with a traced run)': 'components', 'Trace of each delivering step (its runs.jsonl verified or invalid, with the reason code)': 'trace' }
   const kinds = (dispatch) => [...new Set(dispatch.prompt.split('\n').filter((line) => /^  - .+: \//.test(line)).map((line) => line.slice(4, line.indexOf(':'))).map((title) => KIND[title] ?? 'patch'))]
   assert.deepEqual(Object.fromEntries(host.agentRunner.reviewed().map((dispatch) => [dispatch.agent, kinds(dispatch)])), {
     'consistency-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
@@ -132,9 +132,11 @@ test('a lens reads only its own inputs; the cold reader gets neither the story n
     'test-integrity-lens': ['overview', 'outputs', 'context', 'patch', 'files'],
     'architecture-boundaries-lens': ['overview', 'context', 'patch', 'files', 'components'],
     'cold-reader-lens': ['patch', 'files'],
+    'quality-gates-lens': ['overview', 'outputs', 'patch', 'files', 'components', 'trace'],
   })
   assert.ok(prompt('test-integrity-lens', 'deliver_review').includes([
     `  - Documents of this phase: ${TRACKING}/${CHANGE_LOG}`,
+    `  - Documents of this phase: ${TRACKING}/logs/runs/deliver-1-1/runs.jsonl`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${ISSUE}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${RESEARCH}`,
     `  - Documents of the story and of the other phases: ${TRACKING}/${MATRIX}`,
@@ -161,7 +163,7 @@ test('the changes a lens reads are those since the base of the run, without the 
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changed-files.txt'), 'docs/adr/adr-001-card-payment.md\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/design_review-1/changes.patch'), 'diff --git a/docs/adr/adr-001-card-payment.md b/docs/adr/adr-001-card-payment.md\n+# ADR 001: pay by card\n')
   assert.equal(await host.tracking.read(SLUG, 'reviews/deliver_review-1/changed-files.txt'), [
-    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'tests/Acceptance/S1AcceptanceTests.cs', 'src/Checkout.cs', 'tests/CheckoutTests.cs', '',
+    'docs/adr/adr-001-card-payment.md', 'tests/Acceptance/CheckoutAcceptanceTests.cs', 'src/Checkout.cs', 'tests/CheckoutTests.cs', '',
   ].join('\n'))
 })
 
@@ -188,30 +190,30 @@ test('a lens whose trigger matches a changed path or an added line runs with the
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.adds('tests/CheckoutTests.cs', 'var server = WireMockServer.Start();')
-      git.commit('feat(checkout): Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
+      git.commit('feat(checkout): S1 Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs'])
     } })(it),
   ])
 
   await host.start()
 
-  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens'])
+  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'mock-fidelity-lens'])
   const mocks = host.agentRunner.batches.at(-1).at(-1).prompt
-  assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, BDD, gates that passed): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
-  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'test'] }])
+  assert.ok(mocks.includes(`  - Components (stack, mocking strategy, contract testing, BDD, gates with a traced run): ${TRACKING}/reviews/deliver_review-1/components.json`), mocks)
+  assert.deepEqual(JSON.parse(await host.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [{ name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, e2e: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] }])
 
-  const web = { ...API, name: 'web', root: 'web', bdd: false, paths: { src: ['src'], tests: ['tests'] } }
+  const web = { ...API, name: 'web', root: 'web', bdd: false, paths: { src: ['src'], tests: ['tests'] }, commands: { ...API.commands, e2e: 'npx playwright test' } }
   const contracts = scripted({ components: [{ ...API, mocking: undefined, contractTesting: true, bdd: [{ features: 'docs/features', steps: 'tests/Steps' }], commands: { architecture: 'dotnet test --filter Architecture', ...API.commands } }, web] }, (it) => [
     ...nominal(it).slice(0, 3),
     agent({ work: ({ git }) => {
       git.removes('src/Checkout.cs', 'var server = WireMockServer.Start();')
-      git.commit('feat(checkout): Checkout pays by card', ['tests/Contracts/PaymentContractTests.cs', 'src/Checkout.cs'])
+      git.commit('feat(checkout): S1 Checkout pays by card', ['tests/Contracts/PaymentContractTests.cs', 'src/Checkout.cs'])
     } })(it),
   ])
   await contracts.start()
-  assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'contract-fidelity-lens'])
+  assert.deepEqual(contracts.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'contract-fidelity-lens'])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/deliver_review-1/components.json')), [
-    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, bdd: true, gates: ['build', 'test', 'architecture'] },
-    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, gates: ['build', 'test'] },
+    { name: 'api', root: '.', stack: 'dotnet', mocking: { strategy: 'microcks' }, contractTesting: true, bdd: true, e2e: false, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
+    { name: 'web', root: 'web', stack: 'dotnet', mocking: { strategy: 'inprocess' }, contractTesting: false, bdd: false, e2e: true, gates: ['build', 'format', 'lint', 'test', 'architecture', 'coverage'] },
   ])
   assert.deepEqual(JSON.parse(await contracts.tracking.read(SLUG, 'reviews/design_review-1/components.json'))[0].gates, [])
 })
@@ -224,8 +226,8 @@ test('a lens runs on the trigger its node names, whichever lens it is: none runs
 
   assert.equal((await host.start()).status, 'done')
 
-  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'mock-fidelity-lens'])
-  assert.deepEqual(host.events().find((event) => event.type === 'step.started' && event.step === 'deliver_review').lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'mock-fidelity', 'contract-fidelity'])
+  assert.deepEqual(host.agentRunner.batches.at(-1).map(({ agent: id }) => id), ['test-integrity-lens', 'architecture-boundaries-lens', 'quality-gates-lens', 'mock-fidelity-lens'])
+  assert.deepEqual(host.events().find((event) => event.type === 'step.started' && event.step === 'deliver_review').lenses, ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates', 'mock-fidelity', 'contract-fidelity'])
 })
 
 test('a blind lens reads the changes without the decision records and design documents of the run: no ADR, no supersession registry, no context map, event model or scenario', async () => {
@@ -773,7 +775,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
   const after = host.events().slice(host.events().findIndex((event) => event.type === 'question.answered'))
   assert.deepEqual(after.filter((event) => event.type === 'phase.closed' || event.type === 'step.started').slice(0, 4).map(({ type, phase, step }) => `${type} ${phase} ${step ?? ''}`.trim()), [
     // The resumed run picks up the open attempt of deliver: no new step.started for it, no question again.
-    'step.started DISTILL scenario_review', 'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER gates',
+    'step.started DISTILL scenario_review', 'phase.closed DISTILL', 'step.started DELIVER deliver', 'step.started DELIVER deliver_review',
   ])
   assert.deepEqual(reviews(host).filter(([step]) => step !== 'design_review'), [
     ['distill_review', 1, 'needs-rework', 'distill'], ['distill_review', 2, 'needs-rework', 'distill'], ['distill_review', 3, 'needs-rework', null],
@@ -781,13 +783,11 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
     ['deliver_review', 1, 'approved', 'visuals'],
   ])
   assert.deepEqual(host.agentRunner.dispatches.filter((dispatch) => dispatch.agent === 'acceptance-designer').map(({ label }) => label), [
-    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 3 · attempt 1`, `skraft ${SLUG} · distill · pass 4 · scenario 1 of 1 · attempt 1`,
-    `skraft ${SLUG} · distill · pass 5 · attempt 1`, `skraft ${SLUG} · distill · pass 6 · scenario 1 of 1 · attempt 1`,
+    `skraft ${SLUG} · distill · attempt 1`, `skraft ${SLUG} · distill · pass 2 · attempt 1`, `skraft ${SLUG} · distill · pass 3 · attempt 1`,
   ])
   const engineer = host.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer')
   assert.ok(!engineer.prompt.includes('A human refused') && !engineer.prompt.includes('What pass'), engineer.prompt)
-  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, 1]])
+  assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'deliver').map(({ visit, attempt, missing, feedback, sentBy, instruction, group }) => [visit, attempt, missing, feedback, sentBy, instruction, group]), [[1, 1, [], [], undefined, undefined, undefined]])
   const report = await host.tracking.read(SLUG, 'run-report.md')
   // Only what the ceiling's question asked about: not design_review's findings, not the consents answered ACCEPTED before.
   assert.equal(report.slice(report.indexOf('## Accepted findings'), report.indexOf('## Forge writes') < 0 ? report.indexOf('Started at') : report.indexOf('## Forge writes')), [
@@ -803,7 +803,7 @@ test('ACCEPT given with skraft decide at the ceiling of distill_review closes DI
 test('ACCEPT at the ceiling of deliver_review, a call to .skraft/review.skraft.dot, goes on by its APPROVED edge to the visuals (#499)', async () => {
   const host = scripted({ answers: [{ answer: 'ACCEPT' }] }, (it) => [
     ...nominal(it),
-    agent({ work: tddCycle(SLUG, 'Refund') })(it), agent({ work: tddCycle(SLUG, 'Discount') })(it),
+    agent({ work: reworkCycle(SLUG, 'Refund') })(it), agent({ work: reworkCycle(SLUG, 'Discount') })(it),
   ])
   const low = says('test-integrity', 'fail', [finding('F1', 'low', 'the refund test name says nothing', { gate: 'G7', location: 'tests/CheckoutTests.cs:9' })])
   host.agentRunner.review = lenses({ 'test-integrity': [low, low, low] })
@@ -931,7 +931,7 @@ test('the engine reads in the patch the skips added to tests, the test files del
       git.patched('src/latest.ts', ['--- a/src/latest.ts', '+++ b/src/latest.ts', '@@ -2,1 +2,0 @@', '-  expect(version).toBe(2)'])
       git.patched('tests/fixtures/payment.json', ['deleted file mode 100644', '--- a/tests/fixtures/payment.json', '+++ /dev/null'])
       git.patched('src/specs/payment.yaml', ['deleted file mode 100644', '--- a/src/specs/payment.yaml', '+++ /dev/null'])
-      git.commit('feat(checkout): Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'tests/TotalTests.cs', 'tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml'])
+      git.commit('feat(checkout): S1 Checkout pays by card', ['tests/CheckoutTests.cs', 'src/Checkout.cs', 'tests/TotalTests.cs', 'tests/RefundTests.cs', 'src/test_refunds.py', 'src/App.test.tsx', 'src/latest.ts', 'tests/fixtures/payment.json', 'src/specs/payment.yaml'])
     } })(it),
   ])
   const unavailable = { ok: false, text: '', unavailable: true, error: 'finding-refuter is not installed' }
@@ -977,3 +977,21 @@ test('the engine reads in the patch the skips added to tests, the test files del
   await clean.start()
   assert.deepEqual(clean.events().filter((event) => event.type === 'review.lens' && event.lens === 'test-integrity#patch'), [])
 })
+
+test('the review of DISTILL reads the designer\'s traced run of the acceptance tests, labelled red, among the documents of its phase, and no other log', async () => {
+  const host = scripted({}, (it) => [
+    agent()(it), agent()(it),
+    async (dispatch) => {
+      await it.tracking.write(SLUG, 'logs/other.log', 'noise\n')
+      return agent()(it)(dispatch)
+    },
+    agent()(it),
+  ])
+
+  await host.start()
+
+  const lens = host.agentRunner.reviewed().find((dispatch) => dispatch.agent === 'testability-lens' && dispatch.label.includes('distill_review'))
+  assert.ok(lens.prompt.includes(`  - Documents of this phase: ${TRACKING}/logs/runs/distill-1-1/1.log\n`), lens.prompt)
+  assert.ok(!lens.prompt.includes('logs/other.log'), lens.prompt)
+})
+

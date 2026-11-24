@@ -73,7 +73,7 @@ test('commitCopies copies each file byte for byte where it is kept, ignored or n
   assert.equal(git(root, 'status', '--porcelain'), 'M services/api/Payment.cs\n?? .gitignore')
 })
 
-test('commitCopies refuses a symbolic link, a file that resolves outside its folder, a file that is no PNG or is missing, and copies nothing then', async (t) => {
+test('commitCopies and refusedImages refuse, by Git alone, a symbolic link, a file that resolves outside its folder, a file that is no PNG or is missing, and copy nothing then', async (t) => {
   const { root, sourceControl } = withScreenshots(t)
   const visuals = join(root, 'web', 'skraft-visuals')
   writeFileSync(join(root, 'secret.png'), PNG)
@@ -90,6 +90,8 @@ test('commitCopies refuses a symbolic link, a file that resolves outside its fol
   const refused = await sourceControl.commitCopies('.', [copy('checkout-light.png'), ...wrong.map(copy)], 'docs(evidence): screenshots of web')
 
   assert.deepEqual(refused, { ok: false, error: `refused ${wrong.length} files`, refused: wrong.map((name) => `web/skraft-visuals/${name}`) })
+  assert.deepEqual(await sourceControl.refusedImages('.', [copy('checkout-light.png'), ...wrong.map(copy)]), wrong.map((name) => `web/skraft-visuals/${name}`))
+  assert.deepEqual(await sourceControl.refusedImages('.', [{ from: 'web/skraft-visuals/checkout-light.png', within: 'services' }]), ['web/skraft-visuals/checkout-light.png'])
   assert.equal(git(root, 'diff', '--cached', '--name-only'), '')
   assert.equal(git(root, 'log', '-1', '--format=%s'), 'initial')
 })

@@ -15,7 +15,7 @@
 const FOLDED = Object.freeze(['fan-out', 'lens', 'refuter'])
 
 /** The lenses the engine gave a trigger before a workflow named it, with that trigger. */
-const FORMER_TRIGGERS = Object.freeze({ __proto__: null, 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' })
+const FORMER_TRIGGERS = Object.freeze({ __proto__: null, 'quality-gates': 'delivery', 'mock-fidelity': 'mock', 'contract-fidelity': 'contract' })
 
 /** @param {Nodes} nodes @param {string} id */
 const kindOf = (nodes, id) => nodes[id]?.kind

@@ -1,33 +1,26 @@
 ---
 title: "Run mutation on your branch"
-description: "Declare each component's mutation command, run mutation on your branch apart from any story, kill the survivors, read the verdict, or leave mutation out."
+description: "Declare each component's mutation command, then run mutation on your branch in your own session with the skraft-mutation skill and kill the survivors."
 persona: software-engineer
 ---
 
 # Run mutation on your branch
 
-Mutation testing is yours: no story's pipeline mutates. Declare the command once, run it on your
-branch when you choose, and let skraft hand the surviving mutants to agents that propose and write
-the tests that kill them.
+Mutation testing is yours: neither a story's pipeline nor the engine runs it. Declare the command
+once, then run it on your branch when you choose, in your own session, with the `skraft-mutation`
+skill.
 
 ## Prerequisites
 
 - A `skraft-config.json` with its components ([Configure the components](./configure-components.md)).
-- Your branch checked out: a mutation run is the run of the branch HEAD is on.
-- A terminal at the root of the working copy; `skraft` is the command that [`npm i -g @skraft/cli`](./install-on-a-host.mdx#skraft-command) sets up; the long line `node "<plugin folder>/engine/drivers/cli/skraft.mjs"` works without it.
+- Your branch checked out.
 
 ## 1. Declare the mutation command of each component
 
-Ask your agent for `/skraft-init mutation`, or write them yourself:
-
-```console
-$ skraft init --mutation
-skraft-config.json already lists every project found (2 components); mutation: api, web
-```
-
-It writes the command of each stack ([the defaults](../reference/skraft-config.md)) to the
-components that have none, and keeps a command you wrote. It installs nothing: Stryker, PIT or
-mutmut, and their configuration, are yours to add. To leave a component out, remove its
+Ask your agent for `/skraft-init mutation`, or write them yourself under `commands.mutation` of
+each component in `skraft-config.json`. skraft holds no mutation command of any stack: the agent
+proposes one per component, and you confirm or rewrite it. Nothing is installed: Stryker, PIT or
+mutmut, and their configuration, are yours to add. To leave a component out, give it no
 `mutation` key.
 
 The command either writes its result, score already computed, to the file the environment
@@ -35,58 +28,31 @@ variable `SKRAFT_MUTATION_RESULT` names, or leaves the report its tool writes at
 default path ([The mutation result](../reference/skraft-config.md#mutation-result)). The bar is
 80 % for each scope.
 
-## 2. Run mutation on your branch
+## 2. Run the recipe
 
-From your agent: `/skraft-mutation`. From a terminal:
+Ask your agent to run mutation on your branch: it loads the `skraft-mutation` skill. The recipe:
 
-```console
-$ skraft mutation
-```
+1. For each component with a `commands.mutation`, run the command in Bash from the component's root.
+2. Read the report the command leaves.
+3. Judge each scope (the core, the boundary) against the bar, on the files your branch changed
+   since its merge base.
+4. Kill the survivors with tests, then run the command again.
 
-The run lives in `.copilot-tracking/skraft-mutation/<branch>/`, apart from any pipeline. Each
-component's command runs against its merge base, uncommitted changes included. A scope at the bar
-or above ends the run there.
+The engine runs none of this and journals nothing of it.
 
-## 3. Kill the survivors
+## 3. Read the verdict
 
-Below the bar, the run hands one proposal agent per file of survivors over (`dispatch`). The
-agent your host conducts starts them and saves their replies, then:
-
-```console
-$ skraft mutation record
-```
-
-The run then asks you for the plan (`mutation-plan`). Your agent asks it in the chat and relays
-your reply with the `skraft_mutation` tool; from a terminal, answer it yourself:
-
-```console
-$ skraft mutation decide APPLY
-```
-
-`APPLY` has the proposals written as tests, reviewed, gated, then mutated again; an instruction in
-quotes replaces them; `STOP` ends the run. Run `skraft mutation` again to go on.
-
-## 4. Read the verdict
-
-```console
-$ skraft doctor
-ok    mutation: api, web declare a mutation command; last run on feat/refund: mutation passed (core 86 %, boundary 92 %), ended
-```
-
-A failed verdict is a warning, never a failure. The next `skraft mutation` starts afresh on the
-code as it stands.
+A scope at the bar or above passes. Below it, the survivors of the changed files are the work left:
+each one is killed by a test that fails on it, never by a test written for the mutant alone.
 
 ## Leave mutation out
 
-Remove the `mutation` key of each component: `skraft mutation` then refuses with
-`no-mutation-command`, and doctor says that no component declares one. To change the workflow
-itself, eject it: [Eject the workflow](./eject-workflow.mdx).
+Remove the `mutation` key of each component: the skill then has nothing to run and says so. To
+change the workflow itself, eject it: [Eject the workflow](./eject-workflow.mdx).
 
 ## Troubleshooting
 
-| Refusal | What to do |
+| Symptom | What to do |
 | --- | --- |
-| `detached-head` | check out the branch to mutate, then run again |
-| `no-mutation-command` | step 1 |
-| `refused (not-recorded)` | start the agents listed, save their replies, then `skraft mutation record` |
-| `environment` on the mutation gate | the command did not run or its result cannot be read: the reason names the file; fix the command, check it with `skraft doctor` |
+| The skill finds no mutation command | step 1 |
+| The command's report cannot be read | check the path of the report, or have the command write `SKRAFT_MUTATION_RESULT` |

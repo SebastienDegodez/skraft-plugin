@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryCodeHost, ScriptedMachine } from '../support/in-memory-host.mjs'
 import { edit } from '../workflow/support.mjs'
-import { agent, CYCLE, finding, green, lenses, nominal, prWriter, PROSE_TEMPLATE_FR, refutes, REFS_42, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
+import { agent, finding, green, lenses, nominal, prWriter, PROSE_TEMPLATE_FR, refutes, REFS_42, says, scripted, SLUG, tddCycle } from '../support/pipeline-host.mjs'
 import { opening, section } from '../support/description.mjs'
 import { answerYaml } from '../support/answer-yaml.mjs'
 
@@ -42,7 +42,23 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '',
     '## Décisions appliquées',
     '',
-    'Aucune consignée : aucun ADR n\'a été ratifié et aucune porte verrouillée n\'a été déverrouillée dans ce run.',
+    'Aucune consignée : aucun ADR n\'a été ratifié dans ce run.',
+    '',
+    '## QA',
+    '',
+    'QA : 1/1 scénarios réussis sur `root-3` (run r4, 0 s).',
+    '',
+    'Plan de test : `details/2026-10-11/test-plan-checkout.md` dans le dossier de suivi, son texte entier sous Tests.',
+    '',
+    'Livré n\'est pas déployé : ces runs prouvent les tests sur le commit final, rien d\'un environnement.',
+    '',
+    '<details><summary>Résultats des scénarios: 1/1</summary>',
+    '',
+    '| # | Scénario | AC | Composant | RED | Green | Run final | Nommé dans le log | Capture |',
+    '| ---: | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| S1 | Customer pays by card | — | api | `root-2` | `root-3` | r4 sur `root-3` | non | — |',
+    '',
+    '</details>',
     '',
     '<details><summary>Matrice de cohérence</summary>',
     '',
@@ -66,27 +82,26 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '|---|---|---|---|',
     '| S1 | Customer pays by card | api | `@walking-skeleton` |',
     '',
-    'Findings for distill.',
+        '</details>',
+    '',
+    '<details><summary>Preuves RED: 1 commit red</summary>',
+    '',
+    '| Commit | Sujet |',
+    '| --- | --- |',
+    '| `root-2` | test(checkout): acceptance of the card payment |',
     '',
     '</details>',
     '',
-    '<details><summary>Preuves RED: 2 commits red</summary>',
+    '<details><summary>Preuves de qualité: 6 réussies</summary>',
     '',
-    '| Commit | Sujet | Code de sortie du rejeu |',
-    '| --- | --- | ---: |',
-    '| `root-2` | test(checkout): acceptance of the card payment | 1 |',
-    '| `root-3` | test(checkout): scenario 1 | 1 |',
-    '',
-    'Les extraits de sortie des rejeux ne sont pas encore consignés.',
-    '',
-    '</details>',
-    '',
-    '<details><summary>Portes de qualité: 2 réussies</summary>',
-    '',
-    '| Composant | Porte | Commande | Résultat | Durée | Preuve |',
-    '| --- | --- | --- | --- | ---: | --- |',
-    '| api | build | `dotnet build` | pass | 0 s | `gates/api/build-1.log` |',
-    '| api | test | `dotnet test` | pass | 0 s | `gates/api/test-1.log` |',
+    '| Porte | Dossier | Run | Preuve |',
+    '| --- | --- | ---: | --- |',
+    '| build | `.` | 1 | `logs/runs/deliver-1-1/1.log` |',
+    '| format | `.` | 2 | `logs/runs/deliver-1-1/2.log` |',
+    '| lint | `.` | 3 | `logs/runs/deliver-1-1/3.log` |',
+    '| test | `.` | 4 | `logs/runs/deliver-1-1/4.log` |',
+    '| architecture | `.` | 5 | `logs/runs/deliver-1-1/5.log` |',
+    '| coverage | `.` | 6 | `logs/runs/deliver-1-1/6.log` |',
     '',
     '</details>',
     '',
@@ -116,16 +131,15 @@ test('a French story\'s pull request is in French: the pr-writer fills a French 
     '| design | DESIGN | 1 | 1 | 0 | 0 s | - | done |',
     '| design_review | DESIGN | 1 | 1 | 0 | 0 s | - | approved |',
     '| adr | DESIGN | 1 | 1 | 0 | 0 s | - | skipped |',
-    '| distill | DISTILL | 2 | 2 | 1 | 0 s | - | done |',
+    '| distill | DISTILL | 1 | 1 | 0 | 0 s | - | done |',
     '| distill_review | DISTILL | 1 | 1 | 0 | 0 s | - | approved |',
     '| scenario_review | DISTILL | 1 | 1 | 0 | 0 s | - | answered |',
     '| deliver | DELIVER | 1 | 1 | 0 | 0 s | - | done |',
-    '| gates | DELIVER | 1 | 1 | 0 | 0 s | - | pass |',
     '| deliver_review | DELIVER | 1 | 1 | 0 | 0 s | - | approved |',
     '| visuals | DELIVER | 1 | 1 | 0 | 0 s | - | skipped |',
     '| pr_writer | PUBLISH | 1 | 1 | 0 | 0 s | - | done |',
     '| publish | PUBLISH | 1 | 1 | 0 | 0 s | - | en cours |',
-    '| Total | | | 14 | 1 | 0 s | - | |',
+    '| Total | | | 12 | 0 | 0 s | - | |',
     '',
     PRUNE,
     '',
@@ -187,33 +201,18 @@ test('a French story\'s review, failed gate, decisions and costs are told in Fre
     '</details>',
   ].join('\n'))
 
-  const onward = 'digraph p {\n  start [shape=Mdiamond]\n  deliver [shape=box, agent="software-engineer", phase="DELIVER"]\n  gates [shape=parallelogram, gate="build,test"]\n  publish [shape=parallelogram, publish="pull-request", phase="PUBLISH"]\n  exit [shape=Msquare]\n  start -> deliver -> gates\n  gates -> publish\n  gates -> publish [label="FAIL"]\n  publish -> exit\n}'
-  const failed = scripted({ config: CONSENTED, codeHost: french(), workflow: onward, machine: new ScriptedMachine({ exits: { '. $ dotnet test': 1 } }) }, (it) => [agent({ answer: { ok: true, text: 'done', costUsd: 0.5, model: 'claude-sonnet-5' }, work: tddCycle(SLUG, 'Checkout', REFS_42) })(it)])
+  const failed = scripted({ config: CONSENTED, codeHost: french() }, (it) => [...nominal(it, REFS_42)])
   await failed.start(FRENCH)
   const failing = await bodyOf(failed)
-  assert.equal(opening(failing, 'Portes de qualité'), '<details open><summary>Portes de qualité: 1 en échec, 1 réussie</summary>')
   assert.equal(opening(failing, 'Preuves RED'), '<details><summary>Preuves RED: 1 commit red</summary>')
-  assert.ok(section(failing, 'Résumé du run').endsWith('\n\nLes coûts sont approximatifs (~) : chacun est ce que la session Claude Code a coûté pendant que l\'agent tournait ; il inclut donc tout autre échange de cette session pendant ce temps.\n\n' + PRUNE), section(failing, 'Résumé du run'))
-  assert.equal(section(failing, 'Mention de l\'IA'), 'Cette pull request a été préparée par skraft avec des agents IA sur les familles de modèles implementer (modèles nommés par l\'hôte : claude-sonnet-5). Ce qui change, Pourquoi et Hors périmètre ont été rédigés par l\'agent pr-writer ; toutes les autres sections sont rendues par le moteur à partir du journal du run. Un humain la relit avant sa fusion.')
-
-  const lastRed = scripted({ ...CYCLE, config: { ...CONSENTED, tdd: { replay: 'last-red' } }, codeHost: french() }, (it) => [...nominal(it, REFS_42).slice(0, 2), agent({ work: (h) => {
-    h.git.commit('test(checkout): acceptance of the card payment', ['tests/Acceptance/CheckoutAcceptanceTests.cs'], REFS_42)
-    tddCycle(SLUG, 'Checkout', REFS_42)(h)
-    h.git.commit('test(checkout): Checkout refunds', ['tests/RefundTests.cs'], REFS_42)
-    h.git.commit('feat(checkout): Checkout refunds', ['src/Refund.cs'], REFS_42)
-  } })(it), agent()(it)])
-  await lastRed.start(FRENCH)
-  assert.ok(section(await bodyOf(lastRed), 'Preuves RED').includes('\n| `root-3` | test(checkout): Checkout pays by card | non rejoué |\n'), section(await bodyOf(lastRed), 'Preuves RED'))
 
   const adr = '---\nadr: 1\ntitle: Card payment\nstatus: Proposed\nsupersedes: null\nratified_by: null\n---\n\n# ADR-001 — Card payment\n\n**Status:** Proposed\n'
-  const unlocked = edit(BUILT_IN_WORKFLOW, ['locked=true, phase="DELIVER"', 'locked=true, unlock="the team runs the gates in its own CI", phase="DELIVER"'])
-  const decided = scripted({ config: CONSENTED, codeHost: french(), workflow: unlocked, files: { 'docs/adr/adr-001-card-payment.md': adr }, answers: [{ answer: 'RATIFIED' }] }, (it) => [
+  const decided = scripted({ config: CONSENTED, codeHost: french(), files: { 'docs/adr/adr-001-card-payment.md': adr }, answers: [{ answer: 'RATIFIED' }] }, (it) => [
     agent()(it), agent()(it), agent()(it), agent({ work: green(SLUG, 'Checkout', REFS_42) })(it),
   ])
   await decided.start(FRENCH)
   assert.equal(section(await bodyOf(decided), 'Décisions appliquées'), [
     '- ADR-001 Card payment (`docs/adr/adr-001-card-payment.md`), ratifié dans ce run',
-    '- Porte verrouillée `gates` sautée, déverrouillée : the team runs the gates in its own CI',
   ].join('\n'))
 })
 
@@ -253,11 +252,11 @@ test('a French story whose run has no pr-writer, no red commit, no gate, no test
   const description = await host.tracking.read(SLUG, 'pull-request.md')
   assert.ok(description.startsWith('Payer par carte\n\nCloses #42\n\n## Ce qui change\n\nNon rédigé : le run n\'a aucune étape pr-writer qui ait rédigé ce qui change.\n\n## Pourquoi\n\nNon rédigé : le run n\'a aucune étape pr-writer qui ait rédigé le pourquoi.\n'), description)
   assert.equal(section(description, 'Hors périmètre et limites'), 'Non rédigé : le run n\'a aucune étape pr-writer qui ait rédigé ce qui est hors périmètre.')
-  assert.deepEqual(['Matrice de cohérence', 'Tests', 'Preuves RED', 'Portes de qualité'].map((heading) => section(description, heading)), [
+  assert.deepEqual(['Matrice de cohérence', 'Tests', 'Preuves RED', 'Preuves de qualité'].map((heading) => section(description, heading)), [
     'Aucune consignée : le dossier de suivi ne contient aucune matrice de cohérence de ce run (DESIGN l\'écrit).',
     'Aucun consigné : le dossier de suivi ne contient aucun plan de test de ce run (DISTILL l\'écrit).',
     'Aucune consignée : aucun commit red n\'a été accepté dans ce run.',
-    'Aucune consignée : aucune porte n\'a tourné dans ce run.',
+    'Aucune consignée : aucun run tracé n\'a été vérifié dans ce run.',
   ])
   assert.equal(opening(description, 'Preuves RED'), '<details><summary>Preuves RED: 0 commit red</summary>')
   assert.ok(section(description, 'Mention de l\'IA').startsWith('Cette pull request a été préparée par skraft avec des agents IA (l\'hôte n\'a nommé aucun modèle). Ce qui change'), description)

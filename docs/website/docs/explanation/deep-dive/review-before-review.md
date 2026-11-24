@@ -75,8 +75,8 @@ The exact verdict computation: [Gates](../../reference/gates.md#review-run).
 
 ## The DELIVER lenses in practice
 
-In DELIVER, the command gates run first; then come the lenses, each independent and covering a
-different angle.
+In DELIVER, the lenses are each independent and cover a
+different angle; `quality-gates` reads the traced gate runs of the attempt.
 
 | Lens | What it checks |
 | --- | --- |

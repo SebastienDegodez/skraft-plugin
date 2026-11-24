@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BUILT_IN_WORKFLOW, InMemoryGit } from '../support/in-memory-host.mjs'
-import { agent, API, CYCLE, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, scripted, SLUG, TRACKING } from '../support/pipeline-host.mjs'
 import { waitingOnEnvironment } from '../support/decisions.mjs'
 
 /** A component that keeps its scenarios in docs/features, so its designer may write them there. */
@@ -83,7 +83,7 @@ test('files out of scope stay refused on the next attempt of the pass, resumed o
 })
 
 test('the software engineer writing the source and test paths of its components is accepted', async () => {
-  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: (h) => { h.git.commit('feat(checkout): Checkout pays by card', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'tests/Fixtures/card.json']); h.git.change(`.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it)])
+  const host = scripted({}, (it) => [agent()(it), agent()(it), agent()(it), agent({ work: (h) => { h.git.commit('feat(checkout): S1 Checkout pays by card', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'tests/Fixtures/card.json']); h.git.change(`.copilot-tracking/skraft-plans/${SLUG}/notes.md`) } })(it)])
 
   const outcome = await host.start()
 
@@ -104,7 +104,7 @@ test('no agent may change skraft-config.json or the workflow file, even inside i
   const everywhere = { ...API, paths: { src: ['.'], tests: ['.'] } }
   const host = scripted({ components: [everywhere], files: { '.skraft/pipeline.skraft.dot': BUILT_IN_WORKFLOW } }, (it) => [
     agent()(it), agent()(it), agent()(it),
-    agent({ work: ({ git, workspace }) => { git.commit('feat(checkout): Checkout pays by card, as the README says', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'README.md']); editConfig(workspace); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot') } })(it),
+    agent({ work: ({ git, workspace }) => { git.commit('feat(checkout): S1 Checkout pays by card, as the README says', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'README.md']); editConfig(workspace); git.change('skraft-config.json', '.skraft/pipeline.skraft.dot') } })(it),
     unavailable,
   ])
 
@@ -150,9 +150,9 @@ test('skraft-config.json changed by the agent stays refused on its next attempt 
 test('a component in a neighbour repository is checked in that repository, against its own paths', async () => {
   const WEB = { name: 'web', root: '../web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' }, paths: { src: ['src'], tests: ['src'] }, commands: { test: 'npx vitest run' } }
   const git = new InMemoryGit({ repositories: { '.': { mergeBases: { main: 'root-0' } }, '../web': { mergeBases: { main: 'up-web-0' } } } })
-  const host = scripted({ ...CYCLE, components: [API, WEB], git }, (it) => [
+  const host = scripted({ components: [WEB], git }, (it) => [
     agent()(it), agent()(it),
-    agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('feat(checkout): cart', ['../web/src/Cart.tsx']); repos.commit('build(checkout): the cart\'s dependencies', ['../web/package.json']); repos.change('../web/scripts/release.sh', '../web/src/Draft.tsx') } })(it),
+    agent({ work: ({ git: repos }) => { repos.commit('test(checkout): cart', ['../web/src/Cart.test.tsx']); repos.commit('build(checkout): the cart\'s dependencies', ['../web/package.json']); repos.change('../web/scripts/release.sh', '../web/src/Draft.tsx') } })(it),
     unavailable,
   ])
 
@@ -161,7 +161,6 @@ test('a component in a neighbour repository is checked in that repository, again
   const started = host.events().find((event) => event.type === 'step.started' && event.step === 'distill')
   assert.deepEqual(started.heads, [{ repository: '.', sha: 'root-0', dirty: [] }, { repository: '../web', sha: 'up-web-0', dirty: [] }])
   assert.deepEqual(recorded(host, 'distill')[0].failures, ['out of write scope: ../web/scripts/release.sh', 'left uncommitted: ../web/src/Draft.tsx; commit it or undo the change'])
-  assert.deepEqual(host.replay.lines(), ['up-web-1 ../web/. $ npx vitest run', 'up-web-0 ../web/. $ npx vitest run'], 'its red is replayed in that repository, then at its parent there')
 })
 
 test('Git that cannot list a repository\'s changes waits for a human; once retried, the step is checked again', async () => {
@@ -222,7 +221,7 @@ test('the acceptance designer writes the skeleton its failing test calls in the 
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []], [1, 'done', []]])
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []]])
 
   const designing = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => { git.change(...DESIGN_DOCUMENTS); git.commit('test(checkout): pay by card', ['tests/Acceptance/PayTests.cs']) } })(it), unavailable])
   await designing.start()
@@ -236,7 +235,7 @@ test('a component whose paths list no folder (no tests folder yet) is written an
 
   await host.start()
 
-  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []], [1, 'done', []]])
+  assert.deepEqual(recorded(host, 'distill').map((event) => [event.group, event.outcome, event.failures]), [[undefined, 'done', []]])
 })
 
 test('a change an agent leaves uncommitted in its paths is refused, and told so, until its commit holds it; the tracking folder needs none', async () => {
@@ -253,15 +252,13 @@ test('a change an agent leaves uncommitted in its paths is refused, and told so,
   assert.deepEqual(recorded(host, 'distill').map((event) => [event.attempt, event.outcome, event.code, event.failures]), [
     [1, 'failed', 'uncommitted', [`left uncommitted: ${FEATURE}; commit it or undo the change`]],
     [2, 'done', null, []],
-    [1, 'done', null, []],
   ])
   assert.ok(host.agentRunner.dispatches[3].prompt.endsWith(`\n\nRefused in attempt 1 of 3:\n- left uncommitted: ${FEATURE}; commit it or undo the change`))
-  const [, plan, first] = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill')
+  const [, plan] = host.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill')
   assert.deepEqual(plan.commits.map((commit) => [commit.subject, commit.verdict]), [
     ['test(checkout): acceptance of the card payment', 'ok'],
     ['docs(checkout): state the card holder\'s age', 'ok'],
   ])
-  assert.deepEqual(first.commits.map((commit) => [commit.subject, commit.verdict]), [['test(checkout): scenario 1', 'ok']])
 })
 
 test('an architect, with no shell, is told to commit nothing; once DESIGN is done the engine commits what it wrote in its paths, journaled with the step, and nothing stays uncommitted', async () => {

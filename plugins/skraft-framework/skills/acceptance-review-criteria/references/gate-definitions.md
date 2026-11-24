@@ -8,7 +8,7 @@ Formal checklist for the DISTILL review lenses the engine runs. One section per 
 
 ### G1 — AC–Scenario Bijection
 
-**Definition:** Every acceptance criterion in `ac-draft-{story}.md` maps to at least one scenario in the `.feature` files. No scenario exists without a traceable AC.
+**Definition:** Every acceptance criterion in `ac-draft-{story}.md` has its own scenario in the `.feature` files, no scenario holds two criteria, no scenario lacks a source criterion; every value of a scenario equals its criterion's.
 
 **How to check:**
 1. Extract all ACs from `ac-draft-{story}.md` — label them AC-01, AC-02, …
@@ -18,8 +18,10 @@ Formal checklist for the DISTILL review lenses the engine runs. One section per 
    AC-01 → Scenario "Driver with clean record obtains eligibility" ✅
    AC-02 → Scenario "Driver at age limit obtains eligibility" ✅
    AC-03 → [NO SCENARIO] ❌ BLOCKER
+   AC-04, AC-05 → Scenario "Driver renews a licence" ❌ BLOCKER (two criteria, one scenario)
+   [NO AC] → Scenario "Driver pays a late fee" ❌ BLOCKER
    ```
-4. Flag: missing coverage (AC with no scenario) and orphan scenarios (no AC)
+4. Flag: missing coverage (AC with no scenario of its own), merged criteria (one scenario holding two), orphan scenarios (no AC) and values that differ from their AC's
 
 **Severity:** BLOCKER
 **Common cause:** Designer forgot to translate an AC, or a scenario was written without an AC source.
@@ -28,12 +30,12 @@ Formal checklist for the DISTILL review lenses the engine runs. One section per 
 
 ### G2 — Edge Case Representation
 
-**Definition:** Boundary conditions and negative cases from the domain examples in the story are represented as scenarios. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, tactical design) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary.
+**Definition:** Boundary conditions and negative cases from the domain examples in the story are represented, each as an `Examples` row of the scenario of the criterion it belongs to, or as the scenario of a criterion of its own. Only the story and its acceptance criteria give examples: a Gherkin mapping, an example or a variant a DESIGN document writes (event model, tactical design) is none, and a variant an earlier rule of the story already decides (a precedence) adds no boundary.
 
 **How to check:**
 1. Read the domain examples section of the story
 2. Identify boundary values (min age, max accidents, threshold dates, etc.)
-3. Verify a scenario exists for each boundary condition
+3. Verify each boundary condition is an `Examples` row of its criterion's scenario, or a criterion's own scenario
 4. Verify at least one rejection/error scenario per business rule
 
 **Severity:** HIGH
@@ -113,6 +115,7 @@ If YES → ambiguous → flag.
 1. List all scenario titles from `*.feature`
 2. List all entries in `impl-plan-{story}.md`
 3. Verify bijection
+4. The group table: every scenario of the `## Scenarios` table in exactly one group, no number the table does not list, S1 in group 1
 
 **Severity:** HIGH — DELIVER cannot start if a scenario has no implementation entry.
 
@@ -136,8 +139,8 @@ If YES → ambiguous → flag.
 **Why this gate exists:** `outside-in-tdd`'s Concentric circles put the Application-layer acceptance test of a targeted scenario in the fast unit suite, and the walking skeleton's real path in the integration suite. A targeted scenario covered only by an HTTP or Integration test is one circle removed from the boundary DELIVER implements against; a walking skeleton entering through the use case proves no wiring. G1–G10 check Gherkin and plan artefacts, never the test files on disk.
 
 **How to check:**
-1. Find the scenario in progress (S1) in the test plan's `## Scenarios` table: its component, and whether the story declares a walking skeleton exemption.
-2. Search the place each kind takes (tables above): the walking skeleton (unless exempt) and S1's acceptance test.
+1. Find the scenarios in the test plan's `## Scenarios` table: the component of each, and whether the story declares a walking skeleton exemption.
+2. Search the place each kind takes (tables above): the walking skeleton (unless exempt) and the acceptance test of every scenario.
 3. Flag a missing file, a file in the other place, or a test entering anywhere but its entry.
 
 **Auto-fail example:**
@@ -183,7 +186,8 @@ Repo search: tests/pay.test.mjs (found, at the test path root)
 | `refactoring` | the story and the patch add no public interface: no endpoint, command, message or public type |
 | `docs-only` | the story changes configuration or documentation only: no source file |
 
-**How to check:** the engine already refuses a table that tags a scenario other than S1, puts S1 in a `react` component, names an unknown exemption, or declares `docs-only` while a commit changes a component's source.
+**How to check:**
+0. The `## Scenarios` table and its exemption line: S1 alone carries `@walking-skeleton`, in a back-end component when the configuration has one (a `react` front end only when it is the only component); a story that declares `Walking skeleton exemption:` declares `library`, `refactoring` or `docs-only`, tags no scenario `@walking-skeleton`, and `docs-only` holds only when no commit of the story changes a component's source.
 1. No exemption: open the walking skeleton. It starts the component through its production composition root and sends the request, command or message the story's entry point takes; the use case and the internal gateways it reaches are the real ones, the database a Testcontainers container. A walking skeleton that calls the use case, uses an in-memory repository or is a Gherkin binding is a finding; so is an S1 with no acceptance test of its own.
 2. An exemption: check it against the story and the patch; an entry point the component has (`library`), or a public interface the story adds (`refactoring`), is a finding.
 
@@ -245,7 +249,7 @@ during DELIVER integration otherwise, after both implementations are already wri
 | G6 | testability | Impl plan covers all scenarios | HIGH |
 | G11 | testability | Each test is in the place its kind takes: the walking skeleton in the integration place through the entry point; each scenario's acceptance test, S1's included, in the unit-test place through the use case | BLOCKER |
 | T1 | testability | One observable behaviour per scenario, nothing unfixed (time, order, randomness) | HIGH |
-| T2 | testability | The tests hold the walking skeleton and the scenario in progress only, their values equal to the `.feature` verbatim; the walking skeleton asserts the wiring and one value of S1 | BLOCKER |
+| T2 | testability | The tests hold the walking skeleton and the acceptance test of every scenario, each named by its scenario's number, their values equal to the `.feature` verbatim; the walking skeleton asserts the wiring and one value of S1 | BLOCKER |
 | T3 | testability | The walking skeleton and the acceptance test fail on an assertion, not on setup; production code is a skeleton answering empty values (and the walking skeleton's chain wired to it) | BLOCKER |
 | G7 | boundary-enforcement | Coverage matrix → valid use case boundary | BLOCKER |
 | G8 | boundary-enforcement | The story's walking skeleton walks S1 through the real entry point, or the declared exemption holds | BLOCKER |

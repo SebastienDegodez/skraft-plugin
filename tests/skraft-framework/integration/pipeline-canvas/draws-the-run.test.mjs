@@ -98,23 +98,18 @@ test('the canvas shows a blocked step\'s question and says to answer it in the c
   })
 })
 
-test('the gates line gives each component its last result of each gate, with the survivors of a mutation gate, and never its command nor its evidence', BOUNDED, async (t) => {
+test('the quality evidence line names each gate the delivery holds a traced run of, and never a command nor an output', BOUNDED, async (t) => {
   const { cwd, cleanup } = await workingCopy()
   t.after(cleanup)
   const adapters = createNodeAdapters(copilotHost(cwd))
   assert.equal((await createInit(adapters).init({ slug: 'refund' })).ok, true)
   const { journal } = /** @type {any} */ (await openJournal(adapters, 'refund'))
-  const ran = (component, gate, status, survivors) => journal.append('gate.ran', { step: 'gates', visit: 1, component, gate, command: 'secret-command --token', status, durationMs: 3, evidence: `gates/${component}/${gate}-1.log`, survivors })
-  await ran('api', 'test', 'fail')
-  await ran('web', 'lint', 'pass')
-  await ran('api', 'test', 'pass')
-  await ran('api', 'mutation', 'fail', 3)
-  await ran('web', 'mutation', 'pass', null)
+  const run = (id, gate) => ({ run: id, gate, cwd: 'api', log: `logs/runs/deliver-1-1/${id}.log`, sha256: 'abc' })
+  await journal.append('evidence.checked', { step: 'deliver', visit: 1, attempt: 1, runs: [run(1, 'build'), run(2, 'test')] })
   const { shown } = pipelineCanvas(t, { directory: () => cwd, home: `${cwd}-home` })
 
   assert.deepEqual((await shown()).details, [
-    { key: 'gates-api', text: 'gates api: test pass, mutation fail (3 survivors)', state: 'done' },
-    { key: 'gates-web', text: 'gates web: lint pass, mutation pass', state: 'done' },
+    { key: 'quality-evidence', text: 'Quality evidence: build run 1, test run 2', state: 'done' },
   ])
 })
 

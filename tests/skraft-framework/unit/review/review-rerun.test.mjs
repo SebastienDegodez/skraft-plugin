@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { withContext } from '../support/answer-yaml.mjs'
-import { agent, API, CYCLE, finding, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
+import { agent, API, finding, green, lenses, nominal, REFS_42, refutes, reviews, says, scripted, SLUG, tddCycle, TRACKING } from '../support/pipeline-host.mjs'
 import { ejectedPipeline, edit, withLenses } from '../workflow/support.mjs'
 import { BUILT_IN_WORKFLOW, InMemoryAgentCatalog, PLUGIN_AGENTS } from '../support/in-memory-host.mjs'
 import { indexFor } from '../support/decisions.mjs'
@@ -48,22 +48,25 @@ test('a lens that passed with a low finding runs again on the next pass, its inp
   assert.deepEqual(askedOn(host, 'design_review', 2), ['consistency-lens', 'fitness-lens'])
 })
 
-test('an answer that cannot be read is asked once more with the reason; a second one stops the run naming the lens, and the resumed run asks only that lens again', async () => {
+test('an answer that cannot be read is asked once more with the reason; a second one asks for a recovery naming the lens, and the retried run asks only that lens again', async () => {
   const host = scripted({}, nominal)
   host.agentRunner.review = lenses({ consistency: ['Looks fine to me.', 'lens: consistency\nverdict: ok\nfindings: []'] })
 
   const outcome = await host.start()
 
   const reason = 'consistency-lens answered 2 times without a readable verdict: verdict "ok" is not one of pass, fail, inconclusive'
-  assert.deepEqual(outcome, { status: 'blocked', slug: SLUG, phase: 'DESIGN', code: 'lens-unreadable', reason })
+  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'unforeseen'])
+  const question = host.events().filter((event) => event.type === 'question.asked').at(-1)
+  assert.deepEqual([question.step, question.incidents[0].category], ['design_review', 'lens-unreadable'])
+  assert.equal(await host.tracking.read(SLUG, question.incident.log.slice(question.incident.log.indexOf('logs/'))), `${reason}\n`)
   const asked = host.agentRunner.reviewed().filter((dispatch) => dispatch.agent === 'consistency-lens')
   assert.deepEqual(asked.map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`, `skraft ${SLUG} · design_review · consistency · attempt 2`])
   assert.ok(asked[1].prompt.endsWith('\n\nYour previous answer was refused: the answer is not the YAML document the brief shows (line 1: is not a `key: value` line). Answer again with the YAML document only.'), asked[1].prompt)
   assert.deepEqual(host.agentRunner.batches.map((batch) => batch.map((dispatch) => dispatch.agent)), [['consistency-lens', 'architecture-compliance-lens', 'fitness-lens'], ['consistency-lens']])
-  assert.deepEqual(host.events().at(-1), { ...host.events().at(-1), type: 'run.stopped', code: 'lens-unreadable', reason })
   assert.equal(host.events().some((event) => event.type === 'step.recorded' && event.step === 'design_review'), false)
   assert.deepEqual(host.events().filter((event) => event.type === 'review.lens').map((event) => event.lens), ['architecture-compliance', 'fitness'])
 
+  assert.equal((await host.decide({ answer: 'RETRY', by: 'host-llm', model: 'observed-test-model', cost: 0.02, costUnit: 'USD' })).ok, true)
   assert.equal((await host.run()).status, 'done')
 
   assert.deepEqual(host.agentRunner.batches[2].map((dispatch) => dispatch.label), [`skraft ${SLUG} · design_review · consistency · attempt 1`])
@@ -144,7 +147,7 @@ test('each lens journals its own cost, and the review records what its lenses an
   assert.deepEqual(lensed.map((event) => event.cost), [0.25, 0.25, 0.25])
   const recorded = host.events().find((event) => event.type === 'step.recorded' && event.step === 'design_review')
   assert.equal(recorded.cost, 0.75)
-  assert.equal((await host.view()).costUsd, 0.75 * 3 + 0.25 * 1)
+  assert.equal((await host.view()).costUsd, 0.75 * 3 + 0.25 * 2)
 
   const batched = scripted({}, nominal)
   batched.agentRunner.batchCostUsd = 0.5
@@ -308,10 +311,11 @@ test('every lens that answered unreadably twice is named', async () => {
   const host = scripted({}, (it) => nominal(it).slice(0, 2))
   host.agentRunner.review = lenses({ consistency: ['no', 'no'], fitness: ['[]', '[]'] })
 
-  const outcome = await host.start()
+  await host.start()
 
   const notYaml = 'the answer is not the YAML document the brief shows (line 1: is not a `key: value` line)'
-  assert.equal(outcome.reason, `consistency-lens answered 2 times without a readable verdict: ${notYaml}; fitness-lens answered 2 times without a readable verdict: ${notYaml}`)
+  const { incident } = host.events().filter((event) => event.type === 'question.asked').at(-1)
+  assert.equal(await host.tracking.read(SLUG, incident.log.slice(incident.log.indexOf('logs/'))), `consistency-lens answered 2 times without a readable verdict: ${notYaml}; fitness-lens answered 2 times without a readable verdict: ${notYaml}\n`)
 })
 
 test('each agent\'s documents in the tracking folder reach the lenses, by phase, with a shared context naming who wrote them', async () => {
@@ -457,26 +461,12 @@ test('every attempt of a pass the review opened is told the review sent the work
   assert.deepEqual(host.events().filter((event) => event.type === 'step.started' && event.step === 'design').map(({ visit, attempt, sentBy }) => [visit, attempt, sentBy ?? null]), [
     [1, 1, null], [2, 1, 'review'], [2, 2, 'review'],
   ])
-
-  // DISTILL's acceptance tests are named to DELIVER by a workflow that builds no scenario.
-  const distill = scripted(CYCLE, (it) => [...nominal(it).slice(0, 3), agent({ work: ({ git }) => {
-    git.commit('docs(checkout): note the refusal', ['ACCEPTANCE.md'])
-    git.commit('test(checkout): refuse a zero amount', ['tests/Acceptance/RefusalAcceptanceTests.cs'])
-  } })(it), agent({ work: tddCycle() })(it)])
-  distill.agentRunner.review = lenses({ coverage: [says('coverage', 'fail', [finding('F1', 'blocker', 'a criterion has no scenario')])] })
-  assert.equal((await distill.start()).status, 'done')
-  const failing = distill.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · distill · pass 2 · attempt 1`).prompt
-  assert.ok(failing.includes('- Commit the failing acceptance tests as `test(<story>): …`, with the skeleton they call') && !failing.includes('This pass answers the review'), failing)
-  const reds = distill.events().filter((event) => event.type === 'commits.checked' && event.step === 'distill').flatMap((event) => event.commits).filter(({ kind }) => kind === 'red').map(({ sha, subject }) => `${sha.slice(0, 7)} "${subject}"`)
-  const deliver = distill.agentRunner.dispatches.find((dispatch) => dispatch.agent === 'software-engineer').prompt
-  assert.equal(reds.length, 2)
-  assert.ok(deliver.includes(`never a \`feat\`. DISTILL's: ${reds.join(', ')}`), deliver)
 })
 
-test('a DELIVER pass the review opened is told which commit each finding takes: a fix with no red commit is refused, a strengthened test goes in a refactor', async () => {
+test('a DELIVER pass the review opened is told which commit each finding takes: a fix holds its test and its code, a test committed apart or a fix with no test is refused, a strengthened test goes in a refactor', async () => {
   const integrity = says('test-integrity', 'fail', [finding('F1', 'blocker', 'the test asserts nothing', { gate: 'G7' })])
-  // DISTILL's acceptance tests are named to DELIVER by a workflow that builds no scenario.
-  const host = scripted(CYCLE, (it) => [...nominal(it).slice(0, 3), agent({ work: tddCycle() })(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it)])
+  const apart = ({ git }) => { git.commit('test(checkout): assert the card amount', ['tests/CheckoutTests.cs']); git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) }
+  const host = scripted({}, (it) => [...nominal(it).slice(0, 3), agent({ work: green() })(it), agent({ work: apart })(it)])
   host.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   host.agentRunner.behaviours.push(() => ({ ok: false, unavailable: true, text: '', error: 'stop here' }))
 
@@ -485,12 +475,17 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   const deliver = host.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver')
   assert.deepEqual(deliver.map(({ visit, attempt, outcome, code }) => [visit, attempt, outcome, code]), [[1, 1, 'done', null], [2, 1, 'failed', 'tdd']])
   const judged = host.events().find((event) => event.type === 'commits.checked' && event.step === 'deliver' && event.visit === 2)
-  assert.deepEqual(judged.commits.map(({ subject, verdict }) => [subject, verdict]), [['fix(checkout): assert the card amount', 'green-without-red']])
+  assert.deepEqual(judged.commits.map(({ subject, verdict }) => [subject, verdict]), [['test(checkout): assert the card amount', 'test-apart'], ['fix(checkout): assert the card amount', 'green-without-test']])
+  assert.deepEqual(deliver[1].failures, [
+    'commit root-4 "test(checkout): assert the card amount" commits a test on its own: after the story is delivered, each cycle is one feat or fix commit holding its test and the code that makes it pass, once green; squash it into that commit',
+    'commit root-5 "fix(checkout): assert the card amount" holds no test: after the story is delivered, each cycle is one feat or fix commit holding its test and the code that makes it pass, once green',
+  ])
   const reworked = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · pass 2 · attempt 1`).prompt
   const acceptance = host.events().find((event) => event.type === 'commits.checked' && event.step === 'distill').commits[0]
-  assert.ok(reworked.includes(`never a \`feat\`. DISTILL's: ${acceptance.sha.slice(0, 7)} "${acceptance.subject}"\n`), reworked)
+  assert.ok(reworked.includes(`- Acceptance tests DISTILL committed, which you never change (a wrong one, or one failing on a build or setup error: stop blocked, naming it):\n- ${acceptance.sha.slice(0, 7)} "${acceptance.subject}": `), reworked)
+  assert.ok(!reworked.includes('- Groups, in the order you deliver them'), reworked)
   assert.ok(reworked.includes([
-    '- This pass answers the review: a missing or wrong behaviour takes a failing `test(<story>): …` commit, then `fix(<story>): …`;',
+    '- This pass answers the review: a missing or wrong behaviour takes one `fix(<story>): …` commit holding its failing test and the code that makes it pass, once green;',
     '  a test that proves too little, a name, or any change the tests already pass with takes `refactor(<story>): …`.',
   ].join('\n')), reworked)
   const first = host.agentRunner.dispatches.find((dispatch) => dispatch.label === `skraft ${SLUG} · deliver · attempt 1`).prompt
@@ -500,6 +495,11 @@ test('a DELIVER pass the review opened is told which commit each finding takes: 
   strengthened.agentRunner.review = lenses({ 'test-integrity': [integrity] })
   assert.equal((await strengthened.start()).status, 'done')
   assert.deepEqual(strengthened.events().filter((event) => event.type === 'step.recorded' && event.step === 'deliver').map(({ visit, outcome }) => [visit, outcome]), [[1, 'done'], [2, 'done']])
+
+  const together = scripted({}, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs', 'tests/CheckoutTests.cs']) })(it)])
+  together.agentRunner.review = lenses({ 'test-integrity': [integrity] })
+  assert.equal((await together.start()).status, 'done')
+  assert.deepEqual(together.events().filter((event) => event.type === 'commits.checked' && event.step === 'deliver').at(-1).commits.map(({ kind, verdict }) => [kind, verdict]), [['green', 'ok']])
 
   const again = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [...nominal(it), agent({ work: ({ git }) => git.commit('fix(checkout): assert the card amount', ['src/Checkout.cs']) })(it), agent()(it)])
   again.agentRunner.review = lenses({ 'test-integrity': [integrity] })
@@ -588,7 +588,7 @@ test('a lens reads the skills its descriptor lists before any other input, and s
 test('a changed path that is no readable file, such as a nested repository, is reviewed by its name', async () => {
   const host = scripted({}, (it) => [
     ...nominal(it).slice(0, 3),
-    agent({ work: ({ git }) => git.commit('feat(checkout): Checkout pays by card with the vendored payments SDK', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'src/PaymentsSdk']) })(it),
+    agent({ work: ({ git }) => git.commit('feat(checkout): S1 Checkout pays by card with the vendored payments SDK', ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'src/PaymentsSdk']) })(it),
   ])
   const read = host.deps.workspace.read.bind(host.deps.workspace)
   host.deps.workspace.read = async (path) => {

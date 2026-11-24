@@ -171,11 +171,11 @@ Syntax, validity rules and locked or mandatory nodes: [The DOT workflow](./workf
 **`skraft workflow check`** validates the workflow a run would follow (the repository copy when
 there is one, else the plugin's) and the workflows it calls, against `skraft-config.json`: one
 start and an exit, every node reachable, `max_visits` on every loop, known shapes and
-attributes, agents that exist, locked nodes kept or `unlock="<reason>"`, mandatory nodes kept.
+attributes, agents that exist, no gate node nor `goal_gate`, `locked`, `unlock`, `each` or `proposal` attribute (each refused with a migration message, see [Gates](./gates.md#command-gates)), mandatory nodes kept.
 
 | Case | Output | Code |
 | --- | --- | --- |
-| valid | `warning: <warning>` lines (a model family the configuration masks), then `<file> is valid: phases RESEARCH, DESIGN, …`, followed by `; <node> is unlocked and skipped: <reason>` for each unlocked node | 0 |
+| valid | `warning: <warning>` lines (a model family the configuration masks), then `<file> is valid: phases RESEARCH, DESIGN, …` | 0 |
 | invalid | `skraft-config.json is invalid: …` or the workflow's errors, on stderr | 1 |
 
 **`skraft workflow diff`** compares the repository copies with the plugin's workflows without
@@ -187,19 +187,17 @@ writing anything: one line per change, then the summary.
 | nothing ejected | `the working copy has neither .skraft/pipeline.skraft.dot nor .skraft/review.skraft.dot; the plugin's run as shipped (skraft workflow eject [review] copies them)` on stderr | 1 |
 | invalid copy | `<file> is invalid: <errors>` on stderr | 1 |
 
-With `--json`, `check` prints `{ ok, name, errors, unlocked: [{ node, reason }], warnings,
+With `--json`, `check` prints `{ ok, name, errors, warnings,
 reason }` and `diff` prints `{ ok, name, changes, reason }`. `eject` takes no option.
 
-## `skraft doctor [--run] [--base <ref>] [--json]`
+## `skraft doctor [--json]`
 
-**Effect.** Checks that every command of every component can run on this machine. Writes
+**Effect.** Checks the configuration and that every command of every component parses, and lists each component's commands. It starts none and never looks a program up on the PATH. Writes
 nothing to the journal. The first line names the plugin version that answers
 (`ok    plugin: skraft <version>`; `plugin` in the JSON); it is not counted as a check.
 
 | Option | Effect |
 | --- | --- |
-| `--run` | runs each command once from its component's root, with the computed base, and writes what it printed to `.copilot-tracking/skraft-doctor/<component>/<command>.log` (replaced at each run) |
-| `--base <ref>` | base ref for `--run`; without `--run` it is not read |
 | `--json` | JSON output |
 
 Checks, in order:
@@ -209,34 +207,30 @@ Checks, in order:
 | `node` | Node 22 or later | `Node <version>; skraft needs Node 22 or later` |
 | `config` | file present, valid, at least one component | `skraft-config.json is invalid: …`; `no skraft-config.json; run skraft init to detect the components`; `skraft-config.json lists no component; run skraft init to detect them` |
 | `forge` | the forge a run uses can be reached from here (on `github`: a remote, `gh` installed and signed in to its host; on `azure-devops`: a remote naming an organization, project and repository, `az` with its `azure-devops` extension installed and signed in to that organization); otherwise a warning, never a failure | warning: `<forge>, named in the configuration: <reason>` or `<forge>, deduced from the Git remote: <reason>`; reasons: `the working copy has no Git remote whose URL names a host and a repository`, `gh, the GitHub CLI, is not installed`, `gh is not signed in to <host>; run gh auth login --hostname <host>`, `the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository`, `az, the Azure CLI, is not installed`, `skraft runs az under Windows only from the Azure CLI installer (MSI or winget), …`, `the azure-devops extension of the Azure CLI is not installed; run az extension add --name azure-devops`, `az is not signed in to the Azure DevOps organization <organization URL>, …` |
-| `base` (with `--run`) | the base can be computed | the `invalid-base`, `base-unresolved` or `source-control-unavailable` message |
 | `<component>` | the root is a folder | `root <root> is not a folder` (its commands are not checked) |
-| `<component>` | at least one gate command | `no gate command; give it at least one of build, format, lint, test, architecture, coverage, mutation in skraft-config.json` |
-| `<component>/<command>` | the line splits and its program is found (PATH, and PATHEXT under Windows) | `"<line>" <reason>`; `command not found: <program> (from <root>); install it or change commands.<name> in skraft-config.json` (for `python`, `(from <root>; looked for .venv/bin/python, .venv/Scripts/python.exe, python, python3)`) |
-| `<component>/<command>` with `--run` | the command exits with 0 | `<command run> exited <code>; its output is in .copilot-tracking/skraft-doctor/<component>/<command>.log` (base substituted, interpreter chosen) |
+| `<component>` | at least one gate command | `no gate command; give it at least one of build, format, lint, test, architecture, coverage in skraft-config.json; run /skraft-init` |
+| `<component>/<command>` | always `ok`: the line is listed as written | `ok <component>/<command>: <line> (listed; skraft_repl starts it, never skraft)` |
 | `<component>` (after its commands) | every mocking and contract testing skill the component asks for exists in the plugin or the working copy (`.claude/skills/`, `.github/skills/`); otherwise a warning | warning: `skills found nowhere, in the plugin or the working copy: <skills>; mocking-strategy-roster and contract-testing say which recipe its tests use instead, or that they stop` |
 | `infrastructure` (after the components) | `ok`: one line per row of each component's [infrastructure policy](./skraft-config.md#infrastructure) | `<component> (<stack>) <row>: <mechanism> (targeted), <mechanism> (walking skeleton) — <tool>; source plugin` (`source skraft-config.json` for an override, `source skraft-config.json (mocking.strategy)` for a mocking strategy other than the stack's default; `(e2e)` for a `react` row) |
-| `container-runtime` | only when a row runs `testcontainers` or `microcks`: `docker`, else `podman`, found on the PATH, answers `<runtime> info` (exit 0 within 15 s); otherwise a warning, never a failure | ok: `<runtime> answers <runtime> info`; warning: `neither docker nor podman is on the PATH; …` or `docker does not answer docker info[, podman does not answer podman info]; the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs` |
 | `vscode` | always `ok` | names the VS Code driver: `Copilot SDK <version> (<path>): under VS Code, run the pipeline through it with engine/drivers/copilot-sdk/skraft-run.mjs`, or `no Copilot SDK under <folder>: under VS Code, the Skraft - Orchestrator agent conducts skraft next and skraft record; …` |
 | `models` | every agent `assign.agents` names exists in the plugin or the working copy | `assign.agents.<id>: no agent <id> in the plugin, .claude/agents/ or .github/agents/; did you mean <closest>?` |
 | `models/<host>` (`claude-code`, `copilot`) | every family the workflow's agents run on has a model on that host; otherwise a warning with the dispatches that fall back to the host | warnings: `no model on <host> for <family> (<n> dispatches)…`; `CLAUDE_CODE_EFFORT_LEVEL is set…`; `max effort on <agent> (<model>)…` for a Copilot model whose name has no `claude`; `~/.copilot/settings.json sets subagents.agents for <agent>…` when skraft passes its own model or effort |
 
 A component's commands are checked gates first (in gate order), then `e2e`. The doctor stops after `config` when the config is invalid, missing or empty.
-Without `--run`, `{baseSha}` is replaced with `HEAD` for splitting only.
 
 **Text output**:
 
 ```
 ok    node: Node v22.…
 ok    forge: github, deduced from the Git remote
-FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
+ok    web/test: npm run test:ci (listed; skraft_repl starts it, never skraft)
 models on claude-code:
   step      agent                type   family      tier      model   effort  source (family/model/effort)
   research  solution-researcher  phase  researcher  economy   haiku   -       agent/tier/host
   …
 models on copilot:
   …
-skraft doctor: 1 checks failed
+skraft doctor: every check passed
 ```
 
 Once the configuration and the workflow read, one table per host lists each agent the workflow dispatches (a review node's lenses, then its refuter as it checks the node's strongest lens): family, tier, model (a list tried in order), effort, and where each comes from; `-` where the host decides.

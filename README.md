@@ -24,7 +24,7 @@ refined story: specialist agents research it, design it, turn it into acceptance
 deliver tested code, and read-only lenses review each phase.
 
 A host-neutral **engine** decides every step: phase order, expected outputs, write scope (the
-diff after each step), gates run from your `skraft-config.json`, the review verdict, the red and
+diff after each step), the traced gate runs of your `skraft-config.json` commands, the review verdict, the red and
 green commits of TDD. Each host has a thin driver that only starts the agents the engine asks
 for. Every fact of a run lands in a hash-chained, signed journal in your repository. The plugin
 ships no command hooks: nothing runs on your tool calls.
@@ -34,11 +34,12 @@ ships no command hooks: nothing runs on your tool calls.
 - **One pipeline, three hosts**: the Claude Code mod, the Copilot CLI dynamic workflow, and under
   VS Code the Copilot SDK or a `skraft next` / `skraft record` loop; the same journal everywhere.
 - **A workflow you can extend**: a DOT graph you copy into `.skraft/` with `skraft workflow eject`
-  to add an agent, a lens, a gate or a question; DELIVER gates are locked, reviews mandatory.
+  to add an agent, a lens or a question; reviews are mandatory.
 - **Reviews computed in code**: one lens per node, a refuter checks every blocking finding, the
   engine decides; a re-review asks again only the lenses whose inputs changed.
-- **Proof, not claims**: build, format, lint, test, architecture, coverage and mutation (100 %
-  on Domain and Application, 80 % elsewhere) run by the engine, which writes the evidence.
+- **Proof, not claims**: the engineer runs build, format, lint, test, architecture and coverage
+  through `skraft_repl`; the engine refuses a delivery without their signed, passing runs on the
+  final commit and writes the evidence. Mutation (80 %) is a recipe of your own session.
 - **A pull request at the end**: a draft by default, with your consent once per repository, the
   front end's Playwright screenshots, and, with the same consent, a progress comment on the story's issue.
 - **Readable runs**: `skraft status`, the Claude Code pane, `run-report.md` and `qa-report.md`.
@@ -99,7 +100,7 @@ without it):
 
 ```text
 skraft init          detect your components into skraft-config.json
-skraft doctor --run  check that every command runs
+skraft doctor        check the configuration and list each component's commands
 ```
 
 Then start a story: `/skraft <slug> [#issue] [title…] [--base <ref>] [--from-artifacts]` in Claude Code

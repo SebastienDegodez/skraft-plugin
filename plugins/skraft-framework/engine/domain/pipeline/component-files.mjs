@@ -1,4 +1,4 @@
-import { joinRelative, pathUnder } from '../config/relative-path.mjs'
+import { joinRelative, normalizeRelative, pathUnder } from '../config/relative-path.mjs'
 
 /**
  * Which component a file of the working copy belongs to, and whether it is code: a file of its
@@ -56,4 +56,21 @@ export const ownersOf = (components, files) => [...new Set(files.map((file) => o
 export const isCode = (file, components, kinds = ['src', 'tests']) => {
   const owner = ownerOf(file, components)
   return owner !== null && kinds.some((kind) => kind === kindOf(file, owner))
+}
+
+/**
+ * Whether a run started in that folder is the component's: its root holds the folder, and no
+ * deeper root of another component does. A run in web/ is web's, never that of a component whose
+ * root is the working copy, `.`; components sharing a root each hold its runs.
+ * @param {string} cwd relative to the working copy @param {{ root: string }} component @param {ReadonlyArray<{ root: string }>} components
+ */
+export const runsUnder = (cwd, component, components) => {
+  if (pathUnder(cwd, component.root) === null) return false
+  return !components.some((other) => pathUnder(cwd, other.root) !== null && rootDepth(other.root) > rootDepth(component.root))
+}
+
+/** How many folders deep a root is: 0 for the working copy. @param {string} root */
+const rootDepth = (root) => {
+  const at = normalizeRelative(root)
+  return at === '.' ? 0 : at.split('/').length
 }

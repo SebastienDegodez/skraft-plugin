@@ -21,11 +21,11 @@ The detail of each gate cited: [Gates](./gates.md).
 | DISCUSS | `skraft-backlog` | the agent, started by the developer | `backlog-planner` | 4 lenses, verdict from `review-verdict.mjs` | — |
 | RESEARCH | `skraft` | the engine | `solution-researcher` | output filled, research records | — |
 | DESIGN | `skraft` | the engine | `solution-architect` | DESIGN records, structural scan, 3-lens review | `adr-ratification` |
-| DISTILL | `skraft` | the engine | `acceptance-designer` | `## Scenarios` table, red commits replayed, 4-lens review | `scenario-review` |
-| DELIVER | `skraft` | the engine | `software-engineer` | one green commit per scenario, replayed; gates, `review` | — |
+| DISTILL | `skraft` | the engine | `acceptance-designer` | `## Scenarios` table, delivery groups, one red commit, 4-lens review | `scenario-review` |
+| DELIVER | `skraft` | the engine | `software-engineer` | one green commit for the story, the groups worked in plan order, in one dispatch, its gate runs traced; `review` | — |
 | PUBLISH | `skraft` | the engine | `pr-writer` | pull request prose | — |
 
-DISCOVER and DISCUSS do not go through the engine: no journal, no command gate. RESEARCH to
+DISCOVER and DISCUSS do not go through the engine: no journal, no gate run. RESEARCH to
 PUBLISH are the phases of `workflows/pipeline.skraft.dot`; an ejected workflow may add more. In
 any engine phase, a human may get the `environment` and `blocked` questions
 ([below](#human-questions)).
@@ -141,25 +141,25 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 
 | Node | Kind | Role |
 | --- | --- | --- |
-| `distill` | agent `acceptance-designer`, `each="scenario"` | plan pass: every scenario of the story, each tagged `@pending`, the test plan with its `## Scenarios` table, the failing [walking skeleton](../explanation/deep-dive/walking-skeleton.md) and the skeleton of the chain it crosses; then, on its own pass (`scenario 1 of N`), the failing acceptance test of S1 and the skeleton it calls; then, before each next scenario is delivered, that scenario's failing acceptance test |
-| `distill_review` | review | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; runs once, after the plan pass and S1's pass |
-| `scenario_review` | question `scenario-review` | a human reads the scenarios, the walking skeleton (or the exemption) and S1's acceptance test before DELIVER builds them |
+| `distill` | agent `acceptance-designer` | one pass: every scenario of the story, the test plan with its `## Scenarios` table, the implementation plan with its `| Group | Scenarios |` table, the failing [walking skeleton](../explanation/deep-dive/walking-skeleton.md), the failing acceptance test of every scenario and the skeleton they call |
+| `distill_review` | review | lenses `coverage`, `business-alignment`, `testability`, `boundary-enforcement`; they judge the criteria, the form of the Gherkin, the walking-skeleton tag and the groups; runs once, after the pass |
+| `scenario_review` | question `scenario-review` | a human reads the scenarios, their groups and the red of their tests (or the exemption) before DELIVER builds them |
 
 | | |
 | --- | --- |
-| Inputs | stories, DESIGN documents (in the tracking folder and under `docs/`); from the second pass, the scenario to write (`- Scenario: k of N — "<title>" (component <c>, tags …)`) |
+| Inputs | stories, DESIGN documents (in the tracking folder and under `docs/`) |
 | Declared output | `details/{date}/test-plan-{slug}.md` |
-| Other outputs | `details/{date}/impl-plan-{story}.md`; the `.feature` of the component's own folder (`bdd`), as `{bounded-context}/{feature}.feature` (Gherkin scenarios, keywords in English, each tagged `@pending` until its red; the component's Gherkin runner, when it declares one, selects `not @pending`); in the components: on the plan pass, the failing walking skeleton (integration-test place, `tests` paths) and the skeleton of its chain (`src` paths); on a scenario pass, the failing acceptance test of the scenario in progress (unit-test place, `tests` paths), the skeleton it calls (`src` paths) and `@pending` removed from that scenario |
-| Brief | the scenario in progress, the exact `git commit` of its red, and the effective [infrastructure policy](./skraft-config.md#infrastructure) of each component |
+| Other outputs | `details/{date}/impl-plan-{story}.md`, its `| Group | Scenarios | Rule | … |` table (no table: one scenario per group); the `.feature` of the component's own folder (`bdd`), as `{bounded-context}/{feature}.feature` (Gherkin scenarios, keywords in English); in the components: the failing walking skeleton (integration-test place, `tests` paths), the failing acceptance test of every scenario, its name starting with the scenario's number (unit-test place, `tests` paths), and the skeleton they call (`src` paths) |
+| Brief | the exact `git commit` of the red, the instruction to run the acceptance tests once through `skraft_repl` with the label `red`, and the effective [infrastructure policy](./skraft-config.md#infrastructure) of each component |
 | Allowed writes | the tracking folder, the features folders the components' `bdd` names, each component's `src` and `tests` paths, and the files at those components' roots |
-| Commits | `red` mode, at most one per pass: on the plan pass, `test(<story>): walking skeleton of <title of S1>`, the walking skeleton, the skeleton of its chain and the `.feature` of S1's component together (a story exempt of a walking skeleton commits its `.feature` files as `docs(<story>): …` instead); on a scenario pass, `test(<story>): <scenario title>`, the acceptance test and its skeleton together, in the scenario's component only, no `feat`, `fix` or `refactor`; replayed, the replay judge requiring a failing assertion ([Commits and replays](./gates.md#commits)); a change to scenarios alone, outside the components' `src` and `tests` paths, in a `docs(<story>): …` commit; a change left uncommitted is refused (`uncommitted`) |
-| Engine checks | a plan pass of a story that is not exempt with no red committed (`the story has no failing walking skeleton committed: …`), a scenario pass with none (`scenario <k> has no failing acceptance test committed: …`); where added test files sit (`testability#layout`, G11); the `## Scenarios` table of the test plan ([below](#scenarios), `scenarios`); the scenarios the test plan names (`gherkin-records`): every `.feature` cited in its coverage matrix is a file of a folder the component's `bdd` names, each of whose scenarios says Given, When and Then, fills from its examples every placeholder it opens, and is titled once in its file; and the story holds at least one scenario per acceptance criterion of its `ac-draft-{story}.md`. A coverage matrix row that names no Gherkin writes `—`, and a story whose `ac-draft` declares no criterion is asked for no scenario. The check runs only where a component declares `bdd`: one that writes its tests without Gherkin is asked for no `.feature`, and a component that decided neither way refuses the run before its first agent. The keywords are English, whatever language the sentences are in: a `.feature` declaring another language is sent back naming it |
+| Commits | `red` mode, one per pass: `test(<story>): acceptance tests S1–S<n>`, the walking skeleton, every acceptance test, the skeleton they call and the `.feature` of their components together, in the components the scenarios name only, no `feat`, `fix` or `refactor` (a story exempt of a walking skeleton commits its acceptance tests alone) ([Commits](./gates.md#commits)); no test is run by the engine; a change to scenarios alone, outside the components' `src` and `tests` paths, in a `docs(<story>): …` commit; a change left uncommitted is refused (`uncommitted`) |
+| Engine checks | a pass with no red committed, nor any from an earlier pass (`the story has no failing acceptance tests committed: …`); a group of the implementation plan that names no scenario (`scenarios`); where added test files sit (`testability#layout`, G11); the `## Scenarios` table of the test plan, read and refused only when unreadable ([below](#scenarios), `scenarios`). Not checked by the engine: acceptance criteria against scenarios (G1) and the form of the Gherkin (T4), which the lenses judge. A component that decided neither way about `bdd` refuses the run before its first agent |
 
 | Lens | Gates |
 | --- | --- |
 | `coverage` | G1, G2 |
 | `business-alignment` | G3, G4, B1 |
-| `testability` | G5, G6, G11, T1, T2, T3 |
+| `testability` | G5, G6, G11, T1, T2, T3, T4 |
 | `boundary-enforcement` | G7, G8, E1, E2 |
 
 | Edge | Label | `max_visits` |
@@ -169,10 +169,9 @@ Verdict: `review-verdict.mjs --phase discuss`, same rules and same budget as DIS
 | `scenario_review -> deliver` | `APPROVED` | — |
 | `scenario_review -> distill` | `REVISE` (corrections required, sent back to the acceptance designer) | 2 |
 
-After `APPROVED`, no edge leads the scenarios: the engine runs `deliver` on S1, then `distill` on
-S2 and `deliver` on S2, and so on, each pass a visit of its own; after the last scenario,
-`deliver` leaves by its edge to `gates`. A pass of `distill` after S1's is not reviewed. An
-interrupted run resumes on the scenario in progress.
+After `APPROVED`, no edge leads the groups: the engine runs `deliver` once for the story, the
+software engineer working the groups in the plan's order; `deliver` then leaves by its edge to
+`deliver_review`.
 
 ### The `## Scenarios` table <!-- #scenarios -->
 
@@ -183,23 +182,39 @@ The test plan lists the scenarios in the order DELIVER builds them:
 
 | # | Scenario | Component | Tags |
 |---|---|---|---|
-| S1 | Customer pays an order by card | api | @walking-skeleton @happy-path |
-| S2 | Customer is refused an expired card | api | @error-case |
+| S1 | Customer pays an order by card | api | @walking-skeleton @happy-path @AC-1 |
+| S2 | Customer is refused an expired card | api | @error-case @AC-2 |
 
 Walking skeleton exemption: none
 ```
 
 | Rule | Refused with |
 | --- | --- |
-| no `## Scenarios` heading followed by a table with the columns `#`, `Scenario`, `Component`, `Tags` | `<plan> lists no scenario: write …` |
+| a `## Scenarios` heading followed by a table with the columns `#`, `Scenario`, `Component`, `Tags` | `<plan> lists no scenario: write …` |
 | ids `S1`, `S2`, … in row order | `<plan>: row <n> is not S<n>; number the scenarios S1, S2, … in the order DELIVER builds them` |
-| a title on each row, never twice | `<plan>: S<n> has no title`; `<plan>: two scenarios are titled "<title>"` |
+| a title on each row | `<plan>: S<n> has no title` |
 | `Component`: a component name of `skraft-config.json` | `<plan>: S<n> names component "<c>", which is none of <components>` |
-| exemption `none` (default when the line is absent): S1, and S1 only, tagged `@walking-skeleton` | `<plan>: tag S1, and S1 only, @walking-skeleton, or declare "Walking skeleton exemption: library \| refactoring \| docs-only"` |
-| the walking skeleton in a component that is not `react` | `<plan>: the walking skeleton S1 runs in a back-end component; <c> is a react front end` |
-| exemption `library`, `refactoring` or `docs-only`: no scenario tagged `@walking-skeleton` | `<plan>: the story declares its walking skeleton exempt (<exemption>), and S<n> carries @walking-skeleton` |
-| any other exemption | `<plan>: walking skeleton exemption "<value>" must be none, library, refactoring, docs-only` |
-| `docs-only`: no commit of the story changes a component's `src` paths | `the story declares its walking skeleton exempt as docs only, and commit <sha> changes <file>, source of <component>; remove the exemption and tag S1 @walking-skeleton` |
+
+The engine reads nothing more of the table. Whether S1 alone is tagged `@walking-skeleton`, whether the
+walking skeleton sits in a back-end component, whether an exemption (`library`, `refactoring`, `docs-only`) is valid and
+borne out by the story's commits, and whether two rows share a title are judged by the `boundary-enforcement` (G8) and
+`testability` (G6) lenses.
+
+The implementation plan beside it (`impl-plan-…` for `test-plan-…`) groups the scenarios DELIVER
+makes pass, in its order, under any heading; the table gives the order of work, and the story takes one green commit:
+
+```text
+| Group | Scenarios | Rule |
+|---|---|---|
+| 1 | S1, S2 | card payment |
+| 2 | S3–S5 | expired cards |
+```
+
+The engine reads the table for DELIVER's order of work and refuses it only when a group names no scenario
+(`<plan>: group <g> names no scenario`). That every scenario sits in exactly one group, none the test plan does not list,
+S1 in the first group, is the `testability` lens's (G6).
+
+A plan with no table holding the `Group` and `Scenarios` columns works one scenario per group.
 
 Each failure sends the agent of the pass back with the line; after its last attempt, or two
 attempts in a row refused the same way, the run asks the `blocked` question, and `STOP` ends it
@@ -209,32 +224,30 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 
 | Node | Kind | Role |
 | --- | --- | --- |
-| `deliver` | agent `software-engineer`, `each="scenario"` | makes each scenario pass in turn, one green commit each, S1's green making the walking skeleton pass too and every later green keeping it passing; after the last, the passes the gates or the review send back, on the whole story |
-| `gates` | gates `build,format,lint,test,architecture,coverage`, `goal_gate`, `locked` | commands of the changed components, then of all |
-| `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
-| `visuals` | publication `playwright-visuals`, `when="frontend"` | each front end's `e2e` command, screenshots committed |
+| `deliver` | agent `software-engineer` | one dispatch per story: works each group of the implementation plan in plan order and commits one green for the whole story (a second one is refused, `green-split`); that green makes the walking skeleton pass too; after the last, the passes the review sends back, on the whole story. The engineer runs every gate of each component the story changed through `skraft_repl`; the engine journals the traced runs and the DELIVER review judges them ([Gates](./gates.md#command-gates)) |
+| `deliver_review` | call `workflow="review"` | lenses `test-integrity`, `architecture-boundaries`, `cold-reader`, `quality-gates` (`when="delivery"`), `mock-fidelity` (`when="mock"`), `contract-fidelity` (`when="contract"`) |
+| `visuals` | publication `playwright-visuals`, `when="frontend"` | commits the screenshots of the last traced e2e run (`gate('e2e', …)`) of each front end |
 
 | | |
 | --- | --- |
-| Brief on a scenario | the scenario (`- Scenario: k of N — "<title>" (component <c>, tags …)`); the acceptance tests DISTILL committed so far, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one: it stops `blocked`, naming it); the walking skeleton of the scenario's component, which passes at its commit too; the commit, exactly: `<test command> && git add <each file you changed> && git commit -s -m "feat(<story>): <title>" -m "Refs: #<issue>"` |
+| Brief | the groups, in the order the engineer works them (`- <g> of <G> — S1 "<title>" (component <c>, tags …); …`); the commit of the acceptance tests DISTILL committed, the walking skeleton included (`<sha> "<subject>": <files>`), which the agent never changes (a wrong one, or one failing on a build or setup error: it stops `blocked`, naming it); one commit line, exactly: `<the test command of each component> && git add <each file you changed> && git commit -s -m "feat(<story>): S1–S<n> <the rules of the story>" -m "Refs: #<issue>"`. A pass the review sent back lists no group: only the acceptance tests it never changes, and the commit rules of the cycle |
 | Declared output | `changes/{date}/change-log.md` |
-| Evidence | `gates/<component>/<gate>-<n>.log`; `visuals/<component>/e2e-<n>.log` |
+| Evidence | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl` and the logs of the traced runs, handed to the review; the journal's `evidence.checked` ([Gates](./gates.md#command-gates)); `visuals/<component>/e2e-<n>.log` |
 | Allowed writes | the tracking folder, each component's `src` and `tests` paths, and the files at their roots; a change outside it is refused |
-| Commits | `deliver` on a scenario: exactly one `feat(<story>): <scenario title>` (or `fix`), chained in bash to the test command as the brief writes it; no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths, nor to another component; the engine replays the tests at it and the replay judge decides, the walking skeleton of the scenario's component passing too ([Commits and replays](./gates.md#commits)). `deliver` sent back by the gates or the review: each `feat` or `fix` after a `test(<story>): …` since the last green, the gate failure standing for that red on a pass the gates sent back, `refactor` allowed, reds not replayed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
-| Mutation | none: the plugin's pipeline runs no mutation, the developer runs it apart; a team's own workflow may still hold a `gate="mutation"` node ([The DOT workflow](./workflow-dot.mdx)) |
+| Commits | `deliver`, the story's pass: one `feat(<story>): …` (or `fix`) for the whole story, whatever its subject names, chained to the test command as the brief writes it, for sh or PowerShell 7 and for Windows PowerShell 5.1; a second one is refused (`green-split`); no `test`, `refactor`, `style` or `perf` commit, the inner TDD loop staying uncommitted; no change to the acceptance tests or the walking skeleton outside the component's `src` paths; the engine runs no test ([Commits](./gates.md#commits)). `deliver` sent back by the review: each cycle one `feat` or `fix` holding its test and its code, no `test(<story>): …` commit of its own (`test-apart`, `green-without-test`), `refactor` allowed. A DELIVER journal of an earlier V2 alpha, one dispatch per group, is not resumed. Each conventional message ends with `Refs: #<issue>` and closes no issue; a change left uncommitted is refused (`uncommitted`) |
+| Mutation | none: neither the pipeline nor the engine runs mutation; it is a recipe of the developer's session ([Run mutation](../how-to/run-mutation.md)) |
 
 | Lens (`review`) | Gates |
 | --- | --- |
 | `test-integrity` | G7, G9; plus the G9 findings the engine reads in the patch (`test-integrity#patch`) |
 | `architecture-boundaries` | G4, G5, G10 |
 | `cold-reader` | G11 |
+| `quality-gates` | Q1, Q2, Q3, Q4 |
 | `mock-fidelity` | M1, M2, M3, M4 |
 | `contract-fidelity` | K1, K2, K3, K4, K5 |
 
 | Edge | Label | `max_visits` |
 | --- | --- | --- |
-| `gates -> deliver` | `FAIL` | 3 |
-| `gates -> deliver_review` | `PASS` | — |
 | `deliver_review -> deliver` | `NEEDS_REWORK` | 2 |
 | `deliver_review -> visuals` | `APPROVED` | — |
 
@@ -259,8 +272,7 @@ with `scenarios`. Why the walking skeleton walks S1: [Walking Skeleton](../expla
 | --- | --- | --- | --- | --- |
 | `adr-ratification` | node `adr` | `RATIFIED`, `REJECTED` | `REJECTED` | `ADR` |
 | `scenario-review` | node `scenario_review` | `APPROVED`, `REVISE` | `REVISE` | `Scenarios` |
-| `mutation-plan` | a `question="mutation-plan"` node of a team's own workflow; the plugin's asks none | `APPLY`, an instruction, or `STOP` | — | `Mutation` |
-| `environment` | the engine, when a step cannot run on the machine or with what `skraft-config.json` gives it, or when the replay judge asks a human about a replayed commit; its text names the cause and the log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
+| `environment` | the engine, when a step cannot run on the machine or with what `skraft-config.json` gives it; its text names the cause and the log ([causes](./run-journal.md#environment-question)) | `RETRY`, `ABORT` | — | `Environment` |
 | `blocked` | the engine, when an agent answers `blocked`, an agent is refused the same way on two attempts in a row or on its last attempt, a loop reaches its `max_visits` or a lens answers `inconclusive` | an instruction, or `STOP` | — | `Blocked` |
 | `review-consent` | `skraft review --pr --publish` | `ACCEPTED`, `DECLINED` | — | `PR comment` |
 

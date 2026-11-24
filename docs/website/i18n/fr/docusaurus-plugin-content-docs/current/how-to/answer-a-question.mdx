@@ -1,6 +1,6 @@
 ---
 title: "Répondre à une question du run"
-description: "Répondre à la question qu'un run attend (ADR, consentement, machine, agent bloqué, mutants) depuis votre hôte, et ce que devient un refus."
+description: "Répondre à la question qu'un run attend (ADR, consentement, machine, agent bloqué) depuis votre hôte, et ce que devient un refus."
 persona: software-engineer
 ---
 
@@ -42,7 +42,6 @@ La ligne `answer:` donne la clé (`adr-1`) et les réponses permises :
 | `scenario-review` (en-tête `Scenarios`) | `APPROVED`, `REVISE` | avec `REVISE` : vos corrections, envoyées à DISTILL |
 | `review-consent` (`skraft review --pr --publish`, en-tête `PR comment`) | `ACCEPTED`, `DECLINED` | — |
 | `environment` | `RETRY` (après avoir réparé la machine ou `skraft-config.json`), `ABORT` | — |
-| `mutation-plan` | `APPLY`, une consigne à vous, ou `STOP` | — |
 | `blocked` | une consigne pour l'agent, ou `STOP` | — |
 
 Ce que chaque réponse déclenche : [Questions à un humain](../reference/run-journal.md#human-questions).
@@ -60,10 +59,8 @@ Une question `environment` dit qui corrige sur sa ligne `Cause:`, et où la comm
 |---|---|
 | `the machine` | installer ou démarrer le programme ou le service, accorder la permission ou corriger le hook Git ; le log `Output:` dit lequel |
 | `skraft-config.json` | changer la commande ou le chemin que nomme la première ligne ([Configurer les composants](./configure-components.md)) |
-| `what the replay judge read` | lire la réponse du juge que nomme la ligne `Output:` (`logs/judge-<sha court>-<red\|green>.md`) : sa note dit ce que montrent les logs et quoi corriger sur la machine (un programme, un runtime de conteneurs, un identifiant) |
 
-`RETRY` relance l'étape là où elle s'est arrêtée et ne consomme aucune tentative de l'agent ;
-après une question du juge, il rejoue le commit et réinterroge le juge.
+`RETRY` relance l'étape là où elle s'est arrêtée et ne consomme aucune tentative de l'agent.
 
 ## 2. Répondre depuis votre hôte
 
@@ -73,8 +70,8 @@ après une question du juge, il rejoue le commit et réinterroge le juge.
 1. Choisissez une option dans la boîte de dialogue que le mod ouvre (en-tête `ADR`,
    `Pull request`, `Environment`…).
 2. Pour un refus (`REJECTED`, `REVISE`), une deuxième boîte demande la raison : tapez-la sous **Other**.
-3. Pour une question `blocked` ou `mutation-plan`, tapez votre consigne sous **Other**, ou
-   choisissez `STOP` (`APPLY`).
+3. Pour une question `blocked`, tapez votre consigne sous **Other**, ou
+   choisissez `STOP`.
 
 Boîte fermée, le run attend. Répondez plus tard par un bouton du panneau **Skraft**, ou dans la
 conversation :

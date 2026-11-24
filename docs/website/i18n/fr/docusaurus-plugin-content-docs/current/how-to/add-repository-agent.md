@@ -1,6 +1,6 @@
 ---
 title: "Ajouter un agent du dépôt au pipeline"
-description: "Confier une étape du pipeline à un agent écrit dans votre dépôt : l'ajouter comme nœud du workflow éjecté, avant les gates, et vérifier."
+description: "Confier une étape du pipeline à un agent écrit dans votre dépôt : l'ajouter comme nœud du workflow éjecté, avant la revue DELIVER, et vérifier."
 persona: tech-lead
 ---
 
@@ -39,16 +39,16 @@ Lis le brief, mets à jour docs/user pour ce que la story change, puis écris le
 ## 2. Ajouter le nœud au workflow
 
 Dans `.skraft/pipeline.skraft.dot`, déclarez un nœud `shape=box` qui nomme l'agent, puis
-branchez-le. Un agent qui modifie la copie de travail se place **avant** `gates`, pour que ses
-changements passent les gates et la revue DELIVER :
+branchez-le. Un agent qui modifie la copie de travail se place **avant** `deliver_review`, pour que la
+revue DELIVER lise ses changements :
 
 ```text
 user_docs [shape=box, agent="user-docs-writer", outputs="changes/{date}/user-docs-{slug}.md", writes="docs/user"]
 
-deliver -> user_docs -> gates
+deliver -> user_docs -> deliver_review
 ```
 
-et retirez l'arête `deliver -> gates` qu'elle remplace.
+et retirez l'arête `deliver -> deliver_review` qu'elle remplace.
 
 | Attribut | Effet |
 |---|---|
@@ -81,8 +81,8 @@ Résultat attendu :
 .skraft/pipeline.skraft.dot is valid: phases RESEARCH, DESIGN, DISTILL, DELIVER, PUBLISH
 + node user_docs (agent user-docs-writer)
 + edge deliver -> user_docs
-+ edge user_docs -> gates
-- edge deliver -> gates
++ edge user_docs -> deliver_review
+- edge deliver -> deliver_review
 .skraft/pipeline.skraft.dot: 4 changes from the skraft 2.0.0-alpha.19 workflow
 ```
 
@@ -96,8 +96,7 @@ Commitez `.skraft/` et les fichiers de l'agent : l'étape tourne au prochain run
 | Message | Action |
 |---|---|
 | `node user_docs: agent user-docs-writer not found in the plugin, .claude/agents/ or .github/agents/` | Créer le fichier de l'agent au nom exact de l'identifiant, pour l'hôte utilisé. |
-| `user_docs reaches the exit without passing gates; keep the run going through gates, or skip gates with unlock="<reason>"` | Le nœud est placé après les gates : le déplacer avant `gates`. |
-| `user_docs reaches the exit without passing mandatory node deliver_review; …` | Même cause : le nœud contourne la revue DELIVER. |
+| `user_docs reaches the exit without passing mandatory node deliver_review; …` | Le nœud est placé après la revue ou à côté : le placer avant `deliver_review`. |
 | `node user_docs: attribute <clé> is not supported on a box node (supported: …)` | N'utiliser que les attributs listés à l'étape 2. |
 | `out of write scope: <chemin>` dans le journal | L'agent a écrit hors de `writes` : élargir `writes`, ou resserrer son prompt. |
 | `<node> is blocked: <agent> still failed after 3 attempts`, `missing outputs: <path>` en dessous | L'agent n'a pas rempli une sortie de `outputs` après ses tentatives : corriger son prompt, puis répondre à la question `blocked` par une consigne, qui le relance sur un nouveau passage. `STOP` termine le run avec `missing-outputs`. |

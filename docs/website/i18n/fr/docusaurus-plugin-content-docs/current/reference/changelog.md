@@ -48,6 +48,9 @@ Les changements visibles par l'utilisateur, regroupés par version ; le détail 
 | alpha.1 | Un commentaire de progression sur l'issue de la story, à chaque phase et à la fin. |
 | alpha.1 | `skraft review --pr` revoit une pull request seule avec le workflow `review`. |
 | alpha.12 | Sections de preuves repliées dans la pull request ; ce qui attend un humain reste ouvert. |
+| next | La section QA de la pull request : combien de scénarios ont réussi sur le commit final, par quel run, et un tableau replié qui va des critères d'acceptation de chaque scénario jusqu'à ce run ; `qa-report.md` montre la même chose. Le skill `qa-reporting` disparaît. |
+| next | Sur GitHub, gh joint les captures d'un front end à la pull request (`--attach`) ; rien n'est commité. Sur Azure DevOps, elles restent commitées sur la branche, liées à leur commit. La commande e2e est une gate que lance le software engineer. |
+| next | Le consentement des captures passe en version 2 (aucune vidéo n'est publiée) : une acceptation de la version 1 est redemandée. |
 
 ### Hôtes <!-- #v2-hosts -->
 

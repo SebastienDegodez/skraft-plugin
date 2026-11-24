@@ -98,7 +98,7 @@ flowchart TB
     end
     subgraph DEL["DELIVER"]
         direction LR
-        C1["architecture gate<br/>locked"] --> C3["architecture-boundaries lens<br/>G4 · G5"]
+        C1["architecture gate<br/>traced run"] --> C3["architecture-boundaries lens<br/>G4 · G5"]
     end
     DES --> DIS --> DEL
 ```
@@ -116,19 +116,17 @@ Infrastructure or API type (G3) and an interface filed in Infrastructure (G4). T
 the [Domain-Driven Design](./domain-driven-design.md) model.
 
 **In DISTILL, you trace the full path.** The `acceptance-designer` writes, for each scenario, its
-use-case boundary, its layer and its double type, then commits the red walking skeleton, then
-the red acceptance test of one scenario at a time with the skeleton it calls. The walking
+use-case boundary, its layer and its double type, then commits in one red commit the walking
+skeleton and the acceptance test of every scenario with the skeleton they call. The walking
 skeleton walks S1: a plain test, the thinnest slice that crosses every layer, from the real entry
 point to a real database, and proves the wiring exists
-([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). The engine requires it,
-in a back-end component, unless the story declares itself exempt; the `boundary-enforcement` lens
-checks that it runs that real path (G8). Every scenario's acceptance test, S1's included, keeps
+([Freeman & Pryce, 2009](../reference/citations.mdx#cite-freeman-goos-2009)). The `boundary-enforcement` lens
+checks that it exists in a back-end component, unless the story declares itself exempt, and that it runs that real path (G8). Every scenario's acceptance test, S1's included, keeps
 the use case and drives it in process, with internal gateways in
 memory ([infrastructure policy](../reference/skraft-config.md#infrastructure)). See
 [Walking Skeleton](./deep-dive/walking-skeleton.md).
 
-**In DELIVER, a gate checks it on every pass.** `architecture` is one of the gates of DELIVER's
-locked node, between `test` and `coverage`. Its command, declared per component in
+**In DELIVER, a gate checks it on every pass.** `architecture` is one of the six gates the software engineer runs through `skraft_repl`, and the `quality-gates` lens of the review judges its traced run. Its command, declared per component in
 `skraft-config.json`, runs the project's architecture tests: an `ArchitectureTests` filter in
 .NET, `import-linter` in Python, an `architecture-gate.mjs` script in TypeScript, according to the
 component's `quality-gates-<stack>` skill. In review, the `architecture-boundaries` lens,
@@ -145,7 +143,7 @@ Infrastructure.
 **The mutation bar follows the layer.** The `skraft-quality-bar` skill classifies each file by the
 names of its folders: a folder ending in `domain` or `application` is the core;
 everything else — API, Infrastructure — is the boundary. Each is held to 80 %, apart. The developer's own
-mutation run is judged that way, and so is a `gate="mutation"` node of a team's own workflow. The
+mutation run is judged that way. The
 dependency rule therefore also decides how demanding the tests must be.
 
 ## skraft applies the rule to itself

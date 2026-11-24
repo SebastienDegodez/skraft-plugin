@@ -9,7 +9,7 @@
  */
 
 /** What a run holds that a call binds an input to. */
-export const RUN_VALUES = Object.freeze(['base', 'head', 'story', 'documents', 'components'])
+export const RUN_VALUES = Object.freeze(['base', 'head', 'story', 'documents', 'components', 'trace'])
 
 /** What a review cannot run without: the changes from base to head. */
 const CHANGES = Object.freeze(['base', 'head'])

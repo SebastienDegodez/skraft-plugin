@@ -5,7 +5,7 @@ Deterministic agentic software delivery for Claude Code, GitHub Copilot CLI and 
 Give SKRAFT one refined story. Specialist agents research it, design it, turn it into
 acceptance tests and deliver tested code; read-only review lenses challenge each phase. The
 **skraft engine**, not the model's goodwill, decides every step: phase order, expected outputs,
-write scope, gates, review verdict and the red and green commit of each scenario. It runs the same way on
+write scope, the traced gate runs, review verdict and the red and green commit of each scenario. It runs the same way on
 every host, on Windows, macOS and Linux, and costs nothing per tool call: the plugin ships no
 command hooks.
 
@@ -15,8 +15,8 @@ command hooks.
   its outputs, checks them afterwards, and refuses a step that wrote outside its scope (git
   diff after each step).
 - **Proof, not claims.** Build, format, lint, tests, architecture and coverage run
-  from the commands in `skraft-config.json`; the engine writes the evidence. Each scenario's red
-  acceptance test is replayed to confirm it fails on an assertion.
+  from the commands in `skraft-config.json`; the engine writes the evidence. The red of the acceptance tests
+  is committed once, and the DISTILL review reads the designer's traced run of it, labelled `red`.
 - **Craft by default.** Outside-In TDD, BDD, Clean Architecture per stack, contract testing,
   ADRs and the kill of surviving mutants ship as skills the agents read before they start.
   Mutation testing itself is the developer's: the pipeline runs none.
@@ -51,13 +51,13 @@ root of the working copy. The same line works under sh and PowerShell.
 
 ```text
 skraft init             detect one component per project into skraft-config.json
-skraft doctor --run     run each command once and say which one fails, and which VS Code driver applies
+skraft doctor           check the configuration, list each component's commands, say which VS Code driver applies
 ```
 
 `skraft-config.json` lists your **components**: root, stack, source and test paths, and the
 commands skraft runs (build, format, lint, test, architecture, coverage, e2e). A
-component can live in another repository (`"root": "../payment-web"`). A command you write
-always wins over a default; quality thresholds are not configurable. How-to:
+component can live in another repository (`"root": "../payment-web"`). The engine holds no
+command line of any stack: every command is yours; quality thresholds are not configurable. How-to:
 [Configure components](https://sebastiendegodez.github.io/skraft-plugin/how-to/configure-components); every field:
 [skraft-config.json](https://sebastiendegodez.github.io/skraft-plugin/reference/skraft-config).
 
@@ -95,7 +95,7 @@ flowchart LR
 | `RESEARCH` | `solution-researcher` | — | Research document and constraints |
 | `DESIGN` | `solution-architect` | consistency, architecture-compliance, fitness; then you ratify the ADRs | ADRs, event model, tactical design |
 | `DISTILL` | `acceptance-designer` | coverage, business-alignment, testability, boundary-enforcement | Gherkin scenarios, test plan, failing acceptance tests |
-| `DELIVER` | `software-engineer` | after the gates: test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity | Tested code, gate evidence, red/green commits |
+| `DELIVER` | `software-engineer` | after the traced gate runs: test-integrity, architecture-boundaries, cold-reader, mock-fidelity, contract-fidelity | Tested code, gate evidence, red/green commits |
 | `PUBLISH` | `pr-writer` | — | The branch's pull request, with screenshots of a front end |
 
 A `NEEDS_REWORK` verdict sends the work back to its specialist with the confirmed findings;
@@ -104,8 +104,8 @@ before it counts, and a re-review only asks again the lenses whose inputs change
 
 The pipeline is a DOT graph, `workflows/pipeline.skraft.dot`, and the DELIVER review a second
 one, `workflows/review.skraft.dot`. `skraft workflow eject` copies them into `.skraft/` of your
-repository, where you can add an agent, a lens, a gate or a question. DELIVER gates are locked
-and the reviews mandatory: a copy cannot drop them silently. Inputs, outputs and decisions of
+repository, where you can add an agent, a lens or a question. The reviews are mandatory: a copy
+cannot drop them silently. Inputs, outputs and decisions of
 each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/phases); the graph syntax:
 [DOT workflow](https://sebastiendegodez.github.io/skraft-plugin/reference/workflow-dot); adapting it:
 [Copy and adapt the workflow](https://sebastiendegodez.github.io/skraft-plugin/how-to/eject-workflow).
@@ -118,7 +118,7 @@ each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/
 | Expected outputs | Each output is pre-created from its template; a missing or invalid one is asked again with what was wrong, up to three attempts, and the same failure twice stops the run |
 | Write scope | After each step, the git diff is compared with what that agent may write; a step outside it is refused |
 | Gates | DELIVER closes only when the commands of `skraft-config.json` pass |
-| TDD | One scenario at a time: a red acceptance test that fails on no assertion, a second green, or a green that changes the acceptance test or another component is refused |
+| TDD | Every acceptance test first, then one group at a time: a red whose tests fail on no assertion, a second green, or a green that changes an acceptance test is refused |
 | Review verdict | Lenses return typed findings; the engine refutes, counts and decides |
 | Human decisions | A question waits for a person's answer; under Copilot, only a host-confirmed answer is recorded |
 | Journal | `events.jsonl` is hash-chained and signed with a key of your machine; a hand edit stops the run |
@@ -131,10 +131,10 @@ each phase: [Phases](https://sebastiendegodez.github.io/skraft-plugin/reference/
 └── <slug>/
     ├── events.jsonl           hash-chained, signed journal: the run's state is derived from it
     ├── research/ … docs       the phase documents the agents write
-    ├── reviews/  gates/       review passes and gate evidence, written by the engine
+    ├── reviews/  logs/        review passes and the signed gate runs (logs/runs/), written by the engine
     ├── WORKFLOW.md            the workflow graph with where the run stands
     ├── run-report.md          time, cost and retries of each step
-    ├── qa-report.md           test plan, gates, red commits, verdicts, for a QA team
+    ├── qa-report.md           test plan, quality evidence, red commits, verdicts, for a QA team
     └── pull-request.md        the pull request description
 ```
 
@@ -162,14 +162,18 @@ resolved assignment. How-to: [Choose the agents' models](https://sebastiendegode
 | Node JavaScript | — | `quality-gates-javascript` (`node --test`) | MSW (default) or Microcks |
 
 Contract testing is off by default; a component turns it on with `"contractTesting": true`. In
-DELIVER, a component needs at least one gate command; without one the
-gate fails with a named reason (class `environment`): SKRAFT never guesses a command.
+DELIVER, the engineer runs the gates of each component through `skraft_repl`; a gate the
+project names no command for is declared absent: SKRAFT never guesses a command.
+Helpers the agents reuse in every cell live in your repository under `.repl/lib/`, their packages
+in `.repl/package.json`; agents never write them during an attempt, and each cell's code is kept
+beside the trace as `cell-<n>.mjs`, ready to copy into the library
+([Keep your REPL scripts in `.repl`](https://sebastiendegodez.github.io/skraft-plugin/how-to/keep-repl-scripts)).
 
 ## Pull request at the end of a run
 
 The run ends by pushing the branch and opening a draft pull request, or updating it. SKRAFT asks
 your consent once per repository and keeps it in `skraft-config.json` under `publish`. The
-`pr-writer` agent writes the summary; the engine renders the rest from the journal (gates,
+`pr-writer` agent writes the summary; the engine renders the rest from the journal (quality evidence,
 verdicts, ADRs). For a front end, the screenshots of its Playwright run are committed
 and shown in the pull request, after a separate consent. With your consent, a run started from an
 issue keeps one progress comment on that issue. Without consent, a remote or `gh`, the description stays in

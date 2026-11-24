@@ -274,8 +274,7 @@ const TWO = [['Customer pays by card'], ['Customer is refused an expired card', 
 const S2 = 'tests/Acceptance/S2AcceptanceTests.cs'
 
 /** A commit of scenario k, as the designer and the engineer each make theirs. @param {number} index */
-const red = (index) => ({ git }) => git.commit(`test(${SLUG}): scenario ${index}`, [`tests/Acceptance/S${index}AcceptanceTests.cs`])
-const greenOf = (index) => ({ git }) => git.commit(`feat(${SLUG}): scenario ${index}`, [`src/Scenario${index}.cs`, `tests/Unit/Scenario${index}Tests.cs`])
+const greenOf = (index) => ({ git }) => git.commit(`feat(${SLUG}): S${index} scenario ${index}`, [`src/Scenario${index}.cs`, `tests/Unit/Scenario${index}Tests.cs`])
 
 const TRAIL = `${SLUG}/logs/precheck-distill.jsonl`
 
@@ -285,42 +284,41 @@ const halfWritten = (host) => host.tracking.files.set(TRAIL, `${host.tracking.fi
 /** The pre-checks of a step, as the journal kept them per attempt. @param {any} host @param {string} step */
 const recordedCalls = (host, step) => host.events().filter((event) => event.type === 'step.recorded' && event.step === step)
 
-test('the trail keeps the calls of each attempt apart: the attempt sent back, the one that replaced it and the next scenario each journal their own, and none of them reads a commit', async () => {
+test('the trail keeps the calls of each attempt apart: the attempt sent back and the one that replaced it each journal their own, and none of them reads a commit', async () => {
   const answers = []
   const asked = async (/** @type {any} */ host) => answers.push(await host.precheck())
   const host = scripted({}, (it) => [
     agent()(it),
     agent()(it),
     agent({ plan: TWO, work: async (inner) => { await asked(inner); await asked(inner) } })(it),
-    agent({ plan: TWO, work: async (inner) => { await asked(inner); inner.git.commit(`test(${SLUG}): walking skeleton`, ['tests/Integration/WalkingSkeletonTests.cs']) } })(it),
-    agent({ work: greenOf(1) })(it),
-    agent({ work: async (inner) => {
+    agent({ plan: TWO, work: async (inner) => {
       await asked(inner)
       halfWritten(inner)
       inner.git.change(S2)
       await asked(inner)
-      red(2)(inner)
+      inner.git.commit(`test(${SLUG}): acceptance tests S1–S2`, ['tests/Integration/WalkingSkeletonTests.cs', S2])
       await asked(inner)
     } })(it),
+    agent({ work: greenOf(1) })(it),
     agent({ work: greenOf(2) })(it),
   ])
 
   assert.equal((await host.start()).status, 'done')
 
   assert.deepEqual(recordedCalls(host, 'distill').map(({ visit, attempt, outcome, code }) => [visit, attempt, outcome, code]), [
-    [1, 1, 'failed', 'tdd'], [1, 2, 'done', null], [2, 1, 'done', null], [3, 1, 'done', null],
+    [1, 1, 'failed', 'tdd'], [1, 2, 'done', null],
   ], 'the attempt that committed no red is refused on a check no pre-check runs: a pre-check reads no commit')
   assert.deepEqual(recordedCalls(host, 'distill').map(({ prechecks = [] }) => prechecks.map(({ status }) => status)), [
-    ['passed', 'passed'], ['passed'], [], ['passed', 'failed', 'passed'],
-  ], 'each attempt journals the calls of its own visit and attempt, and no call of another')
+    ['passed', 'passed'], ['passed', 'failed', 'passed'],
+  ], 'each attempt journals the calls of its own attempt, and no call of another')
   assert.deepEqual(answers.map(({ status, step }) => `${step} ${status}`),
-    ['distill passed', 'distill passed', 'distill passed', 'distill passed', 'distill failed', 'distill passed'],
+    ['distill passed', 'distill passed', 'distill passed', 'distill failed', 'distill passed'],
     'the agents were told what the journal kept, in the order they asked')
   assert.deepEqual(host.events().filter((event) => event.type === 'step.recorded' && 'prechecks' in event).map(({ step }) => step),
-    ['distill', 'distill', 'distill'], 'a step whose attempt asked nothing journals no pre-checks at all')
-  assert.deepEqual(recordedCalls(host, 'distill')[3].prechecks[1].found,
+    ['distill', 'distill'], 'a step whose attempt asked nothing journals no pre-checks at all')
+  assert.deepEqual(recordedCalls(host, 'distill')[1].prechecks[1].found,
     [{ code: 'uncommitted', line: `left uncommitted: ${S2}; commit it or undo the change` }],
-    'the call that failed holds the anomaly it answered, and the next scenario\'s commit clears it')
-  assert.deepEqual(host.tracking.files.get(TRAIL).split('\n').filter((line) => line !== '').length, 7,
-    'one trail holds the six calls of the step and the half-written line: the journal kept the calls it could read, each under its own attempt, and dropped that line')
+    'the call that failed holds the anomaly it answered, and the commit after it clears it')
+  assert.deepEqual(host.tracking.files.get(TRAIL).split('\n').filter((line) => line !== '').length, 6,
+    'one trail holds the five calls of the step and the half-written line: the journal kept the calls it could read, each under its own attempt, and dropped that line')
 })

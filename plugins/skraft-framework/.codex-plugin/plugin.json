@@ -1,6 +1,6 @@
 {
   "name": "skraft",
-  "version": "2.0.0-alpha.107",
+  "version": "2.0.0-alpha.109",
   "description": "skraft SDLC pipeline — agents, skills and instructions for outside-in TDD, Clean Architecture and the RESEARCH→DESIGN→DISTILL→DELIVER engineering pipeline.",
   "author": {
     "name": "SebastienDegodez",
@@ -29,7 +29,7 @@
   "interface": {
     "displayName": "SKRAFT SDLC Pipeline",
     "shortDescription": "Deterministic agentic SDLC pipeline with adversarial review lenses and checks computed by its engine.",
-    "longDescription": "skraft turns a coding assistant into a disciplined software production line. Each engineering phase (RESEARCH → DESIGN → DISTILL → DELIVER) is driven by a specialized agent and reviewed by isolated read-only lenses. A host-neutral engine decides every step: it starts an agent only when its inputs exist, checks its outputs and its write scope after each step, runs the gates from skraft-config.json, computes the review verdict and replays each red TDD commit, all recorded in a hash-chained, signed journal.",
+    "longDescription": "skraft turns a coding assistant into a disciplined software production line. Each engineering phase (RESEARCH → DESIGN → DISTILL → DELIVER) is driven by a specialized agent and reviewed by isolated read-only lenses. A host-neutral engine decides every step: it starts an agent only when its inputs exist, checks its outputs and its write scope after each step, runs the gates from skraft-config.json, computes the review verdict and checks the order and the kind of every TDD commit, all recorded in a hash-chained, signed journal.",
     "defaultPrompt": [
       "Run the skraft pipeline on this issue.",
       "Review my implementation against the skraft quality bar."

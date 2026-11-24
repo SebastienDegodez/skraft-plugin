@@ -21,14 +21,33 @@ import { branchOnRemote } from './git-push.mjs'
 export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   ...whereTo(commandRunner),
   ...branchOnRemote((argv) => run(commandRunner, argv), () => remoteOf(commandRunner), NO_REMOTE),
-  findPullRequest: (head) => findPullRequest(commandRunner, head),
-  readPullRequest: (number) => readOwn(commandRunner, number),
-  create: (request) => create(commandRunner, request),
-  edit: (request) => edit(commandRunner, request),
+  ...pullRequestsOf(commandRunner),
+  ...screenshotsOf(commandRunner),
   ...comments(commandRunner),
   issue: (number) => findIssue(commandRunner, number),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
   ...LIMITS,
+})
+
+/**
+ * The pull request of a branch, found, read whole by its number, opened, its body replaced.
+ * @param {CommandRunner} commandRunner
+ */
+const pullRequestsOf = (commandRunner) => ({
+  findPullRequest: (/** @type {string} */ head) => findPullRequest(commandRunner, head),
+  readPullRequest: (/** @type {number} */ number) => readOwn(commandRunner, number),
+  create: (/** @type {PullRequestRequest} */ request) => create(commandRunner, request),
+  edit: (/** @type {{ number: number, bodyFile: string }} */ request) => edit(commandRunner, request),
+})
+
+/**
+ * How a pull request shows screenshots on GitHub: gh uploads each with the body (`--attach`).
+ * @param {CommandRunner} commandRunner
+ */
+const screenshotsOf = (commandRunner) => ({
+  attachesFiles: true,
+  fileUrl: (/** @type {string} */ commit, /** @type {string} */ path) => rawUrl(commandRunner, commit, path),
+  screenshotsBlocked: () => attachMissing(commandRunner),
 })
 
 /**
@@ -38,7 +57,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
  */
 const comments = (commandRunner) => ({
   keepIssueComment: (/** @type {import('../../application/ports/code-host.mjs').IssueCommentRequest} */ request) => keepIssueComment(commandRunner, request, remoteOf, OPENS),
-  keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS),
+  keepPullRequestComment: (/** @type {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} */ request) => keepPullRequestComment(commandRunner, request),
   readComment: (/** @type {string} */ url) => readComment(commandRunner, url, remoteOf),
 })
 
@@ -49,6 +68,8 @@ const LIMITS = Object.freeze({
   commentLimit: 60_000,
   // gh takes the body file itself.
   takesRequestFile: false,
+  // The screenshots gh is handed in one command, at most: GitHub's limit on one upload batch is not measured, so the engine stays under it.
+  attachLimit: 50,
 })
 
 /**
@@ -94,7 +115,18 @@ const NO_PROMPT = Object.freeze({ GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ss
 
 /** @param {CommandRunner} commandRunner @param {string[]} argv */
 // Stryker disable next-line StringLiteral: '' and '.' are both the working copy to the CommandRunner
-const run = (commandRunner, argv) => commandRunner.run({ argv, cwd: '.', env: NO_PROMPT, timeoutMs: CALL_TIMEOUT_MS })
+const run = (commandRunner, argv, cwd = '.') => commandRunner.run({ argv, cwd, env: NO_PROMPT, timeoutMs: CALL_TIMEOUT_MS })
+
+/**
+ * gh started from the folder of the body's file: gh resolves the body's references to its
+ * attachments from there (`gh pr create --help`, gh 2.103.3), and each `--attach` from its own
+ * folder, so that both name the same file.
+ * @param {CommandRunner} commandRunner @param {string[]} argv @param {string} bodyFile absolute
+ */
+const runBeside = (commandRunner, argv, bodyFile) => run(commandRunner, argv, folderOf(bodyFile))
+
+/** The folder of an absolute file, `/` or `\\` before its name; the mod loads no node:path. @param {string} file */
+const folderOf = (file) => file.slice(0, Math.max(file.lastIndexOf('/'), file.lastIndexOf('\\')))
 
 /** The longest a git or gh call may run, a push included: past it the run goes on and says why. */
 const CALL_TIMEOUT_MS = 120_000
@@ -305,22 +337,71 @@ const readIssue = (text) => {
   }
 }
 
-/** Opens the pull request; gh prints its URL. @param {CommandRunner} commandRunner @param {PullRequestRequest} request */
-const create = async (commandRunner, { base, head, title, bodyFile, draft }) => {
+/**
+ * Opens the pull request; gh prints its URL. Each attachment is uploaded by gh (`--attach`), which
+ * rewrites the body's reference to it; when some fail, gh still opens the pull request, prints its
+ * URL and exits non-zero (`gh pr create --help`, gh 2.103.3): the URL printed is the answer.
+ * @param {CommandRunner} commandRunner @param {PullRequestRequest} request
+ */
+const create = async (commandRunner, { base, head, title, bodyFile, draft, attachments = [] }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await run(commandRunner, ['gh', 'pr', 'create', `--repo=${remote.repository}`, `--base=${base}`, `--head=${head}`, `--title=${title}`, `--body-file=${bodyFile}`, ...(draft ? ['--draft'] : [])])
-  const url = succeeded(result) ? /https?:\/\/\S+\/pull\/(\d+)/.exec(result.stdout) : null
-  return url === null ? failedWrite(result, `gh could not open the pull request of ${head} on ${remote.repository}`) : { ok: /** @type {const} */ (true), number: Number(url[1]), url: url[0] }
+  const sent = await sendable(commandRunner, attachments)
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'create', `--repo=${remote.repository}`, `--base=${base}`, `--head=${head}`, `--title=${title}`, `--body-file=${bodyFile}`, ...(draft ? ['--draft'] : []), ...attachArgs(sent.attachments)], bodyFile)
+  const url = answered(result, sent.attachments) ? /https?:\/\/\S+\/pull\/(\d+)/.exec(result.stdout) : null
+  if (url === null) return failedWrite(result, `gh could not open the pull request of ${head} on ${remote.repository}`)
+  return { ok: /** @type {const} */ (true), number: Number(url[1]), url: url[0], ...(sent.note === null ? {} : { note: sent.note }) }
 }
 
-/** Replaces the pull request's body. @param {CommandRunner} commandRunner @param {{ number: number, bodyFile: string }} request */
-const edit = async (commandRunner, { number, bodyFile }) => {
+/**
+ * The attachments gh is handed: none when its `gh pr create` takes no --attach, which it would
+ * refuse as an unknown flag, and the write done without them says why.
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').Attachment[]} attachments
+ * @returns {Promise<{ attachments: import('../../application/ports/code-host.mjs').Attachment[], note: string | null }>}
+ */
+const sendable = async (commandRunner, attachments) => {
+  if (attachments.length === 0) return { attachments, note: null }
+  return (await attachMissing(commandRunner)) === null ? { attachments, note: null } : { attachments: [], note: NO_ATTACH }
+}
+
+/**
+ * Replaces the pull request's body, gh uploading each attachment; an exit that is not 0 after an
+ * attachment is told by reading the body back, which the caller does.
+ * @param {CommandRunner} commandRunner @param {{ number: number, bodyFile: string, attachments?: import('../../application/ports/code-host.mjs').Attachment[] }} request
+ */
+const edit = async (commandRunner, { number, bodyFile, attachments = [] }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_REMOTE)
-  const result = await run(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`])
-  return succeeded(result) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not update pull request #${number} on ${remote.repository}`)
+  const sent = (await sendable(commandRunner, attachments)).attachments
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(sent)], bodyFile)
+  return answered(result, sent) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not update pull request #${number} on ${remote.repository}`)
 }
+
+/** gh's `--attach <file>#<alt>`, the file named as the body refers to it, from the body file's folder. @param {import('../../application/ports/code-host.mjs').Attachment[]} attachments */
+const attachArgs = (attachments) => attachments.map(({ reference, alt }) => `--attach=${reference}#${alt}`)
+
+/**
+ * Whether gh answered the write: exit 0, or, with attachments, any exit once it ran to its end
+ * (some attachments failed, the rest of the write done).
+ * @param {CommandResult} result @param {unknown[]} attachments
+ */
+const answered = (result, attachments) => succeeded(result) || (attachments.length > 0 && result.started && result.exitCode !== null)
+
+/** The file's raw route at the commit, on the forge the remote names; null without one. @param {CommandRunner} commandRunner @param {string} commit @param {string} path */
+const rawUrl = async (commandRunner, commit, path) => {
+  const named = await repositoryOf(commandRunner)
+  return named === null ? null : `https://${named.host}/${named.repository}/raw/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`
+}
+
+/** Why gh cannot attach a screenshot to a pull request: no gh, or one whose `gh pr create` takes no --attach; null when it can. @param {CommandRunner} commandRunner */
+const attachMissing = async (commandRunner) => {
+  const help = await run(commandRunner, ['gh', 'pr', 'create', '--help'])
+  if (!help.started) return NO_GH
+  return help.stdout.includes('--attach') ? null : NO_ATTACH
+}
+
+/** Why gh attaches no screenshot. */
+export const NO_ATTACH = 'gh pr create takes no --attach: update gh, or the pull request is opened without its screenshots'
 
 /**
  * Rewrites the run's comment on the issue, or the pull request the number names: the one at the
@@ -337,6 +418,32 @@ const keepIssueComment = async (commandRunner, request, locate, markerAt) => {
   if (kept === LOST) return { ...refused(`${reason}: gh got no answer`), outcome: /** @type {const} */ ('unknown') }
   return kept ?? refused(reason)
 }
+
+/**
+ * A comment of a pull request: one that attaches screenshots is posted by `gh pr comment --attach`,
+ * which writes no comment already there; any other, or any when gh takes no --attach, is kept as an issue's.
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} request
+ */
+const keepPullRequestComment = async (commandRunner, request) => ((await sendable(commandRunner, request.attachments ?? [])).attachments.length > 0
+  ? postAttached(commandRunner, request)
+  : keepIssueComment(commandRunner, { ...request, requestFile: '' }, remoteOf, OPENS))
+
+/**
+ * Posts the comment, gh uploading each attachment and rewriting the body's reference to it; gh
+ * prints the comment's URL, also when some attachments failed and it exits non-zero, as
+ * `gh pr create` does (`gh pr comment --help`, gh 2.103.3; the exit is not measured).
+ * @param {CommandRunner} commandRunner @param {import('../../application/ports/code-host.mjs').PullRequestCommentRequest} request
+ */
+const postAttached = async (commandRunner, { number, bodyFile, attachments }) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await runBeside(commandRunner, ['gh', 'pr', 'comment', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(attachments)], bodyFile)
+  const url = answered(result, attachments) ? PRINTED_COMMENT.exec(result.stdout)?.[0] : undefined
+  return url === undefined ? failedWrite(result, `gh could not comment pull request #${number} on ${remote.repository}`) : { ok: /** @type {const} */ (true), url }
+}
+
+/** The URL of a pull request's comment, the line gh pr comment prints. */
+const PRINTED_COMMENT = /^https:\/\/\S+\/pull\/\d+#issuecomment-\d+$/m
 
 /** A comment written that gh got no answer for: it may be on the forge. */
 const LOST = Symbol('lost')

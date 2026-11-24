@@ -129,7 +129,7 @@ test plan lists them as S1 and S2. The designer first writes the walking skeleto
 that orders through the real endpoint and checks the response's status, its shape and the receipt
 S1 names, with the skeleton of the chain it crosses, and commits them **failing**. On its next
 pass, it writes S1's acceptance test, the binding of the Gherkin through the use case, and commits
-it failing too. The engine replays each test to check it fails on an assertion. After the review,
+it failing too. The designer's run shows each fails on an assertion. After the review,
 a person reads the two scenarios, the walking skeleton and S1's test, and approves them.
 
 - **What enters:** the ADR + the event model.
@@ -140,10 +140,10 @@ a person reads the two scenarios, the walking skeleton and S1's test, and approv
 ### Step 6 — DELIVER: implement, guided by tests
 
 The `software-engineer` makes S1 green with **Outside-In TDD**: unit tests first, then the code,
-then one green commit, which the engine replays: S1's acceptance test and the walking skeleton
+then one green commit: S1's acceptance test and the walking skeleton
 both pass at it. DISTILL then writes S2's failing test, and the
-engineer turns it green the same way. The engine runs the gates (build, tests, architecture,
-coverage), then the DELIVER review reads the code. Whether the tests would catch a mistake in the
+engineer turns it green the same way. The engineer runs the gates (build, tests, architecture,
+coverage) through `skraft_repl` and the engine journals their traced runs, then the DELIVER review reads the code and those runs. Whether the tests would catch a mistake in the
 loyalty rule, the developer's own **mutation** run shows, apart from the pipeline.
 
 - **What enters:** the red walking skeleton + S1's red acceptance test + the plan.
@@ -163,7 +163,7 @@ pipeline, without losing its context:
 | RESEARCH | Cited research document + recommendation |
 | DESIGN | Ratified ADR (payment via ACL) + event model |
 | DISTILL | Gherkin scenarios S1, S2 + red walking skeleton + S1's red acceptance test |
-| DELIVER | One red and one green commit per scenario + reviewed code + pull request |
+| DELIVER | One green commit for the whole story, the groups worked in plan order, after DISTILL's one red + reviewed code + pull request |
 
 Each artifact became the **context** of the next step, and every handoff stayed readable:
 what was not written down was not passed on.

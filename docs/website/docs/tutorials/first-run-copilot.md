@@ -45,8 +45,8 @@ $ git init -b main
 }
 ```
 
-The `test` script prints each test and why it fails to the standard output, which the replay
-judge reads when the engine replays a commit.
+The `test` script prints each test and why it fails to the standard output, which the acceptance
+designer reads when it runs the acceptance tests.
 
 `web/src/cart.js`:
 
@@ -103,8 +103,9 @@ From here on, `skraft …` means that full command, or the `skraft` command that
 
 ![Terminal: skraft init answers "skraft-config.json: web (javascript, web)"](/img/screenshots/shared/terminal-init.svg)
 
-*Figure 1 — One component, `web`, with its `test` and `mutation` commands, is written to
-`skraft-config.json`. The pipeline runs `test`; `mutation` is yours to run.*
+*Figure 1 — One component, `web`, is written to `skraft-config.json`, with no command: write its
+`"commands": { "test": "npm test" }` there. The engineer runs `test` through `skraft_repl`; `mutation` is yours to write
+and run.*
 
 A run that publishes starts only on a configuration that settles the publication consents, so
 answer them now, in `skraft-config.json`. This repository has no remote, so decline both:
@@ -114,7 +115,7 @@ answer them now, in `skraft-config.json`. This repository has no remote, so decl
   "publish": {
     "pullRequest": false,
     "visuals": false,
-    "questionVersions": { "pullRequest": 2, "visuals": 1 }
+    "questionVersions": { "pullRequest": 2, "visuals": 2 }
   },
   "components": [ … ]
 }
@@ -211,13 +212,13 @@ Open the ADR under `docs/adr/`, read it, then choose **RATIFIED** in the chat. T
 
 Once the four DISTILL lenses have approved the scenarios, the failing walking skeleton and the
 failing acceptance test of S1, Copilot asks one more question, headed **Scenarios**: it names each
-scenario of the story in the order DELIVER builds them, S1 marked walking skeleton, the commit of
-the walking skeleton and the commit of S1's test. Open the test plan under
+scenario of the story in the order DELIVER builds them, S1 marked walking skeleton, the groups
+DELIVER makes pass and the commit of the acceptance tests. Open the test plan under
 `.copilot-tracking/skraft-plans/checkout/details/` and those commits, read them, then
 choose **APPROVED** in the chat.
 
-The run then goes on without you: one scenario at a time, a green commit that the engine replays,
-then the next scenario's failing test; then the gates, the DELIVER review, and the pull request
+The run then goes on without you: one pass of the software engineer, one green commit for all the groups of
+scenarios, in plan order; then the DELIVER review, which reads the traced gate runs, and the pull request
 description. The `/workflows` log ends like this:
 
 ![skraft-pipeline workflow log: phase PUBLISH, pr-writer, the pull request not opened as publish.pullRequest is false, PUBLISH closed, then checkout: done: PUBLISH closed](/img/screenshots/shared/terminal-workflow-log.svg)

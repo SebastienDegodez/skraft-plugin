@@ -13,7 +13,7 @@ const MODEL_NAMES = 'must be a model name or a non-empty list of model names, tr
 /** The software engineer's green of the scenario, adding a gateway mock and a contract test, so that every lens of deliver_review runs. */
 const deliverTouchingMocksAndContracts = (host) => agent({
   work: ({ git }) => {
-    git.commit(`feat(${SLUG}): Checkout pays by card`, ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'tests/GatewayMock.cs', 'tests/PaymentContractTests.cs'])
+    git.commit(`feat(${SLUG}): S1 Checkout pays by card`, ['src/Checkout.cs', 'tests/CheckoutTests.cs', 'tests/GatewayMock.cs', 'tests/PaymentContractTests.cs'])
   },
 })(host)
 
@@ -61,7 +61,7 @@ const rows = (host) => {
 const LENSES = [
   'consistency-lens', 'architecture-compliance-lens', 'fitness-lens',
   'coverage-lens', 'business-alignment-lens', 'testability-lens', 'boundary-enforcement-lens',
-  'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
+  'test-integrity-lens', 'architecture-boundaries-lens', 'cold-reader-lens', 'quality-gates-lens', 'mock-fidelity-lens', 'contract-fidelity-lens',
 ]
 
 /** The example of the design document: the team's exception and the developer's local file. */
@@ -110,6 +110,7 @@ test('the plugin defaults, a team exception and a developer file resolve each ag
     'test-integrity-lens': economy,
     'architecture-boundaries-lens': ['economy', 'haiku · high', 'gpt-5.5 · high'],
     'cold-reader-lens': ['deep-review', 'fable · max', 'gpt-7.0 → gpt-6.0 · high'],
+    'quality-gates-lens': economy,
     'mock-fidelity-lens': economy,
     'contract-fidelity-lens': economy,
     'finding-refuter': [standardRefuter, standardRefuter, ['frontier', 'opus · high', 'gpt-6.0 · xhigh']],
@@ -131,7 +132,7 @@ test('without models or assign in any file, Claude Code gets the plugin aliases 
   ])
 })
 
-test('a type rule applies to the twelve lenses of the three review nodes, and an agent rule overrides one agent only', async () => {
+test('a type rule applies to the thirteen lenses of the three review nodes, and an agent rule overrides one agent only', async () => {
   const host = await runOn({ local: { assign: { types: { lens: 'frontier' }, agents: { 'mock-fidelity-lens': 'economy', 'solution-architect': 'premium' } } } })
 
   const lensRows = dispatches(host).filter(({ agent: id }) => id.endsWith('-lens')).map(row)
@@ -382,11 +383,11 @@ test('assign names a family or inherit by default, by type and by agent, an obje
 test('a developer\'s own files hold no components, no file holds a rank or a workflow, and each file is named with its own errors', async () => {
   const noWorkflow = 'workflow is no key: skraft workflow eject copies the pipeline into .skraft/pipeline.skraft.dot, the only one a run follows'
   assert.equal(await refusal({
-    user: { components: [], rank: ['economy'], tdd: { replay: 'some' } },
+    user: { components: [], rank: ['economy'] },
     config: { rank: [], workflow: 'team.dot' },
     local: { workflow: 'mine.dot', models: { 'gpt-codex': { tier: 'standard' } } },
   }), [
-    '~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json; rank is no key: the tier of each family ranks it (economy < standard < frontier); tdd must be { "replay": "all" or "last-red" }',
+    '~/.skraft/config.json is invalid: components belongs in skraft-config.json, never in ~/.skraft/config.json; rank is no key: the tier of each family ranks it (economy < standard < frontier)',
     `skraft-config.json is invalid: rank is no key: the tier of each family ranks it (economy < standard < frontier); ${noWorkflow}`,
     `skraft-config.local.json is invalid: ${noWorkflow}`,
   ].join('; '))
@@ -456,7 +457,7 @@ test('doctor shows, for each host, what every agent the workflow dispatches runs
   assert.equal(report.ok, true)
   assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
     { subject: 'models/claude-code', status: 'ok', detail: "every family the workflow's agents run on has a model on claude-code" },
-    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches), economy (1 dispatch); these run on the session's model" },
+    { subject: 'models/copilot', status: 'warn', detail: "no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (3 dispatches), implementer (2 dispatches), economy (1 dispatch); these run on the session's model" },
   ])
 })
 
@@ -487,7 +488,7 @@ test('doctor fails an agent rule for an agent nobody provides, naming the closes
   assert.deepEqual(report.checks.filter(({ subject }) => subject.startsWith('models')), [
     { subject: 'models', status: 'fail', detail: 'assign.agents.cold-reader: no agent cold-reader in the plugin, .claude/agents/ or .github/agents/; did you mean cold-reader-lens?' },
     { subject: 'models', status: 'fail', detail: 'assign.agents.sofware-engineer: no agent sofware-engineer in the plugin, .claude/agents/ or .github/agents/; did you mean software-engineer?' },
-    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for researcher (1 dispatch), reviewer (8 dispatches), gpt-idle (1 dispatch), economy (1 dispatch); these run on the agent file's model" },
+    { subject: 'models/claude-code', status: 'warn', detail: "no model on claude-code for researcher (1 dispatch), reviewer (9 dispatches), gpt-idle (1 dispatch), economy (1 dispatch); these run on the agent file's model" },
     { subject: 'models/claude-code', status: 'warn', detail: 'CLAUDE_CODE_EFFORT_LEVEL is set to "high": Claude Code applies it to every agent, over the effort skraft assigns' },
     { subject: 'models/copilot', status: 'ok', detail: "every family the workflow's agents run on has a model on copilot" },
     { subject: 'models/copilot', status: 'warn', detail: 'max effort on architecture-boundaries-lens (gpt-mini), cold-reader-lens (gpt-6.0, gpt-5.5): Copilot takes max on Anthropic models only, and these names do not contain "claude"' },
@@ -515,7 +516,7 @@ test('doctor does not warn of max asked of Copilot for an agent that runs on the
 
   assert.equal(tableLine(report.assignments.copilot.find(({ agent: id }) => id === 'coverage-lens')), 'distill_review coverage-lens lens reviewer economy - max type/host/agent')
   assert.deepEqual(report.checks.filter(({ subject }) => subject === 'models/copilot').map(({ status, detail }) => `${status} ${detail.split(';')[0]}`), [
-    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (12 dispatches), standard (3 dispatches), implementer (2 dispatches), economy (1 dispatch)',
+    'warn no model on copilot for researcher (1 dispatch), planner (1 dispatch), reviewer (13 dispatches), standard (3 dispatches), implementer (2 dispatches), economy (1 dispatch)',
     'warn ~/.copilot/settings.json sets subagents.agents for coverage-lens',
   ])
 })

@@ -5,7 +5,7 @@ description: "Les gates de commandes du moteur et les critères de revue (Gxx et
 
 # Gates
 
-Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0, ou un critère qu'une lentille de revue déclare tenu ou non.
+Une gate est un critère binaire, écrit d'avance : une commande qui sort avec 0 dans une exécution tracée, ou un critère qu'une lentille de revue déclare tenu ou non.
 
 Pourquoi des critères écrits et une revue indépendante :
 [La revue avant la revue](../explanation/deep-dive/review-before-review.md).
@@ -15,9 +15,9 @@ Où chaque revue se place dans le pipeline : [Phases](./phases.md).
 
 | Sorte | Identifiants | Qui la juge | Où |
 | --- | --- | --- | --- |
-| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage`, `mutation` | le moteur, par le code de sortie de la commande du composant | nœud `gates` de DELIVER et `skraft gate` ; `mutation` seulement dans le workflow propre à une équipe |
+| Gate de commandes | `build`, `format`, `lint`, `test`, `architecture`, `coverage` | l'ingénieur logiciel la lance par `skraft_repl` ; le moteur journalise la trace signée et la lentille `quality-gates` la juge | DELIVER, dans la revue |
 | Critère de revue | `G<n>`, et `C1`, `F1`, `B1`, `T<n>`, `E<n>`, `M<n>`, `K<n>` | une lentille, puis le moteur (DESIGN, DISTILL, DELIVER) ou `review-verdict.mjs` (DISCOVER, DISCUSS) | revues de chaque phase |
-| Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G1 (`gherkin-records`), G11 (`testability#layout`) (DISTILL) ; G9 (`test-integrity#patch`) | le moteur, sans lentille | après la tentative de l'architecte ; après la tentative du concepteur d'acceptation ; dans le patch d'une revue |
+| Contrôle du moteur rattaché à un critère | G2, G10, G12, G14 (DESIGN) ; G11 (`testability#layout`) (DISTILL) ; G9 (`test-integrity#patch`) | le moteur, sans lentille | après la tentative de l'architecte ; après la tentative du concepteur d'acceptation ; dans le patch d'une revue |
 
 Un identifiant `G<n>` n'est unique que dans sa phase : G1 de DESIGN n'est pas G1 de DISTILL.
 La table d'une lentille, dans son descripteur d'agent, fait foi ; une lentille met
@@ -25,32 +25,47 @@ l'identifiant dans le champ `gate` de chaque finding.
 
 ## Gates de commandes <!-- #command-gates -->
 
-Les gates sont les commandes d'un composant dont le nom est l'un des sept ci-dessous, dans
-`skraft-config.json`. Elles tournent dans cet ordre, quel que soit l'ordre du fichier, depuis la
-racine du composant ; un composant s'arrête à sa première gate en échec.
+Les gates sont les commandes d'un composant dont le nom est l'un des six ci-dessous, dans
+`skraft-config.json`. Le moteur n'en lance aucune : dans DELIVER, l'ingénieur logiciel lance
+chacune par l'outil MCP `skraft_repl` (`gate(name, command, { cwd })`, voir [Le REPL](./repl.md)),
+et le moteur journalise la trace signée de ces exécutions et la remet à la revue DELIVER, qui la juge.
 
-| Ordre | Gate | Nœud du workflow du plugin |
-| --- | --- | --- |
-| 1 | `build` | `gates` |
-| 2 | `format` | `gates` |
-| 3 | `lint` | `gates` |
-| 4 | `test` | `gates` |
-| 5 | `architecture` | `gates` |
-| 6 | `coverage` | `gates` |
-| 7 | `mutation` | aucun : elle revient au développeur ; `skraft gate` et `skraft doctor --run` la laissent aussi |
+| Gate | Ce qu'elle prouve |
+| --- | --- |
+| `build` | le composant compile |
+| `format` | le code est formaté |
+| `lint` | le linter se tait |
+| `test` | toute la suite de tests passe ; l'exécution de la ligne de commit (toute la suite non filtrée, enchaînée à `git add` et `git commit`, étiquette `green`) est cette exécution |
+| `architecture` | les règles de dépendance tiennent |
+| `coverage` | le seuil de couverture tient |
+
+`mutation` n'est pas une gate : c'est une recette de la session du développeur ([Lancer la mutation](../how-to/run-mutation.md)).
 
 | Règle | Détail |
 | --- | --- |
-| Résultat | `pass` (sortie 0) ou `fail`, classe `interrupted`, `environment` ou `deterministic` ([classes d'échec](./skraft-config.md#failure-classes)) |
-| Composant sans commande de gate | gate `none`, `fail`, classe `environment` ; dans un run, la question `environment` nomme la cause `config` |
-| Portée | les composants modifiés depuis leur base ; `goal_gate=true` lance ensuite tous les autres ; `skraft gate --all` les lance tous |
-| Arêtes | toutes les gates du nœud passent : arête `PASS` ; une échoue : arête `FAIL` (`gates` : `PASS` vers `deliver_review`, `FAIL` vers `deliver`) |
-| Machine | une étape de gates qui échoue en `environment` ne prend aucune arête : le run pose la question `environment` ([causes](./run-journal.md#environment-question)), ne renvoie rien à un agent et ne consomme aucune de ses tentatives ; une gate arrêtée par un signal ou un plantage échoue en `deterministic` et prend l'arête `FAIL` avec sa preuve, comme une vérification en échec |
-| Plafond de boucle | une étape de gates en échec prend son arête `FAIL` jusqu'au `max_visits` de cette arête ; un échec de plus pose la question `blocked` (code `loop-ceiling`) sur le nœud vers lequel mène cette arête ; une consigne y renvoie le travail, `STOP` termine le run |
-| Mutation | le pipeline de la story n'en lance aucune : le run de mutation du développeur (`workflows/mutation.skraft.dot`) lance la commande `mutation`, comme un nœud `gate="mutation"` du workflow propre à une équipe. Le moteur juge le résultat que la commande écrit dans `SKRAFT_MUTATION_RESULT`, sinon le rapport qu'écrit son outil, contre **80 %** sur le cœur (Domain, Application) et **80 %** sur la frontière (le reste), jugés à part ([Le résultat de mutation](./skraft-config.md#mutation-result)) |
-| Seuils | aucun n'est configurable |
-| Verrou | `gates` est `locked=true` : une copie du workflow ne le retire qu'avec `unlock="<raison>"` ([Le workflow DOT](./workflow-dot.mdx#locked-nodes)) |
-| Preuve | `gates/<composant>/<gate>-<n>.log` et un événement `gate.ran` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
+| Qui lance | l'ingénieur logiciel, par `skraft_repl`, dans chaque composant que l'histoire a modifié ; `skraft_repl_reset` arrête un noyau qui ne s'arrête pas, ses runs tracés comme tués |
+| Gate absente | une gate sans commande pour le composant dans `skraft-config.json` se déclare par `absent(gate, component, reason)`, l'appel exact que donne sa ligne `no command` du brief de livraison ; `test` n'est jamais absente |
+| Trace | `logs/runs/<step>-<visit>-<attempt>/runs.jsonl`, signée ; un dossier par tentative |
+| Jugement | la lentille `quality-gates` de la revue DELIVER (ci-dessous) ; le moteur ne refuse aucune tentative pour une exécution |
+| Journal | `evidence.checked` avec `runs: [{ run, gate, cwd, log, sha256 }]` quand la trace se lit jusqu'à ses signatures, sinon `runs: []` et `invalid` avec le code de ce qui l'a cassée (`unsigned-line`, `no-key`, `wrong-signature`), que la revue remet à la lentille dans `trace.json` ; le run rouge du concepteur porte `red: true` ([Dossier de suivi et journal](./run-journal.md#gate-evidence)) |
+| Rapport | le tableau « Preuves de qualité » de la pull request, du commentaire d'issue et de `qa-report.md` (Gate, Dossier, Exécution, Preuve), la ligne du panneau Claude Code `Preuves de qualité : build exécution 1, test exécution 4` et la ligne du canvas Copilot |
+| Seuils | aucun n'est configurable ; le seuil de mutation (80 sur le cœur, 80 sur la frontière) est un nombre en lecture seule de la vue de configuration |
+
+### Workflows qui contiennent encore une gate
+
+Un workflow éjecté plus tôt qui contient un nœud gate ou l'un de ses attributs est refusé, un
+message par attribut :
+
+| Trouvé dans le workflow | Message |
+| --- | --- |
+| un nœud de forme `parallelogram` ou un attribut `gate` | `a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin's pipeline)` |
+| `goal_gate`, `locked` ou `unlock` | `<attribut> is gone with the gate node: skraft runs no gate` |
+| `each` ou `proposal` | `<attribut> is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node` |
+
+Un run en cours qui pointe sur un nœud retiré (`gates`, `mutation`, `mutation_gates`,
+`kill_proposal`, `kill_mutants`, ou une étape qui lançait des gates) se bloque avec le code
+`node-retired` : « the node X was retired: skraft runs no gate and no mutation any more ... start
+the story again with the plugin's workflow ».
 
 ## Critères de revue <!-- #review-criteria -->
 
@@ -147,19 +162,20 @@ Revue `distill_review` : 4 lentilles, verdict calculé par le moteur.
 
 | ID | Lentille | Critère | Sévérité |
 | --- | --- | --- | --- |
-| **G1** | `coverage` | Chaque critère d'acceptation a au moins un scénario ; aucun scénario sans critère source ; chaque valeur métier d'un scénario égale celle de son critère. | blocker |
+| **G1** | `coverage` | Chaque critère d'acceptation a son propre scénario ; aucun scénario ne tient deux critères ; aucun scénario sans critère source ; chaque valeur métier d'un scénario égale celle de son critère. | blocker |
 | **G2** | `coverage` | Chaque règle métier a ses cas limites et ses cas négatifs ou d'erreur, tirés des exemples de la story ; un mapping Gherkin ou un exemple écrit dans un document DESIGN n'est pas un exemple de la story, et une variante qu'une règle antérieure décide déjà n'ajoute aucune frontière ; un cas d'entrée technique n'est jamais demandé. | high |
 | **G3** | `business-alignment` | Chaque terme des étapes Given/When/Then vient du vocabulaire métier de la story ; aucun nom de classe, de méthode ni de framework. | high |
 | **G4** | `business-alignment` | Aucune étape ne porte un détail d'implémentation (verbe ou code HTTP, terme ORM ou base de données, `Repository`, `Service`, `Handler`, `Controller`, `UseCase`, cas d'entrée technique). | blocker |
 | **B1** | `business-alignment` | Chaque scénario exprime un résultat que la story demande ; aucun ne décrit un comportement qu'elle ne demande pas. | high |
 | **G5** | `testability` | Chaque étape est sans ambiguïté et implémentable seule. | high |
-| **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation. | high |
+| **G6** | `testability` | Chaque scénario a une entrée dans le plan d'implémentation ; son tableau de groupes nomme chaque scénario du plan de test une fois, aucun qu'il ne liste pas, S1 dans le groupe 1 ; deux lignes du plan de test ne partagent pas un titre. | high |
 | **G11** | `testability` | Chaque test vit là où sa sorte le place : le walking skeleton, un test simple sans Gherkin, à l'emplacement des tests d'intégration de son composant (Java : une classe `*IT`), en entrant par le vrai point d'entrée ; le test d'acceptation de chaque scénario, S1 compris, le binding de son Gherkin, à l'emplacement des tests unitaires de son langage (.NET : projet `<Context>.UnitTest`, `<Context>.UnitTests` ou `<Context>.Tests` ; Java : une classe `*Test` sous le `src/test` d'un module, ou un module `-unit-test(s)` ; Python, TypeScript, JavaScript, React : `<chemin des tests>/unit/`), en entrant par le cas d'usage. | blocker |
 | **T1** | `testability` | Chaque scénario et chaque test vérifient un comportement par un résultat observable et ne dépendent d'aucun temps, ordre ou aléa qu'ils ne fixent pas. | high |
-| **T2** | `testability` | Le patch ne porte que le walking skeleton (sauf si l'histoire est exemptée) et le test d'acceptation du scénario en cours ; un scénario suivant tagué `@pending` n'est pas un finding. Chaque valeur d'entrée et attendue du test d'acceptation de S1 égale le `.feature` mot pour mot ; le walking skeleton affirme le statut, la forme et une valeur que nomme S1, et aucune valeur absente du `.feature`. | blocker |
+| **T2** | `testability` | Le patch porte le walking skeleton (sauf si l'histoire est exemptée) et le test d'acceptation de chaque scénario, chaque nom commençant par le numéro de son scénario ; un scénario sans test, ou un test sauté, est un finding. Chaque valeur d'entrée et attendue de chaque test d'acceptation égale le `.feature` mot pour mot ; le walking skeleton affirme le statut, la forme et une valeur que nomme S1, et aucune valeur absente du `.feature`. | blocker |
 | **T3** | `testability` | Le walking skeleton et le test d'acceptation du scénario en cours existent et chacun échoue sur une assertion, pas sur une erreur de compilation, d'import ou de mise en place ; le code de production du patch est un squelette dont les signatures rendent la valeur vide de leur type, avec, pour le walking skeleton, le point d'entrée, les ports et les adaptateurs de sa chaîne câblés dans la composition root. | blocker |
+| **T4** | `testability` | Gherkin bien formé : chaque `.feature` que cite le plan de test existe sous un dossier que nomme le `bdd` de son composant ; chaque scénario dit Given, When et Then ; les `Examples` d'un plan remplissent chaque variable ; deux scénarios d'un fichier ne partagent pas un titre ; mots-clés en anglais. | blocker |
 | **G7** | `boundary-enforcement` | Chaque scénario du plan de test vise un cas d'usage Application que nomme le modèle d'événements (une de ses Commands ou Queries) ; une étape du plan d'implémentation qui n'écrit le test d'acceptation d'aucun scénario (un test API ou HTTP d'un cercle suivant) est hors de sa portée. | blocker |
-| **G8** | `boundary-enforcement` | L'histoire a un walking skeleton qui parcourt S1, tagué `@walking-skeleton`, dans un composant back : un test simple sans Gherkin qui pilote le vrai point d'entrée à travers le cas d'usage jusqu'aux vraies gateways internes, S1 gardant à côté son propre test d'acceptation ; ou l'exemption déclarée (`library`, `refactoring`, `docs-only`) tient. | blocker |
+| **G8** | `boundary-enforcement` | L'histoire a un walking skeleton qui parcourt S1, tagué `@walking-skeleton`, dans un composant back : un test simple sans Gherkin qui pilote le vrai point d'entrée à travers le cas d'usage jusqu'aux vraies gateways internes, S1 gardant à côté son propre test d'acceptation ; ou l'exemption déclarée (`library`, `refactoring`, `docs-only`) tient et les changements de l'histoire la confirment ; S1 seul est tagué `@walking-skeleton`. | blocker |
 | **E1** | `boundary-enforcement` | Le test d'acceptation de chaque scénario, S1 compris, ne pilote que son cas d'usage ; le walking skeleton ne pilote que le vrai point d'entrée. Ni l'un ni l'autre n'appelle ni n'affirme sur un élément interne du domaine, un repository ou une classe d'infrastructure. Construire les vrais collaborateurs du cas d'usage pour les passer à son constructeur, ou l'hôte de test et les conteneurs du walking skeleton, est du câblage, pas un finding. | blocker |
 | **E2** | `boundary-enforcement` | Les doublures ne remplacent que des dépendances du bord extérieur, jamais un objet du domaine ni le cas d'usage ; le squelette de DISTILL est le vrai module. | high |
 
@@ -175,36 +191,21 @@ sous le `src/test` d'un module une classe `*IT` (Failsafe) est d'intégration et
 (Surefire `*Test`, Cucumber) unitaire, et accepte aussi les modules `<context>-unit-test(s)` et
 `<context>-integration-test(s)` ; toute autre stack `unit/` et `integration/` sous le chemin des tests.
 
-**Contrôle du moteur.** G1 : après chaque tentative d'`acceptance-designer`, sans lentille
-([`gherkin-records`](./run-journal.md#statuses-and-codes)), le moteur lit les scénarios que nomme le
-plan de test et rapporte une ligne par faute : un `.feature` que le plan cite et qu'aucun dossier features de son
-composant ne tient, un scénario qui ne dit ni Given, ni When, ni Then, un outline dont les exemples
-laissent sans colonne un placeholder ouvert par son titre ou ses étapes, deux scénarios d'un même
-fichier qui partagent un titre, et une histoire qui compte moins de scénarios que son
-`ac-draft-{story}.md` ne déclare de critères d'acceptation (un outline compte une fois, quel que
-soit le nombre de lignes de ses exemples). Le plan déclare le périmètre : seuls les `.feature`
-que citent les lignes de ses tableaux sont lus, jamais ceux que sa prose mentionne, si bien que les
-fichiers d'une autre histoire ne sont jamais imputés à ce run,
-et une ligne de la matrice de couverture qui ne nomme aucun Gherkin écrit `—`. Les critères disent
-combien de scénarios il en faut : une histoire dont l'`ac-draft` n'en déclare aucun ne se voit
-demander aucun scénario. C'est un plancher sous G1, pas G1 :
-la lentille `coverage` juge toujours à quel critère répond chaque scénario.
+**Le tableau des scénarios.** Après chaque tentative du passage du plan, le moteur lit le tableau `## Scenarios`
+du plan de test et ne le refuse (`scenarios`) que s'il ne peut pas le lire : pas de tableau, lignes non
+numérotées S1, S2… dans l'ordre, une ligne sans titre, une ligne dont le composant n'est pas dans `skraft-config.json`
+([règles et messages](./phases.md#scenarios)). Le tag walking skeleton, l'exemption, les titres en double et le
+tableau de groupes sont à juger par les lentilles (G8, G6) ; la couverture des critères d'acceptation (G1) et la forme du
+Gherkin (T4) leur reviennent aussi : le moteur ne contrôle ni l'une ni l'autre.
 
-**Contrôle du moteur.** Les scénarios que DELIVER construit : après chaque tentative du passage
-du plan, le moteur lit le tableau `## Scenarios` du plan de test (`scenarios`) : identifiants dans
-l'ordre, un titre chacun, un composant de `skraft-config.json`, S1 seul tagué `@walking-skeleton`
-dans un composant qui n'est pas `react`, ou une exemption `library`, `refactoring` ou `docs-only`
-et aucun tag ([règles et messages](./phases.md#scenarios)). G8 reste à la lentille : le walking
-skeleton parcourt-il le vrai chemin, S1 a-t-il en plus son propre test d'acceptation, une
-exemption déclarée tient-elle.
-
-La revue tourne une fois, après le passage du plan et celui de S1 : les tests ne portent que le
-walking skeleton et le test d'acceptation de S1 (T2, T3). Les passages de `distill` qui écrivent les tests des scénarios suivants ne sont pas revus ;
-le rejeu de leur rouge, et le vert qui doit les faire passer, les vérifient.
+La revue tourne une fois, après le passage : les tests portent le walking skeleton et le test
+d'acceptation de chaque scénario (T2, T3). Le moteur ne lance aucun de ces tests : la revue lit les tests, le squelette et le log du lancement
+du designer, qui montre chaque test échouant sur son assertion. Les verts de DELIVER ne sont pas
+revus par ces lentilles ; la revue DELIVER les lit.
 
 ## DELIVER <!-- #deliver -->
 
-DELIVER passe par les gates `gates`, puis par l'appel `deliver_review` du workflow `review`.
+DELIVER passe par les exécutions tracées de gates de l'ingénieur logiciel, puis par l'appel `deliver_review` du workflow `review`, dont la lentille `quality-gates` lit ces exécutions.
 Les mêmes
 lentilles jugent une pull request par `skraft review --pr`.
 
@@ -213,7 +214,7 @@ lentilles jugent une pull request par `skraft review --pr`.
 | **G7** | `test-integrity` | Aucun test de façade : chaque test peut échouer quand le comportement qu'il nomme casse. | blocker |
 | **G9** | `test-integrity` | Aucun test changé pour passer : ni assertion affaiblie, ni test supprimé, ni skip ou focus ajouté, ni valeur d'acceptation qui s'écarte du `.feature`. | blocker |
 | **G4** | `architecture-boundaries` | Aucune doublure d'un type Domain ou Application dans un test unitaire. | blocker |
-| **G5** | `architecture-boundaries` | Les dépendances pointent vers l'intérieur : Domain → rien, Application → Domain, API et Infrastructure → Application ; sautée pour un composant dont la gate `architecture` a passé dans ce run. | blocker |
+| **G5** | `architecture-boundaries` | Les dépendances pointent vers l'intérieur : Domain → rien, Application → Domain, API et Infrastructure → Application ; sautée pour un composant dont la gate `architecture` a une exécution tracée réussie dans cette tentative. | blocker |
 | **G10** | `architecture-boundaries` | Le code du domaine suit les 9 règles d'Object Calisthenics. | medium |
 | **G11** | `cold-reader` | Tests et code de production parlent la langue du métier et montrent leur intention. | medium |
 | **M1** | `mock-fidelity` | Le test suit la stratégie de mocking de son composant. | high |
@@ -225,18 +226,25 @@ lentilles jugent une pull request par `skraft review --pr`.
 | **K3** | `contract-fidelity` | Une vérification fournisseur Microcks vérifie son résultat. | blocker |
 | **K4** | `contract-fidelity` | Le test d'intégration vérifie le contrat de la réponse. | high |
 | **K5** | `contract-fidelity` | Aucun appel réel vers l'aval ne fuit. | blocker |
+| **Q0** | `quality-gates` | Chaque trace de `trace.json` est `verified` ; une trace `invalid` (`unsigned-line`, `no-key`, `wrong-signature`) est un seul constat, jamais un run manquant par gate. | blocker |
+| **Q1** | `quality-gates` | Chaque gate d'un composant touché a une ligne de run dans la trace, ou une ligne `absent` avec une raison (jamais pour `test`) ; un démarrage sans run et un run perdu ne sont pas un run. | blocker |
+| **Q2** | `quality-gates` | Le dernier run de la gate a réussi : ni tué, ni expiré, sortie 0. | blocker |
+| **Q3** | `quality-gates` | Ce run s'est terminé sur le dernier commit du journal des changements, ou a tourné avant la ligne de commit qui l'a fait : avant son run `green`, sur le commit d'où ce run est parti. | blocker |
+| **Q4** | `quality-gates` | Ce run a démarré sur un arbre propre ; les runs d'avant la ligne de commit qui a fait le dernier commit, et son run `green`, sont les exceptions. | high |
 
+`quality-gates` ne tourne que dans la revue DELIVER d'un run (`when="delivery"`), jamais sur une pull request : une pull request n'a pas de trace.
 `mock-fidelity` ne tourne que sur des changements qui touchent des mocks (`when="mock"`),
 `contract-fidelity` que sur des changements qui touchent des contrats (`when="contract"`)
 ([déclencheurs](./workflow-dot.mdx#conditional-lenses)).
 
 Le moteur vérifie aussi, sans identifiant de gate, les commits de chaque tentative
-(`commits.checked`) : [Commits et rejeux](#commits).
+(`commits.checked`) : [Commits](#commits).
 
-## Commits et rejeux <!-- #commits -->
+## Commits <!-- #commits -->
 
-Chaque commit d'une tentative est jugé dans son ordre ; un commit refusé le reste tant qu'il ne
-quitte pas l'historique. Le brief donne le message exact du rouge et du vert d'un scénario.
+Le moteur ne lance aucun test pour vérifier un commit : il juge l'historique Git seul, chaque
+commit d'une tentative dans son ordre ; un commit refusé le reste tant qu'il ne quitte pas
+l'historique. Le brief donne le message exact du rouge et du vert.
 
 | Type | Sorte | Règle |
 | --- | --- | --- |
@@ -252,63 +260,23 @@ aucune (`issue-closed`).
 
 | Passage | Permis | Refusé |
 | --- | --- | --- |
-| `distill`, passage du plan | un rouge, le walking skeleton, le squelette de sa chaîne et le `.feature` du composant de S1 ; le rouge du walking skeleton existe après le passage, sauf pour une histoire exemptée, dont les fichiers `.feature` vont dans un commit `docs` | comme ci-dessous ; aucun dans une histoire non exemptée |
-| `distill`, qui écrit le test d'acceptation d'un scénario | un rouge, le test et le squelette qu'il appelle, dans le composant du scénario ; le rouge du scénario existe après le passage ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un autre ou un second composant (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
-| `deliver` sur le scénario k | un vert, enchaîné en bash : `<commande de test> && git add <fichiers> && git commit …` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un second vert (`second-green`) ; un changement à un fichier des commits des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; un changement à un autre composant (`other-component`) ; aucun |
-| `deliver` renvoyé par les gates ou la revue, après le dernier scénario | rouges, verts et refactors sur toute l'histoire ; rouges non rejoués | un vert sans rouge depuis le dernier vert (`green-without-red`) ; sur un passage que les gates ont renvoyé, leur échec tient lieu du premier rouge |
-| `kill_mutants`, dans le workflow propre à une équipe | des tests qui tuent des mutants et passent | — |
+| `distill`, passage du plan | un rouge qui tient le walking skeleton, le test d'acceptation de chaque scénario et le squelette qu'ils appellent, dans les composants que nomment les scénarios, et le `.feature` de ces composants ; aucun pour une histoire exemptée de walking skeleton et de tests ; les fichiers `.feature` et Markdown l'accompagnent ou vont dans un commit `docs`, où qu'ils soient | un second rouge (`oracle-split`) ; un rouge dans un composant qu'aucun scénario ne nomme (`oracle-component`) ; un rouge sans fichier des chemins de test du composant (`oracle-without-test`) ; un vert ou un refactor (`code-in-oracle`) ; aucun |
+| `deliver`, passage de l'histoire | un seul vert, pour toute l'histoire, quoi que nomme son sujet, enchaîné : `<commande de test> && git add <fichiers> && git commit …` en sh ou PowerShell 7, `<commande de test>; if ($?) { git add <fichiers>; if ($?) { git commit … } }` en Windows PowerShell 5.1 ; les groupes du plan d'implémentation donnent l'ordre de travail, non un nombre de commits ; un changement d'un autre composant dont un groupe a besoin est accepté et journalisé sous `green.others` | un rouge (`test-in-scenario`) ; un refactor (`refactor-in-scenario`) ; un deuxième vert (`green-split` : le fusionner dans le premier) ; un changement d'un fichier du commit des tests d'acceptation, walking skeleton compris, hors des chemins `src` du composant (`oracle-touched`) ; aucun |
+| `deliver` renvoyé par la revue, après le passage de l'histoire | sur toute l'histoire, chaque cycle un vert qui porte son test et son code, une fois qu'il passe ; des refactors | un rouge (`test-apart` : le fusionner dans son vert) ; un vert sans fichier des chemins de tests d'un composant (`green-without-test`) ; un changement d'un fichier du commit des tests d'acceptation (`oracle-touched`) |
 
-**Rejeux.** Le moteur ne lit aucun rapport de test ni la sortie d'aucun runner : il rejoue les
-commandes d'un commit dans une copie jetable, depuis la racine du composant, et ne distingue
-qu'un code de sortie 0. Ce qu'affiche chaque commande va, tel quel, dans
-`logs/replay-<sha court>-<composant>-<commande>.log`, suffixé `-parent` pour un rejeu au parent
-du commit ([Logs](./run-journal.md#logs)). Le juge du rejeu,
-[`replay-judge`](pathname:///dashboard/#agent-replay-judge), un agent que le driver lance à
-profondeur 1, lit chaque log en entier avec son outil de lecture, jamais à travers un outil qui le résume
-(un résumé perd la ligne qui décide : un test sauté, un compte de tests, un échec écrit dans une
-autre langue), puis le commit (`git show`), et ne change rien : un commit ou un fichier
-qu'il change dans la copie de travail arrête l'étape sur la question `environment`, cause `judge`.
-Il finit sur un bloc YAML :
+Qu'un rouge échoue sur une assertion se lit, ne se rejoue pas : le designer d'acceptation lance une
+fois le walking skeleton et les tests d'acceptation par `skraft_repl` avec l'étiquette `red`, le
+moteur consigne ce run tracé (`evidence.checked` avec `red`), et la revue DISTILL (T3) comme
+l'humain en lisent le log sous `logs/runs/` ([Logs](./run-journal.md#logs)). Que le vert fasse passer l'histoire, c'est la commande qui le commite : enchaînée
+par `&&`, elle ne commite que si les tests passent. Un fichier que les tests écrivent dans la copie
+de travail (un rapport de test) est un changement comme un autre, tenu au périmètre d'écriture :
+listez-le dans `.gitignore`. Une machine qui ne peut pas lancer une commande (programme non
+installé, runtime de conteneurs qui ne répond pas) bloque l'agent, et la question `environment`
+passe la main à un humain.
 
-```yaml
-decision: send-back    # accept | send-back | retry | ask-human
-note: "<what the logs show, and what the agent or the human has to do>"
-```
-
-Le moteur ne lit que `decision` ; il garde la réponse entière, telle qu'écrite, dans
-`logs/judge-<sha court>-<red|green>.md`. Une réponse qu'il ne peut pas lire est redemandée une
-fois, avec la raison. Un fichier que les tests écrivent dans la copie de travail (un rapport de
-test) est un changement comme un autre, tenu au périmètre d'écriture : listez-le dans
-`.gitignore`.
-
-| Rejoué | Ce qui se passe | Effet |
-| --- | --- | --- |
-| un rouge de test d'acceptation | la commande `test` de chaque composant qu'il touche sort avec 0, puis la commande `e2e` de ceux qui en ont une sort avec 0 aussi | refusé, `not-red`, sans demander au juge : `is not red: the tests of <components> pass at it; the replay's output is in <log>`, `pass at it, and so do the e2e tests of <components>; …` quand des tests e2e ont tourné |
-| | une commande échoue : un code de sortie non nul, un programme qui n'a pas démarré, un délai dépassé | chaque commande en échec rejouée au parent du commit, puis le juge interrogé : le commit, ses fichiers, l'indice et le titre du scénario, chaque ligne de commande, comment elle a fini et son log |
-| le vert du scénario k | la commande `test` de son composant, et `e2e` quand des tests e2e ont prouvé le rouge ou celui du walking skeleton | le juge toujours interrogé, même quand chaque commande sort avec 0, avec le sha du rouge, les logs de son rejeu au rouge et à son parent, et les fichiers de test d'acceptation du rouge ; de même pour le rouge du walking skeleton quand le composant du scénario en a un |
-| un rouge ou un vert, jugé | `accept` | le rouge tient et devient l'oracle du scénario (au passage du plan, le walking skeleton de l'histoire), avec la commande qui l'a prouvé (`test` ou `e2e`) ; le vert tient |
-| | `send-back` | refusé, `not-red` ou `not-green` : `the replay judge sends it back: read <judge answer>` |
-| | `retry` | les commandes tournent encore une fois, le commit rapportant alors ce qu'elles trouvent, et le juge est réinterrogé, son brief le disant ; un second `retry` interroge un humain |
-| | `ask-human` ; deux réponses que le moteur ne peut pas lire ; un hôte qui ne peut pas lancer le juge | l'étape reste ouverte : question `environment`, cause `judge` : `the replay judge asks a human about the <red\|green> commit <short sha>: read <judge answer>` (`replay-judge answered 2 times with no verdict the engine reads (…)`, `the host could not start replay-judge`) ; `RETRY` rejoue et rejuge, sans nouvelle tentative |
-| un rouge ou un vert | une personne a interrompu une commande (sortie 130, ou `0xC000013A` sous Windows) | le run s'arrête (`interrupted`), ne demande rien et ne refuse rien ; le run suivant rejoue le commit |
-| | pas de commande `test`, une commande à syntaxe shell ou qui installe des dépendances | l'étape reste ouverte : question `environment`, cause `config`, rien n'est rejoué |
-
-Le juge accepte un rouge dont le test — le walking skeleton au passage du plan, le test
-d'acceptation du scénario sinon — échoue sur son assertion au commit et, au
-parent, n'existe pas, ne tourne pas ou échoue autrement ; il renvoie un rouge qui échoue avant que
-l'assertion ne tourne (build, collecte des tests, un import, l'exception d'un squelette), où seul
-un autre test échoue ou dont le test du commit est sauté ; un walking skeleton antérieur qui
-échoue au commit comme à son parent ne tranche rien. Il accepte un vert dont toutes les commandes
-sortent avec 0 et dont le log montre que le test du scénario a passé, et le walking skeleton aussi
-quand le brief nomme son rouge, chacun par son nom ou par
-autant de tests lancés qu'au rouge, aucun en échec ni sauté ; il interroge un humain quand le seul
-test en échec échouait déjà avant le rouge. Il répond
-`retry` pour une cause qui passe (un délai réseau, un port occupé), `ask-human` pour ce qu'aucun
-agent ne peut donner (un programme non installé, un runtime de conteneurs qui ne répond pas, un
-identifiant). [`tdd.replay`](./skraft-config.md#tdd) choisit quels rouges d'une tentative sont
-rejoués ; un rouge qu'une tentative précédente de la passe a rejoué garde son verdict. Ce qu'a
-coûté chaque question au juge, réponse illisible comprise, est journalisé avec sa décision et
-s'ajoute au `cost` de l'étape.
+Un run d'une alpha V2 antérieure arrêté en DELIVER entre deux groupes, dont le journal tient un
+passage par groupe, est refusé à sa reprise avec le code `delivery-shape` et la raison fixe
+« this run was started by an engine that delivered one group per pass; start the story again ».
 
 ## Revue : réponse, réfutation, verdict <!-- #review-run -->
 
@@ -343,7 +311,7 @@ findings:                # [] quand elle ne trouve rien
 | Valeurs | textes libres entre guillemets doubles ou en bloc littéral ; ni ancre, ni alias, ni tag ; casse de `verdict` et `severity` normalisée |
 | Plafond | au plus 20 findings ; un `pass` avec un finding blocker, high ou medium est refusé |
 | Textes | ramenés sur une ligne et tronqués (description : 500 caractères) ; `location` rendue relative à la copie de travail, séparée par `/`, sans `./`, son `:ligne` gardé (un chemin hors de la copie de travail reste absolu) |
-| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible arrête le run avec `lens-unreadable` ; une reprise ne relance que les lentilles dont la réponse était illisible |
+| Réponse refusée | la lentille est relancée une fois avec la raison ; une seconde réponse illisible est un incident imprévu : le run attend sur la question `unforeseen`, sa raison dans `logs/incident-<étape>-<signature>.log` ; une nouvelle tentative ne relance que les lentilles dont la réponse était illisible |
 
 ### G9 lu par le moteur <!-- #g9-engine -->
 

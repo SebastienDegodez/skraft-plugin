@@ -5,9 +5,10 @@ description: Use in a plain JavaScript/Node.js component tested with `node --tes
 
 # Quality Gates — JavaScript (node --test)
 
-In a skraft pipeline step, the engine runs each gate from the component's `commands` in
-`skraft-config.json`, from the component root, and keeps the evidence: never run a gate to
-produce evidence, never write an evidence file, never launch a mutation run. Outside a
+In a DELIVER attempt, run each gate of the component through `skraft_repl` with
+`gate(name, command, { cwd: <the component root> })`, the command from your brief, else from the
+component's `commands` in `skraft-config.json`: the engine reads the traced run as the evidence.
+Never write an evidence file by hand, never launch a mutation run. Outside a
 pipeline, when the developer asks for a gate, run its command line below from the component
 root and report its exit code and verdict line. Thresholds come from `skraft-quality-bar`.
 

@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { actsAs, scriptedModHost } from './support/scripted-mod-host.mjs'
 import { answerChoices } from '../../../../plugins/skraft-framework/engine/drivers/claude-mod/run-view.mjs'
-import { MUTATION_LOOP_WORKFLOW, designateWorkflow, ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, PAY_OR_NOTHING, SLUG, blocked, commit, deliverWith, fillOutputs, judgeLabel, killsZero, pipelineRepository, proposesZero, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
+import { designateWorkflow, ADR, ADR_PATH, decisionsIndex, INDEX_PATH, NOMINAL, SLUG, blocked, commit, deliverWith, fillOutputs, pipelineRepository, scenarioReviewText, scriptedLlm, writeResult } from '../support/pipeline-repository.mjs'
 import { git, journal } from '../support/workspace.mjs'
 import { withoutReportSummary } from '../support/run-report-summary.mjs'
 
@@ -56,9 +56,8 @@ test('a dismissed dialog leaves the run waiting; /skraft decide records the answ
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, judgeLabel(cwd, 'red'),
-    `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'first'),
-    `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'green'), `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`,
+    `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
 })
 
@@ -75,9 +74,8 @@ test('after the conversation moved into a subfolder of the working copy, /skraft
   assert.equal(text, `${SLUG}: adr-1 answered RATIFIED; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
   assert.equal((await mod.settled()).status, 'done')
   assert.deepEqual(descriptions(mod), [
-    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`, judgeLabel(cwd, 'red'),
-    `skraft ${SLUG} · distill · pass 2 · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'first'),
-    `skraft ${SLUG} · deliver · scenario 1 of 1 · attempt 1`, judgeLabel(cwd, 'green'), `skraft ${SLUG} · pr_writer · attempt 1`,
+    `skraft ${SLUG} · research · attempt 1`, `skraft ${SLUG} · design · attempt 1`, `skraft ${SLUG} · distill · attempt 1`,
+    `skraft ${SLUG} · deliver · attempt 1`, `skraft ${SLUG} · pr_writer · attempt 1`,
   ])
   assert.ok(!existsSync(join(cwd, subfolder, '.copilot-tracking')))
 })
@@ -147,23 +145,6 @@ test('a blocked architect whose dialog is dismissed waits; /skraft decide record
   assert.equal((await mod.settled()).status, 'done')
   assert.ok(spawnOf(mod, 'design · pass 2 · attempt 1').prompt.includes('\nA human refused the work of pass 1:\n- stop the card idea, use the bank gateway'))
 })
-
-test('a mutation plan whose dialog is dismissed waits; /skraft decide records the words after the key as the instruction the kill gets', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  designateWorkflow(cwd, MUTATION_LOOP_WORKFLOW)
-  const llm = scriptedLlm({ cwd, acts: { 'software-engineer': [deliverWith(PAY_OR_NOTHING), proposesZero, killsZero] } })
-  const mod = await scriptedModHost({ cwd, otherwise: actsAs(llm), answers: ['RATIFIED', null] })
-  await mod.command(SLUG)
-  assert.equal((await mod.settled()).code, 'mutation-plan')
-  assert.ok((await mod.command('')).split('\n').includes('answer: /skraft decide mutation_plan-1 APPLY|<instruction>|STOP'))
-
-  const text = await mod.command('decide mutation_plan-1 apply   the test of pay(0) only')
-
-  assert.equal(text, `${SLUG}: mutation_plan-1 answered apply the test of pay(0) only; run the pipeline again to go on\nskraft ${SLUG} started — progress in the Skraft pane.`)
-  assert.equal((await mod.settled()).status, 'done')
-  assert.ok(spawnOf(mod, 'kill_mutants · attempt 1').prompt.includes('\nA human chose how to go on:\n- apply the test of pay(0) only\n'))
-})
-
 test('a button pressed in the pane records its answer by host and resumes the run; a pressed refusal asks its reason first, and without one nothing is recorded', async (t) => {
   const { cwd } = pipelineRepository(t)
   const { mod } = await runOn(cwd, [null])
@@ -250,7 +231,7 @@ test('text typed under Other is a rejection with that reason; a reason dialog le
   const typed = pipelineRepository(t)
   const { mod } = await runOn(typed.cwd, [REASON, 'RATIFIED'])
   assert.deepEqual(journal(typed.cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ answer, reason }) => [answer, reason]), [['REJECTED', REASON], ['RATIFIED', null], ['APPROVED', null]])
-  assert.equal(phaseSpawns(mod).length, 10)
+  assert.equal(phaseSpawns(mod).length, 6)
 
   const later = pipelineRepository(t)
   const { mod: waiting, outcome } = await runOn(later.cwd, ['REJECTED', 'Not now'])
@@ -289,35 +270,6 @@ test('Git unable to list docs/adr asks the human to fix the machine and never sk
   assert.deepEqual(mod.asked.map(({ options }) => options.header), ['Environment', 'ADR', 'Scenarios'])
   assert.match(readFileSync(join(cwd, ...ADR_PATH.split('/')), 'utf8'), /^status: Accepted$/m)
 })
-
-test('skraft-config.json left invalid in the environment dialog stops the run before any command; fixed, /skraft goes on without spawning an agent again', async (t) => {
-  const { cwd } = pipelineRepository(t)
-  const configPath = join(cwd, 'skraft-config.json')
-  const config = readFileSync(configPath, 'utf8')
-  const parsed = JSON.parse(config)
-  writeFileSync(configPath, JSON.stringify({ ...parsed, components: [{ ...parsed.components[0], commands: { ...parsed.components[0].commands, build: 'skraft-missing-build' } }] }))
-  const mod = await scriptedModHost({ cwd, otherwise: actsAs(scriptedLlm({ cwd })) })
-  const ask = mod.host.ask
-  let environmentDialogs = 0
-  mod.host.ask = async (question, options) => {
-    if (options.header !== 'Environment') return ask(question, options)
-    environmentDialogs += 1
-    if (environmentDialogs > 1) return 'ABORT'
-    writeFileSync(configPath, '{ invalid JSON')
-    return 'RETRY'
-  }
-  await mod.command(SLUG)
-
-  const outcome = await mod.settled()
-
-  assert.deepEqual({ status: outcome.status, code: outcome.code }, { status: 'blocked', code: 'config-invalid' })
-  assert.equal(journal(cwd, SLUG).at(-1).type, 'question.answered')
-  writeFileSync(configPath, config)
-  await mod.command(SLUG)
-  assert.equal((await mod.settled()).status, 'done')
-  assert.equal(phaseSpawns(mod).length, 9)
-})
-
 test('an unpublished ADR the architect supersedes on the refused pass is refused; edited in place, it is asked again', async (t) => {
   const { cwd } = pipelineRepository(t)
   const tokens = 'docs/adr/adr-002-card-tokens.md'

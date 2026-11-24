@@ -9,7 +9,7 @@ import { editedDigest } from './edited-files.mjs'
 /**
  * What the `skraft-pipeline` canvas page draws: the Observe view of the active pipeline of the
  * session's directory, read again on each call, as text the page sets with `textContent`: the
- * workflow's phases and steps (the step under way is the open one), the reviews, the gates, the
+ * workflow's phases and steps (the step under way is the open one), the reviews, the quality evidence, the
  * labelled edges the run took, what each agent runs on and the question it waits on, with where
  * to answer it: in the chat, where Copilot puts it to the person, or in a terminal. It shows; it
  * takes no answer and decides nothing. The content carries the journal too, read through Observe
@@ -206,7 +206,7 @@ const contentOf = (view) => ({
   status: view.status,
   reason: view.reason,
   phases: view.phases.map(({ phase, state }) => ({ key: `phase-${phase}`, text: `${MARKS[state]} ${phase}`, state, steps: stepsOf(view, phase) })),
-  details: [...reviewLines(view), ...gateLines(view), ...loopLines(view), ...agentLines(view)],
+  details: [...reviewLines(view), ...evidenceLines(view), ...loopLines(view), ...agentLines(view)],
   question: questionOf(view.question),
 })
 
@@ -240,15 +240,8 @@ const reviewLines = ({ reviews }) => reviews.map(({ step, visit, verdict, lenses
   state: verdict === null ? 'open' : 'done',
 }))
 
-/** One line per component, each gate's last result; never its command nor its evidence. @param {RunView} view @returns {Line[]} */
-const gateLines = ({ gates }) => [...new Set(gates.map((gate) => gate.component))].map((component) => ({
-  key: `gates-${component}`,
-  text: `gates ${component}: ${gates.filter((gate) => gate.component === component).map(gateText).join(', ')}`,
-  state: 'done',
-}))
-
-/** @param {import('../../domain/reporting/run-facts.mjs').GateFact} gate */
-const gateText = ({ gate, status, survivors }) => `${gate} ${status}${typeof survivors === 'number' ? ` (${survivors} survivors)` : ''}`
+/** One line: the traced runs the delivery stands on, by gate; never a command nor an output. @param {RunView} view @returns {Line[]} */
+const evidenceLines = ({ evidence }) => (evidence.length === 0 ? [] : [{ key: 'quality-evidence', text: `Quality evidence: ${evidence.map(({ gate, run }) => `${gate} run ${run}`).join(', ')}`, state: 'done' }])
 
 /** The labelled edges the run took: where it went back or branched. @param {RunView} view @returns {Line[]} */
 const loopLines = ({ graph }) => graph.edges

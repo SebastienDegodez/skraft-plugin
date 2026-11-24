@@ -1,9 +1,6 @@
 {
   "baseBranch": "develop",
   "forge": "github",
-  "tdd": {
-    "replay": "last-red"
-  },
   "publish": {
     "visuals": false
   },

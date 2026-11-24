@@ -19,7 +19,7 @@ plugins/
     engine/                          ← V2 engine: package.json, stryker.config.mjs, jsconfig.json
       domain/                        ← pure policies
       application/  application/ports/ ← use cases and port contracts (JSDoc typedefs)
-      infrastructure/                ← adapters: files, git, processes
+      infrastructure/                ← adapters: files, git, processes, the REPL kernel (infrastructure/repl/)
       drivers/copilot-workflow/      ← GitHub Copilot dynamic workflow + Canvas
       drivers/claude-mod/            ← Claude Code mod + panel
       drivers/copilot-sdk/           ← VS Code through the Copilot SDK
@@ -65,8 +65,24 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
   agent spawns another agent, with one exception: `brownfield-refactorer` (skraft-brownfield),
   run as a session's main agent, may dispatch `refactoring-worker`, and that worker dispatches no
   one.
-- Checks live in the engine, not in hooks or prose: phase order, expected outputs, write scope
-  (git diff per step), gates, review verdict, TDD red/green commits.
+- The engine checks only what the workflow needs to move on and what v1 checked by script: phase
+  order, expected outputs, write scope (git diff per step), the journal and `.active-slug`, the
+  review verdict, and the commits (convention, issue reference, TDD red/green, acceptance tests
+  untouched, one green per story). Acceptance-criteria coverage, Gherkin form, the scenario plan's
+  content and quality evidence belong to the agents' prose and the review lenses.
+- A project command runs only when an agent asks for it through `skraft_repl`, which records each
+  run, signed, under `logs/runs/<step>-<visit>-<attempt>/`. The engine refuses no attempt for it:
+  it journals the runs whose trace reads through its signatures, and the DELIVER review's
+  `quality-gates` lens judges them. Only `infrastructure/process/` and
+  `infrastructure/repl/` start programs, apart from `git`, `gh` and `az`. The journal of the programs a killed MCP server left behind
+  is `.copilot-tracking/skraft-repl/<pid>.json`, outside any story's tracking folder.
+- `.repl/` of a working copy belongs to the project: the engine reads it, never writes it;
+  `skraft init` ignores `.repl/node_modules/`.
+- A run's QA evidence (test plan, scenario outcomes, screenshots) belongs to the engine, rendered
+  from the journal and the trace; no agent writes a QA report.
+- On GitHub the engine attaches screenshots with `gh --attach`; on Azure DevOps it links
+  repository files at the commit; no other upload, gist, release asset or external service.
+- The engine's adapters start no child `node`.
 - Engine code never calls an MCP server: a server is a tool for an agent. The engine reads and
   writes the forge only through its command line, `gh` (GitHub) or `az` (Azure DevOps), with no
   fallback between them; an issue it cannot read refuses the run.
@@ -81,10 +97,9 @@ docs/website/      ← handbook (Docusaurus): book.yml (structure contract), doc
 - State lives in `.copilot-tracking/skraft-plans/<slug>/`; `events.jsonl` (hash-chained)
   replaces `state.json`; `.active-slug` is mandatory and never guessed.
 - Developer configuration is `skraft-config.json` with components (root, stack, paths,
-  commands, mocking, contractTesting, bdd). A command written by the developer always wins over a
-  default. Quality thresholds are not configurable.
+  commands, mocking, contractTesting, bdd). The engine holds no command line of any stack: every command is the developer's. Quality thresholds are not configurable.
 - The workflow is a DOT graph shipped in the plugin and copied into a repo with
-  `skraft workflow eject`. DELIVER gates are `locked`; removing one needs `unlock="<reason>"`.
+  `skraft workflow eject`.
 
 ## Copilot host driver rules
 
@@ -106,9 +121,14 @@ the probe or a test says otherwise.
   `reason`; only a cancellation is rethrown.
 - **Arguments are model-written.** Refuse unknown keys; never let an argument choose an
   executable, an agent or a model outside the workflow and `skraft-config.json`; never echo a
-  refused value.
+  refused value. One exception, `skraft_repl` alone: its `code` is agent-written JavaScript that
+  may start any program, only during the open attempt of an agent that commits code and whose
+  `tools:` names it; unknown keys are still refused and `workspace` is checked as for every tool.
+  `skraft_repl_reset` ends the open attempt's kernel and its runs, waits in no queue and is never
+  refused as busy; it takes only `workspace`.
 - **Messages are fixed by code.** No exception text or stderr in the journal, an outcome, a prompt
-  or a tool result. An exception goes only to `logs/unexpected.log` of the run's tracking folder,
+  or a tool result, except the output and the errors of an agent's own cell in a `skraft_repl`
+  result, capped at 24 KiB, which never reach the journal. An exception goes only to `logs/unexpected.log` of the run's tracking folder,
   which nothing reads back, and the outcome names its path.
 - **Human pipeline questions use native chat.** The model asks the engine's exact question and
   options through the offered native `ask_user` or `askQuestions` tool, requests a refusal
@@ -125,7 +145,14 @@ the probe or a test says otherwise.
   At most one automated intervention per signature; the next occurrence asks a person.
   Human questions refuse `host-llm`. The versioned known-signature table contains only
   author-reviewed incidents and records `by: 'known-signature'`, never a human provenance.
-- **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole.
+- **Commands are bounded.** `signal`, `timeoutMs`, output cap, process group ended as a whole;
+  every `run()` of `skraft_repl` too: a timeout always set (7200 s at most), an output cap, its
+  process group (its tree under Windows) ended as a whole. The REPL's bounds are fixed by code:
+  a call answers at 90 s, a cell lives 7260 s, a kernel is alive within 10 s and ready within 30 s (each `.repl/lib`
+  module loads within 10 s, the library within 20 s), 8 live runs per attempt, a run's log 64 MiB written as it runs, a
+  result 24 KiB, a cell's printed output 1 MiB, the output of the last 50 runs kept, a 2 GiB heap,
+  a kill's grace 30 s at most and never past the timeout; a lease is taken over only when its
+  holder is gone or has not renewed it for 5 minutes.
 - **No pre-tool hook**, ever; a returning post-tool hook gives `additionalContext` only.
 - **A check counts once seen failing**, and a report says what it examined.
 
@@ -174,15 +201,22 @@ Everything must run on Windows and macOS, under Claude Code, Copilot CLI and VS 
 
 - Node code: `node:path` for paths, `spawnSync`/`spawn` with an argv array, never a shell string
   and never `shell: true` (it hides a missing program behind cmd.exe's exit code).
+- A `run(string)` of `skraft_repl` starts through an explicit shell program, `sh -c`, under Windows
+  Git Bash when it is installed, else `pwsh` or `powershell`, as an argv array and never
+  `shell: true`; the shell is named in the trace.
 - Commands that an agent runs: no environment variable (`$SKRAFT_PLUGIN_ROOT` and the like), no
   heredoc, no pipe; data goes through files at paths the engine gives; the command form
   `node "<absolute path>" <subcommand> --option value` works in sh and PowerShell.
 - A skill carries every script it runs, even if that duplicates another skill's script; skills
   reference each other by name, never by path. `npm run skills:sync` / `skills:check` maintain
   declared copies.
+- A skill script is a program first (`node "<absolute path>" …`). A cell may import it only when
+  it calls neither the engine nor the MCP server and its run is no gate's evidence; it then calls
+  its exported function with an explicit root, and importing it does nothing. A gate script runs
+  through `gate()`: its exit code is evidence only when the server started it.
 - A skill script called often (per tool call or per TDD cycle) is written as `.sh` + `.ps1`
   twins tested by one contract suite on the three OS; a script called once per story may stay in
-  Node.
+  Node; the gate scripts run once per pass and stay in Node.
 
 ## Testing rules
 

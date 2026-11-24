@@ -65,9 +65,9 @@ declares no hook, and the host's log stays quiet.
   journal sees every start.
 
 Two checks have no v1 equivalent: the **session lease**, which refuses a second session on a
-pipeline another one is conducting, and the workflow's **locked and mandatory nodes**, which a
-repository copy cannot silently remove
-([DOT workflow](../reference/workflow-dot.mdx#locked-nodes)).
+pipeline another one is conducting, and the workflow's **mandatory nodes**, which a
+repository copy cannot remove
+([DOT workflow](../reference/workflow-dot.mdx)).
 
 ## Prevent or detect
 

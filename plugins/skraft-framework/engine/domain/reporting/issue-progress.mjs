@@ -1,6 +1,6 @@
 import { deriveRun } from '../journal/run-state.mjs'
 import { costText, durationText, runReport } from './run-report.mjs'
-import { finalGates } from './run-facts.mjs'
+import { qualityEvidence } from './run-facts.mjs'
 import { statusIn } from './run-status.mjs'
 import { cell, code } from './markdown-safety.mjs'
 
@@ -85,10 +85,8 @@ const WORDS = Object.freeze({
     reviews: 'Reviews: ',
     /** @param {number} visits */
     passes: (visits) => (visits === 1 ? '1 pass' : `${visits} passes`),
-    noGate: 'Quality gates: none ran.',
-    gates: 'Quality gates:',
-    /** @param {number} survivors */
-    survivors: (survivors) => `, ${survivors} surviving mutants`,
+    noGate: 'Quality evidence: none recorded.',
+    gates: 'Quality evidence:',
     noPullRequest: 'Pull request: none opened or updated by this run.',
     pullRequest: 'Pull request: ',
     updated: ' (updated)',
@@ -111,9 +109,8 @@ const WORDS = Object.freeze({
     noReview: 'Revues : aucune pour l\'instant.',
     reviews: 'Revues : ',
     passes: (visits) => (visits === 1 ? '1 passe' : `${visits} passes`),
-    noGate: 'Portes de qualité : aucune n\'a tourné.',
-    gates: 'Portes de qualité :',
-    survivors: (survivors) => `, ${survivors} mutants survivants`,
+    noGate: 'Preuves de qualité : aucune consignée.',
+    gates: 'Preuves de qualité :',
     noPullRequest: 'Pull request : aucune ouverte ni mise à jour par ce run.',
     pullRequest: 'Pull request : ',
     updated: ' (mise à jour)',
@@ -205,12 +202,11 @@ const reviewsLine = (events, steps, words) => {
   return `${words.reviews}${reviews.map(({ step, visits, outcome }) => `${step} ${outcome} (${words.passes(visits)})`).join(', ')}.`
 }
 
-/** The last result of each gate, its surviving mutants for a mutation gate that counted them, and the log that proves it. @param {RunEvent[]} events @param {Words} words */
+/** The traced runs the delivery stands on, each with its gate, its folder and its log. @param {RunEvent[]} events @param {Words} words */
 const gatesLines = (events, words) => {
-  const gates = finalGates(events)
-  if (gates.length === 0) return [words.noGate]
-  return [words.gates, ...gates.map(({ component, gate, status, evidence, survivors }) =>
-    `- ${component}/${gate} ${status}${typeof survivors === 'number' ? words.survivors(survivors) : ''} · ${code(evidence)}`)]
+  const evidence = qualityEvidence(events)
+  if (evidence.length === 0) return [words.noGate]
+  return [words.gates, ...evidence.map(({ gate, folder, log }) => `- ${gate} · ${code(folder)} · ${code(log)}`)]
 }
 
 /**

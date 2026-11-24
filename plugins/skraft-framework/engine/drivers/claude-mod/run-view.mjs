@@ -10,7 +10,7 @@ import { STOP, takesInstruction } from '../../domain/decisions/questions.mjs'
  * @typedef {import('../../application/pipeline/observe-usecase.mjs').RunView} RunView
  * @typedef {import('../../domain/reporting/run-graph.mjs').GraphNode} GraphNode
  * @typedef {import('../../domain/reporting/review-passes.mjs').ReviewPass} ReviewPass
- * @typedef {import('../../domain/reporting/run-facts.mjs').GateFact} GateFact
+ * @typedef {import('../../domain/reporting/run-facts.mjs').EvidenceFact} EvidenceFact
  * @typedef {{ view: RunView, log: string[], live: boolean }} PipelineSnapshot what the pane draws
  *   live: a run of this session drives the pipeline, and its own dialog asks its questions.
  * @typedef {'title' | 'closed' | 'open' | 'pending' | 'reason' | 'detail' | 'log'} RowTone
@@ -35,7 +35,7 @@ export const viewRows = (view, withSteps = false) => [
   ...(view.current ? [{ key: 'current', text: currentText(view.current), tone: /** @type {const} */ ('detail') }] : []),
   ...(view.question ? [{ key: 'question', text: answerText(view.question), tone: /** @type {const} */ ('reason') }] : []),
   ...view.reviews.map((review) => ({ key: `review-${review.step}`, text: reviewText(review), tone: /** @type {const} */ ('detail') })),
-  ...gateRows(view.gates),
+  ...evidenceRows(view.evidence),
   ...(view.costUsd === null ? [] : [{ key: 'cost', text: `cost: ${costText(view.costUsd)} (${COST_COUNTS})`, tone: /** @type {const} */ ('detail') }]),
 ]
 
@@ -66,25 +66,22 @@ export const reviewText = ({ step, visit, verdict, lenses }) => {
   return `review ${step}: ${verdict ?? 'in progress'}${pass} — ${lensesText(lenses)}`
 }
 
-/** One row per component: each gate's last result. @param {GateFact[]} gates @returns {Row[]} */
-const gateRows = (gates) => [...new Set(gates.map((gate) => gate.component))].map((component) => ({
-  key: `gates-${component}`,
-  text: `gates ${component}: ${gates.filter((gate) => gate.component === component).map(gateText).join(', ')}`,
+/** One row per gate the delivery holds a traced run of: `Quality evidence: build run 1, test run 4`. @param {EvidenceFact[]} evidence @returns {Row[]} */
+const evidenceRows = (evidence) => (evidence.length === 0 ? [] : [{
+  key: 'quality-evidence',
+  text: `Quality evidence: ${evidence.map(({ gate, run }) => `${gate} run ${run}`).join(', ')}`,
   tone: /** @type {const} */ ('detail'),
-}))
-
-/** `test fail`, `mutation fail (3 survivors)`. @param {GateFact} gate */
-const gateText = ({ gate, status, survivors }) => `${gate} ${status}${typeof survivors === 'number' ? ` (${survivors} survivors)` : ''}`
+}])
 
 /**
- * The node the run stands on: a gate node by its gates, a question node by its question, an
- * agent node by its agent and attempt.
+ * The node the run stands on: a question node by its question, an agent node by its agent and
+ * attempt.
  * @param {NonNullable<RunView['current']>} current
  */
-export const currentText = ({ step, agent, gates, question, visit, attempt }) => {
+export const currentText = ({ step, agent, question, visit, attempt }) => {
   const pass = visit > 1 ? `, pass ${visit}` : ''
   if (agent !== null) return `agent: ${agent} (${step}${pass}, attempt ${attempt})`
-  return question ? `question: ${question} (${step}${pass})` : `gates: ${/** @type {string[]} */ (gates).join(', ')} (${step}${pass})`
+  return question ? `question: ${question} (${step}${pass})` : `(${step}${pass})`
 }
 
 /**

@@ -13,9 +13,6 @@
     "forge": {
       "$ref": "#/$defs/forge"
     },
-    "tdd": {
-      "$ref": "#/$defs/tdd"
-    },
     "publish": {
       "$ref": "#/$defs/publish"
     },
@@ -268,18 +265,6 @@
         "azure-devops",
         null
       ]
-    },
-    "tdd": {
-      "type": "object",
-      "properties": {
-        "replay": {
-          "enum": [
-            "all",
-            "last-red",
-            null
-          ]
-        }
-      }
     },
     "publish": {
       "description": "The consents asked once per repository, and how a pull request is opened.",

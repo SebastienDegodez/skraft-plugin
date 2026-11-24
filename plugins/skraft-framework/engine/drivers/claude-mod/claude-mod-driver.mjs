@@ -11,7 +11,6 @@ import { createJournalKeys } from '../../infrastructure/crypto/journal-keys.mjs'
 import { createWorkspaceFiles } from '../../infrastructure/workspace/workspace-files.mjs'
 import { createUserSettings } from '../../infrastructure/settings/user-settings.mjs'
 import { createGitSourceControl } from '../../infrastructure/source-control/git-source-control.mjs'
-import { createGitCommitReplay } from '../../infrastructure/source-control/git-commit-replay.mjs'
 import { createForges } from '../../infrastructure/code-host/forges.mjs'
 import { createAgentCatalog } from '../../infrastructure/agents/agent-catalog.mjs'
 import { createPluginWorkflows } from '../../infrastructure/workflows/plugin-workflows.mjs'
@@ -261,7 +260,6 @@ const pluginPorts = (files, pluginRoot, root) => ({
 const gitPorts = (commandRunner) => ({
   commandRunner,
   sourceControl: createGitSourceControl({ commandRunner }),
-  commitReplay: createGitCommitReplay({ commandRunner }),
   forges: createForges({ commandRunner }),
 })
 

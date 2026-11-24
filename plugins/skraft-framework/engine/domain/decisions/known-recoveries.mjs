@@ -1,7 +1,7 @@
 /**
  * Add only signatures reviewed by the author against an incident report. No reviewed report
  * has supplied an entry yet. Notes require a host judgment rather than an invented table note.
- * @type {Readonly<Record<string, 'RETRY' | 'STOP' | `SEND_TO:${string}`>>}
+ * @type {Readonly<Record<string, 'RETRY' | 'STOP'>>}
  */
 const KNOWN_RECOVERIES = Object.freeze({})
 

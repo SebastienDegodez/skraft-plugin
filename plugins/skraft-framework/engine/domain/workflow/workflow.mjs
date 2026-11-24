@@ -1,6 +1,6 @@
 import { isAbsolutePath } from '../config/skraft-config.mjs'
 import { edgeAnswers, NODE_QUESTIONS, questionSpec } from '../decisions/questions.mjs'
-import { GATE_ORDER } from '../gates/gate-plan.mjs'
+import { delivers, writesScenarios } from '../pipeline/roles.mjs'
 import { FAMILY, readLensSpec, TRIGGER_NAMES } from '../review/lenses.mjs'
 import { RUN_VALUES } from './call.mjs'
 import { isKeyword, isSymbol, parseDot, tokenizeDot } from './dot.mjs'
@@ -10,7 +10,7 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  * A skraft workflow: the DOT graph read as the pipeline the engine runs, and checked before any
  * run.
  *
- * @typedef {'start' | 'exit' | 'agent' | 'gate' | 'review' | 'ask' | 'publish' | 'fan-out' | 'lens' | 'refuter' | 'call'} NodeKind
+ * @typedef {'start' | 'exit' | 'agent' | 'review' | 'ask' | 'publish' | 'fan-out' | 'lens' | 'refuter' | 'call'} NodeKind
  *   review: a review's fan-in (shape=tripleoctagon); fan-out (shape=component), lens
  *   (shape=note) and refuter (shape=octagon) nodes are folded into it (`review-branches.mjs`) and
  *   never reach a Workflow.
@@ -19,10 +19,10 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  * @typedef {{ id: string, lens: string, when: import('../review/lenses.mjs').TriggerName | null, mandatory: boolean | null }} Branch
  *   a lens node of a review: its id, its lens spec, its trigger, its mandatory= (null when it writes none).
  * @typedef {{
- *   id: string, kind: NodeKind, phase: string | null, agent: string | null, gates: string[],
+ *   id: string, kind: NodeKind, phase: string | null, agent: string | null,
  *   lenses: string[], question: import('../decisions/questions.mjs').NodeQuestion | null,
- *   goal: boolean, locked: boolean, unlock: string | null, outputs: string[], writes: string[],
- *   maxAttempts: number | null, model: string | null, refuter: string | null, each: Each | null, proposal: boolean,
+ *   outputs: string[], writes: string[],
+ *   maxAttempts: number | null, model: string | null, refuter: string | null,
  *   publish: Publication | null, when: When | null, fanOut: string | null, branches: Branch[],
  *   mandatory: boolean | null, call: Call | null, refutedBy: Refuter | null,
  * }} WorkflowNode
@@ -33,10 +33,7 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   question: what an ask node asks a human. outputs: relative to the tracking folder (`{date}`,
  *   `{slug}` filled at dispatch); writes: relative to the working copy. model: the family an
  *   agent node's agent runs on, or a review node's lenses that name none; refuter: the family a
- *   review node's refuter runs on. each: an agent node the mutation gate sends its surviving
- *   mutants to runs its agent once per file that holds some (`survivor-file`); the two agent
- *   nodes marked `scenario` run once per scenario of the story, the first writing its failing
- *   acceptance test, the second making it pass. publish: what a publish node (a
+ *   review node's refuter runs on. publish: what a publish node (a
  *   parallelogram with `publish=`) publishes: the run's pull request, or the screenshots of the
  *   e2e runs of its front ends. when: a publish node runs only when skraft-config.json has a
  *   component of that kind, and is skipped otherwise. refutedBy: the refuter node a review (or the
@@ -48,7 +45,6 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  *   workflow is read, the run value each input is bound to, and the id and mandatory= of its
  *   review's fan-in (folded into the call node with its fan-out, branches, lenses and families).
  * @typedef {'pull-request' | 'playwright-visuals'} Publication
- * @typedef {'survivor-file' | 'scenario'} Each
  * @typedef {'PASS' | 'FAIL' | 'APPROVED' | 'NEEDS_REWORK'} EdgeLabel
  * @typedef {{ from: string, to: string, label: string | null, maxVisits: number | null }} WorkflowEdge
  *   label: PASS or FAIL on an edge leaving a gate (unlabeled means PASS), APPROVED or
@@ -67,7 +63,7 @@ import { branchReasons, foldReviews, formerFanInReasons, formerReviewReasons } f
  */
 
 /** @type {ReadonlyMap<string, NodeKind>} */
-const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'gate'], ['component', 'fan-out'], ['note', 'lens'], ['octagon', 'refuter'], ['tripleoctagon', 'review'], ['hexagon', 'ask'], ['house', 'call']])
+const KINDS = new Map([['Mdiamond', 'start'], ['Msquare', 'exit'], ['box', 'agent'], ['parallelogram', 'publish'], ['component', 'fan-out'], ['note', 'lens'], ['octagon', 'refuter'], ['tripleoctagon', 'review'], ['hexagon', 'ask'], ['house', 'call']])
 const COMMON = Object.freeze(['label', 'shape', 'phase'])
 /** The prefix of a call node's bindings, and of a workflow's inputs. */
 const WITH = 'with_'
@@ -78,8 +74,7 @@ const NEEDS = Object.freeze(['required', 'optional'])
 const ATTRIBUTES = Object.freeze({
   start: { required: [], optional: [] },
   exit: { required: [], optional: [] },
-  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts', 'each', 'proposal'] },
-  gate: { required: ['gate'], optional: ['goal_gate', 'locked', 'unlock'] },
+  agent: { required: ['agent'], optional: ['model', 'outputs', 'writes', 'max_attempts'] },
   'fan-out': { required: [], optional: [] },
   lens: { required: ['lens'], optional: ['model', 'when', 'mandatory'] },
   refuter: { required: [], optional: ['mandatory'] },
@@ -90,23 +85,18 @@ const ATTRIBUTES = Object.freeze({
 })
 /** What `when=` names, by the kind of node it is on. @type {Readonly<Partial<Record<NodeKind, readonly string[]>>>} */
 const WHENS = Object.freeze({ publish: Object.freeze(['frontend']), lens: TRIGGER_NAMES })
-/** What an agent node runs once per. @type {readonly Each[]} */
-const EACHES = Object.freeze(/** @type {Each[]} */ (['survivor-file', 'scenario']))
 /** What a publish node publishes. @type {readonly Publication[]} */
 const PUBLICATIONS = Object.freeze(/** @type {Publication[]} */ (['pull-request', 'playwright-visuals']))
 
 /**
- * The kind of a node: its shape's, a parallelogram that publishes being a publish node.
+ * The kind of a node: its shape's.
  * @param {Record<string, string>} attributes @returns {NodeKind | undefined}
  */
-const shapeKind = (attributes) => {
-  const kind = KINDS.get(attributes.shape)
-  return kind === 'gate' && 'publish' in attributes ? 'publish' : kind
-}
+const shapeKind = (attributes) => KINDS.get(attributes.shape)
 /** The verdicts a review or a workflow call returns, approval first. @type {readonly EdgeLabel[]} */
 const VERDICTS = Object.freeze(/** @type {EdgeLabel[]} */ (['APPROVED', 'NEEDS_REWORK']))
 /** The labels an edge leaving a node of that kind takes, its default first. @type {Readonly<Partial<Record<NodeKind, readonly EdgeLabel[]>>>} */
-const LABELS = Object.freeze({ gate: Object.freeze(/** @type {EdgeLabel[]} */ (['PASS', 'FAIL'])), review: VERDICTS, call: VERDICTS })
+const LABELS = Object.freeze({ review: VERDICTS, call: VERDICTS })
 const PHASE = /^[A-Z][A-Z0-9_]*$/
 const AGENT_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const POSITIVE = /^[1-9][0-9]*$/
@@ -132,16 +122,10 @@ const NODE_CHECKS = {
   agent: (value) => (AGENT_ID.test(value) ? null : 'must be a kebab-case agent id'),
   lens: (value) => (AGENT_ID.test(value) ? null : 'must be a kebab-case lens name'),
   question: (value) => (NODE_QUESTIONS.some((known) => known === value) ? null : `must be one of ${NODE_QUESTIONS.join(', ')}`),
-  gate: (value) => (listOf(value).length > 0 && listOf(value).every((gate) => GATE_ORDER.includes(gate)) ? null : `must list gates among ${GATE_ORDER.join(', ')}`),
-  goal_gate: flag,
-  locked: flag,
   mandatory: flag,
-  proposal: flag,
-  unlock: (value) => (value.trim() === '' ? 'needs the reason the node is skipped' : null),
   outputs: (value) => (listOf(value).every((path) => !isAbsolutePath(path) && !path.split(/[\\/]/).includes('..')) ? null : 'must list paths relative to the tracking folder, without ..'),
   writes: (value) => (listOf(value).every((path) => !isAbsolutePath(path)) ? null : 'must list paths relative to the working copy'),
   max_attempts: positive,
-  each: (value) => (EACHES.some((known) => known === value) ? null : `must be ${EACHES.join(' or ')}`),
   publish: (value) => (PUBLICATIONS.some((known) => known === value) ? null : `must be ${PUBLICATIONS.join(' or ')}`),
   when: (value, kind) => {
     const known = /** @type {readonly string[]} */ (WHENS[kind])
@@ -261,7 +245,6 @@ const nodeOf = (id, kind, attributes) => ({
   lenses: attributes.lens === undefined ? [] : [attributes.model === undefined ? attributes.lens : `${attributes.lens}@${attributes.model}`],
   question: NODE_QUESTIONS.find((known) => known === attributes.question) ?? null,
   ...modelSettingsOf(attributes),
-  ...gateSettingsOf(attributes),
   ...stepSettingsOf(attributes),
   call: callOf(kind, attributes),
 })
@@ -276,20 +259,10 @@ const callOf = (kind, attributes) => (kind === 'call' ? { workflow: attributes.w
 const bindingsOf = (attributes) => Object.fromEntries(Object.entries(attributes).filter(([key]) => key.startsWith(WITH)).map(([key, value]) => [key.slice(WITH.length), value]))
 
 /** @param {Record<string, string>} attributes */
-const gateSettingsOf = (attributes) => ({
-  gates: listOf(attributes.gate ?? ''),
-  goal: attributes.goal_gate === 'true',
-  locked: attributes.locked === 'true',
-  unlock: attributes.unlock ?? null,
-})
-
-/** @param {Record<string, string>} attributes */
 const stepSettingsOf = (attributes) => ({
   outputs: listOf(attributes.outputs ?? ''),
   writes: listOf(attributes.writes ?? ''),
   maxAttempts: attributes.max_attempts === undefined ? null : Number(attributes.max_attempts),
-  each: EACHES.find((known) => known === attributes.each) ?? null,
-  proposal: attributes.proposal === 'true',
   publish: PUBLICATIONS.find((known) => known === attributes.publish) ?? null,
   when: /** @type {When | undefined} */ (attributes.when) ?? null,
   mandatory: attributes.mandatory === undefined ? null : attributes.mandatory === 'true',
@@ -327,13 +300,34 @@ const nodeReasons = ({ id, attributes }) => {
   const { shape } = attributes
   const kind = shapeKind(attributes)
   if (kind === undefined) return [shapeReason(id, shape)]
+  return attributeReasons(id, kind, attributes)
+}
+
+/** @param {string} id @param {NodeKind} kind @param {Record<string, string>} attributes */
+const attributeReasons = (id, kind, attributes) => {
+  const { shape } = attributes
   const { required, optional } = ATTRIBUTES[kind]
   const allowed = [...COMMON, ...required, ...optional]
   return [
     ...Object.entries(attributes).flatMap(([key, value]) => nodeAttributeReason(`node ${id}`, shape, kind, allowed, key, value)),
-    ...required.filter((key) => !(key in attributes)).map((key) => `node ${id}: a ${shape} node needs ${key}="…"`),
+    ...required.filter((key) => !(key in attributes) && !('gate' in attributes && shape === 'parallelogram')).map((key) => missingReason(id, shape, key)),
   ]
 }
+
+/** What an ejected workflow still says of the nodes and attributes the engine dropped, and what replaces them. */
+const GONE_ATTRIBUTES = Object.freeze({
+  gate: 'a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline)',
+  goal_gate: 'goal_gate is gone with the gate node: skraft runs no gate',
+  locked: 'locked is gone with the gate node: skraft runs no gate',
+  unlock: 'unlock is gone with the gate node: skraft runs no gate',
+  each: 'each is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node',
+  proposal: 'proposal is gone with the mutation the engine ran: mutation testing is a recipe of the session (the skraft-mutation skill), not a node',
+})
+
+/** A parallelogram with no `publish` is a gate node of an earlier engine; the others miss an attribute. @param {string} id @param {string} shape @param {string} key */
+const missingReason = (id, shape, key) => (shape === 'parallelogram'
+  ? `node ${id}: ${GONE_ATTRIBUTES.gate}`
+  : `node ${id}: a ${shape} node needs ${key}="…"`)
 
 /** @param {string} id @param {string | undefined} shape */
 const shapeReason = (id, shape) => (shape === undefined
@@ -342,6 +336,7 @@ const shapeReason = (id, shape) => (shape === undefined
 
 /** @param {string} name @param {string} shape @param {NodeKind} kind @param {string[]} allowed @param {string} key @param {string} value */
 const nodeAttributeReason = (name, shape, kind, allowed, key, value) => {
+  if (key in GONE_ATTRIBUTES) return [`${name}: ${GONE_ATTRIBUTES[/** @type {keyof typeof GONE_ATTRIBUTES} */ (key)]}`]
   if (kind === 'call' && key.startsWith(WITH)) return valueReasons(name, key, value, bindingProblem(key, value))
   if (!allowed.includes(key)) return [`${name}: attribute ${key} is not supported on a ${shape} node (supported: ${allowed.join(', ')})`]
   return valueReasons(name, key, value, NODE_CHECKS[key]?.(value, kind) ?? null)
@@ -372,7 +367,7 @@ const edgeReasons = ({ from, to, attributes }, source) => {
 /** @param {string} name @param {string | undefined} label @param {readonly string[] | null | undefined} labels those its source takes */
 const labelReasons = (name, label, labels) => {
   if (label === undefined || labels === null) return []
-  if (labels === undefined) return [`${name}: only an edge leaving a gate, a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label`]
+  if (labels === undefined) return [`${name}: only an edge leaving a review's fan-in (shape=tripleoctagon), a call (shape=house) or an ask node takes a label`]
   return valueReasons(name, 'label', label, labels.includes(label) ? null : `must be ${labels.join(' or ')}`)
 }
 
@@ -390,15 +385,6 @@ const oneOutgoing = (node, out) => when(out.length !== 1, `node ${node.id}: ${no
 
 /** @param {WorkflowNode} node @param {WorkflowEdge[]} out its outgoing edges */
 const noOutgoing = (node, out) => when(out.length > 0, `node ${node.id}: exit node takes no outgoing edge, has ${out.length}`)
-
-/** @param {WorkflowNode} node @param {WorkflowEdge[]} out its outgoing edges */
-const gateOutgoing = (node, out) => {
-  const fail = out.filter((edge) => edge.label === 'FAIL').length
-  return [
-    ...when(out.length - fail !== 1, `node ${node.id}: gate node needs exactly one PASS edge, has ${out.length - fail}`),
-    ...when(fail > 1, `node ${node.id}: gate node takes at most one FAIL edge, has ${fail}`),
-  ]
-}
 
 /** @param {WorkflowNode} node @param {WorkflowEdge[]} out its outgoing edges */
 const reviewOutgoing = (node, out) => {
@@ -442,7 +428,6 @@ const OUTGOING = Object.freeze({
   start: oneOutgoing,
   agent: oneOutgoing,
   exit: noOutgoing,
-  gate: gateOutgoing,
   review: reviewOutgoing,
   call: reviewOutgoing,
   ask: askOutgoing,
@@ -453,33 +438,10 @@ const OUTGOING = Object.freeze({
   refuter: oneOutgoing,
 })
 
-/** An agent proposes for the surviving mutants it takes by file. @param {Draft} draft */
-const proposalReasons = ({ nodes }) => Object.values(nodes)
-  .filter((node) => node.proposal && node.each !== 'survivor-file')
-  .map((node) => `node ${node.id}: proposal=true needs each="survivor-file", the mutants it proposes for`)
-
-const SCENARIO_PAIR = 'each="scenario" goes on two agent nodes, the one that writes each scenario\'s failing acceptance test, then the one that makes it pass'
-
-/**
- * The nodes marked each="scenario", in the order the run reaches them: the one that writes each
- * scenario's failing acceptance test, then the one that makes it pass.
- * @param {Pick<Workflow, 'nodes' | 'order'>} workflow
- */
-export const scenarioNodes = ({ nodes, order }) => order.filter((id) => nodes[id].each === 'scenario')
-
-/** The nodes marked each="scenario", in declaration order. @param {Draft} draft */
-const markedScenario = ({ nodes, ids }) => ids.filter((id) => nodes[id]?.each === 'scenario')
-
-/** None or two nodes run per scenario. @param {Draft} draft */
-const scenarioPairReasons = (draft) => {
-  const marked = markedScenario(draft)
-  return when(![0, 2].includes(marked.length), `${SCENARIO_PAIR}; it is on ${marked.length}: ${marked.join(', ')}`)
-}
-
-/** The scenario review shows the scenarios the pair runs. @param {Draft} draft */
-const scenarioReviewReasons = (draft) => Object.values(draft.nodes)
-  .filter((node) => node.question === 'scenario-review' && markedScenario(draft).length === 0)
-  .map((node) => `node ${node.id}: question="scenario-review" needs the two nodes marked each="scenario", whose scenarios it shows`)
+/** The scenario review shows the scenarios the node that writes them leaves and the groups the node that delivers them takes. @param {Draft} draft */
+const scenarioReviewReasons = ({ nodes }) => Object.values(nodes)
+  .filter((node) => node.question === 'scenario-review' && !(Object.values(nodes).some(writesScenarios) && Object.values(nodes).some(delivers)))
+  .map((node) => `node ${node.id}: question="scenario-review" needs the node that writes the scenarios and the node that delivers them`)
 
 /** @param {Draft} draft */
 const startAndExitReasons = ({ starts, exits }) => [
@@ -504,7 +466,7 @@ const deadEndReasons = ({ ids, exits, edges }) => {
 const unboundedLoopReasons = ({ ids, edges }) => loopsOf(ids, edges.filter((edge) => edge.maxVisits === null)).map((loop) => `loop ${loop.join(' -> ')} has no max_visits`)
 
 /** The kinds of node that do the run's work, each in a phase. */
-const WORKING = Object.freeze(['agent', 'gate', 'review', 'ask', 'publish', 'call'])
+const WORKING = Object.freeze(['agent', 'review', 'ask', 'publish', 'call'])
 
 /** @param {Draft} draft */
 const missingPhaseReasons = ({ nodes, order }) => order
@@ -531,8 +493,6 @@ const WORKFLOW_CHECKS = Object.freeze([
   nodeAttributeReasons,
   edgeAttributeReasons,
   outgoingEdgeReasons,
-  proposalReasons,
-  scenarioPairReasons,
   scenarioReviewReasons,
   branchReasons,
   startAndExitReasons,
@@ -583,72 +543,6 @@ const visitLoops = (search, id) => {
   search.done.add(id)
 }
 
-/**
- * The locked nodes of the built-in workflow a repository workflow keeps, skips or breaks. A
- * kept one must keep its gates, its goal, its FAIL edge back to an agent of its phase, and no
- * path may reach the exit around it from the start or from an agent of its phase.
- * @param {Workflow} builtIn @param {Workflow} custom
- * @returns {{ errors: string[], unlocked: Array<{ node: string, reason: string }> }}
- */
-export const checkLocks = (builtIn, custom) => {
-  const locked = Object.values(builtIn.nodes).filter((node) => node.locked)
-  return {
-    errors: locked.flatMap((node) => lockReasons(builtIn, custom, node)),
-    unlocked: locked.flatMap((node) => unlockedOf(custom.nodes[node.id], node)),
-  }
-}
-
-/** @param {WorkflowNode | undefined} kept the node of the same id in the repository workflow @param {WorkflowNode} node a locked built-in node */
-const unlockedOf = (kept, node) => (kept?.kind === 'gate' && kept.unlock !== null ? [{ node: node.id, reason: kept.unlock }] : [])
-
-/** @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} node a locked built-in node */
-const lockReasons = (builtIn, custom, node) => {
-  const kept = custom.nodes[node.id]
-  if (kept?.kind !== 'gate') return [`locked node ${node.id} is missing; keep it with unlock="<reason>" to skip it`]
-  if (kept.unlock !== null) return []
-  return keptLockReasons(builtIn, custom, node, kept)
-}
-
-/** @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} node a locked built-in node @param {WorkflowNode} kept the gate kept for it */
-const keptLockReasons = (builtIn, custom, node, kept) => {
-  const dropped = node.gates.filter((gate) => !kept.gates.includes(gate))
-  return [
-    ...when(dropped.length > 0, `locked node ${node.id} drops ${dropped.join(', ')}; keep them, or skip the node with unlock="<reason>"`),
-    ...when(node.goal && !kept.goal, `locked node ${node.id} must stay goal_gate=true; skip it with unlock="<reason>" instead`),
-    ...failEdge(builtIn, custom, kept),
-    ...bypasses(custom, kept),
-  ]
-}
-
-/**
- * A kept locked gate whose built-in one sends FAIL back must send it to an agent of its phase.
- * @param {Workflow} builtIn @param {Workflow} custom @param {WorkflowNode} kept
- */
-const failEdge = (builtIn, custom, kept) => {
-  const target = custom.edges.find((edge) => edge.from === kept.id && edge.label === 'FAIL')?.to
-  if (target === undefined) return [`locked node ${kept.id} has no FAIL edge back to an agent of ${kept.phase}`]
-  const back = custom.nodes[target]
-  return back.kind === 'agent' && back.phase === kept.phase ? [] : [`locked node ${kept.id} must send FAIL back to an agent of ${kept.phase}, not to ${target}`]
-}
-
-/**
- * The start and the agents of a locked gate's phase from which an exit is reached without it,
- * or without a gate node that stands in for it.
- * @param {Workflow} custom @param {WorkflowNode} kept
- */
-const bypasses = (custom, kept) => [custom.start, ...custom.order.filter((id) => custom.nodes[id].kind === 'agent' && custom.nodes[id].phase === kept.phase)]
-  .filter((from) => reachesExitAvoiding(custom, from, standIns(custom, kept)))
-  .map((from) => `${from} reaches the exit without passing ${kept.id}; keep the run going through ${kept.id}, or skip ${kept.id} with unlock="<reason>"`)
-
-/**
- * The kept locked gate, and each gate node that runs every one of its gates as it does, goal
- * included: a path through any of them runs the locked gates.
- * @param {Workflow} custom @param {WorkflowNode} kept
- */
-const standIns = (custom, kept) => Object.values(custom.nodes)
-  .filter((node) => node.kind === 'gate' && node.unlock === null && (node.goal || !kept.goal) && kept.gates.every((gate) => node.gates.includes(gate)))
-  .map((node) => node.id)
-
 /** @param {Workflow} workflow @param {string} from @param {string} avoided */
 export const reachesExitWithout = (workflow, from, avoided) => reachesExitAvoiding(workflow, from, [avoided])
 
@@ -679,10 +573,8 @@ const enqueueNext = (workflow, id, avoided, seen, queue) => {
 const factsOf = (node) => [
   ['kind', node.kind],
   ['agent', node.agent],
-  ['gate', node.gates.join(',')],
   ...workFactsOf(node),
   ['phase', node.phase],
-  ...gateFactsOf(node),
   ...stepFactsOf(node),
   ...modelFactsOf(node),
 ]
@@ -692,8 +584,6 @@ const stepFactsOf = (node) => [
   ['outputs', node.outputs.join(', ')],
   ['writes', node.writes.join(', ')],
   ['max_attempts', node.maxAttempts === null ? null : String(node.maxAttempts)],
-  ['each', node.each],
-  ['proposal', String(node.proposal)],
 ]
 
 /** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
@@ -701,13 +591,6 @@ const workFactsOf = (node) => [['lens', node.kind === 'lens' ? node.lenses[0] : 
 
 /** @param {DiffedNode} node @returns {Array<[string, string | null]>} */
 const modelFactsOf = (node) => [['model', node.model], ['refuter', node.refuter], ['fan-in', node.fanIn ?? null]]
-
-/** @param {WorkflowNode} node @returns {Array<[string, string | null]>} */
-const gateFactsOf = (node) => [
-  ['goal_gate', String(node.goal)],
-  ['locked', String(node.locked)],
-  ['unlock', node.unlock],
-]
 
 /** @param {WorkflowEdge} edge @returns {Array<[string, string | null]>} */
 const edgeFactsOf = (edge) => [
@@ -768,7 +651,7 @@ const lensNodeOf = (review, branch) => {
 }
 
 /** @param {WorkflowNode} node */
-const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.gates.join(','), node.lenses.join(','), node.question, node.publish].filter(Boolean).join(' ')})`
+const addedNode = (node) => `+ node ${node.id} (${[node.kind, node.agent, node.lenses.join(','), node.question, node.publish].filter(Boolean).join(' ')})`
 
 /** @param {Workflow} from @param {Workflow} to */
 const edgeChanges = (from, to) => {

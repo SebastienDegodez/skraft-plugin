@@ -13,7 +13,7 @@ const API = Object.freeze({
   bdd: PAIRS,
 })
 const WEB = Object.freeze({ name: 'payment-web', root: '../payment-web', stack: 'react', commands: { test: 'npx vitest run' }, bdd: false })
-const TEAM = Object.freeze({ baseBranch: 'develop', tdd: { replay: 'last-red' }, publish: { visuals: false, draft: false }, components: [API, WEB] })
+const TEAM = Object.freeze({ baseBranch: 'develop', notes: 'kept as written', publish: { visuals: false, draft: false }, components: [API, WEB] })
 const LOCAL = 'skraft-config.local.json'
 const SHAPE = 'skraft-config.json is invalid: component payment-api: bdd must be true, false, or a list of { runner, features, steps } whose folders are inside the component root; steps may be left out when nothing binds the scenarios'
 const MODEL_NAMES = 'must be a model name or a non-empty list of model names, tried in order (a name is letters, digits, ".", "_" or "-", starting with a letter or a digit, with no space)'

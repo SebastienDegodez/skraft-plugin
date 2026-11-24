@@ -8,7 +8,8 @@ persona: software-engineer
 
 Get a `skraft-config.json` whose every command runs on your machine, before you start a run.
 
-`skraft init` proposes what it can see; the file is yours, and making it right is your job. The
+`skraft init` detects the components; the commands and the file are yours, and making them right is
+your job. The
 engine takes it as the truth and cannot tell that a path you accepted is not the one your tools
 use — and a wrong path costs silence, not a failure. Read each step's result before the next run.
 
@@ -25,14 +26,14 @@ $ skraft init
 ```
 
 The engine looks for projects up to three levels below the working copy, hidden folders and
-`node_modules` excluded, and writes one component per project, with its stack's default
-commands:
+`node_modules` excluded, and writes one component per project, with its stack, its root and its paths, and no command: skraft
+holds no command line of any stack (`/skraft-init` proposes them from the stack's skill):
 
 ```text
 skraft-config.json: payment-api (dotnet, services/payment-api), web (react, web)
 ```
 
-Open the file and read each command again. Rename a component if you wish: the rest of this page
+Open the file and write each component's commands (next step). Rename a component if you wish: the rest of this page
 renamed `payment-api` to `api`. Running `skraft init` again adds only new projects and leaves the
 rest of the file as it is.
 
@@ -45,28 +46,31 @@ $ skraft init --add ../payment-web
 `--add` takes a folder relative to the working copy and can be repeated. The component it gives
 has `../payment-web` as its root; its base is computed in its own repository.
 
-## 3. Replace a command that does not work for you
+## 3. Write or replace a command
 
-A command written in `skraft-config.json` is always the one that runs. Edit the line:
+A command written in `skraft-config.json` is always the one that runs, and the only one: the engine
+fills none. Write the line:
 
 ```json
 { "name": "web", "root": "../payment-web", "stack": "react",
   "commands": { "build": "npm run build", "lint": "npm run lint", "test": "npm run test:ci" } }
 ```
 
-Write a command to be started **without a shell**, from the component's root:
+Write a command the software engineer runs from the component's root through `skraft_repl`, under `sh`
+(on Windows, Git Bash when it is installed, else PowerShell):
 
-- split on blanks; `"…"` or `'…'` keep blanks inside one argument;
-- no `|`, `&`, `;`, `<`, `>` outside quotes: to chain steps, call a script (`npm run test:ci`,
-  `node scripts/ci-test.mjs`);
-- `npm`, `npx`, `gradlew.bat` are written the same way on Windows.
+- it is one line, written so it works in the shells your team uses; to chain many steps, a script
+  (`npm run test:ci`, `node scripts/ci-test.mjs`) keeps the line short;
+- `npm`, `npx`, `gradlew.bat` are written the same way on Windows;
+- a program starts as written: `python` stays `python`, so write `.venv/bin/python` (or
+  `.venv/Scripts/python.exe`: forward slashes, a backslash is an invalid escape in JSON) when the
+  project's interpreter is not the one on the PATH. A team on several systems chooses one form per component, since `skraft-config.json` holds one line per command.
 
 ## 4. Add a gate
 
 Add the command under one of the names `build`, `format`, `lint`, `test`, `architecture`,
-`coverage` (the run order); `mutation`, your own mutation command, which the pipeline never runs
-and [Run mutation on your branch](./run-mutation.md) declares; or `e2e`, which `skraft doctor`
-checks but no gate runs:
+`coverage`, the gates the software engineer runs through `skraft_repl` ([Run the gates](./run-gates.md)); `mutation`, your own mutation command, which no engine run starts
+and [Run mutation on your branch](./run-mutation.md) declares; or `e2e`, the end-to-end command of a front end:
 
 ```json
 "commands": {
@@ -124,12 +128,11 @@ The external gateway row follows `mocking.strategy`; `infrastructure` refuses it
 
 ## 7. Let the test command print what failed
 
-The engine replays each failing acceptance test DISTILL commits and each scenario's green with
-the component's `test` command (and `e2e`), and keeps what the command prints in a log of the run.
-It reads no test report, JUnit or other: the replay judge reads that log
-([Commits and replays](../reference/gates.md#commits)). So the `test` command needs no reporter
-option for skraft; its default output, which names each failing test and why, is what the judge
-reads.
+The agents run the component's `test` command (and `e2e`) themselves; the acceptance designer
+sends the output of its one run to a log of the run, which the DISTILL review reads. The engine
+runs no test and reads no test report, JUnit or other ([Commits](../reference/gates.md#commits)).
+So the `test` command needs no reporter option for skraft; its default output, which names each
+failing test and why, is what the review reads.
 
 A report a command writes in the working copy (your own CI's JUnit file, a TRX folder) is a change
 like any other, held to the write scope: list it in `.gitignore`. A `testReports` key left from an
@@ -173,7 +176,7 @@ holds.
 A run that publishes starts only once they are settled, so `skraft init` leaves them to you:
 
 ```json
-{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 1 } } }
+{ "publish": { "pullRequest": true, "visuals": false, "questionVersions": { "pullRequest": 2, "visuals": 2 } } }
 ```
 
 `pullRequest` lets a run push its branch, open its pull request and keep a comment on the issue;
@@ -188,23 +191,19 @@ Without them a run is refused before its first agent, with
 $ skraft doctor
 ```
 
-Without `--run`, none of your commands runs: the doctor checks Node, the file, the forge, each component's
-root, at least one gate per component and each command's program.
+The doctor starts none of your commands: it checks Node, the file, the forge and each component's
+root, and lists each component's commands as you wrote them. It never looks a program up on the PATH.
 
 ```text
 ok    node: Node v22.11.0
 ok    config: 2 components: api, web
 ok    forge: github, deduced from the Git remote
-ok    api/build: dotnet → /usr/local/bin/dotnet
-FAIL  web/test: command not found: npx (from ../payment-web); install it or change commands.test in skraft-config.json
-skraft doctor: 1 checks failed
+ok    api/build: dotnet build --nologo (listed; skraft_repl starts it, never skraft)
+ok    web/test: npm run test:ci (listed; skraft_repl starts it, never skraft)
+skraft doctor: every check passed
 ```
 
-Fix each `FAIL`, then run each command once, with the computed base:
-
-```console
-$ skraft doctor --run
-```
+Fix each `FAIL`, then run `skraft doctor` again.
 
 Expected result: `skraft doctor: every check passed`, or `no check failed, N with a warning`.
 Exit code 0.
@@ -227,7 +226,6 @@ Every key and every message: [skraft-config.json](../reference/skraft-config.md#
 
 ## Next steps <!-- #next-steps -->
 
-- [skraft-config.json](../reference/skraft-config.md) — schema, defaults
-  per stack, detection.
+- [skraft-config.json](../reference/skraft-config.md) — schema, detection.
 - [Run the gates and read their evidence](./run-gates.md)
 - [Choose the agents' models](./choose-models.md)

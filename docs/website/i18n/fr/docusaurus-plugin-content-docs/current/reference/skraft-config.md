@@ -26,6 +26,9 @@ sur les précédentes ; un `null` retire ce qu'une couche inférieure a posé :
 | 3 | `skraft-config.json` (racine de la copie de travail) | oui | toutes les clés |
 | 4 | `skraft-config.local.json` (à côté du précédent) | non | toute clé sauf `components` |
 
+`skraft init` inscrit `skraft-config.local.json` et `/.repl/node_modules/` (les paquets de la
+[bibliothèque REPL](./repl.md#lib) du projet) dans le `.gitignore` de la copie de travail, chacun une fois.
+
 Chaque fichier est validé seul, puis la fusion est validée. Schémas JSON :
 `schemas/skraft-config.schema.json` et `schemas/skraft-config.local.schema.json` dans le
 plugin.
@@ -36,7 +39,7 @@ flowchart TD
     F -->|lu et validé| V{valide ?}
     V -->|non| R[refus config-invalid<br/>toutes les erreurs]
     V -->|oui| B[base par dépôt<br/>git merge-base HEAD ref]
-    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage]
+    B --> G[gates par skraft_repl<br/>build → format → lint → test<br/>→ architecture → coverage]
     F --> D[skraft doctor]
 ```
 
@@ -65,10 +68,9 @@ flowchart TD
 | `baseBranch` | string | absent (la base retombe sur `main`) | ref git : sans blanc, ne commence pas par `-` ; `null` vaut absent |
 | `forge` | string | absent (déduite du remote Git, voir [Forge](#forge)) | `github` ou `azure-devops` ; `null` vaut absent. Une valeur écrite par vous l'emporte toujours sur le remote |
 | `components` | array d'objets | `[]` | chaque entrée est un composant (ci-dessous) |
-| `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }` ; `replay` absent ou `null` vaut `all` ; voir [tdd](#tdd) |
 | `publish` | object | `{}` | voir [publish](#publish) |
 | `models` | object | les alias Claude Code du plugin par palier | famille de modèle → `tier` et, par hôte (`claude-code`, `copilot`), `{ "model": nom ou liste, "effort": niveau }` ; un nom est un seul mot de lettres, de chiffres, de `.`, `_` et `-`, une lettre ou un chiffre en tête, sans espace, et une liste compte au moins un nom (toute autre valeur est refusée : `models.<family>.<host>.model must be a model name or a non-empty list of model names, tried in order (…)`) ; voir [Choisir les modèles des agents](../how-to/choose-models.md) |
-| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, `replay-judge` `standard`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
+| `assign` | object | lentilles `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, défaut `implementer` | `{ "default", "types", "agents" }` : une famille, `inherit`, ou `{ "family", "<hôte>": { "effort" } }` ; lu aussi dans `~/.skraft/config.json` et `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refusées : `rank is no key: …`, `workflow is no key: …` |
 | `configurationConfirmed` | booléen | `false` | dans `skraft-config.local.json` seulement (refusé dans ce fichier et dans `~/.skraft/config.json`). Écrit `true` par le moteur quand vous répondez START à *Démarrer ce run avec la configuration de cette copie de travail ?*, qu'un run Copilot pose avant sa première phase tant qu'il est absent, et de nouveau avec `configure: true`. L'onglet Configuration du canvas skraft modifie la forge, les composants et les consentements de ce fichier, et l'`assign` et les `models` de `skraft-config.local.json`, vérifiés comme un run les charge |
 | toute autre clé | quelconque | — | conservée telle quelle, jamais lue ni réécrite |
@@ -133,26 +135,12 @@ Docker or Podman runs`. Seul `skraft-config.json` porte `infrastructure`, comme 
   "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
 ```
 
-## `tdd` <!-- #tdd -->
-
-| Clé | Valeur | Effet |
-| --- | --- | --- |
-| `replay` | `all` (défaut) | le moteur rejoue chaque commit rouge d'un test d'acceptation (`test(<story>): …`, DISTILL) avec la commande `test` de son composant, et le juge du rejeu lit ce qu'elle a affiché ([Commits et rejeux](./gates.md#commits)) |
-| `replay` | `last-red` | seul le dernier commit rouge de chaque story (même portée de commit) est rejoué |
-| `replay` | `null` | vaut `all` |
-
-Avec `all`, quand les rejeux dépassent 20 % de la durée d'une phase, le moteur journalise
-`tdd.replay-slow` une fois par phase et affiche `<slug>: replaying test commits took N% of
-<PHASE>; set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test
-commit of each story`. Toute autre valeur : `tdd must be { "replay": "all" or "last-red" }`. Le
-rejeu du commit vert d'un scénario ne dépend pas de cette clé.
-
 ## `publish` <!-- #publish -->
 
 | Clé | Type | Défaut | Effet |
 | --- | --- | --- | --- |
 | `pullRequest` | boolean | absent : un run qui publie est refusé, `/skraft-init` le demande | le run peut pousser sa branche, ouvrir ou mettre à jour sa pull request et tenir un commentaire de progression sur l'issue de sa story |
-| `visuals` | boolean | absent : un run qui publie des captures est refusé, `/skraft-init` le demande (seulement avec un front end) | le run peut publier les captures et vidéos d'un front end dans la pull request |
+| `visuals` | boolean | absent : un run qui publie des captures est refusé, `/skraft-init` le demande (seulement avec un front end) | le run peut montrer les captures d'un front end dans la pull request (version 2 de la question ; une acceptation de la version 1, qui nommait des vidéos, est redemandée) |
 | `draft` | boolean | `true` | une pull request ouverte par skraft est un brouillon |
 | `reviewComment` | boolean | absent : demandé une fois par dépôt | `skraft review --pr --publish` peut garder un commentaire sur la pull request revue ; écrit à la main dans le fichier de l'équipe, il l'emporte sur la réponse de chaque développeur, que le moteur garde dans son `~/.skraft/config.json` (`reviewComments`) |
 | `questionVersions` | object | `1` par clé | la version du texte de la question à laquelle chaque réponse a été donnée (`visuals`, `pullRequest`, `reviewComment`, entiers à partir de 1) ; une acceptation d'une version antérieure n'est pas réglée : le run est refusé jusqu'à ce que `/skraft-init` la repose |
@@ -263,7 +251,6 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 | pas un objet | `skraft-config.json must hold a JSON object` |
 | `baseBranch` global | `baseBranch must be a git ref, got <valeur JSON>` |
 | `forge` | `forge must be "github" or "azure-devops"` |
-| `tdd` | `tdd must be { "replay": "all" or "last-red" }` |
 | `publish` | `publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false` ; `publish.questionVersions must be an object of visuals, pullRequest and reviewComment, each a whole number from 1` |
 | `rank`, `workflow` | `rank is no key: …` ; `workflow is no key: …` |
 | `components` hors de `skraft-config.json` | `components belongs in skraft-config.json, never in <fichier>` |
@@ -288,64 +275,47 @@ Dans les messages, `<label>` vaut `component <name>` si le nom est une chaîne, 
 
 ## Lignes de commande <!-- #command-lines -->
 
-Une ligne de `commands` est lancée **sans shell**, depuis la racine du composant. La même
-ligne se comporte donc de la même façon sous sh, PowerShell et cmd.
+Une ligne de `commands` est celle du développeur : le moteur ne porte aucune ligne de commande d'aucune
+stack, et une ligne écrite ici est celle qui tourne. L'ingénieur logiciel la lance depuis la racine du
+composant par `skraft_repl`, `run(string)` sous `sh -c` (sous Windows, Git Bash quand il est installé, sinon
+`pwsh` ou `powershell` ; le shell est nommé dans la trace). Une ligne peut donc enchaîner des étapes
+(`a && b`) ou poser des variables comme ce shell le fait ; écrivez-la pour qu'elle marche dans les
+shells de votre équipe.
 
 | Règle | Détail |
 | --- | --- |
-| Découpage | sur les blancs ; le premier mot est le programme |
-| Guillemets | `"…"` et `'…'` gardent les blancs dans un seul argument ; pas de caractère d'échappement |
-| `{baseSha}` | remplacé, avant le découpage, par le SHA de la base du dépôt du composant |
-| Syntaxe shell | un mot écrit sans guillemets qui contient <code>&#124;</code>, `&`, `;`, `<` ou `>` est refusé |
-| Variables | un `NOM=valeur` avant le programme est refusé : aucun shell ne le pose |
-| Rien d'interprété | pas de variable, de joker ni de redirection : chaque mot part tel quel au programme |
-| Programme | cherché dans le PATH (et PATHEXT sous Windows) ; un chemin avec `/` ou `\` part de la racine du composant |
-| Windows | un `.cmd` ou `.bat` (npm, npx, gradlew.bat) passe par cmd.exe, arguments échappés |
-
-Messages de refus d'une ligne (précédés de `command "<ligne>"` dans une gate, de
-`"<ligne>"` dans le doctor) :
-
-| Cas | Message |
-| --- | --- |
-| syntaxe shell | `uses shell syntax (<mot>); put the steps in a script and call the script` |
-| variables avant le programme | `sets <NOM>, … before its program, which no shell reads; put the variables and the command in a script and call the script` |
-| guillemet non fermé | `has an unclosed <guillemet> quote` |
-| `{baseSha}` sans base | `uses {baseSha} but the run has no base for this repository` |
-
-Pour enchaîner des étapes (`a && b`) ou poser des variables
-(`TESTCONTAINERS_RYUK_DISABLED=true mvn test`), écrivez-les dans un script du dépôt et appelez le
-script.
+| `{baseSha}` | remplacé, dans le brief qu'un agent lit, par le SHA de la base du dépôt du composant |
+| Non vide | une ligne vide est refusée : `<label>: command <name> must be a non-empty command line` |
+| Programme | cherché dans le PATH du shell ; un programme qui ne démarre pas fait échouer son exécution dans le REPL |
 
 ## Gates <!-- #gates -->
 
-Une **gate** est une commande dont le nom est l'un des sept noms ci-dessous. Elles tournent
-dans cet ordre, quel que soit l'ordre du fichier :
+Une **gate** est une commande dont le nom est l'un des six noms ci-dessous. Le moteur n'en lance
+aucune : l'ingénieur logiciel lance chacune par `skraft_repl` dans DELIVER, et la lentille `quality-gates` de la revue DELIVER
+juge les exécutions tracées ([Gates](./gates.md#command-gates)).
 
-| Ordre | Nom |
-| --- | --- |
-| 1 | `build` |
-| 2 | `format` |
-| 3 | `lint` |
-| 4 | `test` |
-| 5 | `architecture` |
-| 6 | `coverage` |
-| 7 | `mutation` |
+| Nom |
+| --- |
+| `build` |
+| `format` |
+| `lint` |
+| `test` |
+| `architecture` |
+| `coverage` |
 
-`mutation` revient au développeur : ni le pipeline de la story ni `skraft gate` ne la lancent ;
-le run de mutation du développeur (`workflows/mutation.skraft.dot`) la lance, comme un nœud
-`gate="mutation"` du workflow propre à une équipe, et `skraft doctor` vérifie que son programme
-est trouvé ([Le résultat de mutation](#mutation-result)). `e2e`, le seul autre nom permis, n'est pas une gate : `skraft gate` ne la lance pas, mais
-`skraft doctor` la vérifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu
-de sauter la gate en silence. Un composant sans aucune commande de gate échoue (gate `none`,
-classe `environment`) : `no gate command; give it at least one of build, format, lint, test,
-architecture, coverage in skraft-config.json` ; une commande `mutation` seule ne compte pas. Un composant s'arrête à sa première
-gate en échec.
+`mutation` n'est pas une gate : elle revient au développeur, recette de sa propre session (le skill
+`skraft-mutation`, [Lancer la mutation](../how-to/run-mutation.md)), et `skraft doctor` la liste avec
+les autres commandes ([Le résultat de mutation](#mutation-result)). `e2e`, l'autre nom permis, est la
+commande de bout en bout d'un front end, que l'ingénieur lance par `gate('e2e', ...)` quand la story le
+modifie. Un nom mal écrit (`tset`) rend la configuration invalide au lieu de sauter la gate en
+silence. Une gate sans commande dans un composant est déclarée absente par l'ingénieur, avec sa
+raison (`test` ne l'est jamais).
 
 ### Le résultat de mutation <!-- #mutation-result -->
 
-La commande `mutation` trouve dans la variable d'environnement `SKRAFT_MUTATION_RESULT` le chemin
-d'un fichier du run, à côté de son journal de preuve. Elle peut y écrire son résultat, score déjà
-calculé :
+La commande `mutation` peut écrire son résultat, score déjà calculé, dans le fichier que nomme la
+variable d'environnement `SKRAFT_MUTATION_RESULT` (la recette `skraft-mutation` la fixe sur un fichier
+de son dossier de travail) :
 
 ```json
 { "scopes": [
@@ -358,51 +328,41 @@ calculé :
 | --- | --- |
 | `name` | `core` et `boundary` pour un composant en Clean Architecture, chacun une fois au plus ; `global` seul pour un projet unique |
 | `score` | un pourcentage, de 0 à 100 ; chaque périmètre doit atteindre 80 |
-| `survivors` | facultatif : une ligne par mutant resté vivant, `<fichier>:<ligne> <détail>`, le fichier relatif à la racine du composant ; un périmètre sous 80 les confie à une proposition par fichier |
+| `survivors` | facultatif : une ligne par mutant resté vivant, `<fichier>:<ligne> <détail>`, le fichier relatif à la racine du composant ; un périmètre sous 80 les laisse à tuer par des tests |
 
-Quand la commande n'y écrit rien, le moteur lit le rapport qu'écrit l'outil de la stack, relatif à
+Quand la commande n'y écrit rien, la recette lit le rapport qu'écrit l'outil de la stack, relatif à
 la racine du composant : `StrykerOutput/reports/mutation-report.json` (.NET),
 `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python),
 `target/pit-reports/mutations.xml` (Java ; `build/reports/pitest/mutations.xml` quand la commande
-nomme Gradle). Un résultat ou un rapport illisible fait échouer la gate en `environment`.
+nomme Gradle). Un résultat ou un rapport illisible est un échec de l'environnement, que la recette signale.
 
-Une ligne qui commence par `python` lance le premier interpréteur trouvé depuis la racine du
-composant : `.venv/bin/python`, `.venv/Scripts/python.exe`, puis `python` et `python3` sur le
-PATH. Le fichier garde `python` et reste le même sous Windows, macOS et Linux. Tout autre
-programme démarre tel qu'écrit.
+Tout programme démarre tel qu'écrit, depuis la racine du composant : le moteur n'en substitue
+aucun, `python` compris. Écrivez l'interpréteur dont votre machine a besoin (`.venv/bin/python -m
+pytest` ou `.venv/Scripts/python.exe -m pytest`, ou `python -m pytest` quand il est sur le PATH ; barres
+obliques, une barre inverse étant un échappement invalide en JSON). Une équipe sur plusieurs
+systèmes choisit une forme par composant : le fichier porte une ligne par commande. Un programme
+qui ne démarre pas fait échouer son exécution dans le REPL.
 
 Avec Microcks (le défaut hors React), les tests qui l'utilisent font tourner Microcks dans un
-conteneur, Docker ou Podman. Les gates n'en cherchent pas : un tel test échoue quand aucun
-conteneur ne répond, comme tout test en échec ; `skraft doctor` avertit quand aucun ne répond.
+conteneur, Docker ou Podman. Rien n'en cherche : un tel test échoue quand aucun
+conteneur ne répond, comme tout test en échec.
 
 ## Classes d'échec <!-- #failure-classes -->
 
-| Classe | Cas | Raison affichée | Qui agit |
-| --- | --- | --- | --- |
-| `environment` | programme ou dossier introuvable, programme impossible à lancer | `<erreur>; install it or change the command in skraft-config.json` | un humain, sur la machine ou la config : la question `environment` ; jamais un agent |
-| `environment` | code de sortie 127 (sh) ou 9009 (cmd) | `exited <code>` | idem |
-| `environment` | ligne refusée (syntaxe shell, guillemet, `{baseSha}`) | `command "<ligne>" <raison>` | idem |
-| `environment` | composant sans commande de gate | message `no gate command` ci-dessus | idem, cause `config` |
-| `environment` | `mutation` seulement : un run fini avant que son outil puisse finir (sans code de sortie, un signal ou un plantage), un rapport illisible, ou un run en échec dont le rapport ne compte aucun mutant | comment il a fini, puis `; the mutation report <chemin> …` quand le rapport est en cause (`is missing; …`, `counts no mutant of a run that failed`) | idem |
-| `interrupted` | code de sortie 130 (SIGINT sous POSIX) ou `0xC000013A` (Ctrl-C sous Windows) : une personne a arrêté la commande | `was interrupted by a person (exit <code>)` | personne : le run s'arrête (`interrupted`), ne demande rien, et le run suivant reprend l'étape |
-| `deterministic` | tout autre code de sortie non nul : une vérification en échec, 128 (erreur fatale de Git), un signal sous POSIX (128 + son numéro), un code de plantage à partir de `0xC0000000` sous Windows | `exited <code>` ; `was stopped by a signal or crashed (exit <code>), not by a failing check` | l'agent, par l'arête `FAIL` de la gate, avec la preuve : il corrige le code, ou s'arrête `blocked` en nommant ce qui manque à la machine |
-| `deterministic` | programme arrêté sans code de sortie (un signal, un délai dépassé) | `<erreur>; run it again` (`<programme> was stopped by <signal>; run it again`) | idem |
-
-Sous la CLI et Copilot, la sortie d'une commande est gardée jusqu'à 64 Mio par flux. Au-delà, la preuve en garde le
-début et la fin autour de `… output cut …`, la commande va jusqu'au bout, et son code de sortie
-juge toujours la gate ; sa raison, réussie ou non, se termine par `; its output passed the
-runner's limit: the evidence keeps only its head and its tail`.
+Le moteur ne lance aucune commande du projet, il n'en classe donc aucune. Une exécution de
+`skraft_repl` enregistre son code de sortie, son commit et son log dans la trace signée de la
+tentative ([Le REPL](./repl.md)). Le moteur ne refuse aucune tentative pour elles : la lentille
+`quality-gates` signale une gate dont la dernière exécution n'est pas sortie avec 0
+([Gates](./gates.md#command-gates)).
 
 ## Composants modifiés <!-- #changed-components -->
 
-Sans `--all`, `skraft gate` ne lance que les composants **modifiés depuis leur base** :
-fichiers changés depuis le SHA de base (commits, index, copie de travail) et fichiers non
-suivis, dans la racine du composant. Ne comptent pas : les fichiers sous `.copilot-tracking/`
-et ceux d'un composant imbriqué dans celui-ci. Un composant sans base (racine hors de tout
-dépôt Git), ou dont Git ne sait pas lister les changements, compte comme modifié.
-`skraft gate --all` les lance tous. En DELIVER, un nœud de gate lance d'abord les composants
-modifiés ; une fois qu'ils passent, une gate d'objectif (`goal_gate=true`) lance aussi les
-autres, si bien que DELIVER se clôt sur tous les composants.
+Les composants que l'histoire a modifiés sont ceux dont des fichiers ont changé depuis leur SHA de
+base (commits, index, copie de travail) ou qui ont des fichiers non suivis, dans la racine du
+composant. Ne comptent pas : les fichiers sous `.copilot-tracking/` et ceux d'un composant imbriqué
+dans celui-ci. Un composant sans base (racine hors de tout dépôt Git), ou dont Git ne sait pas lister
+les changements, compte comme modifié. Le moteur n'exige la preuve de chaque gate que pour ces
+composants.
 
 ## Règle de base <!-- #base -->
 
@@ -454,25 +414,18 @@ solution) ; un projet d'une **autre famille** en est un (un front React sous une
 
 Dans un même dossier, le premier marqueur trouvé dans cet ordre décide de la stack :
 
-| Stack | Marqueurs | `build` | `test` | Autres commandes |
-| --- | --- | --- | --- | --- |
-| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format` : `dotnet format --verify-no-changes` |
-| `java` (Maven) | `pom.xml` | `mvn -B -q -DskipTests package` (`./mvnw` si présent) | `mvn -B -q verify` (`./mvnw` si présent) : Surefire `*Test` puis Failsafe `*IT` | — |
-| `java` (Gradle) | `build.gradle`, `build.gradle.kts` | `gradle build -x test` (`./gradlew` si présent) | `gradle test` (`./gradlew` si présent) | — |
-| `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` | `python -m compileall -q src` (`.` sans dossier `src`) | `python -m pytest -q -p no:cacheprovider` | — |
-| `react` / `typescript` / `javascript` | `package.json` | `npm run build` si script `build`, sinon `npx tsc --noEmit` (pas pour javascript) | `npm test` si script `test`, sinon `npx vitest run` si dépendance vitest, sinon `npx jest` si dépendance jest | `lint` : `npm run lint` si script `lint` |
-
-`skraft init` n'écrit aucune commande `mutation` : muter est le choix du développeur.
-`skraft init --mutation`, ou `/skraft-init mutation`, écrit celle de chaque stack aux composants
-qui n'en ont pas :
-
-| Stack | `mutation` |
+| Stack | Marqueurs |
 | --- | --- |
-| `dotnet` | `dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput` |
-| `java` (Maven) | `mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory` (`./mvnw` si présent) |
-| `java` (Gradle) | `gradle pitest` (`./gradlew` si présent) |
-| `python` | `python -m mutmut run` |
-| `react` / `typescript` / `javascript` | `npx stryker run --incremental --reporters json,clear-text` |
+| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` |
+| `java` (Maven) | `pom.xml` |
+| `java` (Gradle) | `build.gradle`, `build.gradle.kts` |
+| `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` |
+| `react` / `typescript` / `javascript` | `package.json` |
+
+`skraft init` n'écrit aucune ligne de commande, pas même `mutation` : le moteur n'en détient aucune
+d'aucune stack, car elles cassent quand un outil ou une version change. Toute commande du fichier
+est celle du développeur, proposée par `/skraft-init` depuis le skill de la stack
+(`quality-gates-<stack>`).
 
 Pour `package.json` : `react` si dépendance `react`, sinon `typescript` si `tsconfig.json`
 existe ou dépendance `typescript`, sinon `javascript`. Les dépendances lues sont
@@ -554,8 +507,8 @@ de sortie nul. Sans pratique Gherkin, utiliser `"bdd": false`.
   dans un script et appelez-le.
 - **Compter sur une variable d'environnement** (`$HOME`, `%PATH%`) dans une ligne : elle part
   telle quelle au programme.
-- **Un nom de gate mal écrit** (`Test`, `unit-test`) : ce n'est pas une gate, elle ne tourne
-  jamais dans `skraft gate`.
+- **Un nom de gate mal écrit** (`Test`, `unit-test`) : ce n'est pas une gate, aucune de ses
+  exécutions ne compte dans la preuve.
 - **Une racine absolue** : refusée ; un dépôt voisin s'écrit `../nom`.
 - **Oublier Docker ou Podman avec Microcks** : démarrez-en un avant les tests, ou passez le
   composant en `inprocess` s'il ne mocke pas avec Microcks.

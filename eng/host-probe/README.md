@@ -70,15 +70,18 @@ The session asks for extension access once: the probe approves it for its own fi
 | `skraft-decide-relayed-answer` | opens one on failure | `skraft_decide {key, answer}` records once with `by: 'decide'`, without elicitation; replaces retired `skraft-decide-one-question` check |
 | `decide-after-cd` | #245 | `skraft_decide` still acts on the first repository after `/cd` |
 | `skraft-mcp-server-loaded` | opens one on failure | the `skraft` server of the plugin's `mcp.json` is started (`session.rpc.mcp.list()`) and `session.rpc.mcp.listTools` lists `skraft_status` |
+| `skraft-repl-listed` | opens one on failure | `session.rpc.mcp.listTools` of the `skraft` server lists `skraft_repl`, the REPL of an agent's attempt, and `skraft_repl_reset`, which ends its kernel; inconclusive when the server is not loaded |
 | `skraft-mcp-loop-hidden` | opens one on failure | that server offers none of `skraft_start`, `skraft_next`, `skraft_record`, `skraft_review`: the CLI does not name itself `Visual Studio Code` at the handshake; inconclusive when the server is not loaded |
 | `session-agents` | opens one on failure | every `com.github.copilot/agents/*` resolves in `session.rpc.agent.list` |
 | `agent-mcp-reach` | #581 | whether a tool of the plugin's MCP server can be given to one producer agent and withheld from another: two sessions, each activating a custom agent that declares one tool, read what `rpc.tools.getCurrentMetadata` offers them. `pass` when the agent declaring `skraft-skraft_doctor` is offered it and the other is not, `fail` when the other is offered it too (the host ignores the list), `inconclusive` when the session offers no tool of that server at all. No model call |
+| `agent-repl-reach` | opens one on failure | the same two sessions as `agent-mcp-reach` for `skraft-skraft_repl` and `skraft-skraft_repl_reset`: `pass` when the agent declaring `skraft/skraft_repl` and `skraft/skraft_repl_reset` is offered both and the one declaring `view` neither (an agent that is not the acceptance designer or the software engineer opens no REPL and ends none), `fail` when the other is offered one, or the declaring agent only one. No model call |
 | `copilot-models-available` | opens one on failure | every Copilot name under `models` in the `skraft-config.json` of the directory the probe runs from is in `client.listModels()`; inconclusive when it names none |
 | `skraft-tool-names-free` | opens one on failure | the tool names of a session with no plugin (the host's own tools, listed in the report) include no tool the `skraft-pipeline` extension registers |
 | `plugin-command-listed` | opens one on failure | `session.rpc.commands.list({ includeSkills: true })` lists, once each, the commands a plugin ships under `com.github.copilot/commands/`; reports each `name`, `aliases`, `kind` and `input.hint` (a command named like its plugin and one that is not, which shows the prefix rule) |
 | `plugin-command-input` | opens one on failure | `session.rpc.commands.invoke({ name, input })` returns an `agent-prompt`; reports whether the typed text is appended, substituted for `$ARGUMENTS` or absent (absent fails) |
 | `skraft-command-listed` | opens one on failure | with the real `plugins/skraft-framework` and `plugins/skraft-backlog`, `skraft` and `skraft-refine` are listed once each, no name masking another; reports the exposed names, how the input of the real `skraft` command lands (absent fails), and the `rpc.skills.list()` entries |
 | `plugin-hooks-quiet` | opens one on failure | a session that loads the real `plugins/skraft-framework`, `skraft-backlog` and `skraft-brownfield` makes the runtime write no `[ERROR] [rust:hooks]` line under its `logs/`. Each session gets a runtime of its own through `baseDirectory` (its `COPILOT_HOME`, honoured when the SDK spawns the runtime over stdio; an in-process runtime ignores it). A witness plugin that holds its hooks only at the root must log one first: no line for the witness means the log was not read, and the verdict is `inconclusive`. Reports the lines read for the witness and for the plugins |
+| `gh-pr-attach` | none | `gh pr create --help` names `--attach`, which the engine uploads a front end's screenshots with when it opens a pull request on GitHub. Reads gh's help only, reaches no forge; `inconclusive` when gh does not start |
 | `copilot-model-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for an unknown model; passes when the host accepts it or `refusalOf` reads the error as `model`; the error text is in the report |
 | `copilot-effort-refusal` | opens one on failure | with `--agent-calls`: what `ctx.agent` answers for `reasoningEffort: 'max'` on the first listed model whose name has no `claude`; passes when the host accepts it or `refusalOf` reads the error as `effort` |
 | `agent-skills-preload` | — | with `--agent-calls`: an Agent Plugins fixture holds a skill with a token, an agent that lists it under `skills:` and a twin without; each is asked, with no tool, for the token. `pass` when only the first knows it (Copilot preloads the field), `fail` when neither does, `inconclusive` when the twin knows it too or an agent is not listed |
@@ -99,6 +102,18 @@ Claude Code: `node eng/host-probe/claude-incident-probe.mjs` measures the same p
 `skraft_answer` of the plugin's MCP server, loaded with `--plugin-dir plugins/skraft-framework`).
 It writes `host-probe-results/claude-incident-probe-<date>.json`: verdict, calls, reply, the
 tools and plugins of the `init` event, model and `total_cost_usd`.
+
+Claude Code: `node eng/host-probe/claude-repl-permission-probe.mjs` measures the permission a
+first call of `skraft_repl` and of `skraft_repl_reset` meets under `claude -p` (the host's
+default model, `--max-budget-usd 0.5` per arm, `Bash` denied in every arm, about 0.6 USD in all).
+Four sessions, each asked to call one tool once: `skraft_repl` unlisted, then allowed by its name;
+`skraft_repl_reset` with only `skraft_repl` allowed, then with both allowed. `pass` when each call
+of a tool not allowed is denied by the host and never reaches the engine, and each call of an
+allowed tool reaches the engine's refusal (both tools refuse a call outside an open attempt, so
+nothing starts and nothing ends). It does not measure that "always
+allow" persists, an interactive session, autopilot, the host's MCP call timeout nor
+`notifications/cancelled`: those stay unmeasured. It writes
+`host-probe-results/claude-repl-permission-probe-<date>.json`.
 
 A check linked to an issue states the issue's premise: `pass` means the premise was measured as
 the issue says. Paste the Markdown report into `docs/v2/host-verification.md`.

@@ -125,7 +125,7 @@ const renderSummary = (content, lang) => {
 
 const factLine = (line) => `<li class="fact f-${esc(line.key.split('-')[0])} s-${esc(line.state)}">${esc(line.text)}</li>`
 
-/** What the steps came to: reviews, gates and edges in sight; what each agent started ran on, folded. */
+/** What the steps came to: reviews, quality evidence and edges in sight; what each agent started ran on, folded. */
 const renderFacts = (details, lang) => {
   if (details.length === 0) return `<p class="muted">${esc(ui(lang, 'noFacts'))}</p>`
   const agents = details.filter((line) => line.key.startsWith('agent-'))
@@ -398,13 +398,12 @@ export const renderSaveBar = (state, lang, stand) => {
 
 // ── Workflow ─────────────────────────────────────────────────────────────
 
-const KIND_ICONS = { agent: 'agent', review: 'review', ask: 'ask', gate: 'gate', publish: 'publish', call: 'call' }
+const KIND_ICONS = { agent: 'agent', review: 'review', ask: 'ask', publish: 'publish', call: 'call' }
 
 /** What a step runs, asks, checks or publishes. */
 const stepBody = (step, lang) => {
   if (step.kind === 'agent') return `<p class="what"><code>${esc(step.agent)}</code></p>`
   if (step.kind === 'ask') return `<p class="what">${esc(step.question)}</p>`
-  if (step.kind === 'gate') return `<p class="chips">${step.gates.map((gate) => `<span class="chip">${esc(gate)}</span>`).join('')}</p>`
   if (step.kind === 'publish') return `<p class="what">${esc(step.publish)}</p>`
   const lenses = `<p class="chips">${step.lenses.map(({ lens, when }) => `<span class="chip">${esc(lens)}${when ? ` <em>${esc(ui(lang, 'runsWhen', { when }))}</em>` : ''}</span>`).join('')}</p>${refuterLine(step.refuter, lang)}`
   return step.kind === 'call' ? `<p class="what">${icon('call')} ${esc(ui(lang, 'calls', { name: step.calls }))}</p>${lenses}` : lenses
@@ -415,7 +414,7 @@ const refuterLine = (refuter, lang) => (refuter
   ? `<p class="refuter">${icon('review')} <code>${esc(refuter.id)}</code> ${esc(ui(lang, 'refuterRuns'))} <code>${esc(refuter.agent)}</code>${refuter.mandatory ? ` <span class="badge">${esc(ui(lang, 'mandatory'))}</span>` : ''}</p>`
   : '')
 
-/** Whether an edge sends the run back: a refusal, a rework, a failed gate. */
+/** Whether an edge sends the run back: a refusal, a rework. */
 const isBack = (edge) => /REWORK|FAIL|REJECTED/.test(edge.label ?? '')
 
 /** `NEEDS_REWORK · max 3 · ×1`: the label, the loop budget, how often the run took it. */
@@ -429,10 +428,9 @@ const branches = (step, next, edges, lang) => {
   return `<ul class="branches">${out.map((edge) => `<li class="branch${edge.taken > 0 ? ' taken' : ''}${isBack(edge) ? ' back' : ''}">${icon(isBack(edge) ? 'loop' : 'arrow')}<span class="label">${esc(edge.label ?? '')}</span><span class="to">${esc(edge.to)}</span>${edge.maxVisits === null ? '' : `<span class="max">${esc(ui(lang, 'maxVisits', { count: edge.maxVisits }))}</span>`}${edge.taken > 0 ? `<span class="count">${esc(ui(lang, 'taken', { count: edge.taken }))}</span>` : ''}</li>`).join('')}</ul>`
 }
 
-/** The badges of a step: mandatory, locked, where the run stands on it. */
+/** The badges of a step: mandatory, where the run stands on it. */
 const badges = (step, lang) => [
   step.mandatory ? `<span class="badge">${esc(ui(lang, 'mandatory'))}</span>` : '',
-  step.locked ? `<span class="badge">${icon('lock')}${esc(ui(lang, 'locked'))}</span>` : '',
   step.state === 'open' ? `<span class="badge now">${esc(ui(lang, 'now'))}</span>` : '',
   step.state === 'done' ? `<span class="badge done">${icon('pass')}${esc(ui(lang, 'done'))}${step.visits > 1 ? ` ×${esc(step.visits)}` : ''}</span>` : '',
 ].join('')

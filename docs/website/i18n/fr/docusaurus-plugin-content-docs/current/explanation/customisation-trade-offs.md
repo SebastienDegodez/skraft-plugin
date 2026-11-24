@@ -29,11 +29,10 @@ Ce qui ne se règle pas, et pourquoi :
 
 - **Les seuils qualité.** Un seuil réglable devient un seuil négocié à chaque story difficile ;
   80 % de mutants détectés sur le cœur métier comme ailleurs restent les mêmes pour toutes les équipes.
-- **Les contrôles du moteur** (journal chaîné, droits d'écriture, sorties attendues, rejeu des
-  commits rouges). Ce ne sont pas des nœuds du workflow : aucune copie ne peut les retirer.
-- **Les gates de DELIVER et les revues.** Le nœud `gates` est verrouillé :
-  le retirer exige d'écrire `unlock="<raison>"`, que `skraft workflow diff` montre et que le
-  journal garde. Les fan-in des revues, l'appel `deliver_review` et les lentilles
+- **Les contrôles du moteur** (journal chaîné, droits d'écriture, sorties attendues, ordre et
+  types des commits). Ce ne sont pas des nœuds du workflow : aucune copie ne peut les retirer.
+- **Les revues de DELIVER.** Le moteur ne refuse aucune tentative DELIVER pour ses exécutions de gates :
+  la lentille `quality-gates` de la revue DELIVER lit leur trace et signale une exécution manquante, en échec ou périmée. Les fan-in des revues, l'appel `deliver_review` et les lentilles
   `test-integrity` et `architecture-boundaries` sont obligatoires : aucune raison ne les retire.
 
 Le moteur rend donc certains contournements impossibles, et les autres visibles. Ce qu'il ne
@@ -43,24 +42,22 @@ peut pas voir, c'est une commande qui tourne et ne prouve rien.
 
 | Ce que vous faites | Ce qui disparaît | Le signe à surveiller |
 | --- | --- | --- |
-| Retirer une gate d'un composant (`architecture`, `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans la sortie de `skraft gate` ni dans `gates/<composant>/` |
+| Retirer une gate d'un composant (`architecture`, `coverage`) | La preuve correspondante : plus de contrôle des dépendances, plus de couverture | La gate n'apparaît plus dans le tableau « Preuves de qualité » de la pull request ni dans `evidence.checked`, et la lentille `quality-gates` n'a rien à juger pour elle |
 | Retirer une revue, l'appel à `review`, ou sa lentille `test-integrity` ou `architecture-boundaries` | Rien : le moteur refuse le workflow | `… this node is mandatory and cannot be removed` dans `skraft workflow check` |
 | Ne jamais lancer votre propre mutation testing | La preuve que les tests attraperaient une erreur | Rien dans le run : le pipeline ne lance aucune mutation, seuls vos propres rapports le montrent |
-| Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un filtre qui exclut presque tout) | Toute la gate : elle passe à chaque fois | Une preuve `pass` dont `stdout` ne montre aucun test lancé |
+| Remplacer une commande par une qui ne teste rien (`"test": "node -e 0"`, un filtre qui exclut presque tout) | Toute la gate : elle passe à chaque fois | Une exécution tracée réussie dont le log ne montre aucun test lancé |
 | Passer un composant en `inprocess` sans test de contrat | La garantie que vos mocks ressemblent encore au vrai service | Des tests verts, puis une panne à l'intégration |
-| Laisser un composant sans gate | Toute preuve sur ce composant ; le moteur le signale en échec `environment` | `no gate command; …` dans `skraft gate` |
-| Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé | `no component changed since its base; no gate to run` alors que du code a changé |
+| Laisser un composant sans gate | Toute preuve sur ce composant ; la lentille `quality-gates` signale l'exécution manquante | La gate manque dans « Preuves de qualité », sauf si l'ingénieur l'a déclarée absente avec une raison |
+| Fixer `--base` ou `baseBranch` sur une ref trop récente | Des fichiers modifiés hors du périmètre comparé | Un composant dont le code a changé est absent de « Preuves de qualité » |
 | Retirer le nœud question `adr` | La ratification humaine des ADR, qui restent `Proposed` | `skraft workflow diff` montre le nœud disparu |
 | Retirer le nœud question `scenario_review` | La lecture par un humain des scénarios, du walking skeleton et du test d'acceptation de S1 avant que DELIVER ne les construise | `skraft workflow diff` montre le nœud disparu |
-| Retirer `each="scenario"` de `distill` et `deliver` | L'ordre un scénario à la fois et le rejeu de chaque vert : DISTILL commite ses tests d'acceptation en un passage, les commits de DELIVER ne sont jugés que sur leur ordre | `skraft workflow diff` montre l'attribut disparu |
 | Faire tourner en mémoire le point d'entrée ou les gateways internes du walking skeleton (`infrastructure`) | La preuve d'intégration de la story : le walking skeleton n'atteint plus un vrai point d'entrée ni une vraie base | `skraft doctor` affiche la rangée avec `source skraft-config.json` |
 | Mettre un composant à `bdd: false` | La spécification lisible par le métier de ce composant : aucun `.feature` n'est demandé à DISTILL, donc ses tests d'acceptation ne reprennent plus mot pour mot les valeurs d'un scénario qu'un expert du domaine peut lire | Aucun `.feature` écrit pour ses features, et la colonne `Feature File` du plan de test entièrement à tirets |
 | Modifier `events.jsonl` à la main pour débloquer un run | Le journal comme preuve : le run est bloqué en `journal-tampered` | [Reprendre ou débloquer un run](../how-to/resume-a-run.mdx) |
 
 Avant de réduire un contrôle, écrivez la raison là où l'équipe la lira : la description de la
-pull request, un ADR. Pour savoir si une gate prouve encore quelque chose, ouvrez sa preuve
-(`.copilot-tracking/skraft-plans/<slug>/gates/<composant>/<gate>-<n>.log`) et lisez ce que la
-commande a réellement fait.
+pull request, un ADR. Pour savoir si une gate prouve encore quelque chose, ouvrez le log de son
+exécution tracée (`logs/runs/<step>-<visit>-<attempt>/`) et lisez ce que la commande a réellement fait.
 
 ## Le cas du mutation testing
 
@@ -70,11 +67,11 @@ détectent (Jia & Harman, 2011). C'est la seule mesure des tests eux-mêmes : un
 la plus lente qu'une story puisse payer, et celle qui dépend le plus d'un outil et de sa
 configuration.
 
-Le pipeline du plugin n'en lance donc aucun : le développeur le lance à part, avec l'outil et la
-configuration qu'il a choisis, contre le seuil de `skraft-quality-bar`. Le risque se déplace
-avec lui : une équipe qui ne le lance jamais perd la preuve que les autres gates prouvent quelque
-chose, et aucun run ne le dira. Une équipe qui le veut à chaque run met un nœud
-`gate="mutation"` dans son propre workflow ([Éjecter le workflow](../how-to/eject-workflow.mdx)).
+Ni le pipeline du plugin ni le moteur n'en lancent donc : c'est une recette de la session du
+développeur (le skill `skraft-mutation`, [Lancer la mutation](../how-to/run-mutation.md)), avec
+l'outil et la configuration qu'il a choisis, contre le seuil de `skraft-quality-bar`. Le risque se
+déplace avec lui : une équipe qui ne le lance jamais perd la preuve que les autres gates prouvent
+quelque chose, et aucun run ne le dira.
 
 ## Sources
 
@@ -86,5 +83,4 @@ chose, et aucun run ne le dira. Une équipe qui le veut à chaque run met un nœ
   pourquoi un seuil fixe.
 - [Architecture](./architecture.md) — pourquoi ces décisions
   vivent dans le moteur.
-- [Gates](../reference/gates.md) et
-  [nœuds verrouillés](../reference/workflow-dot.mdx#locked-nodes).
+- [Gates](../reference/gates.md).

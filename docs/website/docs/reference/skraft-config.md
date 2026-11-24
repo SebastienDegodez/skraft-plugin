@@ -26,6 +26,9 @@ ones before it; a `null` removes what a lower layer set:
 | 3 | `skraft-config.json` (root of the working copy) | yes | every key |
 | 4 | `skraft-config.local.json` (beside the previous one) | no | any key but `components` |
 
+`skraft init` lists `skraft-config.local.json` and `/.repl/node_modules/` (the packages of the
+project's [REPL library](./repl.md#lib)) in the working copy's `.gitignore`, each once.
+
 Each file is validated on its own, then the merge is validated. JSON schemas:
 `schemas/skraft-config.schema.json` and `schemas/skraft-config.local.schema.json` in the plugin.
 
@@ -35,7 +38,7 @@ flowchart TD
     F -->|read and validated| V{valid?}
     V -->|no| R[refused config-invalid<br/>every error]
     V -->|yes| B[base per repository<br/>git merge-base HEAD ref]
-    B --> G[skraft gate<br/>build → format → lint → test<br/>→ architecture → coverage]
+    B --> G[skraft_repl gates<br/>build → format → lint → test<br/>→ architecture → coverage]
     F --> D[skraft doctor]
 ```
 
@@ -64,10 +67,9 @@ flowchart TD
 | `baseBranch` | string | absent (the base falls back to `main`) | git ref: no blank, does not start with `-`; `null` counts as absent |
 | `forge` | string | absent (deduced from the Git remote, see [Forge](#forge)) | `github` or `azure-devops`; `null` counts as absent. A value you write always wins over the remote |
 | `components` | array of objects | `[]` | each entry is a component (below) |
-| `tdd` | object | `{ "replay": "all" }` | `{ "replay": "all" }`, `{ "replay": "last-red" }`; `replay` absent or `null` counts as `all`; see [tdd](#tdd) |
 | `publish` | object | `{}` | see [publish](#publish) |
 | `models` | object | the plugin's Claude Code aliases per tier | model family → `tier` and, per host (`claude-code`, `copilot`), `{ "model": name or list, "effort": level }`; a name is one word of letters, digits, `.`, `_` and `-`, a letter or a digit first, no space, and a list holds at least one (any other value is refused: `models.<family>.<host>.model must be a model name or a non-empty list of model names, tried in order (…)`); see [Choose the agents' models](../how-to/choose-models.md) |
-| `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, `replay-judge` `standard`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
+| `assign` | object | lenses `reviewer`, workers `implementer`, `solution-researcher` `researcher`, `solution-architect` `planner`, `pr-writer` `economy`, default `implementer` | `{ "default", "types", "agents" }`: a family, `inherit`, or `{ "family", "<host>": { "effort" } }`; also read from `~/.skraft/config.json` and `skraft-config.local.json` |
 | `rank`, `workflow` | — | — | refused: `rank is no key: …`, `workflow is no key: …` |
 | `configurationConfirmed` | boolean | `false` | in `skraft-config.local.json` only (refused in this file and in `~/.skraft/config.json`). Written `true` by the engine when you answer START to *Start this run with the configuration of this working copy?*, which a Copilot run asks before its first phase while it is absent, and again with `configure: true`. The Configuration tab of the skraft canvas edits the forge, the components and the consents of this file and the `assign` and `models` of `skraft-config.local.json`, checked as a run loads them |
 | any other key | any | — | kept as is, never read or rewritten |
@@ -130,26 +132,12 @@ Docker or Podman runs`. Only `skraft-config.json` holds `infrastructure`, as eve
   "infrastructure": { "internalGateway": { "walkingSkeleton": "in-memory" } } }
 ```
 
-## `tdd` <!-- #tdd -->
-
-| Key | Value | Effect |
-| --- | --- | --- |
-| `replay` | `all` (default) | the engine replays each red commit of an acceptance test (`test(<story>): …`, DISTILL) with its component's `test` command, and the replay judge reads what it printed ([Commits and replays](./gates.md#commits)) |
-| `replay` | `last-red` | only the last red commit of each story (same commit scope) is replayed |
-| `replay` | `null` | counts as `all` |
-
-With `all`, when the replays take more than 20 % of a phase's duration, the engine journals
-`tdd.replay-slow` once per phase and prints `<slug>: replaying test commits took N% of <PHASE>;
-set "tdd": { "replay": "last-red" } in skraft-config.json to replay only the last test commit of
-each story`. Any other value: `tdd must be { "replay": "all" or "last-red" }`. The replay of a
-scenario's green commit does not depend on this key.
-
 ## `publish` <!-- #publish -->
 
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
 | `pullRequest` | boolean | absent: a run that publishes is refused, `/skraft-init` asks for it | the run may push its branch, open or update its pull request and keep a progress comment on its story's issue |
-| `visuals` | boolean | absent: a run that publishes screenshots is refused, `/skraft-init` asks for it (only with a front end) | the run may publish a front end's screenshots and videos in the pull request |
+| `visuals` | boolean | absent: a run that publishes screenshots is refused, `/skraft-init` asks for it (only with a front end) | the run may show a front end's screenshots in the pull request (question version 2; an acceptance of version 1, which named videos, is asked again) |
 | `draft` | boolean | `true` | a pull request skraft opens is a draft |
 | `reviewComment` | boolean | absent: asked once per repository | `skraft review --pr --publish` may keep one comment on the pull request it reviews; written by hand in the team's file, it wins over each developer's answer, which the engine keeps in their `~/.skraft/config.json` (`reviewComments`) |
 | `questionVersions` | object | `1` per key | the version of the question's text each answer was given to (`visuals`, `pullRequest`, `reviewComment`, whole numbers from 1); an acceptance of an earlier version is not settled: the run is refused until `/skraft-init` asks again |
@@ -258,7 +246,6 @@ otherwise.
 | not an object | `skraft-config.json must hold a JSON object` |
 | global `baseBranch` | `baseBranch must be a git ref, got <JSON value>` |
 | `forge` | `forge must be "github" or "azure-devops"` |
-| `tdd` | `tdd must be { "replay": "all" or "last-red" }` |
 | `publish` | `publish must be an object of visuals, pullRequest, reviewComment and draft, each true or false`; `publish.questionVersions must be an object of visuals, pullRequest and reviewComment, each a whole number from 1` |
 | `rank`, `workflow` | `rank is no key: …`; `workflow is no key: …` |
 | `components` outside `skraft-config.json` | `components belongs in skraft-config.json, never in <file>` |
@@ -283,60 +270,46 @@ otherwise.
 
 ## Command lines <!-- #command-lines -->
 
-A `commands` line runs **with no shell**, from the component's root. The same line therefore
-behaves the same way under sh, PowerShell and cmd.
+A `commands` line is the developer's: the engine holds no command line of any stack, and a line written
+here is the one that runs. The software engineer runs it from the component's root through
+`skraft_repl`, `run(string)` under `sh -c` (on Windows, Git Bash when it is installed, else `pwsh` or
+`powershell`; the shell is named in the trace). A line may therefore chain steps (`a && b`) or set
+variables the way that shell does; write it so it works in the shells your team uses.
 
 | Rule | Detail |
 | --- | --- |
-| Splitting | on blanks; the first word is the program |
-| Quotes | `"…"` and `'…'` keep blanks inside one argument; no escape character |
-| `{baseSha}` | replaced, before splitting, with the base SHA of the component's repository |
-| Shell syntax | a word written with no quotes that contains <code>&#124;</code>, `&`, `;`, `<` or `>` is refused |
-| Variables | a `NAME=value` before the program is refused: no shell sets it |
-| Nothing interpreted | no variable, wildcard or redirection: each word goes to the program as is |
-| Program | looked up on the PATH (and PATHEXT under Windows); a path with `/` or `\` starts from the component's root |
-| Windows | a `.cmd` or `.bat` (npm, npx, gradlew.bat) goes through cmd.exe, arguments escaped |
-
-Messages refusing a line (prefixed with `command "<line>"` in a gate, with `"<line>"` in the
-doctor):
-
-| Case | Message |
-| --- | --- |
-| shell syntax | `uses shell syntax (<word>); put the steps in a script and call the script` |
-| variables before the program | `sets <NAME>, … before its program, which no shell reads; put the variables and the command in a script and call the script` |
-| unclosed quote | `has an unclosed <quote> quote` |
-| `{baseSha}` with no base | `uses {baseSha} but the run has no base for this repository` |
-
-To chain steps (`a && b`) or set variables (`TESTCONTAINERS_RYUK_DISABLED=true mvn test`), write them in a script of the repository and call the script.
+| `{baseSha}` | replaced, in the brief an agent reads, by the base SHA of the component's repository |
+| Non-empty | an empty line is refused: `<label>: command <name> must be a non-empty command line` |
+| Program | looked up on the PATH of the shell; a program that does not start fails its run in the REPL |
 
 ## Gates <!-- #gates -->
 
-A **gate** is a command whose name is one of the seven names below. They run in this order,
-whatever the order in the file:
+A **gate** is a command whose name is one of the six names below. The engine runs none: the
+software engineer runs each one through `skraft_repl` in DELIVER, and the DELIVER review's
+`quality-gates` lens judges the traced runs ([Gates](./gates.md#command-gates)).
 
-| Order | Name |
-| --- | --- |
-| 1 | `build` |
-| 2 | `format` |
-| 3 | `lint` |
-| 4 | `test` |
-| 5 | `architecture` |
-| 6 | `coverage` |
-| 7 | `mutation` |
+| Name |
+| --- |
+| `build` |
+| `format` |
+| `lint` |
+| `test` |
+| `architecture` |
+| `coverage` |
 
-`mutation` is the developer's: neither the story's pipeline nor `skraft gate` runs it; the
-developer's mutation run (`workflows/mutation.skraft.dot`) does, as does a `gate="mutation"` node
-of a team's own workflow, and `skraft doctor` checks that its program is found ([The mutation
-result](#mutation-result)). `e2e`, the only other name allowed, is not a gate: `skraft gate` does not run it, but
-`skraft doctor` checks it. A misspelt name (`tset`) makes the configuration invalid instead
-of silently skipping the gate. A component with no gate command fails (gate `none`, class `environment`):
-`no gate command; give it at least one of build, format, lint, test, architecture, coverage in
-skraft-config.json`; a `mutation` command alone does not count. A component stops at its first failing gate.
+`mutation` is not a gate: it is the developer's, a recipe of their own session (the
+`skraft-mutation` skill, [Run mutation](../how-to/run-mutation.md)), and `skraft doctor` lists it
+with the other commands ([The mutation result](#mutation-result)). `e2e`, the other name allowed, is
+the end-to-end command of a front end, which the engineer runs through `gate('e2e', ...)` when the
+story changes it. A misspelt name (`tset`) makes the configuration invalid instead of silently
+skipping the gate. A gate with no command in a component is declared absent by the engineer, with its
+reason (`test` never is).
 
 ### The mutation result <!-- #mutation-result -->
 
-The `mutation` command finds in the environment variable `SKRAFT_MUTATION_RESULT` the path of a
-file of the run, beside its evidence log. It may write its result there, score already computed:
+The `mutation` command may write its result, score already computed, to the file that the
+environment variable `SKRAFT_MUTATION_RESULT` names (the `skraft-mutation` recipe sets it to a file of
+its scratch folder):
 
 ```json
 { "scopes": [
@@ -349,50 +322,38 @@ file of the run, beside its evidence log. It may write its result there, score a
 | --- | --- |
 | `name` | `core` and `boundary` for a component in Clean Architecture, each at most once; `global` alone for a single project |
 | `score` | a percent, 0 to 100; each scope must reach 80 |
-| `survivors` | optional: one line per mutant left alive, `<file>:<line> <detail>`, the file relative to the component root; a scope below 80 hands them to one proposal per file |
+| `survivors` | optional: one line per mutant left alive, `<file>:<line> <detail>`, the file relative to the component root; a scope below 80 leaves them to be killed with tests |
 
-When the command writes nothing there, the engine reads the report the stack's tool writes, relative
+When the command writes nothing there, the recipe reads the report the stack's tool writes, relative
 to the component root: `StrykerOutput/reports/mutation-report.json` (.NET),
 `reports/mutation/mutation.json` (TypeScript, JavaScript, React), `mutation-report.json` (Python),
 `target/pit-reports/mutations.xml` (Java; `build/reports/pitest/mutations.xml` when the command
-names Gradle). A result or a report that cannot be read fails the gate as `environment`.
+names Gradle). A result or a report that cannot be read is a failure of the environment, which the recipe reports.
 
-A line that starts with `python` starts the first interpreter found from the component's
-root: `.venv/bin/python`, `.venv/Scripts/python.exe`, then `python` and `python3` on the
-PATH. The file keeps `python` and stays the same on Windows, macOS and Linux. Any other
-program starts as written.
+Every program starts as written, from the component's root: the engine substitutes none, `python`
+included. Write the interpreter your machine needs (`.venv/bin/python -m pytest` or
+`.venv/Scripts/python.exe -m pytest`, or `python -m pytest` when it is on the PATH; forward slashes,
+since a backslash is an invalid escape in JSON). A team on several systems chooses one form per
+component: the file holds one line per command. A program that does not start fails its run in the REPL.
 
 With Microcks (the default outside React), the tests that use it run Microcks in a container,
-Docker or Podman. The gates do not look for one: such a test fails when no container answers, like
-any failing test; `skraft doctor` warns when neither answers.
+Docker or Podman. Nothing looks for one: such a test fails when no container answers, like
+any failing test.
 
 ## Failure classes <!-- #failure-classes -->
 
-| Class | Case | Reason shown | Who acts |
-| --- | --- | --- | --- |
-| `environment` | program or folder not found, program cannot start | `<error>; install it or change the command in skraft-config.json` | a human, on the machine or the config: the `environment` question; never an agent |
-| `environment` | exit code 127 (sh) or 9009 (cmd) | `exited <code>` | same |
-| `environment` | line refused (shell syntax, quote, `{baseSha}`) | `command "<line>" <reason>` | same |
-| `environment` | component with no gate command | `no gate command` message above | same, cause `config` |
-| `environment` | `mutation` only: a run that ended before its tool could finish (no exit code, a signal or a crash), a report that cannot be read, or a failed run whose report counts no mutant | how it ended, then `; the mutation report <path> …` when the report is the cause (`is missing; …`, `counts no mutant of a run that failed`) | same |
-| `interrupted` | exit code 130 (SIGINT on POSIX) or `0xC000013A` (Ctrl-C on Windows): a person stopped the command | `was interrupted by a person (exit <code>)` | nobody: the run stops (`interrupted`), asks nothing, and the next run picks the step up |
-| `deterministic` | any other non-zero exit code: a failing check, 128 (Git's fatal error), a signal on POSIX (128 + its number), a crash code from `0xC0000000` on Windows | `exited <code>`; `was stopped by a signal or crashed (exit <code>), not by a failing check` | the agent, through the gate's `FAIL` edge, with the evidence: it fixes the code, or stops `blocked` naming what the machine lacks |
-| `deterministic` | program stopped with no exit code (a signal, a timeout) | `<error>; run it again` (`<program> was stopped by <signal>; run it again`) | same |
-
-Under the CLI and Copilot, a command's output is kept up to 64 MiB per stream. Past that, the evidence keeps its head and
-its tail around `… output cut …`, the command still runs to its end, and its exit code still
-judges the gate; its reason, pass or fail, ends with `; its output passed the runner's limit:
-the evidence keeps only its head and its tail`.
+The engine starts no project command, so it classifies none. A run of `skraft_repl` records its exit
+code, its commit and its log in the signed trace of the attempt ([The REPL](./repl.md)). The engine
+refuses no attempt for them: the `quality-gates` lens reports a gate whose last run did not exit 0
+([Gates](./gates.md#command-gates)).
 
 ## Changed components <!-- #changed-components -->
 
-Without `--all`, `skraft gate` runs only the components **changed since their base**: files
-changed since the base SHA (commits, index, working tree) and untracked files, under the
-component's root. These do not count: files under `.copilot-tracking/` and files of a
-component nested inside this one. A component with no base (root outside any Git
-repository), or whose changes Git cannot list, counts as changed. `skraft gate --all` runs
-them all. In DELIVER, a gate node runs the changed components first; once they pass, a goal
-gate (`goal_gate=true`) runs the others too, so DELIVER closes on every component.
+The components the story changed are those with files changed since their base SHA (commits, index,
+working tree) or untracked files, under the component's root. These do not count: files under
+`.copilot-tracking/` and files of a component nested inside this one. A component with no base (root
+outside any Git repository), or whose changes Git cannot list, counts as changed. The engine requires
+the evidence of each gate for those components only.
 
 ## Base rule <!-- #base -->
 
@@ -441,25 +402,17 @@ family** is one (a React front end under a .NET solution). Families: `dotnet`, `
 
 In one folder, the first marker found in this order decides the stack:
 
-| Stack | Markers | `build` | `test` | Other commands |
-| --- | --- | --- | --- | --- |
-| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` | `dotnet build --nologo` | `dotnet test --nologo` | `format`: `dotnet format --verify-no-changes` |
-| `java` (Maven) | `pom.xml` | `mvn -B -q -DskipTests package` (`./mvnw` when present) | `mvn -B -q verify` (`./mvnw` when present): Surefire `*Test` then Failsafe `*IT` | — |
-| `java` (Gradle) | `build.gradle`, `build.gradle.kts` | `gradle build -x test` (`./gradlew` when present) | `gradle test` (`./gradlew` when present) | — |
-| `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` | `python -m compileall -q src` (`.` with no `src` folder) | `python -m pytest -q -p no:cacheprovider` | — |
-| `react` / `typescript` / `javascript` | `package.json` | `npm run build` when a `build` script exists, otherwise `npx tsc --noEmit` (not for javascript) | `npm test` when a `test` script exists, otherwise `npx vitest run` with a vitest dependency, otherwise `npx jest` with a jest dependency | `lint`: `npm run lint` when a `lint` script exists |
-
-`skraft init` writes no `mutation` command: mutating is the developer's choice. `skraft init
---mutation`, or `/skraft-init mutation`, writes the one of each stack to the components that
-have none:
-
-| Stack | `mutation` |
+| Stack | Markers |
 | --- | --- |
-| `dotnet` | `dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput` |
-| `java` (Maven) | `mvn -B -q org.pitest:pitest-maven:mutationCoverage -DoutputFormats=XML -DtimestampedReports=false -DwithHistory` (`./mvnw` when present) |
-| `java` (Gradle) | `gradle pitest` (`./gradlew` when present) |
-| `python` | `python -m mutmut run` |
-| `react` / `typescript` / `javascript` | `npx stryker run --incremental --reporters json,clear-text` |
+| `dotnet` | `*.sln`, `*.slnx`, `*.csproj`, `*.fsproj`, `*.vbproj` |
+| `java` (Maven) | `pom.xml` |
+| `java` (Gradle) | `build.gradle`, `build.gradle.kts` |
+| `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` |
+| `react` / `typescript` / `javascript` | `package.json` |
+
+`skraft init` writes no command line, not even `mutation`: the engine holds none of any stack, since
+they break when a tool or a version changes. Every command in the file is the developer's, proposed
+by `/skraft-init` from the stack's skill (`quality-gates-<stack>`).
 
 For `package.json`: `react` with a `react` dependency, otherwise `typescript` when
 `tsconfig.json` exists or with a `typescript` dependency, otherwise `javascript`. The
@@ -537,8 +490,8 @@ resolved bindings, not just a zero exit status. With no Gherkin practice, use `"
   and call it.
 - **Relying on an environment variable** (`$HOME`, `%PATH%`) in a line: it goes to the
   program as is.
-- **A misspelt gate name** (`Test`, `unit-test`): it is not a gate and never runs in
-  `skraft gate`.
+- **A misspelt gate name** (`Test`, `unit-test`): it is not a gate: no run of it
+  counts in the evidence.
 - **An absolute root**: refused; a neighbour repository is written `../name`.
 - **Forgetting Docker or Podman with Microcks**: start one before the tests, or switch the
   component to `inprocess` when it does not mock with Microcks.

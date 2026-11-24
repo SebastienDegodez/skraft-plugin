@@ -15,7 +15,7 @@ test('each consent question\'s text is pinned to its version', () => {
     pullRequest: { version: CONSENT_VERSIONS.pullRequest, text: fingerprint(PUBLISH_CONSENT_TEXT) },
     reviewComment: { version: CONSENT_VERSIONS.reviewComment, text: fingerprint(REVIEW_CONSENT_TEXT) },
   }, {
-    visuals: { version: 1, text: '98517f38d62f' },
+    visuals: { version: 2, text: '378ea7386411' },
     pullRequest: { version: 2, text: 'b47f63e770b4' },
     reviewComment: { version: 1, text: '609f2dc42459' },
   })

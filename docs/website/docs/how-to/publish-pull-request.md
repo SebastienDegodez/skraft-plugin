@@ -62,7 +62,7 @@ forge, starting with `Refs #<issue>` (`Closes #<issue>` when it targets the defa
 
 ### What the description holds
 
-The description starts with `Refs #<issue>`; what decides shows under headings, the rest is folded and opens by itself on a failed gate or a finding to fix or to decide. It is written in the story's language; past the forge's limit, folded sections go to a `skraft · run details` comment. Each section, what it is for and when to act: [Pull request and review comment](../reference/pull-request.md#description).
+The description starts with `Refs #<issue>`; what decides shows under headings, the rest is folded and opens by itself on a failed gate or a finding to fix or to decide. It is written in the story's language; past the forge's limit, folded sections go to a `skraft · run details` comment. Under QA, one line says how many scenarios passed on the final commit and by which run; the folded table traces each one ([Attach QA evidence](./attach-screenshots.md)). Each section, what it is for and when to act: [Pull request and review comment](../reference/pull-request.md#description).
 
 ## 4. Publish later with `skraft publish`
 
@@ -118,7 +118,7 @@ Every message: [`skraft publish`](../reference/cli.md).
 
 ## Next steps <!-- #next-steps -->
 
-- [Attach a front end's screenshots](./attach-screenshots.md)
+- [Attach QA evidence](./attach-screenshots.md)
 - [Phases — PUBLISH](../reference/phases.md#publish)
 - [skraft-config.json — `publish`](../reference/skraft-config.md#publish)
 - [Tracking folder and journal](../reference/run-journal.md) —

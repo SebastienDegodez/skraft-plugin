@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -117,29 +117,14 @@ test('a pull request review keeps its own journal and files under .copilot-track
   assert.equal(await adapters.files.read('pr-12', 'reviews/verdict-1/changes.patch'), null)
   assert.deepEqual(readdirSync(join(cwd, '.copilot-tracking')), ['skraft-reviews'])
 })
-
-test('a mutation run keeps its journal, its active run and its files under .copilot-tracking/skraft-mutation/, follows the mutation workflow, and is forgotten whole', async (t) => {
+test('a workspace folder is listed as a folder, and a symbolic link to one as a file', async (t) => {
   const { adapters, cwd } = adaptersIn(t)
-  const { journal, activePipeline, files, runLock, workflowSource } = adapters.mutationRun
+  mkdirSync(join(cwd, 'web', 'skraft-visuals'), { recursive: true })
+  symlinkSync(join(cwd, 'web'), join(cwd, 'linked'), process.platform === 'win32' ? 'junction' : 'dir')
 
-  await journal.append('feat-refund', '{"a":1}')
-  await files.write('feat-refund', 'gates/api/mutation-1.log', 'log\n')
-  await activePipeline.activate('feat-refund')
-  assert.equal(await runLock.create('feat-refund', 'held\n'), true)
+  const entries = await adapters.workspace.list('.')
 
-  const runs = join(cwd, '.copilot-tracking', 'skraft-mutation')
-  assert.equal(readFileSync(join(runs, 'feat-refund', 'events.jsonl'), 'utf8'), '{"a":1}\n')
-  assert.equal(files.location('feat-refund', 'gates/api/mutation-1.log'), join(runs, 'feat-refund', 'gates', 'api', 'mutation-1.log'))
-  assert.equal(readFileSync(join(runs, '.active-slug'), 'utf8'), 'feat-refund\n')
-  assert.equal(readFileSync(join(runs, 'feat-refund', '.lock'), 'utf8'), 'held\n')
-  assert.equal(workflowSource.name, 'mutation')
-  assert.match(await workflowSource.builtIn(), /gate="mutation"/)
-  assert.equal(await adapters.activePipeline.current(), null)
-  assert.deepEqual(await adapters.journal.lines('feat-refund'), [])
-
-  await files.forget('feat-refund')
-  assert.deepEqual(readdirSync(join(runs, 'feat-refund')), [])
-  assert.equal(await activePipeline.current(), 'feat-refund')
+  assert.deepEqual(entries.sort((a, b) => a.name.localeCompare(b.name)), [{ name: 'linked', kind: 'file' }, { name: 'web', kind: 'dir' }])
 })
 
 test('a workspace file replaced takes its new text in one rename, leaving no other file beside it', async (t) => {

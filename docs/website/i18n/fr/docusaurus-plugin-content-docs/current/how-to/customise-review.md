@@ -36,7 +36,7 @@ La lentille rend sa réponse dans le format que lit le moteur :
 
 | Revue | Commande | Fichier copié |
 |---|---|---|
-| DESIGN, DISTILL ou mutation | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
+| DESIGN, DISTILL ou DELIVER | `skraft workflow eject` | `.skraft/pipeline.skraft.dot` |
 | DELIVER (et `skraft review --pr`) | `skraft workflow eject review` | `.skraft/review.skraft.dot` |
 
 ```text
@@ -68,7 +68,8 @@ Options du nœud :
 - `model="<famille>"` choisit la famille de modèle de la lentille (une règle `assign.agents`
   l'emporte, voir [Choisir les modèles des agents](./choose-models.md)) ;
 - `when="mock"` ou `when="contract"` ne la lance que si les changements touchent des mocks ou
-  des contrats ([lentilles conditionnelles](../reference/workflow-dot.mdx#conditional-lenses)).
+  des contrats, `when="delivery"` que dans la revue DELIVER d'un run, jamais sur une pull request
+  ([lentilles conditionnelles](../reference/workflow-dot.mdx#conditional-lenses)).
 
 ## 4. Vérifier le workflow
 

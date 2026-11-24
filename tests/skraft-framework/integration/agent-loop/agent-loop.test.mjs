@@ -15,7 +15,6 @@ const NEXT = `${SKRAFT_COMMAND} next`
 
 /** What a journal says happened, without what differs between two runs: times, hashes, paths, models, costs, and who answered. */
 const facts = (events) => events
-  .filter((event) => event.type !== 'tdd.replay-slow')
   .map(({ type, step, phase, visit, attempt, outcome, next, lens, verdict, key, answer, status }) =>
     JSON.stringify({ type, step, phase, visit, attempt, outcome, next, lens, verdict, key, answer, status }))
 
@@ -43,8 +42,8 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
   assert.deepEqual(step, { status: 'done', slug: SLUG, phase: 'PUBLISH', code: null, reason: 'PUBLISH closed', dispatches: [], then: null })
   assert.deepEqual(dispatched(steps), [
     ['solution-researcher@copilot-small'], ['solution-architect@copilot-large'], lensesOn(LENSES.design_review),
-    ['acceptance-designer@copilot-medium'], ['replay-judge@copilot-medium'], ['acceptance-designer@copilot-medium'], ['replay-judge@copilot-medium'], lensesOn(LENSES.distill_review),
-    ['software-engineer@copilot-medium'], ['replay-judge@copilot-medium'], lensesOn(LENSES.deliver_review), ['pr-writer@copilot-small'],
+    ['acceptance-designer@copilot-medium'], lensesOn(LENSES.distill_review),
+    ['software-engineer@copilot-medium'], lensesOn(LENSES.deliver_review), ['pr-writer@copilot-small'],
   ])
   assert.deepEqual(steps.filter((each) => each.status !== 'dispatch'), [
     {
@@ -67,8 +66,8 @@ test('the loop conducts the five phases to the end, the pr-writer and the publis
   assert.deepEqual(journal(cwd, SLUG).filter((event) => event.type === 'question.answered').map(({ by }) => by), ['cli-tty', 'cli-tty'])
 })
 
-test('the loop runs the visuals node: a front end\'s light and dark screenshots are committed on the working branch and the pull request shows them', async (t) => {
-  const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true } })
+test('the loop runs the visuals node: a front end\'s light and dark screenshots stay where Playwright wrote them, for gh to attach to the pull request', async (t) => {
+  const { cwd } = pipelineRepository(t, { frontend: true, publish: { pullRequest: false, visuals: true, questionVersions: { pullRequest: 2, visuals: 2 } } })
   issueForge(t, cwd)
   await skraft(cwd, ['init', SLUG, '--issue', '42', '--title', 'Pay by card'])
 
@@ -121,21 +120,18 @@ test('next refuses while handed over agents are not recorded, record refuses whe
   assert.deepEqual(journal(cwd, SLUG), before)
 })
 
-test('an agent that saved no reply and left its outputs to do stops the run; next hands the same attempt over again', async (t) => {
+test('an agent that saved no reply and left its outputs to do pauses the run on an unforeseen incident, its attempt still open', async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
-  const handed = (await loop(cwd, ['next'])).step
+  await loop(cwd, ['next'])
 
-  const stopped = await loop(cwd, ['record'])
+  const paused = await loop(cwd, ['record'])
 
-  assert.deepEqual(stopped.step, {
-    status: 'blocked', slug: SLUG, phase: 'RESEARCH', code: 'agent-failed', reason: 'solution-researcher stopped without finishing: no reply was saved', dispatches: [], then: null,
-  })
-  assert.equal(stopped.exit, 1)
-  const resumed = await loop(cwd, ['next'])
-  assert.deepEqual(resumed.step, handed)
+  assert.deepEqual([paused.step.status, paused.step.code], ['waiting', 'unforeseen'])
+  const asked = journal(cwd, SLUG).filter(({ type }) => type === 'question.asked').at(-1)
+  assert.deepEqual([asked.kind, asked.step, asked.incidents[0].category], ['unforeseen', 'research', 'agent-failed'])
   assert.deepEqual(journal(cwd, SLUG).map(({ type, step, attempt }) => [type, step ?? null, attempt ?? null]), [
-    ['run.started', null, null], ['step.started', 'research', 1], ['run.stopped', null, null],
+    ['run.started', null, null], ['step.started', 'research', 1], ['question.asked', 'research', null],
   ])
 })
 
@@ -244,26 +240,20 @@ test('a loop file that is not what skraft wrote refuses with a fixed reason; rem
 test('without --json the step reads as lines: the status, each agent with its prompt and reply file, then the command', async (t) => {
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
-  const { step } = await loop(cwd, ['next'])
-  await skraft(cwd, ['record', '--json'])
 
   const run = await skraft(cwd, ['next'])
 
   assert.equal(run.status, 0)
-  assert.equal(run.stdout, [
+  const lines = run.stdout.split('\n')
+  assert.deepEqual(lines.slice(0, 2), [
     `skraft ${SLUG}: dispatch in RESEARCH — start this agent, save each final reply as it is to its reply file, then record`,
     "agent 1: solution-researcher on the session's model",
-    `  prompt: ${step.dispatches[0].prompt}`,
-    `  reply: ${step.dispatches[0].reply}`,
-    `then: ${RECORD}`,
-    '',
-  ].join('\n'))
-  const blocked = await skraft(cwd, ['record'])
-  assert.deepEqual(blocked, {
-    status: 1,
-    stdout: `skraft ${SLUG}: blocked (agent-failed) in RESEARCH — solution-researcher stopped without finishing: no reply was saved\n`,
-    stderr: `phase RESEARCH\n${SLUG}: solution-researcher, attempt 1 — researcher · economy · model chosen by the host\n`,
-  })
+  ])
+  assert.match(lines[2], /^ {2}prompt: Your brief is the file .+[\\/]results[\\/]loop[\\/]dispatch-1\.brief\.md\. Read it whole and do what it asks\./)
+  assert.match(lines[3], /^ {2}reply: .+[\\/]results[\\/]loop[\\/]dispatch-1\.reply\.md$/)
+  assert.deepEqual(lines.slice(4), [`then: ${RECORD}`, ''])
+  const paused = await skraft(cwd, ['record'])
+  assert.match(paused.stdout, new RegExp(`^skraft ${SLUG}: waiting \\(unforeseen\\) in RESEARCH — research stopped on an unforeseen incident\\.`))
 })
 
 test('without an active pipeline next and record refuse; they take only --json, else the usage', async (t) => {

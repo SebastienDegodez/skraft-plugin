@@ -1,9 +1,8 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { APPLY, BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, mutationPlanText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
+import { BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
-import { namedFeatures } from '../../domain/pipeline/gherkin-records.mjs'
-import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
-import { trackingFolder } from '../../domain/pipeline/roles.mjs'
+import { namedFeatures } from '../../domain/pipeline/named-features.mjs'
+import { scenarioWriter } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
@@ -18,7 +17,7 @@ import { refusedCommit } from './refused-commits.mjs'
 import { RUN_REPORT_FILE, runReport } from '../../domain/reporting/run-report.mjs'
 import { REPEATED_FAILURES } from '../../domain/pipeline/failure-signature.mjs'
 import { mayAnswerQuestion } from '../../domain/decisions/questions.mjs'
-import { mayJudgeIncident, recoveryOptions, unforeseenStop, unforeseenText } from '../../domain/decisions/unforeseen.mjs'
+import { mayJudgeIncident, unforeseenStop, unforeseenText } from '../../domain/decisions/unforeseen.mjs'
 import { recordJudgment } from '../decisions/decide-usecase.mjs'
 import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
 
@@ -59,42 +58,9 @@ const RATIFICATION = {
 }
 
 /**
- * The mutation plan: the proposals the step before it wrote, asked once; APPLY or the developer's
- * instruction goes on to the node that applies them, STOP ends the run.
- * @type {Questionnaire}
- */
-const MUTATION_PLAN = {
-  plan: async ({ deps, slug, journal }) => {
-    const proposals = proposalsOf(journal.events).map((path) => `${trackingFolder(slug, deps.files.folder)}/${path}`)
-    return { text: mutationPlanText(proposals), subjects: proposals }
-  },
-  act: async (context, asked) => planChosen(context, asked),
-}
-
-/**
- * The outputs the last recorded step wrote on its last visit, each once, relative to the tracking folder.
- * @param {RunEvent[]} events
- */
-const proposalsOf = (events) => {
-  const last = /** @type {RunEvent} */ (events.findLast((event) => event.type === 'step.recorded'))
-  const started = events.filter((event) => event.type === 'step.started' && event.step === last.step && event.visit === last.visit)
-  return [...new Set(started.flatMap((event) => event.outputs))]
-}
-
-/**
- * What the developer chose: the proposals applied, their own instruction with the proposals it
- * departs from, or the run ended.
- * @param {Context} context @param {AskedQuestion} asked @returns {Act}
- */
-const planChosen = ({ deps, slug }, { answer, subjects, step }) => {
-  if (answer === STOP) return { stop: `a human stopped the run at ${step}; the proposals are in ${subjects.join(', ')}` }
-  const paths = subjects.map((path) => deps.files.location(slug, path.slice(trackingFolder(slug, deps.files.folder).length + 1))).join(', ')
-  return { failures: answer === APPLY ? [`Apply the proposals in ${paths}`] : [/** @type {string} */ (answer), `The proposals it departs from: ${paths}`] }
-}
-
-/**
- * The scenario review: the story's scenarios, the red of its walking skeleton and the red of S1's
- * acceptance test, read by a human once before DELIVER builds them; REVISE sends their corrections to DISTILL.
+ * The scenario review: the story's scenarios, the groups DELIVER makes them pass in and the one
+ * red of their acceptance tests, read by a human once before DELIVER builds them; REVISE sends
+ * their corrections to DISTILL.
  * @type {Questionnaire}
  */
 const SCENARIO_REVIEW = {
@@ -103,21 +69,32 @@ const SCENARIO_REVIEW = {
 }
 
 /**
- * The scenarios, the `.feature` files the test plan names, the red of the walking skeleton and
- * the red of S1, once the node that writes them recorded them; a question the machine cannot ask before.
+ * Where the designer's traced run of the acceptance tests, labelled `red`, left its output; null when it traced none.
+ * @param {Context} context @param {string} writer the node that writes the scenarios
+ */
+const redLogOf = ({ deps, slug, journal }, writer) => {
+  const kept = journal.events.findLast((/** @type {RunEvent} */ event) => event.type === 'evidence.checked' && event.red === true && event.step === writer)
+  return kept === undefined ? null : deps.files.location(slug, kept.runs[0].log)
+}
+
+/**
+ * The scenarios, the `.feature` files the test plan names, the groups and the red of the
+ * acceptance tests, once the node that writes them recorded them; a question the machine cannot ask before.
  * @param {Context} context @param {RunState} run @returns {Promise<Plan>}
  */
 const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
   if (scenarios === null) return { environment: 'the run recorded no scenario of the story to show yet; put the scenario review after the node that writes them' }
   const oracle = scenarios.oracles[1]
-  const [plan] = nodes[scenarioNodes(context.loaded.workflow)[0]].outputs
+  const writer = /** @type {string} */ (scenarioWriter(context.loaded.workflow))
+  const [plan] = nodes[writer].outputs
   const features = namedFeatures(/** @type {string} */ (await context.deps.files.read(context.slug, plan)))
-  const { skeleton, exemption, list } = scenarios
-  return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle }), subjects: [...(skeleton?.files ?? []), ...oracle.files] }
+  const { skeleton, exemption, list, groups } = scenarios
+  const log = redLogOf(context, writer)
+  return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle, groups, log }), subjects: oracle.files }
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'mutation-plan': MUTATION_PLAN, 'scenario-review': SCENARIO_REVIEW })
+const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'scenario-review': SCENARIO_REVIEW })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
 const adrPlan = (adrs) => {
@@ -321,11 +298,10 @@ const askEnvironment = async (context, step, visit, reason, incident, incidents)
 
 /** @param {Context} context @param {string} step @param {number} visit @param {import('../../domain/pipeline/incidents.mjs').Incident} incident @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents */
 const askUnforeseen = async (context, step, visit, incident, incidents) => {
-  const { journal, loaded } = context
+  const { journal } = context
   const question = questionOf('unforeseen', nextKey(journal, step), withReport(context, unforeseenText(step, incident.log), step, incidents))
-  const options = recoveryOptions(loaded.workflow, step)
-  await journal.append('question.asked', { ...question, options, step, visit, subjects: [], incident, incidents })
-  const action = knownRecovery(incidents, options)
+  await journal.append('question.asked', { ...question, step, visit, subjects: [], incident, incidents })
+  const action = knownRecovery(incidents, question.options)
   if (action !== null) await journal.append('question.answered', { key: question.key, answer: action, reason: null, by: 'known-signature' })
   return null
 }
@@ -334,32 +310,8 @@ const askUnforeseen = async (context, step, visit, incident, incidents) => {
 export const settleUnforeseen = async (context, run, asked) => {
   const open = /** @type {OpenAttempt} */ (run.nodes[asked.step].open)
   if (asked.answer === null) return answerOrWait(context, asked, open.phase)
-  if (asked.answer.startsWith('SEND_TO:')) return sendIncidentBack(context, run, asked, open)
   await context.journal.append('step.recorded', {
     step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'aborted', ...unforeseenStop(asked),
-    missing: [], failures: [], next: null, durationMs: 0,
-  })
-  return null
-}
-
-/** @param {Context} context @param {RunState} run @param {AskedQuestion} asked @param {OpenAttempt} open */
-const sendIncidentBack = async (context, run, asked, open) => {
-  const failures = [`Unforeseen incident at ${asked.step}; read ${asked.incident?.log ?? 'the run report'}`]
-  const routed = leave(context, run, asked.step, 'FAIL', failures)
-  if (routed.next !== null && `SEND_TO:${routed.next}` !== asked.answer) return stopChangedRecovery(context, asked, open)
-  await context.journal.append('step.recorded', {
-    step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'fail',
-    code: routed.code ?? null, reason: routed.reason ?? null, next: routed.next, ceiling: routed.ceiling,
-    missing: [], failures, durationMs: 0,
-  })
-  return null
-}
-
-/** @param {Context} context @param {AskedQuestion} asked @param {OpenAttempt} open */
-const stopChangedRecovery = async ({ journal }, asked, open) => {
-  await journal.append('step.recorded', {
-    step: asked.step, visit: open.visit, attempt: open.attempt, outcome: 'aborted', code: 'workflow-changed',
-    reason: 'the selected unforeseen recovery edge changed; restore the workflow before continuing',
     missing: [], failures: [], next: null, durationMs: 0,
   })
   return null

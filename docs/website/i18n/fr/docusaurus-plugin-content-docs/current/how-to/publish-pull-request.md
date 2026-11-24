@@ -63,7 +63,7 @@ défaut).
 
 ### Ce que contient la description
 
-La description commence par `Refs #<issue>` ; ce qui décide s'affiche sous des titres, le reste est replié et s'ouvre seul sur une porte en échec ou un constat à corriger ou à trancher. Elle est écrite dans la langue de la story ; au-delà de la limite de la forge, les sections repliées vont dans un commentaire `skraft · détails du run`. Chaque section, à quoi elle sert et quand agir : [Pull request et commentaire de revue](../reference/pull-request.md#description).
+La description commence par `Refs #<issue>` ; ce qui décide s'affiche sous des titres, le reste est replié et s'ouvre seul sur une porte en échec ou un constat à corriger ou à trancher. Elle est écrite dans la langue de la story ; au-delà de la limite de la forge, les sections repliées vont dans un commentaire `skraft · détails du run`. Sous QA, une ligne dit combien de scénarios ont réussi sur le commit final et par quel run ; le tableau replié trace chacun ([Joindre les preuves QA](./attach-screenshots.md)). Chaque section, à quoi elle sert et quand agir : [Pull request et commentaire de revue](../reference/pull-request.md#description).
 
 ## 4. Publier plus tard avec `skraft publish`
 
@@ -121,7 +121,7 @@ Tous les messages : [`skraft publish`](../reference/cli.md).
 
 ## Étapes suivantes <!-- #next-steps -->
 
-- [Joindre les captures d'un frontend](./attach-screenshots.md)
+- [Joindre les preuves QA](./attach-screenshots.md)
 - [Phases — PUBLISH](../reference/phases.md#publish)
 - [skraft-config.json — `publish`](../reference/skraft-config.md#publish)
 - [Dossier de suivi et journal](../reference/run-journal.md) —

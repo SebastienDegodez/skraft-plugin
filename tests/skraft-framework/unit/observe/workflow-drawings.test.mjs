@@ -4,7 +4,7 @@ import { createObserve } from '../../../../plugins/skraft-framework/engine/appli
 import { agent, pipelineHost, scripted } from '../support/pipeline-host.mjs'
 
 /** A step of a drawing as a page shows it, its run state aside. */
-const shape = ({ id, kind, phase, agent: runs, gates, question, publish, calls, lenses, refuter, mandatory, locked }) => ({ id, kind, phase, runs, gates, question, publish, calls, lenses, refuter, mandatory, locked })
+const shape = ({ id, kind, phase, agent: runs, question, publish, calls, lenses, refuter, mandatory }) => ({ id, kind, phase, runs, question, publish, calls, lenses, refuter, mandatory })
 const where = ({ id, state, visits }) => [id, state, visits]
 
 test('the workflows a run of this working copy can follow are drawn before any run: the pipeline step by step, each detour right after the step it leaves, with its edges, then each workflow it calls, every step pending', async () => {
@@ -13,18 +13,18 @@ test('the workflows a run of this working copy can follow are drawn before any r
   assert.deepEqual(more, [])
   assert.deepEqual([pipeline.name, pipeline.file, pipeline.goal, review.name, review.file, review.goal], ['pipeline', null, 'Deliver the story', 'review', null, 'Review the changes'])
   assert.deepEqual(pipeline.steps.map(({ id }) => id), [
-    'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver', 'gates',
+    'research', 'design', 'design_review', 'adr', 'distill', 'distill_review', 'scenario_review', 'deliver',
     'deliver_review', 'visuals', 'pr_writer', 'publish',
   ])
   const steps = Object.fromEntries(pipeline.steps.map((step) => [step.id, shape(step)]))
   assert.deepEqual(steps.design_review, {
-    id: 'design_review', kind: 'review', phase: 'DESIGN', runs: null, gates: [], question: null, publish: null, calls: null, mandatory: true, locked: false,
+    id: 'design_review', kind: 'review', phase: 'DESIGN', runs: null, question: null, publish: null, calls: null, mandatory: true,
     lenses: [{ lens: 'consistency', when: null }, { lens: 'architecture-compliance', when: null }, { lens: 'fitness', when: null }],
     refuter: { id: 'design_review_refuter', agent: 'finding-refuter', mandatory: true },
   })
-  assert.deepEqual([steps.deliver_review.refuter, steps.distill_review.refuter.id, steps.gates.refuter], [{ id: 'refuter', agent: 'finding-refuter', mandatory: true }, 'distill_review_refuter', null])
-  assert.deepEqual([steps.adr.question, steps.gates.gates, steps.gates.locked, steps.research.runs, steps.publish.publish, steps.deliver_review.calls], [
-    'adr-ratification', ['build', 'format', 'lint', 'test', 'architecture', 'coverage'], true, 'solution-researcher', 'pull-request', 'review',
+  assert.deepEqual([steps.deliver_review.refuter, steps.distill_review.refuter.id, steps.deliver.refuter], [{ id: 'refuter', agent: 'finding-refuter', mandatory: true }, 'distill_review_refuter', null])
+  assert.deepEqual([steps.adr.question, steps.research.runs, steps.publish.publish, steps.deliver_review.calls], [
+    'adr-ratification', 'solution-researcher', 'pull-request', 'review',
   ])
   assert.deepEqual(pipeline.edges.filter(({ from }) => from === 'adr'), [
     { from: 'adr', to: 'distill', label: 'RATIFIED', maxVisits: null, taken: 0 },
@@ -32,10 +32,10 @@ test('the workflows a run of this working copy can follow are drawn before any r
   ])
   assert.deepEqual(new Set(pipeline.steps.map(({ state }) => state)), new Set(['pending']))
   assert.deepEqual(review.steps.map(shape), [{
-    id: 'verdict', kind: 'review', phase: null, runs: null, gates: [], question: null, publish: null, calls: null, mandatory: true, locked: false,
+    id: 'verdict', kind: 'review', phase: null, runs: null, question: null, publish: null, calls: null, mandatory: true,
     refuter: { id: 'refuter', agent: 'finding-refuter', mandatory: true },
     lenses: [
-      { lens: 'test-integrity', when: null }, { lens: 'architecture-boundaries', when: null }, { lens: 'cold-reader', when: null },
+      { lens: 'test-integrity', when: null }, { lens: 'architecture-boundaries', when: null }, { lens: 'cold-reader', when: null }, { lens: 'quality-gates', when: 'delivery' },
       { lens: 'mock-fidelity', when: 'mock' }, { lens: 'contract-fidelity', when: 'contract' },
     ],
   }])
@@ -80,13 +80,15 @@ test('a rework a review sends to a step of its own is drawn right after the revi
 const WORKFLOW = `digraph asking {
   start    [shape=Mdiamond]
   research [shape=box, agent="solution-researcher", phase="RESEARCH"]
-  plan     [shape=hexagon, question="mutation-plan"]
+  plan     [shape=hexagon, question="adr-ratification"]
   exit     [shape=Msquare]
-  start -> research -> plan -> exit
+  start -> research -> plan
+  plan -> exit [label="RATIFIED"]
+  plan -> research [label="REJECTED", max_visits=1]
 }`
 
 test('the pipeline a run follows is drawn with where the run stands: each step done, open or pending, and how often each edge was taken; a workflow the working copy ejected is named by its file', async () => {
-  const host = scripted({ workflow: WORKFLOW, config: { publish: {} }, files: { '.skraft/pipeline.skraft.dot': WORKFLOW } }, (it) => [agent()(it)])
+  const host = scripted({ workflow: WORKFLOW, config: { publish: {} }, files: { '.skraft/pipeline.skraft.dot': WORKFLOW, 'docs/adr/adr-001-card-payment.md': '---\nadr: 1\ntitle: Card payment\nstatus: Proposed\nsupersedes: null\nratified_by: null\n---\n\n# ADR-001 — Card payment\n\n**Status:** Proposed\n' } }, (it) => [agent()(it)])
   assert.equal((await host.start()).status, 'waiting')
 
   const [pipeline, ...called] = await createObserve(host.deps).workflows()
@@ -96,6 +98,7 @@ test('the pipeline a run follows is drawn with where the run stands: each step d
   assert.deepEqual(pipeline.edges, [
     { from: 'start', to: 'research', label: null, maxVisits: null, taken: 0 },
     { from: 'research', to: 'plan', label: null, maxVisits: null, taken: 1 },
-    { from: 'plan', to: 'exit', label: null, maxVisits: null, taken: 0 },
+    { from: 'plan', to: 'exit', label: 'RATIFIED', maxVisits: null, taken: 0 },
+    { from: 'plan', to: 'research', label: 'REJECTED', maxVisits: 1, taken: 0 },
   ])
 })

@@ -14,6 +14,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { withoutRepositoryEnv } from '../eng/lib/repository-env.mjs'
+import { missingInstalls } from '../eng/lib/missing-installs.mjs'
 
 const flags = new Set(process.argv.slice(2))
 const withMutation = flags.has('--mutation') || flags.has('-m')
@@ -71,9 +72,7 @@ const fastGates = [
   { name: 'Brownfield agent model policy (B12)', cmd: 'node', args: ['scripts/agent-policy/resolve-model-bin.mjs', '--check', '--forbid-model', '--dir', 'plugins/skraft-brownfield/com.github.copilot/agents'] },
 ]
 
-if (!existsSync(join(ENGINE, 'node_modules'))) {
-  process.stdout.write(`\nℹ The engine lint, the skill script tests and the configuration schema parity test need ESLint, Stryker and Ajv from the engine: run \`npm ci --prefix ${ENGINE.split('\\').join('/')}\` first, or expect them to fail.\n`)
-}
+for (const notice of missingInstalls(existsSync)) process.stdout.write(`\nℹ ${notice.text}\n`)
 
 // Run from the pre-push hook, GIT_DIR would send every test's own git repository into this one.
 const env = withoutRepositoryEnv(process.env)

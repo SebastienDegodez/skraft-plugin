@@ -62,8 +62,8 @@ les plus performantes n'opposent pas vitesse et stabilité, elles obtiennent les
 Le moteur vérifie lui-même ce qu'une consigne ne fait qu'espérer. Il pré-crée le document
 qu'un agent doit remplir, contrôle qu'il est rempli, relance l'agent avec la liste de ce qui
 manque (trois tentatives au plus), puis s'arrête en nommant la cause. Il vérifie aussi après
-chaque étape que l'agent n'a écrit que là où il le peut, que le test d'acceptation
-rouge de chaque scénario échoue vraiment, et que son commit vert le fait passer. Aucun agent ne lance un autre agent :
+chaque étape que l'agent n'a écrit que là où il le peut, que le rouge des tests d'acceptation
+et l'unique commit vert de l'histoire se suivent dans l'historique, et que la revue les lit. Aucun agent ne lance un autre agent :
 seul le **pilote d'hôte** (la partie de SKRAFT propre à chaque outil) lance les agents, sur
 ordre du moteur.
 
@@ -71,32 +71,32 @@ ordre du moteur.
 
 Le même moteur tourne dans Claude Code (par un mod), dans GitHub Copilot CLI (par un
 workflow dynamique) et dans VS Code (par le SDK Copilot, ou par une boucle de repli conduite
-par l'agent quand le SDK manque). Les commandes passent sans shell, avec la même forme sous sh
-et PowerShell. Les tests du moteur tournent sous Windows, macOS et Linux.
+par l'agent quand le SDK manque). Les commandes passent par `skraft_repl` sous `sh` (Git Bash ou
+PowerShell sous Windows). Les tests du moteur tournent sous Windows, macOS et Linux.
 
 ### Une traçabilité auditable
 
 Chaque run écrit un **journal d'événements** : une ligne par fait (étape lancée, résultat
-enregistré, phase close, gate lancée). Chaque ligne porte l'empreinte SHA-256 de la ligne
+enregistré, phase close, preuve de gate contrôlée). Chaque ligne porte l'empreinte SHA-256 de la ligne
 précédente et une signature sous une clé de la machine qui le fait tourner. Une
-modification à la main casse cette chaîne et le moteur s'arrête en le disant. Les **preuves de gate** (commande, dossier, résultat, sorties) sont écrites par le
-moteur, jamais par le modèle.
+modification à la main casse cette chaîne et le moteur s'arrête en le disant. Les **preuves de gate** (les exécutions signées de
+l'ingénieur logiciel, par gate, dossier et hash de log) sont contrôlées par le moteur, jamais affirmées par le modèle.
 
 ### Des équipes autonomes, sans attendre une release
 
 Chaque dépôt décrit ses composants et leurs commandes dans `skraft-config.json` : build,
 test, format, lint, couverture, architecture, et la commande de mutation propre au développeur.
 SKRAFT détecte les projets
-(.NET, Java, Python, TypeScript, JavaScript, React), propose des commandes par défaut, et
-vérifie que chacune peut tourner. Une commande écrite par l'équipe est toujours celle qui
-tourne. Les seuils de qualité, eux, ne se négocient pas : ils ne sont pas configurables.
+(.NET, Java, Python, TypeScript, JavaScript, React), ne détient aucune ligne de commande d'aucune stack, et
+vérifie que chaque commande écrite par l'équipe se découpe. Toute commande est celle de
+l'équipe. Les seuils de qualité, eux, ne se négocient pas : ils ne sont pas configurables.
 
 ### De quoi qualifier le livrable
 
-La gate de couverture laisse ses preuves dans le dossier du run. Le mutation testing revient au
-développeur : le pipeline n'en lance aucun, et le run du développeur doit atteindre 80 % sur le
+Chaque gate, couverture comprise, laisse son exécution tracée dans le dossier du run. Le mutation testing revient au
+développeur : ni le pipeline ni le moteur ne le lancent, et le run du développeur doit atteindre 80 % sur le
 cœur métier comme ailleurs. `qa-report.md` rassemble pour l'équipe de qualification le plan de
-test, les gates et les verdicts de revue ; `run-report.md` donne le
+test, les preuves de qualité et les verdicts de revue ; `run-report.md` donne le
 temps, le coût et les relances de chaque étape. Le run se termine par une pull request décrite
 depuis le journal, avec les captures d'un front.
 

@@ -64,7 +64,7 @@ test('a v1 run in progress becomes a journal that closes its completed phases, h
   assert.deepEqual(tracking.journal('checkout-flow').map(bare), [
     {
       type: 'run.started', slug: 'checkout-flow', story: null, workflow: 'skraft', start: 'distill',
-      artifacts: ['plans/2026-08-30/stories-m1.md', 'research/2026-09-01/checkout-flow-research.md', 'design/2026-09-01/adr-001.md'], unlocked: [], migratedFrom: 'v1',
+      artifacts: ['plans/2026-08-30/stories-m1.md', 'research/2026-09-01/checkout-flow-research.md', 'design/2026-09-01/adr-001.md'], migratedFrom: 'v1',
       base: [{ component: null, root: '.', repository: '.', ref: 'main', source: 'default', sha: 'b2' }],
     },
     { type: 'phase.closed', phase: 'RESEARCH' },
@@ -221,7 +221,7 @@ test('a dry run writes nothing and shows the events each journal would start wit
       reason: 'checkout-flow: DELIVER restarts at deliver, RESEARCH, DESIGN and DISTILL closed; resume it with skraft init checkout-flow',
       events: [
         {
-          type: 'run.started', slug: 'checkout-flow', story: null, workflow: 'skraft', artifacts: ['plans/2026-09-01/stories-m1.md'], start: 'deliver', unlocked: [], migratedFrom: 'v1',
+          type: 'run.started', slug: 'checkout-flow', story: null, workflow: 'skraft', artifacts: ['plans/2026-09-01/stories-m1.md'], start: 'deliver', migratedFrom: 'v1',
           base: [{ component: null, root: '.', repository: '.', ref: 'main', source: 'default', sha: 'b2' }],
         },
         { type: 'phase.closed', phase: 'RESEARCH' },

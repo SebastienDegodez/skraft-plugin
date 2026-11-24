@@ -11,12 +11,12 @@
 const WORDS = Object.freeze({
   en: {
     title: 'skraft · run details',
-    pointer: 'The run\'s other details (tests, consistency matrix, RED evidence, quality gates, review, screenshots, run summary, AI disclosure) are in this pull request\'s comments titled skraft · run details.',
+    pointer: 'The run\'s other details (tests, consistency matrix, RED evidence, quality evidence, review, screenshots, run summary, AI disclosure) are in this pull request\'s comments titled skraft · run details.',
     unused: 'This part of the run details is no longer used.',
   },
   fr: {
     title: 'skraft · détails du run',
-    pointer: 'Les autres détails du run (tests, matrice de cohérence, preuves RED, portes de qualité, revue, captures d\'écran, résumé du run, mention de l\'IA) sont dans les commentaires de cette pull request intitulés skraft · détails du run.',
+    pointer: 'Les autres détails du run (tests, matrice de cohérence, preuves RED, preuves de qualité, revue, captures d\'écran, résumé du run, mention de l\'IA) sont dans les commentaires de cette pull request intitulés skraft · détails du run.',
     unused: 'Cette partie des détails du run n\'est plus utilisée.',
   },
 })

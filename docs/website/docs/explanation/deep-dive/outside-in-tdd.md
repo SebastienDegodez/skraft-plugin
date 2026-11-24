@@ -35,42 +35,41 @@ Freeman & Pryce formalise the "outside-in" variant with its double loop: an oute
 
 ## Application in SKRAFT
 
-The pipeline applies the **double loop**, one scenario at a time. The outer loop is the
-acceptance scenario: DISTILL commits its failing test, the engine replays that commit, and the
-[replay judge](pathname:///dashboard/#agent-replay-judge) reads the replay's log to confirm it
-fails on an assertion. The inner loop is the unit RED → GREEN → REFACTOR cycle, which
+The pipeline applies the **double loop**, one dispatch for the whole story. The outer loop is the
+acceptance scenarios: DISTILL commits the failing test of every one in one commit, after one run
+whose output shows each failing on an assertion, which the DISTILL review reads. The inner loop is the unit RED → GREEN → REFACTOR cycle, which
 the `software-engineer` runs in DELIVER without committing it.
 
 The story itself opens on a wider outer loop, its [walking skeleton](walking-skeleton.md): a
 plain test that enters through the real entry point and checks only the wiring. DISTILL commits
-it failing before S1's acceptance test; S1's green makes both pass, and every later green keeps the
-walking skeleton green. Each scenario's acceptance test, S1's included, enters through the use case.
+it failing with the acceptance tests; the story's one green makes both pass. Each scenario's acceptance test, S1's included, enters through the use case.
 
 ```text
-┌─ Outer loop (acceptance, scenario k) ────────────────────────┐
-│  RED  : DISTILL commits the scenario's test, failing          │
-│         → test(<story>): <scenario>   (replayed: assertion)   │
+┌─ Outer loop (acceptance, every group in plan order) ─────────┐
+│  RED  : DISTILL commits every scenario's test, failing, once  │
+│         → test(<story>): acceptance tests S1–Sn               │
 │   ┌─ Inner loop (unit, not committed) ────────────────────┐  │
 │   │  RED → a unit test fails                                │  │
 │   │  GREEN → minimal implementation that makes it pass      │  │
 │   │  REFACTOR → clean up without changing behaviour         │  │
 │   └─────────────────────────────────────────────────────────┘ │
-│  GREEN : the acceptance scenario passes in turn               │
-│         → feat(<story>): <scenario>   (replayed: passes)      │
+│  GREEN : every group's acceptance scenarios pass              │
+│         → one feat(<story>): <rules>, after the last group    │
 └──────────────────────────────────────────────────────────────┘
-then scenario k+1
+the groups are worked in plan order, in one dispatch, one commit
 ```
 
 Concretely, the `software-engineer` creates an interface only when a unit test needs it to
 isolate a boundary — never "just in case". The acceptance test stays red until the scenario is
 complete, which keeps the focus on business behaviour, and it never changes: written by another
-agent, it is the oracle the code must meet. Each scenario ends in one green commit, chained to
-the test command so that it happens only once the tests pass.
+agent, it is the oracle the code must meet. The story ends in one green commit, chained to
+the test command so that it happens only once every test passes; a second green is refused (`green-split`).
 
-Only one acceptance test is red at a time, beside the walking skeleton until S1 is green. DISTILL writes the next scenario's test once the one
-before passes, so a red in the history always names the scenario in progress. The inner loop's
-unit tests are never seen failing by the engine; mutation, run last on the whole story, is what
-shows they would catch a mistake.
+DISTILL commits every acceptance test red at once, beside the failing walking skeleton, in one test
+commit: the history holds one red for the whole story, and the review reads the run that shows each
+test failing on its business assertion. The engine never sees the inner loop's unit tests fail;
+mutation testing, which the developer runs on the branch apart from the pipeline, is what shows
+they would catch a mistake.
 
 ## Pitfalls & anti-patterns
 

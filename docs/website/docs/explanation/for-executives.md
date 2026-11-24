@@ -61,37 +61,37 @@ highest-performing teams do not trade speed against stability; they get both.
 The engine checks what an instruction can only hope for. It pre-creates the document an
 agent must fill, checks it is filled, retries the agent with the list of what is missing (at
 most three attempts), then stops and names the cause. It also checks after each step that the
-agent wrote only where it may, that each scenario's red acceptance test really fails, and that its green commit makes it pass. No agent spawns another agent: only the **host
+agent wrote only where it may, that the red of the acceptance tests and the one green commit of the story follow one another in the history, and the review reads them. No agent spawns another agent: only the **host
 driver** (the part of SKRAFT specific to each tool) spawns agents, on the engine's order.
 
 ### The same pipeline on every tool and every system
 
 The same engine runs in Claude Code (through a mod), in GitHub Copilot CLI (through a
 dynamic workflow) and in VS Code (through the Copilot SDK, or an agent-driven fallback loop
-when the SDK is missing). Commands run without a shell, with the same form under sh and
-PowerShell. The engine's tests run on Windows, macOS and Linux.
+when the SDK is missing). Commands run through `skraft_repl` under `sh` (Git Bash or PowerShell on
+Windows). The engine's tests run on Windows, macOS and Linux.
 
 ### Auditable traceability
 
 Every run writes an **event journal**: one line per fact (step started, result recorded,
-phase closed, gate run). Each line carries the SHA-256 hash of the previous line and a
+phase closed, gate evidence checked). Each line carries the SHA-256 hash of the previous line and a
 signature under a key of the machine that runs it. A hand edit breaks that chain and the
-engine stops and says so. **Gate evidence** (command,
-directory, result, output) is written by the engine, never by the model.
+engine stops and says so. **Gate evidence** (the signed runs of the
+software engineer, by gate, folder and log hash) is checked by the engine, never asserted by the model.
 
 ### Autonomous teams, without waiting for a release
 
 Each repository describes its components and their commands in `skraft-config.json`: build,
 test, format, lint, coverage, architecture, and the developer's own mutation command. SKRAFT detects the projects (.NET,
-Java, Python, TypeScript, JavaScript, React), proposes default commands, and checks that each
-one can run. A command written by the team is always the one that runs. Quality thresholds,
+Java, Python, TypeScript, JavaScript, React), holds no command line of any stack, and checks that each
+command the team wrote parses. Every command is the team's. Quality thresholds,
 however, are not negotiable: they are not configurable.
 
 ### What it takes to qualify a delivery
 
-The coverage gate leaves its evidence in the run folder. Mutation testing is the developer's:
-the pipeline runs none, and the developer's own run must reach 80 % on the business core and
-elsewhere. `qa-report.md` gathers the test plan, the gates and the review verdicts for the
+Each gate, coverage included, leaves its traced run in the run folder. Mutation testing is the developer's:
+neither the pipeline nor the engine runs it, and the developer's own run must reach 80 % on the business core and
+elsewhere. `qa-report.md` gathers the test plan, the quality evidence and the review verdicts for the
 QA team;
 `run-report.md` gives the time, cost and retries of each step. The run ends with a pull request
 described from the journal, with the screenshots of a front end.

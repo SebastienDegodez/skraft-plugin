@@ -2,8 +2,9 @@
 // agents act as a model would: they read their brief, fill the outputs it lists, write the
 // result JSON it names, change files and make real Git commits. The gates then run the
 // repository's real test command. No doubles: every driver test stages the same repository.
+import { traceDelivery, traceRed } from './delivery-trace.mjs'
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { answerYaml, withContext } from '../../unit/support/answer-yaml.mjs'
 import { PLUGIN_ROOT, commitAll, git, tempFolder } from './workspace.mjs'
@@ -48,61 +49,6 @@ export const SKELETON = "export const pay = () => ''\n"
 
 export const PAY = 'export const pay = (amount) => `paid ${amount}`\n'
 export const WRONG_PAY = 'export const pay = (amount) => `owed ${amount}`\n'
-/** A pay that answers nothing to pay for zero, a branch `tests/unit/check.mjs` never takes: `>` mutated to `>=` survives. */
-export const PAY_OR_NOTHING = "export const pay = (amount) => (amount > 0 ? `paid ${amount}` : 'nothing to pay')\n"
-
-/** `tests/unit/zero.mjs`: the test that kills the `>=` mutant of PAY_OR_NOTHING. */
-export const ZERO_CHECK = [
-  "import { pay } from '../../src/pay.mjs'",
-  "if (pay(0) !== 'nothing to pay') {",
-  '  console.error(`pay(0) answered ${pay(0)}`)',
-  '  process.exit(1)',
-  '}',
-  '',
-].join('\n')
-
-/** A software engineer that kills the `>=` mutant of PAY_OR_NOTHING with a test of its own. @type {Act} */
-export const killsZero = (brief, { cwd, slug }) => {
-  fillOutputs(brief, 'Killed the zero mutant.\n')
-  commit(cwd, `test(${slug}): pay nothing for zero`, { 'tests/unit/zero.mjs': ZERO_CHECK })
-  writeResult(brief, { status: 'done', summary: 'mutant killed' })
-}
-
-/** A software engineer that proposes the test that kills the `>=` mutant of PAY_OR_NOTHING, and changes no code. @type {Act} */
-export const proposesZero = (brief) => {
-  fillOutputs(brief, 'test: tests/unit/zero.mjs asserts that pay(0) answers nothing to pay.\n')
-  writeResult(brief, { status: 'done', summary: 'proposal written' })
-}
-
-/** The mutation command of the `app` component: a mutation tool in miniature, by node's absolute path. */
-export const MUTATION_COMMAND = `"${process.execPath}" tools/mutate.mjs`
-
-/**
- * `tools/mutate.mjs`: each mutant is one text replacement in `src/pay.mjs`; a mutant some test of
- * `tests/unit/` fails on is killed. It writes the mutation-testing-elements report where
- * StrykerJS writes it, and exits 0 whatever survives, as StrykerJS does without a break threshold:
- * the engine judges the score from the report.
- */
-export const MUTATE = [
-  "import { spawnSync } from 'node:child_process'",
-  "import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'",
-  "const file = 'src/pay.mjs'",
-  "const source = existsSync(file) ? readFileSync(file, 'utf8') : ''",
-  "const tests = readdirSync('tests/unit').filter((name) => name.endsWith('.mjs'))",
-  "const killedBy = () => tests.some((name) => spawnSync(process.execPath, [`tests/unit/${name}`]).status !== 0)",
-  "const mutants = [['paid', 'owed', 'StringLiteral'], [' > ', ' >= ', 'EqualityOperator']].flatMap(([from, to, mutatorName], index) => {",
-  '  const at = source.indexOf(from)',
-  '  if (at < 0) return []',
-  '  writeFileSync(file, `${source.slice(0, at)}${to}${source.slice(at + from.length)}`)',
-  '  const line = source.slice(0, at).split(\'\\n\').length',
-  "  return [{ id: String(index + 1), mutatorName, replacement: to.trim(), location: { start: { line, column: 1 }, end: { line, column: 1 } }, status: killedBy() ? 'Killed' : 'Survived' }]",
-  '})',
-  'if (source !== \'\') writeFileSync(file, source)',
-  "mkdirSync('reports/mutation', { recursive: true })",
-  "writeFileSync('reports/mutation/mutation.json', JSON.stringify({ schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: { [file]: { language: 'javascript', source, mutants } } }))",
-  '',
-].join('\n')
-
 /** The ADR the architect drafts: Proposed until a human ratifies it. */
 export const ADR = [
   '---',
@@ -140,8 +86,6 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   security [shape=box, agent="acme-security-reviewer"]
   distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]
   deliver  [shape=box, agent="software-engineer", phase="DELIVER"]
-  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
-  mutation [shape=parallelogram, gate="mutation", goal_gate=true, locked=true]
   exit     [shape=Msquare]
   design_review_lenses [shape=component]
   design_review_consistency [shape=note, lens="consistency"]
@@ -159,19 +103,7 @@ export const SECURITY_WORKFLOW = `digraph skraft {
   distill -> distill_review_lenses -> distill_review_coverage -> distill_review_refuter -> distill_review
   distill_review -> distill [label="NEEDS_REWORK", max_visits=3]
   distill_review -> deliver [label="APPROVED"]
-  deliver -> gates
-  gates -> deliver [label="FAIL", max_visits=3]
-  gates -> mutation [label="PASS"]
-  mutation -> kill_mutants [label="FAIL", max_visits=5]
-  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
-  mutation_review_lenses [shape=component]
-  mutation_review_test_integrity [shape=note, lens="test-integrity"]
-  mutation_review_refuter [shape=octagon]
-  mutation_review [shape=tripleoctagon, mandatory=true]
-  kill_mutants -> mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter -> mutation_review
-  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=3]
-  mutation_review -> gates [label="APPROVED"]
-  mutation -> deliver_review [label="PASS"]
+  deliver -> deliver_review
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]
   deliver_review -> exit [label="APPROVED"]
 }
@@ -191,14 +123,14 @@ const faulty = (replacements) => replacements.reduce((text, [from, to]) => {
  */
 export const REFUSED_WORKFLOWS = Object.freeze([
   {
-    fault: 'locked gates dropped without unlock',
-    workflow: faulty([['gate="build,format,lint,test,architecture,coverage"', 'gate="build,format,lint,test"']]),
-    reason: 'locked node gates drops architecture, coverage; keep them, or skip the node with unlock="<reason>"',
+    fault: 'a gate node of an earlier engine',
+    workflow: faulty([['  exit     [shape=Msquare]\n', '  exit     [shape=Msquare]\n  gates    [shape=parallelogram, gate="build,test", phase="DELIVER"]\n']]),
+    reason: 'node gates: a gate node is gone: skraft runs no gate. The software engineer runs each gate through skraft_repl, and the DELIVER review reads the traced runs of its attempt; remove the node and its PASS and FAIL edges (skraft workflow diff shows the plugin\'s pipeline); node gates: publish node needs exactly one outgoing edge, has 0; node gates is unreachable from start; node gates never reaches an exit',
   },
   {
     fault: 'a loop without max_visits',
-    workflow: faulty([['gates -> deliver [label="FAIL", max_visits=3]', 'gates -> deliver [label="FAIL"]']]),
-    reason: 'loop gates -> deliver -> gates has no max_visits',
+    workflow: faulty([['deliver_review -> deliver [label="NEEDS_REWORK", max_visits=3]', 'deliver_review -> deliver [label="NEEDS_REWORK"]']]),
+    reason: 'loop deliver_review -> deliver -> deliver_review has no max_visits',
   },
   {
     fault: 'a node the start cannot reach',
@@ -237,40 +169,6 @@ export const dropMandatoryLens = (cwd) => {
   return '.skraft/pipeline.skraft.dot is invalid: mandatory node test_integrity (lens test-integrity between lenses and verdict of review) is missing; this node is mandatory and cannot be removed'
 }
 
-/**
- * A repository workflow: the plugin's, with the mutation loop it no longer runs put back between
- * the gates and the delivery review, the one place a repository copy may run it: a kill reaches
- * the pull request only through the delivery review.
- */
-export const MUTATION_LOOP_WORKFLOW = [
-  ['  visuals  [shape=parallelogram', `  mutation [shape=parallelogram, gate="mutation", goal_gate=true]
-  kill_proposal [shape=box, agent="software-engineer", each="survivor-file", proposal=true]
-  mutation_plan [shape=hexagon, question="mutation-plan"]
-  kill_mutants [shape=box, agent="software-engineer", each="survivor-file"]
-  mutation_review_lenses [shape=component]
-  mutation_review_test_integrity [shape=note, lens="test-integrity"]
-  mutation_review_refuter [shape=octagon]
-  mutation_review [shape=tripleoctagon]
-  mutation_gates [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true]
-  visuals  [shape=parallelogram`],
-  ['  gates -> deliver_review [label="PASS"]\n', `  gates -> mutation [label="PASS"]
-  mutation -> deliver_review [label="PASS"]
-  mutation -> kill_proposal [label="FAIL", max_visits=5]
-  kill_proposal -> mutation_plan
-  mutation_plan -> kill_mutants [label="APPLY"]
-  kill_mutants -> mutation_review_lenses
-  mutation_review_lenses -> mutation_review_test_integrity -> mutation_review_refuter
-  mutation_review_refuter -> mutation_review
-  mutation_review -> kill_mutants [label="NEEDS_REWORK", max_visits=2]
-  mutation_review -> mutation_gates [label="APPROVED"]
-  mutation_gates -> kill_mutants [label="FAIL", max_visits=3]
-  mutation_gates -> mutation [label="PASS"]
-`],
-].reduce((text, [old, now]) => {
-  if (!text.includes(old)) throw new Error(`${JSON.stringify(old)} is not in the plugin's workflow`)
-  return text.replace(old, now)
-}, readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
-
 /** A repository workflow: the plugin's, its design review with the repository lens last. */
 export const LENS_WORKFLOW = readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8')
   .replace('  design_review [shape=tripleoctagon, mandatory=true]\n', `  design_review_acme_security [shape=note, lens="${SECURITY_LENS}"]\n  design_review [shape=tripleoctagon, mandatory=true]\n`)
@@ -286,8 +184,7 @@ const repositoryAgent = (cwd, agent, description, skills = []) => {
 }
 
 /**
- * A repository on `main` with one JavaScript component `app` at its root, mutated by
- * `tools/mutate.mjs`, the tracking folder and the mutation reports ignored, and the Git identity a developer's machine has, which the engine commits a
+ * A repository on `main` with one JavaScript component `app` at its root,, the tracking folder and the reports folder ignored, and the Git identity a developer's machine has, which the engine commits a
  * ratification with. Its skraft-config.json has answered the publish consent with `publish`
  * (no pull request), unless `publish` is null, when the run asks. With `security`, it runs SECURITY_WORKFLOW and defines its repository agent for
  * both hosts; with `lens`, it runs LENS_WORKFLOW and defines its repository lens for both hosts,
@@ -319,20 +216,12 @@ export const PLAYWRIGHT = [
   '',
 ].join('\n')
 
-/** The `web` front end: a build that passes, a mutation run with nothing to mutate, and an e2e command that runs PLAYWRIGHT, by node's absolute path. */
+/** The `web` front end: a build that passes and an e2e command that runs PLAYWRIGHT, by node's absolute path. */
 export const WEB = Object.freeze({
   name: 'web', root: 'web', stack: 'react', bdd: false, mocking: { strategy: 'inprocess' },
   paths: { src: ['src'], tests: ['tests'] },
-  commands: { build: `"${process.execPath}" tools/build.mjs`, mutation: `"${process.execPath}" tools/mutate.mjs`, e2e: `"${process.execPath}" tools/playwright.mjs` },
+  commands: { build: `"${process.execPath}" tools/build.mjs`, e2e: `"${process.execPath}" tools/playwright.mjs` },
 })
-
-/** `web/tools/mutate.mjs`: a StrykerJS report of no file. */
-const NOTHING_TO_MUTATE = [
-  "import { mkdirSync, writeFileSync } from 'node:fs'",
-  "mkdirSync('reports/mutation', { recursive: true })",
-  "writeFileSync('reports/mutation/mutation.json', JSON.stringify({ schemaVersion: '1', thresholds: { high: 100, low: 100 }, files: {} }))",
-  '',
-].join('\n')
 
 /**
  * With `frontend`, the repository also holds WEB, its screenshots folder ignored as a developer
@@ -353,7 +242,7 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     components: [{
       name: 'app', root: '.', stack: 'javascript', bdd: false, mocking: { strategy: 'inprocess' },
       paths: { src: ['src'], tests: ['tests'] },
-      commands: { test: TEST_COMMAND, mutation: MUTATION_COMMAND },
+      commands: { test: TEST_COMMAND },
       ...(contractTesting ? { contractTesting: true } : {}),
     }, ...(frontend ? [WEB] : [])],
   }
@@ -361,14 +250,11 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
     mkdirSync(join(cwd, 'web', 'tools'), { recursive: true })
     writeFileSync(join(cwd, 'web', 'tools', 'build.mjs'), "console.log('built')\n")
     writeFileSync(join(cwd, 'web', 'tools', 'playwright.mjs'), PLAYWRIGHT)
-    writeFileSync(join(cwd, 'web', 'tools', 'mutate.mjs'), NOTHING_TO_MUTATE)
     writeFileSync(join(cwd, 'web', '.gitignore'), 'skraft-visuals/\n')
   }
   writeFileSync(join(cwd, 'skraft-config.json'), `${JSON.stringify(config, null, 2)}\n`)
   writeFileSync(join(cwd, 'skraft-config.local.json'), `${JSON.stringify({ configurationConfirmed: true })}\n`)
   writeFileSync(join(cwd, '.gitignore'), '.copilot-tracking/\nreports/\nskraft-config.local.json\n')
-  mkdirSync(join(cwd, 'tools'))
-  writeFileSync(join(cwd, 'tools', 'mutate.mjs'), MUTATE)
   writeFileSync(join(cwd, 'README.md'), '# payment\n')
   for (const folder of skills) writeFile(join(cwd, ...folder.split('/'), 'SKILL.md'), `---\nname: ${folder.split('/').at(-1)}\n---\n`)
   if (security) {
@@ -387,31 +273,28 @@ export const pipelineRepository = (t, { security = false, lens = false, lensSkil
 }
 
 /**
- * What a run of a repository with `frontend` left: its visuals step, the commit that holds the
- * screenshots, each byte for byte in the story's evidence folder, and the pull request's Screenshots
- * section, which links them at that commit on the forge the story's issue is on (issueForge).
- * @param {string} cwd @param {object[]} events
+ * What a run with a front end leaves on a GitHub remote, whichever driver ran it: the screenshots
+ * where Playwright wrote them, nothing committed, and the pull request's body referring to each by
+ * its path from the body file's folder, which gh rewrites once it attached the file.
+ * @param {string} cwd @param {Array<Record<string, any>>} events
  */
 export const visualsKept = (cwd, events) => {
-  const forge = 'https://github.example.com/acme/payment/raw'
-  const evidence = `.copilot-tracking/skraft-plans/${SLUG}/evidence/${SLUG}/web`
+  const shots = 'web/skraft-visuals'
   const step = events.find((event) => event.type === 'step.recorded' && event.step === 'visuals')
-  const sha = git(cwd, 'log', '-1', '--format=%H', '--', evidence)
-  assert.deepEqual([step.outcome, step.next, step.reason], ['recorded', 'pr_writer', `2 screenshots committed in ${sha}`])
-  assert.equal(git(cwd, 'log', '-1', '--format=%B', sha), 'docs(evidence): screenshots of web\n\nRefs: #42')
-  assert.deepEqual(git(cwd, 'show', '--name-only', '--format=', sha).split('\n'), [`${evidence}/dark-1.png`, `${evidence}/light-1.png`])
-  for (const theme of ['light', 'dark']) assert.deepEqual(readFileSync(join(cwd, ...evidence.split('/'), `${theme}-1.png`)), screenshotBytes(theme))
+  assert.deepEqual([step.outcome, step.next, step.reason], ['recorded', 'pr_writer', '2 screenshots to attach to the pull request'])
+  assert.equal(git(cwd, 'log', '--format=%s', '--grep=docs(evidence)', '--fixed-strings'), '')
+  for (const theme of ['light', 'dark']) assert.deepEqual(readFileSync(join(cwd, 'web', 'skraft-visuals', `checkout-${theme}.png`)), screenshotBytes(theme))
   const body = readFileSync(join(cwd, '.copilot-tracking', 'skraft-plans', SLUG, 'pull-request-body.md'), 'utf8')
   assert.ok(body.includes([
     '<details><summary>Screenshots</summary>',
     '',
-    '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `visuals/web/e2e-1.log`); 2 screenshots committed',
+    '- web: e2e run passed (`' + WEB.commands.e2e + '`, evidence `logs/runs/deliver-1-1/13.log`); 2 screenshots attached to the pull request',
     '',
-    `![Checkout, card paid](${forge}/${sha}/${evidence}/light-1.png)`,
+    `![Checkout, card paid](../../../${shots}/checkout-light.png)`,
     '',
     '<details><summary>Dark theme</summary>',
     '',
-    `![Checkout, card paid](${forge}/${sha}/${evidence}/dark-1.png)`,
+    `![Checkout, card paid](../../../${shots}/checkout-dark.png)`,
     '',
     '</details>',
   ].join('\n')), body)
@@ -434,7 +317,7 @@ export const issueProgressKept = (cwd, events) => {
     `<!-- skraft:issue-progress slug=${SLUG} -->`, `### skraft · ${SLUG} — run done`, '', 'done', '',
     '- [x] RESEARCH', '- [x] DESIGN', '- [x] DISTILL', '- [x] DELIVER', '- [x] PUBLISH', '',
   ].join('\n')), body)
-  assert.ok(body.includes('\nQuality gates:\n- app/test pass · `gates/app/test-1.log`\n\nPull request: none opened or updated by this run.\n'), body)
+  assert.ok(body.includes('\nQuality evidence:\n- build · `.` · `logs/runs/deliver-1-1/1.log`\n- format · `.` · `logs/runs/deliver-1-1/2.log`\n- lint · `.` · `logs/runs/deliver-1-1/3.log`\n- test · `.` · `logs/runs/deliver-1-1/4.log`\n- architecture · `.` · `logs/runs/deliver-1-1/5.log`\n- coverage · `.` · `logs/runs/deliver-1-1/6.log`\n\nPull request: none opened or updated by this run.\n'), body)
 }
 
 /**
@@ -487,10 +370,9 @@ export const componentSkillsBriefed = (cwd, skillFolder, prompts) => {
     ['solution-researcher', [], []],
     ['solution-architect', [], []],
     ['acceptance-designer', [], []],
-    ['acceptance-designer', [], []],
     ['software-engineer', slashed([join(cwd, ...skillFolder.split('/'), 'SKILL.md'), join(PLUGIN_ROOT, 'skills', 'contract-testing', 'SKILL.md')]), ['contract-testing-javascript (app)']],
   ])
-  for (const path of briefs[4].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
+  for (const path of briefs[3].skills) assert.ok(readFileSync(path, 'utf8').startsWith('---\nname: '), path)
 }
 
 /** @param {string} path @param {string} text */
@@ -558,12 +440,12 @@ export const writesOnly = (result = { status: 'done', summary: 'outputs written'
   writeResult(brief, result)
 }
 
-/** Whether the brief puts a scenario of the story in the agent's hands. @param {Brief} brief */
-const onScenario = (brief) => brief.prompt.includes('\n- Scenario: ')
+/** Whether the brief puts the groups of the story's scenarios in the engineer's hands. @param {Brief} brief */
+const onScenario = (brief) => brief.prompt.includes('\n- Groups, in the order you work them')
 
 /**
- * The engineer's work: on a scenario, the one green commit of the code with its unit test, once
- * the scenario passes; on a pass with none (the gates or the review sent the work back, or a
+ * The engineer's work: on the groups of the story, the one green commit of the code with its unit
+ * test, once the group passes; on a pass with none (the gates or the review sent the work back, or a
  * workflow that builds no scenario), its TDD cycle: a red test commit while the code is missing
  * or wrong, then the code.
  * @param {string} code what src/pay.mjs holds once it is done
@@ -573,21 +455,20 @@ export const deliverWith = (code) => (brief, { cwd, slug }) => {
   const fixing = brief.prompt.includes('The gates failed on pass')
   fillOutputs(brief, fixing ? 'Fixed the amount.\n' : 'Paid by card.\n')
   const test = { [`tests/pay-${fixing ? 'fix' : 'amount'}.md`]: 'pay(10) answers paid 10\n' }
-  if (onScenario(brief)) commit(cwd, `feat(${slug}): pay by card`, { ...test, 'src/pay.mjs': code }, brief)
+  if (onScenario(brief)) commit(cwd, `feat(${slug}): S1 pay by card`, { ...test, 'src/pay.mjs': code }, brief)
+  else if (fixing) commit(cwd, `fix(${slug}): pay answers the amount paid`, { ...test, 'src/pay.mjs': code }, brief)
   else {
-    commit(cwd, `test(${slug}): ${fixing ? 'pay answers the amount paid' : 'pay a card amount'}`, test, brief)
-    commit(cwd, `${fixing ? 'fix' : 'feat'}(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
+    commit(cwd, `test(${slug}): pay a card amount`, test, brief)
+    commit(cwd, `feat(${slug}): pay by card`, { 'src/pay.mjs': code }, brief)
   }
+  traceDelivery(cwd, slug)
   writeResult(brief, { status: 'done', summary: 'delivered' })
 }
-
-/** CHECK taking a second before its assertion: replaying a commit then takes longer than the agent's work, on any machine. */
-export const SLOW_CHECK = CHECK.replace("if (pay(10) !== 'paid 10') {\n", "await new Promise((resolve) => setTimeout(resolve, 1000))\nif (pay(10) !== 'paid 10') {\n")
 
 /** The Scenarios table of the test plan: the story's one scenario, its walking skeleton, in `app`. */
 export const SCENARIOS = '\n## Scenarios\n\n| # | Scenario | Component | Tags |\n|---|---|---|---|\n| S1 | Customer pays by card | app | @walking-skeleton |\n'
 
-/** The acceptance test of S1, as the acceptance designer commits it on the pass on that scenario. */
+/** The acceptance test of S1, as the acceptance designer commits it beside the walking skeleton. */
 export const FIRST_ACCEPTANCE = Object.freeze({ path: 'tests/acceptance/customer-pays-by-card.md', text: 'Given a basket of 10\nWhen the customer pays by card\nThen pay(10) answers paid 10\n' })
 
 /** The last commit whose subject is `subject`, by its short sha. @param {string} cwd @param {string} subject */
@@ -595,59 +476,30 @@ const shortShaOf = (cwd, subject) => git(cwd, 'log', '-1', '--format=%H', '--fix
 
 /**
  * What the human is asked to read before DELIVER, on a run whose acceptance designer acts as
- * NOMINAL's: the story's one scenario, the last red commit DISTILL made of its walking skeleton,
- * and the last of the acceptance test of S1.
+ * NOMINAL's: the story's one scenario in one group, and the last red commit DISTILL made of its
+ * walking skeleton and acceptance test.
  * @param {string} cwd @param {string} [slug]
  */
-export const scenarioReviewText = (cwd, slug = SLUG) => {
-  const skeleton = `test(${slug}): pay by card`
-  const first = `test(${slug}): customer pays by card`
-  return `Read the 1 scenario of the story before DELIVER builds them, one at a time: S1 "Customer pays by card" (app; @walking-skeleton). The walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, skeleton)} "${skeleton}": src/pay.mjs, tests/unit/check.mjs. The acceptance test of S1 is commit ${shortShaOf(cwd, first)} "${first}": ${FIRST_ACCEPTANCE.path}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
+export const scenarioReviewText = (cwd, slug = SLUG, visit = 1) => {
+  const red = `test(${slug}): pay by card`
+  const log = join(realpathSync(cwd), '.copilot-tracking', 'skraft-plans', slug, 'logs', 'runs', `distill-${visit}-1`, '1.log')
+  return `Read the 1 scenario of the story before DELIVER builds them: S1 "Customer pays by card" (app; @walking-skeleton). DELIVER makes them pass in one pass and one commit, working the groups in this order: 1. S1. The acceptance tests of every scenario, the walking skeleton and the skeleton of its chain are commit ${shortShaOf(cwd, red)} "${red}": src/pay.mjs, ${FIRST_ACCEPTANCE.path}, tests/unit/check.mjs. skraft does not run them: check that each fails on its own assertion; the designer's traced run is in ${log}. APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).`
 }
 
 /**
- * The acceptance designer as its descriptor asks: on the pass that writes the plan, `check` as
- * the failing walking skeleton, with the skeleton it calls, its test plan listing the story's
- * scenario; on the pass on S1, the failing acceptance test of S1, committed once: a pass that
- * finds it already committed (DISTILL sent back) commits nothing.
+ * The acceptance designer as its descriptor asks: `check` as the failing walking skeleton and the
+ * acceptance test of S1, with the skeleton they call, in one red commit, its test plan listing the
+ * story's scenario; a pass that finds them already committed (DISTILL sent back) commits nothing.
  * @param {string} check @returns {Act}
  */
-export const acceptanceWith = (check) => (brief, repository) => {
-  if (onScenario(brief)) return firstAcceptance(brief, repository)
-  const { cwd, slug } = repository
+export const acceptanceWith = (check) => (brief, { cwd, slug }) => {
   fillOutputs(brief, `pay(10) answers paid 10.\n${SCENARIOS}`)
-  commit(cwd, `test(${slug}): pay by card`, { 'tests/unit/check.mjs': check, 'src/pay.mjs': SKELETON }, brief)
-  writeResult(brief, { status: 'done', summary: 'walking skeleton committed red' })
+  const files = { 'tests/unit/check.mjs': check, 'src/pay.mjs': SKELETON, [FIRST_ACCEPTANCE.path]: FIRST_ACCEPTANCE.text }
+  const written = Object.entries(files).every(([path, text]) => existsSync(join(cwd, ...path.split('/'))) && readFileSync(join(cwd, ...path.split('/')), 'utf8') === text)
+  if (!written) commit(cwd, `test(${slug}): pay by card`, files, brief)
+  traceRed(cwd, slug)
+  writeResult(brief, { status: 'done', summary: 'acceptance tests committed red' })
 }
-
-/** The acceptance test of S1, committed red unless an earlier pass committed it. @type {Act} */
-const firstAcceptance = (brief, { cwd, slug }) => {
-  fillOutputs(brief, 'S1 has its acceptance test.\n')
-  const path = join(cwd, ...FIRST_ACCEPTANCE.path.split('/'))
-  if (!existsSync(path) || readFileSync(path, 'utf8') !== FIRST_ACCEPTANCE.text) commit(cwd, `test(${slug}): customer pays by card`, { [FIRST_ACCEPTANCE.path]: FIRST_ACCEPTANCE.text }, brief)
-  writeResult(brief, { status: 'done', summary: 'acceptance test of S1 committed red' })
-}
-
-/**
- * The acceptance designer of a workflow that builds no scenario committing `check` as acceptanceWith
- * does, then a second failing test of the story.
- * @param {string} check @returns {Act}
- */
-export const twoRedsWith = (check) => (brief, repository) => {
-  acceptanceWith(check)(brief, repository)
-  commit(repository.cwd, `test(${repository.slug}): pay by card twice`, { 'tests/pay-twice.md': 'pay(10) answers paid 10 each time\n' }, brief)
-}
-
-/** The plugin's workflow as a repository ejected it before stories were built scenario by scenario: no each="scenario", no scenario review. */
-export const CYCLE_WORKFLOW = [
-  ['distill  [shape=box, agent="acceptance-designer", phase="DISTILL", each="scenario"]', 'distill  [shape=box, agent="acceptance-designer", phase="DISTILL"]'],
-  ['deliver  [shape=box, agent="software-engineer", phase="DELIVER", each="scenario"]', 'deliver  [shape=box, agent="software-engineer", phase="DELIVER"]'],
-  ['  scenario_review [shape=hexagon, question="scenario-review"]\n', ''],
-  ['  distill_review -> scenario_review [label="APPROVED"]\n  scenario_review -> deliver [label="APPROVED"]\n  scenario_review -> distill [label="REVISE", max_visits=2]\n', '  distill_review -> deliver [label="APPROVED"]\n'],
-].reduce((text, [old, now]) => {
-  if (!text.includes(old)) throw new Error(`the plugin's workflow no longer holds ${JSON.stringify(old)}`)
-  return text.replace(old, now)
-}, readFileSync(join(PLUGIN_ROOT, 'workflows', 'pipeline.skraft.dot'), 'utf8'))
 
 const CONTEXT_MAP = 'docs/architecture/context-map.md'
 
@@ -685,7 +537,7 @@ export const NOMINAL = Object.freeze({
 export const LENSES = Object.freeze({
   design_review: ['consistency', 'architecture-compliance', 'fitness'],
   distill_review: ['coverage', 'business-alignment', 'testability', 'boundary-enforcement'],
-  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader'],
+  deliver_review: ['test-integrity', 'architecture-boundaries', 'cold-reader', 'quality-gates'],
 })
 
 /**
@@ -761,40 +613,16 @@ export const reviewBriefOf = (prompt) => {
  *   what one lens or the refuter answers to one brief: its final message.
  */
 
-/** The replay judge's final message. @param {string} decision @param {string} [note] */
-export const judgeVerdict = (decision, note = 'the logs show it') => ['```yaml', `decision: ${decision}`, `note: "${note}"`, '```'].join('\n')
-
-/**
- * The label the replay judge is started under on the nominal run: `red` for the acceptance
- * designer's walking skeleton in DISTILL, `first` for its acceptance test of S1 on the next pass,
- * `green` for the software engineer's feat commit of the scenario in DELIVER; each named by the
- * first 7 characters of its sha.
- * @param {string} cwd @param {'red' | 'first' | 'green'} kind
- */
-export const judgeLabel = (cwd, kind) => {
-  const [step, subject, judged, pass] = {
-    red: ['distill', `test(${SLUG}): pay by card`, 'red', ''],
-    first: ['distill', `test(${SLUG}): customer pays by card`, 'red', ' · pass 2'],
-    green: ['deliver', `feat(${SLUG}): pay by card`, 'green', ''],
-  }[kind]
-  return `skraft ${SLUG} · ${step} · judge ${judged} ${shortShaOf(cwd, subject)} of attempt 1${pass} · attempt 1`
-}
-
 /**
  * The scripted LLM of one run: each dispatch is answered by the next act queued for its agent,
  * else by its NOMINAL act. A lens `<name>` answers the next of `reviews[name]`, the refuter the
  * next of `reviews.refuter`; what a queue does not script passes, or is confirmed.
- * The replay judge answers the next of `judges`, else accepts.
- * `dispatched` lists the phase briefs in dispatch order, `reviewed` the lens and refuter briefs,
- * `judged` the replay judge's.
- * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]>, reviews?: Record<string, ReviewAnswer[]>, judges?: string[] }} options
+ * `dispatched` lists the phase briefs in dispatch order, `reviewed` the lens and refuter briefs.
+ * @param {{ cwd: string, slug?: string, acts?: Record<string, Act[]>, reviews?: Record<string, ReviewAnswer[]> }} options
  */
-export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {}, judges = [] }) => {
+export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {} }) => {
   const queues = Object.fromEntries(Object.entries(acts).map(([agent, list]) => [agent, [...list]]))
   const answers = Object.fromEntries(Object.entries(reviews).map(([name, list]) => [name, [...list]]))
-  const verdicts = [...judges]
-  /** @type {string[]} */
-  const judged = []
   /** @type {Brief[]} */
   const dispatched = []
   /** @type {Array<NonNullable<ReturnType<typeof reviewBriefOf>>>} */
@@ -807,21 +635,14 @@ export const scriptedLlm = ({ cwd, slug = SLUG, acts = {}, reviews = {}, judges 
     if (next !== undefined) return next
     return brief.name === 'refuter' ? refutes('confirmed') : says(brief.lens, 'pass')
   }
-  /** The replay judge's final message: the next scripted one, else it accepts. @param {string} prompt @returns {string} */
-  const judge = (prompt) => {
-    judged.push(prompt)
-    return verdicts.shift() ?? judgeVerdict('accept')
-  }
   return {
     dispatched,
     reviewed,
-    judged,
     /**
      * Acts on one brief, as the agent it names; a lens or the refuter returns its final message.
      * @param {string} prompt @returns {string | undefined}
      */
     act: (prompt) => {
-      if (prompt.startsWith('Judge the ')) return judge(prompt)
       const asked = reviewBriefOf(prompt)
       if (asked !== null) return review(asked)
       const brief = briefOf(prompt)
