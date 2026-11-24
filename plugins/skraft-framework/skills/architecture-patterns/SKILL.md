@@ -218,7 +218,7 @@ graph LR
 **Definition:** Abstracts the storage mechanism for an aggregate.
 
 - One per aggregate — `IEligibilityRepository`, not `IGenericRepository<T>`
-- Interface defined in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure; the aggregate's ADR records the choice
+- Interface defined in Domain when it persists an aggregate, Application for a CRUD entity or a read model — never Infrastructure; the contracts record the layer, never an ADR
 - No ORM/LINQ leakage in the interface — domain-friendly method names (`GetEligibleDrivers`, not `FindAll(x => x.Status == "Eligible")`)
 
 ### Domain Service

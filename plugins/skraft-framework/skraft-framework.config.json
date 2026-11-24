@@ -307,6 +307,10 @@
         "policy": "verify"
       },
       {
+        "name": "adr-eligibility-gate",
+        "policy": "verify"
+      },
+      {
         "name": "clean-architecture-dotnet",
         "policy": "on-demand"
       },

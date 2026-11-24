@@ -232,24 +232,14 @@ This is the canonical definition of the `Proposed -> Accepted | Rejected` gate. 
 
 ## When to Write an ADR
 
-Write an ADR for any decision that:
-- Establishes or changes a layer boundary
-- Chooses an aggregate boundary
-- **Adopts** a pattern that adds complexity beyond the project baseline (CQRS+Bus, Event Sourcing, Saga, Specification, ACL)
-- Establishes a bounded context boundary
-- Chooses a context mapping relationship (ACL, Conformist, etc.)
-- Affects a cross-cutting concern (error handling strategy, validation approach)
-
-ADRs are written for **additions** and **deviations** from the project baseline. The baseline itself is not an ADR — it is the set of conventions enforced by project skills and architecture tests.
+Only for a candidate the `adr-eligibility-gate` skill finds `ELIGIBLE`: it is `NOT ELIGIBLE` until the gate proves otherwise, and zero ADRs is the normal outcome of a story. The gate holds the candidates that may pass and the Never-an-ADR list.
 
 ### When NOT to Write an ADR
 
-Do not write an ADR for:
+Besides the gate's Never-an-ADR list:
 - Implementation details (naming conventions, code formatting)
 - Library version choices — unless the version has architectural impact (e.g., switching from EF Core to Dapper changes the data access strategy)
 - Configuration choices (connection string format, environment variable names)
-- **A pattern that was never raised by any story or measurable force.** Silence = baseline default. ADRs (whether `Accepted` or `Rejected`) ratify questions that were actually asked. A `Rejected` ADR is legitimate ONLY when a story or measurable force in the batch raised the question — in which case the ADR records the evaluation so the debate is not re-opened without new evidence. Writing a `Rejected` ADR for an unraised question is a non-decision artefact (G14).
-- **A convention already enforced by a project skill or by automated architecture tests** (e.g., CQS method-level separation, layer boundaries, convention-based DI registration). Conventions are baseline; ADRs document additions or deviations from baseline.
 
 ---
 
