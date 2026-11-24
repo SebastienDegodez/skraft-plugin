@@ -146,6 +146,12 @@ const SAMPLES = [
   { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '1', verdict: 'Rejected', by: 'owner' }] } },
   { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: [{ adr: '1', verdict: 'Accepted' }] } },
   { currentPhase: 'DESIGN', adrRatification: { checkpointStatus: 'resolved', pending: [], ratified: ['ADR-1'] } },
+  { currentPhase: 'RESEARCH', humanQuestions: { checkpointStatus: 'none', questions: [] } },
+  { currentPhase: 'RESEARCH', humanQuestions: { checkpointStatus: 'awaiting_human', kind: 'product-unknowns', questions: [{ id: 'Q1', question: 'q', recommended: 'r' }] } },
+  { currentPhase: 'DESIGN', humanQuestions: { checkpointStatus: 'awaiting_human', kind: 'adr-options', questions: [{ id: 'C1', question: 'q' }] } },
+  { currentPhase: 'DESIGN', humanQuestions: { checkpointStatus: 'awaiting_human', kind: 'ratification', questions: [] } },
+  { currentPhase: 'DESIGN', humanQuestions: { checkpointStatus: 'resolved', questions: [{ id: 'C1' }] } },
+  { currentPhase: 'DESIGN', humanQuestions: { checkpointStatus: 'resolved' } },
 ]
 
 test('the runtime validator and ajv agree on every sample', () => {

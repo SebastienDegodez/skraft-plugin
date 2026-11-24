@@ -13,6 +13,7 @@ const DEFAULT_STATE = ({ projectSlug, phaseOrder }) => ({
   projectSlug: projectSlug ?? null,
   currentPhase: phaseOrder[0],
   adrRatification: { checkpointStatus: 'none', pending: [], ratified: [] },
+  humanQuestions: { checkpointStatus: 'none', questions: [] },
   phasesCompleted: [],
   phaseArtifacts: {},
   verdicts: {},
