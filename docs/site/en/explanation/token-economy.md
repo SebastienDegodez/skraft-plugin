@@ -135,7 +135,7 @@ The model class is **actually applied**: a deterministic resolver (`plugins/skra
 Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
 `model_requirement` floor, then **pins the `model:` field** of its `.md` descriptor to the
 resolved concrete model. The current policy pins the Copilot descriptors:
-`reviewer → gpt-6-luna` or `claude-haiku-5.5`, `implementer` and `researcher → claude-sonnet-5.5`,
+`reviewer` and `researcher → gpt-6-luna` or `claude-haiku-5.5`, `implementer → claude-sonnet-5.5`,
 `planner → claude-opus-5.5`; Claude Code descriptors keep the `haiku`, `sonnet` and `opus`
 aliases. The Sonnet floor raises the two exceptions
 (`software-engineer`, `software-engineer-reviewer`). One source of truth; a CI linter

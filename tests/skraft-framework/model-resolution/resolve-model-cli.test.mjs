@@ -134,9 +134,9 @@ test('planAgent applies the Sonnet floor override for a reviewer with a requirem
   assert.equal(plan.resolvedModel, 'claude-sonnet-5.5')
 })
 
-test('planAgent resolves a researcher to Sonnet 5.5', () => {
+test('planAgent resolves a researcher to the economy model', () => {
   const plan = planAgent(agent({ name: 'res', cls: 'researcher' }), { allowList: new Set() })
-  assert.equal(plan.resolvedModel, 'claude-sonnet-5.5')
+  assert.equal(plan.resolvedModel, 'gpt-6-luna')
 })
 
 test('planAgent skips an allow-listed agent', () => {
