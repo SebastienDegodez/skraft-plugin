@@ -68,7 +68,8 @@ questions through the host's native chat. A CI run that waits on a person publis
 request itself, every question in its body; while its branch holds no commit (GitHub opens no
 pull request without one), it pushes the branch and asks in one marked comment on the issue or
 epic instead. A scope question stops it at once. A
-`/skraft-answer` comment is recorded by `engine/drivers/cli/ci-reply.mjs`, without a model, only
+`/skraft-answer` comment (then one `Q1: B` line per question, one option, or one JSON object; the
+key may be left out) is recorded by `engine/drivers/cli/ci-reply.mjs`, without a model, only
 when the forge says its author has `admin`, `maintain` or `write` access, with the provenance
 `pr-comment`. Between the pausing and the resuming job, the run's tracking folder travels as a
 workflow artifact and the journal is signed with the `SKRAFT_DESIGN_JOURNAL_KEY` repository

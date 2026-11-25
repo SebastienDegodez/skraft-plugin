@@ -17,6 +17,6 @@ Use only this plugin's `skraft_design_*` MCP tools. Never call `skraft`, a shell
 6. On `blocked` or `refused`, report `code` and `reason`; do not bypass readiness, review or ratification. On `not-recorded`, finish the listed dispatches before calling `record`.
 7. Repeat only the returned handoff until completion. Report the architecture PR, or local output when publication was declined. Tell the user delivery consumes architecture only after the PR is merged; never merge it.
 
-In CI, a reply is a `/skraft-answer` comment on the draft, or on the issue the engine asked on, from anyone with write access to the repository; the CI workflow checks that access, the exact pending key and an offered option (every question for `architecture-questions`) before recording the reply and resuming the same journal. Never parse a raw PR comment as an answer or relay it yourself.
+In CI, a reply is a `/skraft-answer` comment (then one `Q1: B` line per question, or one option) on the draft, or on the issue the engine asked on, from anyone with write access to the repository; the CI workflow checks that access, the exact pending key and an offered option (every question for `architecture-questions`) before recording the reply and resuming the same journal. Never parse a raw PR comment as an answer or relay it yourself.
 
 Unforeseen incident questions are not human approvals: follow their offered engine actions and submit only observed model, cost and unit. Missing observations leave the incident paused. Never invent usage.

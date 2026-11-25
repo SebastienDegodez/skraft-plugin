@@ -12,8 +12,8 @@ export const PULL_REQUEST_FILE = 'pull-request.md'
 /** A noun that a count does not change. @param {string} word @returns {Noun} */
 const invariable = (word) => Object.freeze({ one: word, many: word })
 
-/** The reply that answers every open question at once, each id holding what the person writes there. @param {string} key @param {string[]} ids @param {string} placeholder */
-const replyAll = (key, ids, placeholder) => JSON.stringify({ key, answer: Object.fromEntries(ids.map((id) => [id, placeholder])) })
+/** The reply that answers every open question at once, ready to copy: the command, then one line per question. @param {string} intro @param {string[]} ids @param {string} placeholder */
+const replyLines = (intro, ids, placeholder) => [intro, '```text', '/skraft-answer', ...ids.map((id) => `${id}: ${placeholder}`), '```']
 
 const EN = Object.freeze({
   /** Whether a count takes the plural. @param {number} count */
@@ -70,7 +70,7 @@ const EN = Object.freeze({
   pendingOptions: (options) => `Options: ${options}`,
   pendingReply: (key) => `Reply in a comment with: \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
   pendingQuestions: (count, key) => `Human answers pending: the solution architect left ${count} question(s) (key ${key})`,
-  pendingReplyAll: (key, ids) => `Reply in one comment with: \`/skraft-answer ${replyAll(key, ids, '<option or your words>')}\``,
+  pendingReplyAll: (ids) => replyLines('Reply in one comment, one line per question:', ids, '<option or your words>'),
   /** @param {string} node @param {string} reason */
   noDecision: 'None recorded: no ADR was proposed for acceptance on merge in this run.',
   noRed: 'None recorded: no red commit was accepted in this run.',
@@ -136,7 +136,7 @@ const FR = Object.freeze({
   pendingOptions: (options) => `Choix : ${options}`,
   pendingReply: (key) => `Répondez dans un commentaire avec : \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
   pendingQuestions: (count, key) => `Réponses humaines attendues : l'architecte a laissé ${count} question(s) (clé ${key})`,
-  pendingReplyAll: (key, ids) => `Répondez dans un seul commentaire avec : \`/skraft-answer ${replyAll(key, ids, '<option ou vos mots>')}\``,
+  pendingReplyAll: (ids) => replyLines('Répondez en un seul commentaire, une ligne par question :', ids, '<option ou vos mots>'),
   noDecision: 'Aucune consignée : aucun ADR proposé ne sera accepté à la fusion dans ce run.',
   noRed: 'Aucune consignée : aucun commit red n\'a été accepté dans ce run.',
   redHeader: '| Commit | Sujet |',

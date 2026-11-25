@@ -263,7 +263,7 @@ const openQuestionLines = (question, words) => [
     `  - ${inert(oneLine(`${asked.id} (#${asked.issue} ${asked.criterion}): ${asked.question}`))}`,
     ...asked.options.map((option) => `    - ${code(option.id)}: ${inert(oneLine(`${option.label} — ${option.consequence}`))}`),
   ]),
-  `  ${words.pendingReplyAll(question.key, question.questions.map(({ id }) => id))}`,
+  ...words.pendingReplyAll(question.questions.map(({ id }) => id)).map((line) => `  ${line}`),
 ]
 
 /** @param {RedCommit[]} reds @param {Words} words */

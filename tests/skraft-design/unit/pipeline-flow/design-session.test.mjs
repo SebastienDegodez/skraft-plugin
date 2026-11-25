@@ -393,7 +393,7 @@ test('in CI the engine publishes the draft itself, every open question in its bo
   assert.match(body, /Q1 \(#42 AC-1\): How is the receipt proved in this slice\?/)
   assert.match(body, /`A`: Through the HTTP entry point — The browser proof waits for the UI story\./)
   assert.match(body, /`EMPTY`: Empty it — The customer starts again\./)
-  assert.ok(body.includes(`/skraft-answer {"key":"${settled.question.key}","answer":{"Q1":"<option or your words>","Q2":"<option or your words>"}}`), body)
+  assert.ok(body.includes('  ```text\n  /skraft-answer\n  Q1: <option or your words>\n  Q2: <option or your words>\n  ```'), body)
 })
 
 test('a closed story in CI stops at once and, nothing designed yet, asks on the epic with the branch pushed', async () => {
@@ -480,4 +480,28 @@ test('a pull request a previous run of the branch left closed does not stop a ne
   const again = await createDraftPublication(deps).publish()
   assert.equal(again.ok, false)
   assert.match(again.reason, new RegExp(`#${opened[0].number} of checkout is closed, and skraft opens no other one`))
+})
+
+test('a reply in free lines under /skraft-answer, one per question, answers them all without the key; a question left out records nothing', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  const { question } = await draftInCi(deps, await createRunPipeline(deps).run())
+  host.codeHost.permissions = { maintainer: 'maintain' }
+  const reply = (body) => createCommentAnswer(deps).answer({ author: 'maintainer', body })
+  const partial = await reply('/skraft-answer\nQ1:b')
+  assert.equal(partial.ok, false)
+  assert.match(partial.reason, /Q2 has no answer/)
+  assert.equal((await reply('/skraft-answer\nQ1:b\nq2 = keep it, and warn the customer')).ok, true)
+  const [answered] = host.events().filter(({ type, key }) => type === 'question.answered' && key === question.key)
+  assert.match(answered.answer, /Q1 \(#42 AC-1\): B — In a browser now/)
+  assert.match(answered.answer, /Q2 \(#43 AC-1\): keep it, and warn the customer/)
+})
+
+test('a one-word reply under /skraft-answer answers the one decision a CI run waits on, without its key', async () => {
+  const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  const { question } = await draftInCi(deps, await run.start({ epic: 42, mode: 'ci' }))
+  host.codeHost.permissions = { maintainer: 'write' }
+  assert.equal((await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer continue' })).ok, true)
+  assert.deepEqual(host.events().filter(({ type, key }) => type === 'question.answered' && key === question.key).map(({ answer }) => answer), ['CONTINUE'])
 })

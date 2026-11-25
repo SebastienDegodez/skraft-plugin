@@ -99,8 +99,12 @@ consequence. Before the review, the run waits on one decision that holds them al
   scope at the start, it asks on the issue or epic instead. Answer in one comment:
 
 ```text
-/skraft-answer {"key":"<key from the draft>","answer":{"Q1":"A","Q2":"your own words"}}
+/skraft-answer
+Q1: A
+Q2: your own words
 ```
+
+A question with options takes one word, such as `/skraft-answer continue`.
 
 Anyone with write access to the repository may answer; any other comment, or a reply that leaves
 a question out, records nothing. A question of scope, such as a closed story, stops a CI run at
