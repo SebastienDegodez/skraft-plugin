@@ -343,11 +343,27 @@ export const lenses = (byLens) => {
   const queues = Object.fromEntries(Object.entries(byLens).map(([name, answers]) => [name, [...answers]]))
   return (dispatch) => {
     const name = dispatch.agent === 'design-finding-refuter' ? 'refuter' : dispatch.agent.replace(/^design-/, '').replace(/-lens$/, '')
+    if (name === 'refuter') return refuterAnswer(queues.refuter ?? [], citedBy(dispatch))
     const next = queues[name]?.shift()
-    if (next !== undefined) return next
-    return name === 'refuter' ? refutes('confirmed') : says(name, 'pass')
+    return next !== undefined ? next : says(name, 'pass')
   }
 }
+
+/** The findings a refuter dispatch checks, as its label cites them: `consistency F1`, … */
+const citedBy = (dispatch) => dispatch.label.split(' · ').find((part) => part.startsWith('refute ')).slice('refute '.length).split(', ')
+
+/**
+ * One scripted verdict per cited finding, taken in order from the queue; a single finding gets it as
+ * is, several get one check each. An answer that is not one verdict is given whole.
+ */
+const refuterAnswer = (queue, cited) => {
+  if (cited.length === 1 || (queue[0] !== undefined && !String(queue[0]).startsWith('verdict:'))) return queue.shift() ?? refutes('confirmed')
+  const checks = cited.map((finding) => ({ finding, ...verdictOf(queue.shift() ?? refutes('confirmed')) }))
+  return answerYaml({ checks })
+}
+
+/** @param {string} answer the YAML of refutes() */
+const verdictOf = (answer) => Object.fromEntries(answer.split('\n').map((line) => [line.slice(0, line.indexOf(':')), JSON.parse(line.slice(line.indexOf(':') + 1).trim().replace(/^(\w+)$/, '"$1"'))]))
 
 /** The step.recorded of the review nodes: step, visit, outcome, next. @param {ReturnType<typeof pipelineHost>} host */
 export const reviews = (host) => host.events()

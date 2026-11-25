@@ -2,7 +2,7 @@ import { readLensAnswer, readRefutations } from '../../domain/review/answers.mjs
 import { composeReviewContext, DECISIONS_INDEX, listedRecords, RULE_FILES } from '../../domain/review/context.mjs'
 import { reviewedPatch, reviewedPaths, SCOPES, scopedChanges } from '../../domain/review/changes.mjs'
 import { composeLensBrief, composeRefuterBrief, reviewLabel } from '../../domain/review/lens-brief.mjs'
-import { citationOf, groupFindings } from '../../domain/review/finding-groups.mjs'
+import { citationOf, groupFindings, refuterBatches } from '../../domain/review/finding-groups.mjs'
 import { lensAgent, planLenses, REFUTER } from '../../domain/review/lenses.mjs'
 import { escalatedTier } from '../../domain/config/model-assignment.mjs'
 import { modelText, onHost } from '../../domain/reporting/agent-models.mjs'
@@ -652,7 +652,7 @@ const refuterAsking = (review) => ({
  */
 const toRefute = (results, planned, refuterOf) => {
   const dissent = dissentOf(results, ENGINE)
-  return groupFindings(results.flatMap(({ lens, findings }) => findings.map((finding) => ({ lens, finding }))))
+  return refuterBatches(groupFindings(results.flatMap(({ lens, findings }) => findings.map((finding) => ({ lens, finding })))))
     .map((members) => suspectOf(members, planned, { refuterOf, dissent }))
 }
 

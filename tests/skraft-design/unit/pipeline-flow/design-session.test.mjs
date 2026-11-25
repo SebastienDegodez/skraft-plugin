@@ -578,6 +578,10 @@ test('a pass the review sends back is told the files its findings cite, once eac
   await createRunPipeline(deps).run()
   const designs = host.agentRunner.dispatches.filter(({ agent: id }) => id === 'design-solution-architect')
   assert.equal(designs.length, 2)
+  // One refuter checks every finding of a lens, each with its own verdict, its documents read once.
+  const refuters = host.agentRunner.reviewed().filter(({ agent: id }) => id === 'design-finding-refuter')
+  assert.equal(refuters.length, 1)
+  assert.deepEqual(host.events().filter(({ type }) => type === 'review.refuted').map(({ finding, verdict }) => [finding, verdict]), [['F1', 'confirmed'], ['F2', 'confirmed'], ['F3', 'confirmed']])
   // The pass that fixes the findings runs a tier down.
   const started = host.events().filter(({ type }) => type === 'step.started')
   assert.deepEqual(started.filter(({ agent: id }) => id === 'design-solution-architect').map(({ assignment }) => [assignment.family, assignment.source]), [['planner', 'agent'], ['standard', 'rework']])
