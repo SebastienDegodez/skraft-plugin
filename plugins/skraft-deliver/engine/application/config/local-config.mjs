@@ -1,4 +1,4 @@
-import { LOCAL_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { LOCAL_CONFIG_FILE, REPL_PACKAGES } from '../../domain/config/skraft-config.mjs'
 import { ignoring } from '../../domain/config/git-ignore.mjs'
 
 const GIT_IGNORE = '.gitignore'
@@ -20,6 +20,6 @@ export const ignoreLocalConfig = async (workspace) => {
  * @param {Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'write'>} workspace
  */
 export const ignoreReplPackages = async (workspace) => {
-  const text = ignoring(await workspace.read(GIT_IGNORE), '.repl/node_modules/', '/.repl/node_modules/')
+  const text = ignoring(await workspace.read(GIT_IGNORE), '.repl/node_modules/', REPL_PACKAGES)
   if (text !== null) await workspace.write(GIT_IGNORE, text)
 }

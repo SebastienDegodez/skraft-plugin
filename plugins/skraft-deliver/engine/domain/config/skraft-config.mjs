@@ -77,6 +77,12 @@ export { HOSTS } from './model-assignment.mjs'
 export const CONFIG_FILE = 'skraft-deliver-config.json'
 /** The developer's own layer beside the team's file, never committed. */
 export const LOCAL_CONFIG_FILE = 'skraft-deliver-config.local.json'
+
+/** The packages the developer installs for the project's REPL library: listed in `.gitignore`, never committed. */
+export const REPL_PACKAGES = '/.repl/node_modules/'
+
+/** Every line setup lists in the working copy's `.gitignore`. */
+export const SETUP_IGNORES = Object.freeze([LOCAL_CONFIG_FILE, REPL_PACKAGES])
 /** The developer's layer for every working copy, as messages name it. */
 export const USER_CONFIG_FILE = '~/.skraft-deliver/config.json'
 const MERGED = 'the merged configuration'

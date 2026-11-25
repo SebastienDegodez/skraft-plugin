@@ -12,7 +12,7 @@ tools:
   - Skill
   - Bash
   - mcp__graphify__*
-  - mcp__plugin_skraft_design_skraft_design__skraft_design_precheck
+  - mcp__plugin_skraft-design_skraft-design__skraft_design_precheck
 ---
 
 # Solution-researcher agent

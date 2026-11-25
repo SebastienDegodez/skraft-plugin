@@ -10,8 +10,8 @@ tools:
   - Glob
   - Grep
   - Bash
-  - mcp__plugin_skraft_deliver_skraft_deliver__skraft_deliver_repl
-  - mcp__plugin_skraft_deliver_skraft_deliver__skraft_deliver_repl_reset
+  - mcp__plugin_skraft-deliver_skraft-deliver__skraft_deliver_repl
+  - mcp__plugin_skraft-deliver_skraft-deliver__skraft_deliver_repl_reset
   - TaskOutput
   - mcp__graphify__*
   - Skill

@@ -10,7 +10,7 @@ tools:
   - Skill
   - Edit
   - Write
-  - mcp__plugin_skraft_design_skraft_design__skraft_design_precheck
+  - mcp__plugin_skraft-design_skraft-design__skraft_design_precheck
 ---
 
 # PR Writer

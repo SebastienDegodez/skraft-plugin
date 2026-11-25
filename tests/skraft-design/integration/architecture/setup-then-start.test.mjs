@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createNodeAdapters } from '../../../../plugins/skraft-design/engine/infrastructure/node-adapters.mjs'
 import { createMergedRepository } from '../../../../plugins/skraft-design/engine/infrastructure/architecture/merged-repository.mjs'
+import { createConfigureComponents } from '../../../../plugins/skraft-design/engine/application/config/configure-components-usecase.mjs'
 
 const git = (cwd, ...args) => {
   const result = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.test', ...args], { cwd, encoding: 'utf8' })
@@ -23,17 +24,19 @@ const cloneWith = async (t) => {
   git(root, 'clone', '--quiet', origin, seed)
   writeFileSync(join(seed, '.gitignore'), 'target/\n')
   writeFileSync(join(seed, 'README.md'), 'hello\n')
+  writeFileSync(join(seed, 'package.json'), '{"name":"shop","scripts":{"test":"node --test"}}\n')
   git(seed, 'add', '.')
   git(seed, 'commit', '-m', 'init')
   git(seed, 'push', 'origin', 'HEAD:main')
   git(root, 'clone', '--quiet', origin, work)
   const adapters = createNodeAdapters({ cwd: work, pluginRoot: join(root, 'plugin'), home: join(root, 'home') })
-  return { work, repository: createMergedRepository({ ...adapters, base: 'main' }) }
+  return { work, adapters, repository: createMergedRepository({ ...adapters, base: 'main' }) }
 }
 
-test('a run branch starts after setup listed the local configuration in .gitignore', async (t) => {
-  const { work, repository } = await cloneWith(t)
-  appendFileSync(join(work, '.gitignore'), 'skraft-design-config.local.json\n')
+test('a run branch starts after setup listed what it ignores in .gitignore', async (t) => {
+  const { adapters, repository } = await cloneWith(t)
+  const configured = await createConfigureComponents(adapters).configure({ workingCopyName: 'work' })
+  assert.equal(configured.ok, true, configured.reason)
   const branched = await repository.branch({ name: 'design/epic-7', existing: false })
   assert.deepEqual(branched, { ok: true })
 })

@@ -1,5 +1,5 @@
 import { isBriefPath } from '../../domain/architecture/brief.mjs'
-import { isRef, LOCAL_CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { isRef, SETUP_IGNORES } from '../../domain/config/skraft-config.mjs'
 
 const QUIET = { GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' }
 const failed = (reason) => ({ ok: false, code: 'architecture-repository-unavailable', reason })
@@ -30,12 +30,12 @@ const clean = async (runner) => succeeded(await git(runner, ['diff', '--quiet', 
   && succeeded(await git(runner, ['diff', '--cached', '--quiet']))
   && await onlyIgnoresLocalConfig(runner)
 
-// Setup lists the developer's local configuration in .gitignore; that one line is not a change to set aside.
+// Setup lists the developer's local configuration and the REPL's packages in .gitignore; those lines are not a change to set aside.
 const onlyIgnoresLocalConfig = async (runner) => {
   const changed = textOf(await git(runner, ['diff', '--unified=0', '--no-color', '--', '.gitignore']))
   if (changed === null) return false
   const edits = lines(changed).filter((line) => /^[+-](?![+-]{2} )/.test(line))
-  return edits.every((line) => line === `+${LOCAL_CONFIG_FILE}`)
+  return edits.every((line) => SETUP_IGNORES.some((ignored) => line === `+${ignored}`))
 }
 
 const snapshot = async (runner, sourceControl, base) => {

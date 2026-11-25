@@ -5,8 +5,8 @@ model: sonnet
 user-invocable: false
 tools:
   - Bash
-  - mcp__plugin_skraft_deliver_skraft_deliver__skraft_deliver_repl
-  - mcp__plugin_skraft_deliver_skraft_deliver__skraft_deliver_repl_reset
+  - mcp__plugin_skraft-deliver_skraft-deliver__skraft_deliver_repl
+  - mcp__plugin_skraft-deliver_skraft-deliver__skraft_deliver_repl_reset
   - Read
   - Write
   - Edit
