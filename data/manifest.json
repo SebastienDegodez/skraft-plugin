@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-25T20:19:44.641Z",
+  "generated": "2026-11-25T20:47:39.655Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -14312,7 +14312,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-660"
       ],
-      "mtime": 1795637979536.0493
+      "mtime": 1795639653296.9868
     },
     {
       "id": "pr/660/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
@@ -14325,7 +14325,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-660"
       ],
-      "mtime": 1795637979536.0493
+      "mtime": 1795639653363.9875
     },
     {
       "id": "pr/660/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
@@ -14338,7 +14338,7 @@
         "absent-acceptance-criteria-halt-the-distillation",
         "pr-660"
       ],
-      "mtime": 1795637979535.0493
+      "mtime": 1795639653366.9878
     },
     {
       "id": "pr/660/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
@@ -14351,7 +14351,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-660"
       ],
-      "mtime": 1795637979537.0493
+      "mtime": 1795639653433.9885
     },
     {
       "id": "pr/660/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
@@ -14364,7 +14364,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-660"
       ],
-      "mtime": 1795637979537.0493
+      "mtime": 1795639653434.9885
     },
     {
       "id": "pr/660/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
@@ -14377,7 +14377,7 @@
         "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
         "pr-660"
       ],
-      "mtime": 1795637979537.0493
+      "mtime": 1795639653434.9885
     },
     {
       "id": "pr/660/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
@@ -14390,7 +14390,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-660"
       ],
-      "mtime": 1795637979536.0493
+      "mtime": 1795639653497.9895
     },
     {
       "id": "pr/660/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
@@ -14403,7 +14403,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-660"
       ],
-      "mtime": 1795637979536.0493
+      "mtime": 1795639653501.9895
     },
     {
       "id": "pr/660/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
@@ -14416,7 +14416,7 @@
         "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
         "pr-660"
       ],
-      "mtime": 1795637979536.0493
+      "mtime": 1795639653500.9895
     },
     {
       "id": "pr/660/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
@@ -14429,7 +14429,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-660"
       ],
-      "mtime": 1795637979558.049
+      "mtime": 1795639653574.145
     },
     {
       "id": "pr/660/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
@@ -14442,7 +14442,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-660"
       ],
-      "mtime": 1795637979559.049
+      "mtime": 1795639653574.9905
     },
     {
       "id": "pr/660/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
@@ -14455,7 +14455,7 @@
         "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
         "pr-660"
       ],
-      "mtime": 1795637979559.049
+      "mtime": 1795639653574.9905
     },
     {
       "id": "pr/660/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
@@ -14468,7 +14468,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-660"
       ],
-      "mtime": 1795637979558.049
+      "mtime": 1795639653574.145
     },
     {
       "id": "pr/660/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
@@ -14481,7 +14481,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-660"
       ],
-      "mtime": 1795637979558.049
+      "mtime": 1795639653574.9905
     },
     {
       "id": "pr/660/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
@@ -14494,7 +14494,7 @@
         "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
         "pr-660"
       ],
-      "mtime": 1795637979559.049
+      "mtime": 1795639653574.9905
     },
     {
       "id": "pr/660/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run0",
@@ -14507,7 +14507,7 @@
         "fourteen-criteria-pricing-story-becomes-an-executable-specification",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653633.9915
     },
     {
       "id": "pr/660/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run1",
@@ -14520,7 +14520,7 @@
         "fourteen-criteria-pricing-story-becomes-an-executable-specification",
         "pr-660"
       ],
-      "mtime": 1795637979606.7244
+      "mtime": 1795639653633.9915
     },
     {
       "id": "pr/660/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run2",
@@ -14533,7 +14533,7 @@
         "fourteen-criteria-pricing-story-becomes-an-executable-specification",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653633.9915
     },
     {
       "id": "pr/660/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
@@ -14546,7 +14546,7 @@
         "finish-the-approved-customer-guide-issue",
         "pr-660"
       ],
-      "mtime": 1795637979627.0486
+      "mtime": 1795639653693.9922
     },
     {
       "id": "pr/660/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
@@ -14559,7 +14559,7 @@
         "record-a-customer-guide-increment-while-the-issue-remains-open",
         "pr-660"
       ],
-      "mtime": 1795637979627.0486
+      "mtime": 1795639653719.9924
     },
     {
       "id": "pr/660/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
@@ -14572,7 +14572,7 @@
         "record-the-approved-guide-edit-without-a-known-issue",
         "pr-660"
       ],
-      "mtime": 1795637979626.0486
+      "mtime": 1795639653719.9924
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run0",
@@ -14585,7 +14585,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979606.7244
+      "mtime": 1795639653716.9924
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run1",
@@ -14598,7 +14598,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653717.9924
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run2",
@@ -14611,7 +14611,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653717.9924
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--baseline--run3",
@@ -14624,7 +14624,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979622.0486
+      "mtime": 1795639653718.9197
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run0",
@@ -14637,7 +14637,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979615.0488
+      "mtime": 1795639653716.9924
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run1",
@@ -14650,7 +14650,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653718.9197
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run2",
@@ -14663,7 +14663,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653718.9197
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--baseline--run3",
@@ -14676,7 +14676,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653718.9197
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run0",
@@ -14689,7 +14689,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979615.0488
+      "mtime": 1795639653785.9934
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run1",
@@ -14702,7 +14702,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653794.9937
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run2",
@@ -14715,7 +14715,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653794.9937
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--baseline--run3",
@@ -14728,7 +14728,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653796.1738
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run0",
@@ -14741,7 +14741,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653803.9937
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run1",
@@ -14754,7 +14754,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653804.9937
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run2",
@@ -14767,7 +14767,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653804.9937
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--baseline--run3",
@@ -14780,7 +14780,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653804.9937
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run0",
@@ -14793,7 +14793,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979615.0488
+      "mtime": 1795639653798.9937
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run1",
@@ -14806,7 +14806,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979624.0486
+      "mtime": 1795639653800.9937
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run2",
@@ -14819,7 +14819,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--baseline--run3",
@@ -14832,7 +14832,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run0",
@@ -14845,7 +14845,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979615.0488
+      "mtime": 1795639653798.9937
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run1",
@@ -14858,7 +14858,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run2",
@@ -14871,7 +14871,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979619.9963
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--baseline--run3",
@@ -14884,7 +14884,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run0",
@@ -14897,7 +14897,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979619.0486
+      "mtime": 1795639653798.9937
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run1",
@@ -14910,7 +14910,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run2",
@@ -14923,7 +14923,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653803.9937
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--baseline--run3",
@@ -14936,7 +14936,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653803.9937
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run0",
@@ -14949,7 +14949,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979617.0486
+      "mtime": 1795639653798.9937
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run1",
@@ -14962,7 +14962,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979621.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run2",
@@ -14975,7 +14975,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979621.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--baseline--run3",
@@ -14988,7 +14988,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979621.0486
+      "mtime": 1795639653801.9937
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run0",
@@ -15001,7 +15001,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979622.0486
+      "mtime": 1795639653803.9937
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run1",
@@ -15014,7 +15014,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979626.0486
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run2",
@@ -15027,7 +15027,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979626.0486
+      "mtime": 1795639653805.9937
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--baseline--run3",
@@ -15040,7 +15040,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979625.0486
+      "mtime": 1795639653805.9937
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run0",
@@ -15053,7 +15053,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979660.0483
+      "mtime": 1795639653802.9937
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run1",
@@ -15066,7 +15066,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653807.9937
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run2",
@@ -15079,7 +15079,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979664.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/do-not-invent-an-unresolved-business-outcome--skilled--run3",
@@ -15092,7 +15092,7 @@
         "do-not-invent-an-unresolved-business-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run0",
@@ -15105,7 +15105,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979661.0483
+      "mtime": 1795639653804.9937
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run1",
@@ -15118,7 +15118,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979664.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run2",
@@ -15131,7 +15131,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/hand-off-a-tdd-slice-to-an-unattended-worker--skilled--run3",
@@ -15144,7 +15144,7 @@
         "hand-off-a-tdd-slice-to-an-unattended-worker",
         "pr-660"
       ],
-      "mtime": 1795637979664.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run0",
@@ -15157,7 +15157,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979664.0483
+      "mtime": 1795639653804.9937
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run1",
@@ -15170,7 +15170,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979664.0483
+      "mtime": 1795639653807.9937
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run2",
@@ -15183,7 +15183,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/keep-wider-integration-work-behind-the-failing-behavior--skilled--run3",
@@ -15196,7 +15196,7 @@
         "keep-wider-integration-work-behind-the-failing-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run0",
@@ -15209,7 +15209,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979666.0483
+      "mtime": 1795639653806.9937
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run1",
@@ -15222,7 +15222,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979666.0483
+      "mtime": 1795639653807.9937
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run2",
@@ -15235,7 +15235,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653807.9937
     },
     {
       "id": "pr/660/outside-in-tdd/make-the-domain-emerge-from-an-approved-scenario--skilled--run3",
@@ -15248,7 +15248,7 @@
         "make-the-domain-emerge-from-an-approved-scenario",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653807.9937
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run0",
@@ -15261,7 +15261,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653807.9937
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run1",
@@ -15274,7 +15274,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653832.9941
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run2",
@@ -15287,7 +15287,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653834.0645
     },
     {
       "id": "pr/660/outside-in-tdd/prove-the-first-route-through-a-new-feature--skilled--run3",
@@ -15300,7 +15300,7 @@
         "prove-the-first-route-through-a-new-feature",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653834.0645
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run0",
@@ -15313,7 +15313,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979666.0483
+      "mtime": 1795639653834.9941
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run1",
@@ -15326,7 +15326,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653836.762
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run2",
@@ -15339,7 +15339,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653836.762
     },
     {
       "id": "pr/660/outside-in-tdd/reach-a-failure-that-witnesses-the-missing-behaviour--skilled--run3",
@@ -15352,7 +15352,7 @@
         "reach-a-failure-that-witnesses-the-missing-behaviour",
         "pr-660"
       ],
-      "mtime": 1795637979666.0483
+      "mtime": 1795639653836.762
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run0",
@@ -15365,7 +15365,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979660.0483
+      "mtime": 1795639653835.9941
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run1",
@@ -15378,7 +15378,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979666.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run2",
@@ -15391,7 +15391,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/outside-in-tdd/replace-a-fixture-provided-discount-with-production-behavior--skilled--run3",
@@ -15404,7 +15404,7 @@
         "replace-a-fixture-provided-discount-with-production-behavior",
         "pr-660"
       ],
-      "mtime": 1795637979664.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run0",
@@ -15417,7 +15417,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979659.0483
+      "mtime": 1795639653834.9941
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run1",
@@ -15430,7 +15430,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979666.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run2",
@@ -15443,7 +15443,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/outside-in-tdd/tidy-a-green-test-class-without-inventing-new-work--skilled--run3",
@@ -15456,7 +15456,7 @@
         "tidy-a-green-test-class-without-inventing-new-work",
         "pr-660"
       ],
-      "mtime": 1795637979662.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run0",
@@ -15469,7 +15469,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979664.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run1",
@@ -15482,7 +15482,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653837.9941
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run2",
@@ -15495,7 +15495,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653837.9941
     },
     {
       "id": "pr/660/outside-in-tdd/turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome--skilled--run3",
@@ -15508,7 +15508,7 @@
         "turn-an-untrustworthy-failure-into-evidence-of-the-approved-outcome",
         "pr-660"
       ],
-      "mtime": 1795637979665.0483
+      "mtime": 1795639653836.9941
     },
     {
       "id": "pr/660/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run0",
@@ -15521,7 +15521,7 @@
         "fourteen-scenario-net-pricing-story-reaches-green",
         "pr-660"
       ],
-      "mtime": 1795637979675.0483
+      "mtime": 1795639653898.9949
     },
     {
       "id": "pr/660/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run1",
@@ -15534,7 +15534,7 @@
         "fourteen-scenario-net-pricing-story-reaches-green",
         "pr-660"
       ],
-      "mtime": 1795637979684.532
+      "mtime": 1795639653900.9949
     },
     {
       "id": "pr/660/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run2",
@@ -15547,7 +15547,7 @@
         "fourteen-scenario-net-pricing-story-reaches-green",
         "pr-660"
       ],
-      "mtime": 1795637979687.0483
+      "mtime": 1795639653903.995
     },
     {
       "id": "pr/660/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run0",
@@ -15560,7 +15560,7 @@
         "fourteen-scenario-net-pricing-story-reaches-green",
         "pr-660"
       ],
-      "mtime": 1795637979701.048
+      "mtime": 1795639653916.995
     },
     {
       "id": "pr/660/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run1",
@@ -15573,7 +15573,7 @@
         "fourteen-scenario-net-pricing-story-reaches-green",
         "pr-660"
       ],
-      "mtime": 1795637979701.048
+      "mtime": 1795639653917.995
     },
     {
       "id": "pr/660/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run2",
@@ -15586,7 +15586,7 @@
         "fourteen-scenario-net-pricing-story-reaches-green",
         "pr-660"
       ],
-      "mtime": 1795637979701.048
+      "mtime": 1795639653917.995
     }
   ]
 }
