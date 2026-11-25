@@ -236,6 +236,7 @@ const decisionLines = (facts) => {
   const lines = [
     ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.acceptedOnMerge}`),
     ...(facts.excluded ?? []).map(({ issue, reason }) => `- ${words.leftOut(issue, reason === null ? null : inert(oneLine(reason)))}`),
+    ...(facts.oversized ?? []).map(({ path, kb }) => `- ${words.oversized(code(path), kb)}`),
     ...pendingDecisionLines(facts.pendingQuestion, words),
   ]
   return lines.length > 0 ? lines : [words.noDecision]

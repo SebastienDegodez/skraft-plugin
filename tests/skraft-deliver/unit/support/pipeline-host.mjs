@@ -122,6 +122,8 @@ export const pipelineHost = ({
       return host.run()
     },
   }
+  // A removal the engine commits removes the file from the working copy too.
+  git.workspace = deps.workspace
   codeHost.read = (file) => tracking.files.get(file.slice(`${tracking.root}/`.length)) ?? ''
   deps.agentRunner.writer = (dispatch) => (host.prWriters.shift() ?? prWriter())(host)(dispatch)
   return host

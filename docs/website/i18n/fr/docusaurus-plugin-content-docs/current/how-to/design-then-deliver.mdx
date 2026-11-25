@@ -90,7 +90,9 @@ L'architecture dure par bounded context : `docs/architecture/context-map.md` ave
 et `docs/architecture/contexts/<contexte>/` avec `tactical-design.md` et un fichier
 `event-model/<tranche>.md` par tranche, reecrits en place. Les briefs d'un run sont a part dans
 `docs/architecture/runs/<run>/`, pour partir ensemble une fois livres. Quand une autre branche
-de design ouverte change un des memes contextes, le run demande avant de publier.
+de design ouverte change un des memes contextes, le run demande avant de publier. La PR
+d'architecture nomme chaque document partage que le run a fait depasser 15 Ko, pour que vous le
+decoupiez.
 
 Lisez chaque `docs/architecture/runs/<run>/<number>-<slug>.md` : son en-tete garde l'identite de
 l'issue, l'empreinte du corps, les composants, criteres, ADR et documents communs.
@@ -131,7 +133,9 @@ commandes et bindings Gherkin independants. Utilisez le meme `baseBranch` que de
 
 Deliver lit le brief et les documents cites depuis un commit recupere de cette base fusionnee,
 puis transmet leurs copies aux agents. DISTILL, revue des scenarios, validation humaine, TDD,
-gates, revue d'implementation et visuels optionnels precedent la PR de livraison.
+gates, revue d'implementation et visuels optionnels precedent la PR de livraison, qui retire
+aussi le brief de la story en un commit du moteur ; git le garde, et les documents qu'il cite
+restent.
 Sans brief, deliver annonce son absence et commence quand meme a DISTILL.
 
 Pour reprendre, demandez au meme plugin de continuer son run actif. L'etat reste sous

@@ -2,6 +2,7 @@ import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
 import { publishPullRequest } from '../publish/pull-request.mjs'
 import { recordVisuals } from '../publish/visuals.mjs'
 import { leave } from './run-routes.mjs'
+import { retireBrief } from '../architecture/retire-brief.mjs'
 
 /**
  * @typedef {import('./run-pipeline-usecase.mjs').Context} Context
@@ -41,6 +42,7 @@ const unmet = ({ config }, { when }) => (when === 'frontend' && !config.componen
 /** @type {Readonly<Record<import('../../domain/workflow/workflow.mjs').Publication, (context: Context, run: RunState, next: WorkStep) => Promise<Published | Stopped>>>} */
 const PUBLISHERS = Object.freeze({
   'pull-request': async ({ deps, slug, journal, config, loaded }) => {
+    await retireBrief(deps, { slug, journal })
     const publication = await publishPullRequest(deps, { slug, journal, config, workflow: loaded.workflow })
     return { outcome: publication.published ? 'published' : 'local', reason: publication.reason }
   },

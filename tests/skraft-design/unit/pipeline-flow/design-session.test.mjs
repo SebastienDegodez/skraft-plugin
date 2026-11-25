@@ -722,3 +722,24 @@ test('without a configuration, the run lists the projects it detects as the comp
   const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
   assert.ok(failures.some((line) => line.includes('services/payments') && line.includes('services/api, web')), failures.join('|'))
 })
+
+test('the architecture pull request names each shared document the run changed past 15 KB, so it is split; a smaller one and a brief are not named', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ issue: 42 })
+  const large = 'docs/architecture/contexts/checkout/tactical-design.md'
+  const small = 'docs/architecture/contexts/billing/tactical-design.md'
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    const brief = 'docs/architecture/runs/issue-42/42-card-checkout.md'
+    await workspace.write(brief, `${briefOf(current)}${'b'.repeat(20_000)}\n`)
+    await workspace.write(large, `# Checkout\n${'x'.repeat(16_000)}\n`)
+    await workspace.write(small, '# Billing\n')
+    git.change(brief, large, small)
+  } })(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const body = host.codeHost.pullRequests[0].body
+  assert.match(body, /`docs\/architecture\/contexts\/checkout\/tactical-design\.md` is 16 KB, past the 15 KB a shared document keeps: split it/)
+  assert.doesNotMatch(body, /billing\/tactical-design\.md` is/)
+  assert.doesNotMatch(body, /42-card-checkout\.md` is/)
+})

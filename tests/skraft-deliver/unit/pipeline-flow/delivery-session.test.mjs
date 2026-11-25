@@ -52,8 +52,8 @@ test('delivery retains human scenario approval, TDD, gates and final review befo
   assert.ok(host.events().some(({ type, step, outcome }) => type === 'step.recorded' && step === 'publish' && outcome === 'local'))
 })
 
-const architectureSession = ({ changed = false, status = 'Accepted' } = {}) => {
-  const context = session()
+const architectureSession = ({ changed = false, status = 'Accepted', options = {} } = {}) => {
+  const context = session(options)
   context.deps.hasher = { sha256: async (text) => createHash('sha256').update(text).digest('hex'),
     hmacSha256: async (key, text) => createHmac('sha256', key).update(text).digest('hex') }
   const path = 'docs/architecture/stories/42-checkout.md'
@@ -112,4 +112,17 @@ test('an actual delivery run refuses a rejected merged ADR before dispatch', asy
   const { host, run } = architectureSession({ status: 'Rejected' })
   assert.equal((await run.start({ issue: 42 })).code, 'architecture-stale')
   assert.equal(host.agentRunner.dispatches.length, 0)
+})
+
+test('a delivered story\'s pull request retires its brief from the working branch in one engine commit, the documents it cites kept', async () => {
+  const brief = 'docs/architecture/stories/42-checkout.md'
+  const { host, deps, run } = architectureSession({ options: { scenarioReviews: [{ answer: 'APPROVED' }], files: { [brief]: '# merged brief\n', 'docs/adr/adr-001-checkout.md': '# adr\n' } } })
+  assert.equal((await run.start({ issue: 42 })).status, 'ready')
+  host.agentRunner.behaviours.push(agent()(host), agent()(host))
+  const finished = await createRunPipeline(deps).run()
+  assert.equal(finished.status, 'done', finished.reason)
+  const retired = host.git.engineCommits.filter(({ message }) => message.startsWith('docs(issue-42): retire'))
+  assert.deepEqual(retired.map(({ paths }) => paths), [[brief]])
+  assert.equal(host.workspace.files.has(brief), false)
+  assert.ok(host.workspace.files.has('docs/adr/adr-001-checkout.md'))
 })

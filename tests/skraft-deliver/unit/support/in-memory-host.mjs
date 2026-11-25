@@ -572,6 +572,11 @@ export class InMemoryGit {
     this.commit(subject, paths.map((path) => tidy(`${dir}/${path}`)), rest.join('\n').trim())
     return { ok: true }
   }
+  /** The files removed, then their removal committed alone, as `git rm` and a commit would. */
+  async retireFiles(dir, paths, message) {
+    for (const path of paths) this.workspace?.files.delete(tidy(`${dir}/${path}`))
+    return this.commitFiles(dir, paths, message)
+  }
   /** Each file copied where `to` says, relative to dir, then the copies committed alone; `copies` keeps them in order. */
   async refusedImages(dir, files) { return files.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from) }
   async commitCopies(dir, copies, message) {

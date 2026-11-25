@@ -88,7 +88,8 @@ The architecture lasts by bounded context: `docs/architecture/context-map.md` wi
 and `docs/architecture/contexts/<context>/` with `tactical-design.md` and one
 `event-model/<slice>.md` per slice, rewritten in place. A run's briefs sit apart in
 `docs/architecture/runs/<run>/`, so they go together once delivered. When another open design
-branch changes one of the same contexts, the run asks before it publishes.
+branch changes one of the same contexts, the run asks before it publishes. The architecture PR
+names each shared document the run changed past 15 KB, so you split it.
 
 Read each `docs/architecture/runs/<run>/<number>-<slug>.md`: its header records the issue identity,
 body fingerprint, components, criteria, ADRs and shared documents.
@@ -126,7 +127,8 @@ commands and Gherkin bindings. Use the same `baseBranch` as design.
 
 Delivery reads the brief and cited documents from one fetched commit of that merged base,
 then supplies snapshots to its agents. DISTILL, scenario review, human approval, TDD,
-gates, implementation review and optional visuals precede the delivery PR.
+gates, implementation review and optional visuals precede the delivery PR, which also removes
+the story's brief in one engine commit; git keeps it, and the documents it cites stay.
 Without a brief, delivery announces its absence and still starts at DISTILL.
 
 Resume by asking the same plugin to continue its active run. State stays under

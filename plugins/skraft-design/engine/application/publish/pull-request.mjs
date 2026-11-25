@@ -186,8 +186,31 @@ const factsIn = async (deps, { slug, journal, config }, { run, language }) => ({
   testPlans: await trackedDocuments(deps, slug, testPlanPaths(journal.events)),
   matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
   outcomes: await scenarioOutcomesOf(/** @type {any} */ (deps), { slug, events: journal.events, components: config.components }),
+  oversized: await oversizedDocuments(deps, run),
   ...journalFacts(journal.events, run, language),
 })
+
+/** The size past which a shared architecture document is split (#669). */
+const SPLIT_AT_KB = 15
+
+/**
+ * The shared architecture documents the run changed since its base that grew past SPLIT_AT_KB,
+ * each with its size in KB; the briefs, which delivery retires, are none of them.
+ * @param {OnForge} deps @param {import('../../domain/journal/run-state.mjs').RunState} run
+ * @returns {Promise<Array<{ path: string, kb: number }>>}
+ */
+const oversizedDocuments = async (deps, run) => {
+  const base = run.base?.find((entry) => entry.component === null)?.sha
+  const changed = base ? (await deps.sourceControl.changedFiles('.', base)) ?? [] : []
+  const sized = []
+  for (const path of changed.filter(isSharedDocument)) sized.push({ path, kb: kilobytes(await deps.workspace.read(path)) })
+  return sized.filter(({ kb }) => kb > SPLIT_AT_KB)
+}
+
+/** @param {string} path */
+const isSharedDocument = (path) => path.startsWith('docs/architecture/') && path.endsWith('.md') && !/^docs\/architecture\/(?:stories|runs)\//.test(path)
+/** @param {string | null} text */
+const kilobytes = (text) => Math.round(new TextEncoder().encode(text ?? '').length / 1024)
 
 /**
  * What the forge holds for the description: the ADRs the merge accepts, the repository the PR opens

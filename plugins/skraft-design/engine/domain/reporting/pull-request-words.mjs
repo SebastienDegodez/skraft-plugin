@@ -70,6 +70,7 @@ const EN = Object.freeze({
   pendingOptions: (options) => `Options: ${options}`,
   pendingReply: (key) => `Reply in a comment with: \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
   leftOut: (issue, reason) => `Story #${issue} left out: ${reason ?? 'the issue is closed'}`,
+  oversized: (path, kb) => `${path} is ${kb} KB, past the 15 KB a shared document keeps: split it`,
   pendingQuestions: (count, key) => `Human answers pending: the solution architect left ${count} question(s) (key ${key})`,
   pendingReplyAll: (ids) => replyLines('Reply in one comment, one line per question:', ids, '<option or your words>'),
   /** @param {string} node @param {string} reason */
@@ -137,6 +138,7 @@ const FR = Object.freeze({
   pendingOptions: (options) => `Choix : ${options}`,
   pendingReply: (key) => `Répondez dans un commentaire avec : \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
   leftOut: (issue, reason) => `Story #${issue} écartée : ${reason ?? 'l’issue est fermée'}`,
+  oversized: (path, kb) => `${path} fait ${kb} Ko, au-delà des 15 Ko d’un document partagé : découpez-le`,
   pendingQuestions: (count, key) => `Réponses humaines attendues : l'architecte a laissé ${count} question(s) (clé ${key})`,
   pendingReplyAll: (ids) => replyLines('Répondez en un seul commentaire, une ligne par question :', ids, '<option ou vos mots>'),
   noDecision: 'Aucune consignée : aucun ADR proposé ne sera accepté à la fusion dans ce run.',
