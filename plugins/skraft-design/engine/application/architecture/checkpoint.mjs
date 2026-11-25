@@ -5,6 +5,10 @@ import { publishResearch } from './publish-research.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { concurrencyCheckpoint } from './concurrent-designs.mjs'
 import { OPEN_QUESTIONS_FILE, openQuestions, questionsText } from '../../domain/architecture/open-questions.mjs'
+import { interpretReply } from './reply-interpreter.mjs'
+
+/** What a checkpoint gives when it settled a question itself: the run takes its next step again. */
+export const AGAIN = Object.freeze({ again: true })
 
 export const architectureCheckpoint = async (context, next) => {
   if (next.node?.id === 'design') return researchCheckpoint(context)
@@ -26,14 +30,15 @@ const scopeCheckpoint = async (context) => {
  * person answers them together, the answers run the design again once, and the review reads the
  * design they settle (#662). The same questions left again are not asked again.
  */
-const questionsCheckpoint = async ({ deps, slug, journal }) => {
+const questionsCheckpoint = async (context) => {
+  const { deps, slug, journal } = context
   const issues = currentStories(journal.events).map(({ number }) => number)
   const questions = openQuestions(await deps.files.read(slug, OPEN_QUESTIONS_FILE), issues)
   if (questions.length === 0) return null
   const hash = await deps.hasher.sha256(JSON.stringify(questions))
   const key = `architecture-questions-${passIndex(journal.events)}-${hash.slice(0, 12)}`
   const question = await contextQuestion(journal, { key, kind: 'architecture-questions', text: questionsText(questions), step: 'design', details: { questions } })
-  if (!question.answer) return waitingFor(slug, question)
+  if (!question.answer) return (await interpretReply(context, question)) ? AGAIN : waitingFor(slug, question)
   return question.answer === 'STOP' ? stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.') : null
 }
 

@@ -50,7 +50,7 @@ export const PLUGIN_DEFAULTS = Object.freeze({
   assign: {
     default: 'implementer',
     types: { lens: 'reviewer', worker: 'implementer', rework: 'standard' },
-    agents: { 'design-solution-researcher': 'researcher', 'design-solution-architect': 'planner', 'design-pr-writer': 'economy' },
+    agents: { 'design-solution-researcher': 'researcher', 'design-solution-architect': 'planner', 'design-pr-writer': 'economy', 'design-reply-interpreter': 'economy' },
   },
 })
 

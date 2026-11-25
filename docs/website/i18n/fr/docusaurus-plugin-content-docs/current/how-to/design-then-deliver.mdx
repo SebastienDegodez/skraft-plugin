@@ -121,7 +121,11 @@ Q1: A
 Q2: vos propres mots
 ```
 
-Une question a options prend un seul mot, comme `/skraft-answer continue`.
+Une question a options prend un seul mot, comme `/skraft-answer continue`. Les questions de
+l'architecte acceptent aussi une reponse dans vos mots, comme `/skraft-answer B partout, on garde
+le panier` : un petit agent interprete la lit quand le run reprend, le moteur ne garde sa lecture
+que si elle repond a chaque question, et la PR montre ce qu'il a lu. Une reponse floue n'enregistre
+rien, et la PR dit pourquoi.
 
 Toute personne qui a le droit d'ecriture sur le depot peut repondre ; tout autre commentaire, ou
 une reponse qui oublie une question, n'enregistre rien. Une story que l'architecte ne peut pas

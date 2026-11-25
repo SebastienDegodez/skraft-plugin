@@ -763,3 +763,49 @@ test('a rework never runs above the architect\'s own family: an architect a team
   const families = host.events().filter(({ type, agent: id }) => type === 'step.started' && id === 'design-solution-architect').map(({ assignment }) => assignment.family)
   assert.deepEqual(families, ['economy', 'economy'])
 })
+
+/** What the reply interpreter answers: its reading of the reply, in a fenced JSON block. */
+const reading = (answers) => `I read the reply.\n\n\`\`\`json\n${JSON.stringify(answers)}\n\`\`\`\n`
+
+test('in CI a reply in prose from a writer is read by the interpreter, recorded as interpreted, runs the architect with it and is shown on the pull request', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'), questioningArchitect(host, 'epic-42'))
+  const { question } = await draftInCi(deps, await createRunPipeline(deps).run())
+  host.codeHost.permissions = { maintainer: 'maintain', reader: 'read' }
+  const prose = '/skraft-answer B partout, et pour le panier on le garde'
+  assert.equal((await createCommentAnswer(deps).answer({ author: 'reader', body: prose })).code, 'not-a-writer')
+  const taken = await createCommentAnswer(deps).answer({ author: 'maintainer', body: prose })
+  assert.equal(taken.code, 'reply-to-interpret', taken.reason)
+  assert.equal(host.events().filter(({ type }) => type === 'reply.received').length, 1)
+  const asked = []
+  host.agentRunner.review = (dispatch) => {
+    if (dispatch.agent !== 'design-reply-interpreter') return lenses({})(dispatch)
+    asked.push(dispatch)
+    return reading({ Q1: 'B', Q2: 'KEEP' })
+  }
+  await createRunPipeline(deps).run()
+  assert.equal(asked.length, 1)
+  assert.match(asked[0].prompt, /B partout, et pour le panier on le garde/)
+  assert.match(asked[0].prompt, /Q2/)
+  const [answered] = host.events().filter(({ type, key }) => type === 'question.answered' && key === question.key)
+  assert.equal(answered.by, 'interpreted')
+  assert.match(answered.answer, /Q1 \(#42 AC-1\): B — In a browser now/)
+  assert.match(answered.answer, /Q2 \(#43 AC-1\): KEEP — Keep it/)
+  assert.equal(host.agentRunner.dispatches.filter(({ agent: id }) => id === 'design-solution-architect').length, 2)
+  assert.match(host.codeHost.pullRequests[0].body, /@maintainer's reply, as the engine read it: Q1: B, Q2: KEEP/)
+})
+
+test('a reply the interpreter cannot read answers nothing: the run keeps waiting and the draft says what it could not read', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  const { question } = await draftInCi(deps, await createRunPipeline(deps).run())
+  host.codeHost.permissions = { maintainer: 'maintain' }
+  await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer comme on a dit hier' })
+  host.agentRunner.review = (dispatch) => (dispatch.agent === 'design-reply-interpreter' ? reading({ unclear: 'the reply names no option and refers to a conversation the engine has not got' }) : lenses({})(dispatch))
+  const outcome = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(outcome.status, 'waiting', outcome.reason)
+  assert.equal(host.events().some(({ type, key }) => type === 'question.answered' && key === question.key), false)
+  assert.match(host.codeHost.pullRequests[0].body, /@maintainer's reply could not be read: the reply names no option/)
+})

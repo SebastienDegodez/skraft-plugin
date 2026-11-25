@@ -248,6 +248,13 @@ const excludedStories = (events) => [
   ...events.filter((event) => event.type === 'architecture.excluded').flatMap((event) => event.stories.map(({ issue, reason }) => ({ issue, reason }))),
 ]
 
+/**
+ * What the engine made of each reply the interpreter read: its reading, or why it read none (#662).
+ * @param {any[]} events @returns {Array<{ author: string, answers: Record<string, string> | null, reason: string | null }>}
+ */
+const readReplies = (events) => events.filter((event) => ['reply.interpreted', 'reply.uninterpretable'].includes(event.type))
+  .map(({ author, answers = null, reason = null }) => ({ author, answers, reason }))
+
 const journalFacts = (events, run, language) => ({
   reds: redCommits(events),
   evidence: qualityEvidence(events),
@@ -255,6 +262,7 @@ const journalFacts = (events, run, language) => ({
   status: statusLine(run, language),
   pendingQuestion: waitingOn(run),
   excluded: excludedStories(events),
+  replies: readReplies(events),
   report: runReport(events),
   models: modelsOf(events),
 })

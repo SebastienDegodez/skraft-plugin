@@ -237,10 +237,16 @@ const decisionLines = (facts) => {
     ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.acceptedOnMerge}`),
     ...(facts.excluded ?? []).map(({ issue, reason }) => `- ${words.leftOut(issue, reason === null ? null : inert(oneLine(reason)))}`),
     ...(facts.oversized ?? []).map(({ path, kb }) => `- ${words.oversized(code(path), kb)}`),
+    ...(facts.replies ?? []).map((reply) => `- ${replyLine(reply, words)}`),
     ...pendingDecisionLines(facts.pendingQuestion, words),
   ]
   return lines.length > 0 ? lines : [words.noDecision]
 }
+
+/** A reply the interpreter read: what the engine took from it, or why it took nothing; the reply's words made inert. @param {{ author: string, answers: Record<string, string> | null, reason: string | null }} reply @param {Words} words */
+const replyLine = ({ author, answers, reason }, words) => (answers === null
+  ? words.replyUnread(inert(oneLine(author)), inert(oneLine(reason ?? '')))
+  : words.replyRead(inert(oneLine(author)), Object.entries(answers).map(([id, value]) => `${inert(oneLine(id))}: ${inert(oneLine(String(value)))}`).join(', ')))
 
 /** @param {import('./run-status.mjs').WaitingQuestion | null} question @param {Words} words */
 export const pendingDecisionLines = (question, words) => {

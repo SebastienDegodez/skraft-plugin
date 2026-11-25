@@ -115,7 +115,11 @@ Q1: A
 Q2: your own words
 ```
 
-A question with options takes one word, such as `/skraft-answer continue`.
+A question with options takes one word, such as `/skraft-answer continue`. The architect's
+questions also take a reply in your own words, such as `/skraft-answer B everywhere, keep the
+basket`: a small interpreter agent reads it when the run resumes, the engine keeps its reading only
+when it answers every question, and the pull request shows what it read. An unclear reply answers
+nothing, and the pull request says why.
 
 Anyone with write access to the repository may answer; any other comment, or a reply that leaves
 a question out, records nothing. A story the architect cannot design stops a CI run at once.

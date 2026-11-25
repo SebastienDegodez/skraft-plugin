@@ -209,14 +209,26 @@ const runFrom = async (context) => {
   /** @type {string | null} */
   let shown = null
   for (;;) {
-    const run = deriveRun(context.journal.events)
-    const next = nextStep(context.loaded.workflow, run)
-    const outcome = await architectureCheckpoint(context, next) ?? await take(context, shown, run, next)
+    const step = await stepOnce(context, shown)
+    if (step === null) continue
     await writeReports(context)
-    await tellForge(context, outcome)
-    if (outcome) return outcome
-    shown = next.phase
+    await tellForge(context, step.outcome)
+    if (step.outcome) return step.outcome
+    shown = step.phase
   }
+}
+
+/**
+ * The next step, taken: the checkpoint's outcome, else the step's, with its phase; null when a
+ * checkpoint settled a question itself, so the step is computed again.
+ * @param {Context} context @param {string | null} shown
+ */
+const stepOnce = async (context, shown) => {
+  const run = deriveRun(context.journal.events)
+  const next = nextStep(context.loaded.workflow, run)
+  const checked = await architectureCheckpoint(context, next)
+  if (checked?.again) return null
+  return { outcome: checked ?? await take(context, shown, run, next), phase: next.phase }
 }
 
 /**

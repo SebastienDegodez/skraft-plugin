@@ -15,7 +15,8 @@
     "./com.anthropic.claude-code/agents/design-fitness-lens.md",
     "./com.anthropic.claude-code/agents/design-pr-writer.md",
     "./com.anthropic.claude-code/agents/design-solution-architect.md",
-    "./com.anthropic.claude-code/agents/design-solution-researcher.md"
+    "./com.anthropic.claude-code/agents/design-solution-researcher.md",
+    "./com.anthropic.claude-code/agents/design-reply-interpreter.md"
   ],
   "mcpServers": {
     "skraft-design": {

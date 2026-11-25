@@ -71,6 +71,8 @@ const EN = Object.freeze({
   pendingReply: (key) => `Reply in a comment with: \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
   leftOut: (issue, reason) => `Story #${issue} left out: ${reason ?? 'the issue is closed'}`,
   oversized: (path, kb) => `${path} is ${kb} KB, past the 15 KB a shared document keeps: split it`,
+  replyRead: (author, answers) => `@${author}'s reply, as the engine read it: ${answers}. If that is not what you meant, reply again with one line per question, such as Q1: B`,
+  replyUnread: (author, reason) => `@${author}'s reply could not be read: ${reason}. Reply again with one line per question, such as Q1: B`,
   pendingQuestions: (count, key) => `Human answers pending: the solution architect left ${count} question(s) (key ${key})`,
   pendingReplyAll: (ids) => replyLines('Reply in one comment, one line per question:', ids, '<option or your words>'),
   /** @param {string} node @param {string} reason */
@@ -139,6 +141,8 @@ const FR = Object.freeze({
   pendingReply: (key) => `Répondez dans un commentaire avec : \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
   leftOut: (issue, reason) => `Story #${issue} écartée : ${reason ?? 'l’issue est fermée'}`,
   oversized: (path, kb) => `${path} fait ${kb} Ko, au-delà des 15 Ko d’un document partagé : découpez-le`,
+  replyRead: (author, answers) => `Réponse de @${author}, telle que le moteur l’a lue : ${answers}. Si ce n’est pas ce que vous vouliez dire, répondez de nouveau avec une ligne par question, par exemple Q1: B`,
+  replyUnread: (author, reason) => `La réponse de @${author} n’a pas pu être lue : ${reason}. Répondez de nouveau avec une ligne par question, par exemple Q1: B`,
   pendingQuestions: (count, key) => `Réponses humaines attendues : l'architecte a laissé ${count} question(s) (clé ${key})`,
   pendingReplyAll: (ids) => replyLines('Répondez en un seul commentaire, une ligne par question :', ids, '<option ou vos mots>'),
   noDecision: 'Aucune consignée : aucun ADR proposé ne sera accepté à la fusion dans ce run.',

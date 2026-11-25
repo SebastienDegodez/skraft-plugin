@@ -5,7 +5,8 @@
 #   question, and this job keeps the run's tracking folder as an artifact.
 #   While nothing is designed yet (a question of scope, before any commit), the engine asks on the
 #   issue or epic instead, since GitHub opens no pull request without a commit.
-# - Answer in that draft, or on that issue, with one comment: /skraft-answer {"key":"…","answer":…}. The comment
+# - Answer in that draft, or on that issue, with one comment: /skraft-answer, then one "Q1: B" line
+#   per question, or your own words, which an interpreter agent reads when the run resumes. The comment
 #   resumes the same run: the engine records it only when its author has write access to the
 #   repository (admin, maintain or write) and it answers the pending question; then the design
 #   goes on, and pauses again or ends with the architecture pull request.
