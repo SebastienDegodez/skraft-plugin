@@ -434,3 +434,27 @@ test('a reply in the draft from someone with write access answers every open que
   assert.deepEqual(answered.map(({ by }) => by), ['pr-comment'])
   assert.match(answered[0].answer, /Q1 \(#42 AC-1\): Z/)
 })
+
+test('what a blocked architect pass wrote is committed with the pass that resumes it, though that pass left it as it was', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42')
+  await run.start({ epic: 42 })
+  const briefs = (numbers) => async ({ workspace, git, tracking }) => {
+    for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories.filter(({ number }) => numbers.includes(number))) {
+      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      await workspace.write(path, `${briefOf(current)}\nPass ${numbers.length}.\n`)
+      git.change(path)
+    }
+  }
+  host.agentRunner.behaviours.push(agent()(host),
+    agent({ work: briefs([42, 43]), result: { status: 'blocked', summary: 'The product owner decides the receipt proof.' } })(host))
+  const blocked = await createRunPipeline(deps).run()
+  assert.equal(blocked.status, 'waiting', blocked.reason)
+  const { question } = await createObserve(deps).view()
+  assert.equal((await createDecide(deps).decide({ key: question.key, answer: 'Prove it through the HTTP entry point.' })).ok, true)
+  host.agentRunner.behaviours.push(agent({ work: briefs([42]) })(host))
+  const finished = await createRunPipeline(deps).run()
+  assert.equal(finished.status, 'done', finished.reason)
+  const committed = host.git.engineCommits.flatMap(({ paths }) => paths)
+  assert.ok(committed.includes('docs/architecture/stories/43-card-checkout.md'), committed.join(', '))
+  assert.ok(committed.includes('docs/architecture/stories/42-card-checkout.md'), committed.join(', '))
+})

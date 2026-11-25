@@ -288,7 +288,8 @@ const resultFailures = (reading) => (reading.ok ? [] : [{ code: 'invalid-result'
 /**
  * The files the attempt changed out of its write scope, then those in its scope it left
  * uncommitted outside the tracking folder: an agent with a shell commits its changes, refused
- * otherwise; the engine commits those of an agent with none, once its step is done.
+ * otherwise; the engine commits those of an agent with none, once its step is done, whichever
+ * attempt of the step wrote them: a pass that resumes a blocked one leaves its work as it was.
  * @param {Pick<CheckDeps, 'sourceControl' | 'files'>} deps
  * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[] }} step
  * @param {{ slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig, touched: string[] }} attempt
@@ -298,8 +299,10 @@ const scopeFailures = async (deps, { role, visitHeads }, { slug, config, touched
   const left = await uncommittedPaths(deps, visitHeads)
   if (typeof left === 'string') return left
   const folder = deps.files.folder
-  const refused = outOfScope(touched, writeScopeOf(role, { slug, folder, config }))
-  const kept = left.filter(({ path }) => touched.includes(path) && !refused.includes(path) && pathUnder(path, trackingFolder(slug, folder)) === null)
+  const scope = writeScopeOf(role, { slug, folder, config })
+  const refused = outOfScope(touched, scope)
+  const inScope = left.filter(({ path }) => !isRefused(scope, path) && pathUnder(path, trackingFolder(slug, folder)) === null)
+  const kept = makesCommits(role) ? inScope.filter(({ path }) => touched.includes(path)) : inScope
   const failures = [...refused.map((path) => failure('write-scope', `out of write scope: ${path}`)), ...(makesCommits(role) ? kept.map(uncommittedLine) : [])]
   return { failures, uncommitted: kept }
 }
