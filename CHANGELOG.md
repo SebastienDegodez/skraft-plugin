@@ -3,6 +3,17 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.17.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.17.1...v1.17.2) (2026-11-25)
+
+### 🐛 Bug Fixes
+
+* **ci:** local CI runs its gates without Git's repository variables ([#664](https://github.com/SebastienDegodez/skraft-plugin/issues/664)) ([4d94778](https://github.com/SebastienDegodez/skraft-plugin/commit/4d947783c146ecc17e486ccdb962e74c2f022ab4)), closes [#663](https://github.com/SebastienDegodez/skraft-plugin/issues/663)
+* **quality-gates:** DELIVER evidence contract v7 ([#653](https://github.com/SebastienDegodez/skraft-plugin/issues/653)) ([7a368e1](https://github.com/SebastienDegodez/skraft-plugin/commit/7a368e10cc9aa3fb95dd56ad4a6b91e77bbcd60f)), closes [#661](https://github.com/SebastienDegodez/skraft-plugin/issues/661) [#663](https://github.com/SebastienDegodez/skraft-plugin/issues/663)
+
+### ⚡ Performance
+
+* **skraft-framework:** faster, assisted RESEARCH and DESIGN with stricter ADRs ([#656](https://github.com/SebastienDegodez/skraft-plugin/issues/656)) ([f8e73b7](https://github.com/SebastienDegodez/skraft-plugin/commit/f8e73b749170667156aa82400821760ff447a1bd)), closes [#654](https://github.com/SebastienDegodez/skraft-plugin/issues/654) [#654](https://github.com/SebastienDegodez/skraft-plugin/issues/654)
+
 ## [1.17.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.17.0...v1.17.1) (2026-11-23)
 
 ### 🐛 Bug Fixes
