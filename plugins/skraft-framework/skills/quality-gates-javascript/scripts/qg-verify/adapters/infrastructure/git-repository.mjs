@@ -20,6 +20,7 @@ export const createGitRepository = ({ cwd }) => {
     head: () => git(['rev-parse', 'HEAD'])?.trim() || null,
     parentOf: (sha) => (SHA.test(sha ?? '') ? git(['rev-parse', '--verify', '--quiet', `${sha}^`])?.trim() || null : null),
     filesOf,
+    treeOf: (sha) => (SHA.test(sha ?? '') ? git(['rev-parse', '--verify', '--quiet', `${sha}^{tree}`])?.trim() || null : null),
     commit: (sha) => {
       if (!SHA.test(sha ?? '') || git(['cat-file', '-e', `${sha}^{commit}`]) === null) return { exists: false }
       return {
@@ -30,6 +31,7 @@ export const createGitRepository = ({ cwd }) => {
       }
     },
     range: (base, rev) => (SHA.test(base ?? '') && SHA.test(rev ?? '') ? lines(git(['rev-list', '--no-merges', `${base}..${rev}`])) : []),
+    tracked: (path) => (typeof path === 'string' && path.length > 0 ? lines(git(['ls-files', '--', path])) : []),
     show: (sha, path) => (SHA.test(sha ?? '') && typeof path === 'string' && path.length > 0 ? git(['show', `${sha}:${path}`]) : null),
   }
 }

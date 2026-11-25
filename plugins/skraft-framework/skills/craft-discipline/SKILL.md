@@ -68,7 +68,7 @@ Test names, variables, and assertions use business vocabulary
 
 ### C8 — mutation stays out of the delivery
 
-Run no mutation tool, mutation gate or `/skraft-mutation`: G6 is recorded `not_run`. The
+Run no mutation tool, mutation gate or `/skraft-mutation`: the project's CI runs mutation. The
 developer runs `/skraft-mutation`; when they ask to kill its survivors, load `mutation-testing`.
 
 ### C9 — Conventional commit format

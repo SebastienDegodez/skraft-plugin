@@ -1,6 +1,6 @@
 ---
 name: outside-in-tdd
-description: Use when an approved behaviour (scenario, Gherkin example, worked example, expected result) must become working software, or when a test suite is not trustworthy evidence of it — the suite is green while the real runtime behaviour is wrong or missing because fixtures or tests supply the value, or the suite already fails but that failure may not prove the missing approved outcome. Drives outside-in / double-loop TDD with an acceptance or application-boundary test first, a trustworthy RED before any implementation, domain logic emerging only from failing behaviour, one walking skeleton or delivery slice at a time. Also decides what belongs in first delivery, keeps wider HTTP/DB/infrastructure tests behind an inner failing behaviour, and keeps the RED inspection point when RED and GREEN are split across workers or subagents. Finishes with post-GREEN wiring verification and mutation/coverage gates; never commits on red.
+description: Use when an approved behaviour (scenario, Gherkin example, worked example, expected result) must become working software, or when a test suite is not trustworthy evidence of it — the suite is green while the real runtime behaviour is wrong or missing because fixtures or tests supply the value, or the suite already fails but that failure may not prove the missing approved outcome. Drives outside-in / double-loop TDD with an acceptance or application-boundary test first, a trustworthy RED before any implementation, domain logic emerging only from failing behaviour, one walking skeleton or delivery slice at a time. Also decides what belongs in first delivery, keeps wider HTTP/DB/infrastructure tests behind an inner failing behaviour, and keeps the RED inspection point when RED and GREEN are split across workers or subagents. Finishes with post-GREEN wiring verification; coverage and mutation run in the project's CI; never commits on red.
 ---
 
 # Outside-In TDD
@@ -339,19 +339,13 @@ BEFORE its commit:
    BLOCK the commit and move it. Moving misplaced code is not the forbidden post-GREEN iteration: the
    acceptance test does not change and stays green throughout.
 
-## Coverage Gate
+## Coverage and mutation
 
-This skill owns **when** the gate runs and **what evidence closes it**. `skraft-quality-bar` owns
-the numbers, and no setting lowers them.
+`skraft-quality-bar` owns the numbers, and no setting lowers them. Coverage and mutation are
+executed by the project's CI, never by the pipeline: no delivery runs them, inside a cycle or
+after it, and no evidence log records them. The developer runs `/skraft-mutation` by hand.
 
 Code you cannot cover is code no approved behavior asked for — delete it rather than lower the bar.
-
-The coverage run happens once, after the story's last work commit, and only it closes the gate.
-If the gate has not run, the work is not complete — that is sequence, and it holds for every
-change.
-
-Mutation never runs in the delivery, inside a cycle or after it: G6 is recorded `not_run`, and
-the developer runs `/skraft-mutation`.
 
 ## Walking Skeleton (first slice of a feature)
 
@@ -369,7 +363,7 @@ This skill decides **in what order** you take them and what "done" means for one
 - Unit tests only if needed to decompose a complex GREEN.
 - The AT drives ALL implementation. A later scenario's test may go green before its turn because an
   earlier scenario's code already covers it — that is correct. Confirm it with the deletion test
-  rather than assuming it; record no cycle for it, and name the earlier scenario on its change-log
+  rather than assuming it; write no code for it, and name the earlier scenario on its change-log
   line.
 
 ## Concentric Circle Expansion

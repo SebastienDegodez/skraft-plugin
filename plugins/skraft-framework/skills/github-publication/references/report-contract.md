@@ -9,8 +9,8 @@ or rendering/publishing a reviewed report. No new agent or review pass.
   and approved AC/design sources. Acceptance reviewer checks traceability and
   sourced expected impact in its existing review. Forecast follows approved DISTILL;
   planned tests are not passed tests.
-- Software engineer writes outcome data, actual impact, quality evidence, change
-  log and frontend manifest, including on blocked delivery. Engineer reviewer keeps
+- Software engineer writes outcome data, actual impact, quality evidence (the log and
+  its screenshots) and change log, including on blocked delivery. Engineer reviewer keeps
   all four mandatory lenses and owns the persisted verdict. Quality-gates lens
   checks report/evidence consistency; cold-reader receives no producer context.
 - Router passes raw returned paths, records the review, binds its persisted
@@ -78,23 +78,25 @@ Example outcome (illustrative refs; replace with actual returned paths):
     "expected": "Reject invalid checkout; source: docs/checkout.md",
     "actual": "Observed rejection in AC-1 test; deployment unverified."
   },
-  "criteria": [{ "id": "AC-1", "description": "Reject invalid checkout", "test": "Checkout rejects invalid input", "evidence": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/tests.stdout" }],
+  "criteria": [{ "id": "AC-1", "description": "Reject invalid checkout", "test": "Checkout rejects invalid input", "evidence": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/checkout/qg-checkout.json" }],
   "testPlanRef": ".copilot-tracking/skraft-plans/checkout/details/2026-09-17/test-plan-checkout.md",
-  "qualityEvidenceRef": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/qg-checkout.json",
+  "qualityEvidenceRef": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/checkout/qg-checkout.json",
   "reviewRef": ".copilot-tracking/skraft-plans/checkout/reviews/2026-09-17/deliver-review-1.md",
   "changeLogRef": ".copilot-tracking/skraft-plans/checkout/changes/2026-09-17/change-log.md",
   "limitations": ["Browser evidence is local-only; no deployment evidence."],
-  "media": [{ "label": "Checkout rejection", "path": ".copilot-tracking/skraft-plans/checkout/changes/2026-09-17/evidence/checkout/evidence/screenshots/rejection.png" }],
+  "media": [{ "label": "Checkout rejection", "path": ".copilot-tracking/skraft-plans/checkout/evidence/2026-09-17/checkout/screenshots/rejection.png" }],
   "maxMedia": 0
 }
 ```
 
 Missing refs remain missing, never fabricated to satisfy rendering. Keep canonical
 quality evidence (`quality-gates-evidence-contract`) and
-quality bar (`skraft-quality-bar`) authoritative: current v3
-includes G11; legacy v1/v2 stay readable, missing gates never pass. Renderer local
-proof checks are distinct from recorded reviewer verdict, particularly Git checks
-G8/G9. A final report has no verdict of its own and cannot overrule review.
+quality bar (`skraft-quality-bar`) authoritative: current v7 names its gates
+`type.description` and carries no architecture, coverage or mutation row; legacy v1–v6
+stay readable with their `G<N>` ids, missing gates never pass. Renderer local proof
+checks are distinct from recorded reviewer verdict, particularly Git checks
+`commit.convention`/`test.integrity` (G8/G9 before v7) and screenshot hashes
+(`evidence.screenshots`, verified by `qg-verify`). A final report has no verdict of its own and cannot overrule review.
 
 ## Publication handoff ownership
 

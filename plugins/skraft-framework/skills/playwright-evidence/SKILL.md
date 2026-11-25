@@ -1,33 +1,36 @@
 ---
 name: playwright-evidence
 description: >
-  Use when capturing E2E test evidence (screenshots, videos, traces) and storing
-  them in .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/ for agents to consume. Covers
-  Playwright setup, on-failure capture, trace collection, and evidence manifest
-  generation.
+  Use when capturing E2E test evidence for a frontend story: the success screenshots
+  recorded in the story's evidence log (the only evidence kept with the test plan), plus
+  local-only failure diagnostics (videos, traces, reports). Covers Playwright setup,
+  screenshot capture and recording, on-failure capture and trace collection.
 ---
 
 # Playwright Evidence Skill
 
 ## Overview
 
-For frontend stories, engineer captures evidence under the exact dispatched
-story directory (normally `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/`).
+For frontend stories, the engineer records the success screenshots in the story's evidence
+directory (`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/screenshots/`,
+listed by the `evidence.screenshots` gate of its log). With the test plan, they are the evidence
+the QA reads; nothing else is kept as evidence. Failure diagnostics (videos, traces, HTML and JUnit
+reports) stay in Playwright's own `test-results/` and `playwright-report/` folders, local-only.
 Use the resolved tracking root and return actual repository-root-relative paths;
 never infer today's directory or read pipeline state. Backend-only work does not
 load browser capture.
 
 ```
-Approved real E2E run → Engineer captures → Local manifest → Reviewed report refs
-                       bounded success     all evidence     remote URLs or
-                       + failure proof     retained         explicit local-only
+Approved real E2E run → Engineer captures   → evidence.screenshots → Reviewed report refs
+                       mandatory success     hashed in the v7 log   remote URLs or
+                       + failure proof       (Git-ignored)          explicit local-only
 ```
 
 `{story}` is the story slug passed as `SKRAFT_STORY_ID` env var (e.g. `42-add-eligibility-check`).
 Use returned plan and evidence refs, not legacy phase-path conventions.
 
-**Scope:** capture, name, store and list evidence. Engineer owns capture/manifest;
-router consumes refs only. For report media selection load
+**Scope:** capture, name and record screenshots. The engineer owns capture and recording; the
+evidence log lists them, so no manifest is written; the router consumes refs only. For report media selection load
 `qa-reporting`, then its
 [reporting contract](references/report-contract.md#media-boundary). No hosting or
 automatic upload/push. Existing remote URLs must be verified; local paths are
@@ -50,8 +53,8 @@ rework pass. Treat it as a checklist item, not an optional troubleshooting step:
 2. Rebuild images (`--build` / equivalent) so local code/config changes are actually picked up.
 3. Re-run the full e2e suite after every dependency rebuild — a partial re-run against a mixed
    old/new environment is worse than no run, since it produces a false-positive green.
-4. Record the rebuild in the evidence manifest run notes (e.g. `containers: rebuilt`) so reviewers
-   can see freshness was verified, not assumed.
+4. Say it in the change log (e.g. `containers: rebuilt`) so reviewers can see freshness was
+   verified, not assumed.
 
 ## Playwright Setup (TypeScript)
 
@@ -67,12 +70,16 @@ for full configuration options, parallel settings, and browser lifecycle managem
 
 ## Screenshot Capture
 
-For an approved frontend journey, capture a bounded representative success
-screenshot at its asserted outcome during the existing approved real test run.
-Agree the optional success selection count; do not invent a default. Associate
-each capture with AC, test, source revision and actual run result in the manifest.
-Screenshot alone never proves correctness. Do not rerun tests for report cosmetics;
-any additional reporting-only run needs explicit approval and cost warning.
+Screenshots are mandatory for a frontend story: one whose commits touch a `@visual`
+scenario, `tests/e2e/`, a `package.json` declaring `react` or a `playwright.config.*`.
+Capture at least one success screenshot per delivered journey at its asserted outcome,
+during the real E2E run of the story, and name it after the scenario it shows. Record each PNG
+with the stack adapter's `gate-log.mjs --log {evidence dir}/qg-{story}.json --screenshot <png>`
+(on .NET, `qg-collect.mjs --screenshot <png>`): it copies the PNG into the story's evidence
+directory (ignored by Git, never committed) and records it in the `evidence.screenshots` gate of
+the v7 log (`quality-gates-evidence-contract`) with the sha256 of its bytes. A frontend story
+without a screenshot fails `qg-verify`.
+Screenshot alone never proves correctness. Do not rerun tests for report cosmetics.
 
 Success-selection and report `maxMedia` limits never truncate correctness-gate
 captures, failure diagnostics or reviewer inputs. Retain full local evidence.
@@ -91,8 +98,8 @@ test.afterEach(async ({ page }, testInfo) => {
 });
 ```
 
-Naming convention: `{test-title}-{timestamp}.png`. Output dir: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/screenshots/`.
-`{story}` comes from the `SKRAFT_STORY_ID` environment variable.
+Naming convention: `{test-title}-{timestamp}.png`, under Playwright's `test-results/`: a
+failure screenshot is a local diagnostic, never recorded as evidence.
 Using `testInfo.attachments` makes the screenshot appear inline in the HTML report.
 Reference `references/screenshot-and-video.md` for all `page.screenshot()` options and
 on-failure hook patterns.
@@ -109,8 +116,8 @@ use: {
 
 CLI override: `npx playwright test --video=retain-on-failure`
 
-Set `outputDir` in `playwright.config.ts` to `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence`
-so Playwright writes all test-results (videos, traces) under the story-keyed path.
+Keep Playwright's default `outputDir` (`test-results/`): videos and traces are local
+diagnostics, never evidence.
 No manual context management required — the test runner handles lifecycle.
 Reference `references/screenshot-and-video.md` for all video config options.
 
@@ -131,10 +138,10 @@ For manual control within a test:
 ```typescript
 await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
 // ... test steps ...
-await context.tracing.stop({ path: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/traces/trace.zip` });
+await context.tracing.stop({ path: 'test-results/traces/trace.zip' });
 ```
 
-View a trace locally: `npx playwright show-trace evidence/traces/trace.zip`
+View a trace locally: `npx playwright show-trace test-results/traces/trace.zip`
 
 Traces contain DOM snapshots, network requests, console logs, and source context. Prefer traces
 over screenshots when diagnosing flaky tests. Reference `references/trace-viewer.md` for all options.
@@ -145,10 +152,9 @@ Configure multi-reporter output in `playwright.config.ts`:
 
 ```typescript
 reporter: [
-  ['html', { outputFolder: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports` }],
-  ['junit', { outputFile: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }],
+  ['html', { outputFolder: 'playwright-report' }],
+  ['junit', { outputFile: 'playwright-report/results.xml' }],
 ],
-// SKRAFT_STORY_ID must be set before running: e.g. SKRAFT_STORY_ID=42-add-eligibility-check npx playwright test
 ```
 
 CLI equivalents:
@@ -163,34 +169,6 @@ Retain HTML/JUnit locally. Existing approved CI may expose artifacts/status chec
 without a verified remote URL, report them as local-only. Do not add uploads or
 change CI solely to publish a report.
 
-## Evidence Manifest
-
-After the test run, write `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md` so agents know what was captured.
-The story key makes the manifest unambiguous when multiple stories run in sequence:
-
-```markdown
-# Evidence Manifest
-
-## Run
-- timestamp: 2026-05-15T10:30:00Z
-- status: failed (2 failures, 8 passed)
-- duration: 45s
-- containers: rebuilt
-
-## Files
-| Type | Path | Test |
-|---|---|---|
-| screenshot | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/screenshots/underage-driver-rejected-1715770200000.png | underage driver should be rejected |
-| trace | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/traces/policy-flow-1715770200000.zip | full policy flow |
-| report | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/index.html | — |
-| junit | .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/results.xml | — |
-```
-
-Engineer returns the manifest's exact repository-root-relative path to router and
-reviewer. Include AC/test mapping, revision, success/failure run status, verified
-remote URL if already available, local-only status otherwise, and selection
-omissions. Router never guesses the date or produces the manifest.
-
 ## CI Configuration
 
 Only when CI setup/upload is separately authorized, adapt the existing job:
@@ -199,9 +177,9 @@ Only when CI setup/upload is separately authorized, adapt the existing job:
 2. `npm ci`
 3. `npx playwright install --with-deps chromium` (cache `~/.cache/ms-playwright`)
 4. `npx playwright test --reporter=html,junit`
-5. `actions/upload-artifact@v4` — upload `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/` on failure
+5. `actions/upload-artifact@v4` — upload `playwright-report/` and `test-results/` on failure
 
-Manifest consumption alone never authorizes a binary upload.
+Recording a screenshot never authorizes a binary upload.
 Reference `references/ci-configuration.md` for the full workflow YAML.
 
 ## Evidence Retention Policy
@@ -209,14 +187,13 @@ Reference `references/ci-configuration.md` for the full workflow YAML.
 Add to `.gitignore`:
 
 ```
-.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/
+.copilot-tracking/skraft-plans/*/evidence/
 playwright-report/
 test-results/
 ```
 
 Preserve full local failure evidence and correctness proof; publication selection
-never deletes it. Retain only agreed optional representative success captures,
-without changing required gate capture. CI retention follows separately approved
+never deletes it, nor any screenshot the `evidence.screenshots` gate cites. CI retention follows separately approved
 policy; neither report `maxMedia` nor missing upload consent limits local proof.
 
 ## References
@@ -231,4 +208,3 @@ policy; neither report `maxMedia` nor missing upload consent limits local proof.
 - `examples/01-basic-screenshot.md` — `afterEach` on-failure screenshot with eligibility test
 - `examples/02-video-on-failure.md` — `retain-on-failure` video config, accessing video path
 - `examples/03-trace-upload.md` — manual trace capture with all options, stop and save
-- `examples/04-evidence-manifest.md` — writing the manifest after a test run

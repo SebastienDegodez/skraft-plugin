@@ -116,3 +116,10 @@ test('show: a file as a commit holds it, null when absent or unaddressable', () 
   assert.equal(repo.show(sha.nested, ['src/Orders/Discount.cs']), null, 'a path must be a string, not something that prints as one')
   assert.equal(repo.show('release-1234567', 'README.md'), null)
 })
+
+test('tracked: the files Git tracks under a directory, none for an untracked one', () => {
+  assert.deepEqual(repo.tracked('src/Orders'), ['src/Orders/Discount.cs'])
+  writeFileSync(join(root, 'loose.txt'), 'untracked\n')
+  assert.deepEqual(repo.tracked('loose.txt'), [])
+  assert.deepEqual(repo.tracked(''), [])
+})

@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -193,5 +193,110 @@ test('a missing or unreadable log is inconclusive, and usage errors exit 3', () 
     assert.equal(run.status, 2)
     assert.equal(JSON.parse(run.stdout).findings[0].code, 'LOG_MISSING')
     assert.equal(spawnSync('node', [QG_VERIFY], { encoding: 'utf8' }).status, 3)
+  } finally { s.cleanup() }
+})
+
+// v7: the evidence directory is ignored by Git and holds only the log of verdicts (and the
+// screenshots); DISTILL commits the RED before DELIVER starts, and qg-verify reads the commits
+// and every guarded test file from Git.
+const v7story = (tweak = {}) => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'skraft-qg-verify-v7-')))
+  const git = (...args) => execFileSync('git', ['-c', 'user.email=e@x', '-c', 'user.name=E', ...args], { cwd: root, encoding: 'utf8' }).trim()
+  const write = (path, content) => {
+    mkdirSync(dirname(join(root, path)), { recursive: true })
+    writeFileSync(join(root, path), content)
+  }
+  git('init', '-q')
+  write('.gitignore', '.copilot-tracking/skraft-plans/*/evidence/\n')
+  git('add', '.')
+  git('commit', '-q', '-s', '-m', 'chore(orders): base')
+  const distill = git('rev-parse', 'HEAD')
+
+  write(TEST_FILE, RED_TEST)
+  write('src/Orders.Domain/Discount.cs', 'public static class Discount { public static decimal For(string tier, decimal amount) => 0m; }\n')
+  git('add', '.')
+  git('commit', '-q', '-s', '-m', 'test(order-discount): acceptance tests S1–S2')
+  const base = git('rev-parse', 'HEAD')
+
+  write('src/Orders.Domain/Discount.cs', 'public static class Discount { }\n')
+  write(TEST_FILE, tweak.greenTest ?? GREEN_TEST)
+  if (tweak.frontend) write('tests/e2e/discount.spec.ts', "test('discount', async () => {})\n")
+  git('add', '.')
+  git('commit', '-q', '-s', ...(tweak.deviation ? ['-m', 'feat(order-discount): apply loyalty discounts', '-m', 'PLAN_DEVIATION: 90m → 89m'] : ['-m', 'feat(order-discount): apply loyalty discounts']))
+  const green = git('rev-parse', 'HEAD')
+
+  const gates = ['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core']
+    .map((id) => ({ id, label: id, status: 'pass', command_executed: `run ${id}`, summary: 'ok', tree: git('rev-parse', 'HEAD^{tree}') }))
+  if (tweak.screenshot) {
+    write(`${EV}/screenshots/discount.png`, 'PNG bytes')
+    gates.push({ id: 'evidence.screenshots', label: 'Frontend screenshots captured', status: 'pass', screenshots: [{ ref: `${REF}/screenshots/discount.png`, sha256: sha256('PNG bytes') }] })
+  }
+  const log = {
+    $schema: 'quality-gates-evidence/v7',
+    story: 'order-discount',
+    produced_at: '2026-11-24T10:00:00Z',
+    producer: 'software-engineer',
+    tech_adapter: 'quality-gates-dotnet',
+    repo_root_rev: green,
+    gates,
+  }
+  write(`${EV}/qg-order-discount.json`, `${JSON.stringify(log, null, 2)}\n`)
+  tweak.after?.({ git })
+  return { root, distill, base, green, cleanup: () => rmSync(root, { recursive: true, force: true }) }
+}
+const verify7 = (s) => verify(s, '--base', s.base, '--red-base', s.distill)
+
+test('a v7 story passes with only its log of verdicts under the evidence directory', () => {
+  const s = v7story()
+  try {
+    const result = verify7(s)
+    assert.deepEqual(result.findings, [])
+    assert.equal(result.exit, 0)
+  } finally { s.cleanup() }
+})
+
+test('a v7 verdict recorded before the last code change is stale', () => {
+  const s = v7story({ after: ({ git }) => { writeFileSync(join(git('rev-parse', '--show-toplevel'), 'src/late.cs'), '// late\n'); git('add', '.'); git('commit', '-q', '-s', '-m', 'feat(order-discount): late change') } })
+  try {
+    const log = join(s.root, EV, 'qg-order-discount.json')
+    const stamped = JSON.parse(readFileSync(log, 'utf8'))
+    writeFileSync(log, JSON.stringify({ ...stamped, repo_root_rev: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: s.root, encoding: 'utf8' }).trim() }))
+    const result = verify7(s)
+    assert.equal(result.verdict, 'inconclusive')
+    assert.ok(codes(result).every((code) => code === 'GATE_STALE'), codes(result).join())
+  } finally { s.cleanup() }
+})
+
+test('a v7 GREEN that rewrites a line of the RED test fails, unless it records a PLAN_DEVIATION', () => {
+  const rewritten = GREEN_TEST.replace('90m', '89m')
+  const tampered = v7story({ greenTest: rewritten })
+  const declared = v7story({ greenTest: rewritten, deviation: true })
+  try {
+    const result = verify7(tampered)
+    assert.equal(result.verdict, 'fail')
+    assert.deepEqual(codes(result), ['TEST_TAMPERED'])
+    const allowed = verify7(declared)
+    assert.equal(allowed.verdict, 'pass')
+    assert.deepEqual(codes(allowed), ['PLAN_DEVIATION'])
+  } finally { tampered.cleanup(); declared.cleanup() }
+})
+
+test('a v7 frontend story without a screenshot fails, and passes once one is recorded', () => {
+  const bare = v7story({ frontend: true })
+  const shown = v7story({ frontend: true, screenshot: true })
+  try {
+    const result = verify7(bare)
+    assert.equal(result.verdict, 'fail')
+    assert.ok(codes(result).includes('SCREENSHOTS_MISSING'), codes(result).join())
+    assert.equal(verify7(shown).verdict, 'pass')
+  } finally { bare.cleanup(); shown.cleanup() }
+})
+
+test('a v7 log whose evidence was committed fails', () => {
+  const s = v7story({ after: ({ git }) => { git('add', '-f', '.copilot-tracking'); git('commit', '-q', '-s', '-m', 'chore(order-discount): record quality evidence') } })
+  try {
+    const result = verify(s)
+    assert.equal(result.verdict, 'fail')
+    assert.ok(codes(result).includes('EVIDENCE_COMMITTED'), codes(result).join())
   } finally { s.cleanup() }
 })

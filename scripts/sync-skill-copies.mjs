@@ -15,7 +15,11 @@ export const pluginRoot = join(repo, 'plugins', 'skraft-framework')
 
 export const COPIES = [
 	{ source: 'skills/quality-gates-dotnet/scripts/capture.mjs', targets: ['skills/quality-gates-javascript/scripts/capture.mjs'] },
-	{ source: 'skills/quality-gates-dotnet/scripts/snapshot.mjs', targets: ['skills/quality-gates-javascript/scripts/snapshot.mjs', 'skills/quality-gates-python/scripts/snapshot.mjs'] },
+	// The evidence log writer: every stack's capture and no-mocks scan record their verdict through it.
+	{
+		source: 'skills/quality-gates-dotnet/scripts/gate-log.mjs',
+		targets: ['javascript', 'python', 'typescript'].map((stack) => `skills/quality-gates-${stack}/scripts/gate-log.mjs`),
+	},
 	// The reporting pair links to each other, so they always travel together.
 	...['mcp-publication.md', 'report-contract.md'].map((name) => ({
 		source: `skills/qa-reporting/references/${name}`,
@@ -31,6 +35,7 @@ export const BUNDLES = [
 			'skills/quality-gates-dotnet/scripts/qg-verify',
 			'skills/quality-gates-javascript/scripts/qg-verify',
 			'skills/quality-gates-python/scripts/qg-verify',
+			'skills/quality-gates-typescript/scripts/qg-verify',
 		],
 	},
 	{ entry: 'src/cli/report.mjs', targets: ['skills/qa-reporting/scripts/report'] },

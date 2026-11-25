@@ -6,7 +6,7 @@ description: Use whenever an agent must run a toolchain command (build, test) an
 # Resolving Stack Commands (stack-agnostic)
 
 The single place that maps a repository's stack to its concrete toolchain
-commands (build, test, mutation). No agent and no workflow step may hardcode a
+commands (build, test, lint). No agent and no workflow step may hardcode a
 command (`dotnet test`, `dotnet build`, `mvn test`, `pytest`, ...). They resolve
 it here instead.
 
@@ -22,15 +22,16 @@ says how.
 
 Detect the stack from markers at the repo root, then resolve the concrete
 commands from the matching `quality-gates-<tech>` adapter (the adapter owns the
-build / test commands and their evidence mapping). Mutation is never resolved here: the
-pipeline never runs it, and the developer gives its command to `/skraft-mutation`.
+build / test commands and their evidence mapping). Architecture, coverage and mutation commands
+are never resolved here: the pipeline never runs them, the project's CI does, and the developer
+gives the mutation command to `/skraft-mutation`.
 
 
 | Stack | Detection markers | Adapter | Status |
 |---|---|---|---|
 | .NET | `*.sln`, `*.slnx`, `**/*.csproj`, `Directory.Packages.props` | `quality-gates-dotnet` (`dotnet build` / `dotnet test`) | supported |
-| TypeScript tested with Vitest (React front end, Node package) | A `package.json` whose devDependencies hold `vitest` | `quality-gates-typescript` (`{bin:vitest} run` / `{bin:typescript:tsc} --noEmit` / ESLint boundaries, run from the package's `node_modules`) | supported; uninstalled dependencies or a missing coverage provider is a blocker |
-| Node JavaScript | A `package.json` without `vitest` | `quality-gates-javascript`: checked-in package scripts and native Node tests | narrow support; no G11 coverage enforcement |
+| TypeScript tested with Vitest (React front end, Node package) | A `package.json` whose devDependencies hold `vitest` | `quality-gates-typescript` (`{bin:vitest} run` / `{bin:typescript:tsc} --noEmit` / `{bin:eslint} .`, run from the package's `node_modules`) | supported; uninstalled dependencies are a blocker |
+| Node JavaScript | A `package.json` without `vitest` | `quality-gates-javascript`: checked-in package scripts and native Node tests | narrow support |
 | TypeScript or browser code under another test runner | Jest, Mocha, Karma or Jasmine without Vitest | No matching supported adapter | NOT SUPPORTED |
 | Python | `pyproject.toml` | `quality-gates-python` (`{python} -m pytest` / `{python} -m compileall`, run from `.venv`) | supported; no `.venv` and no `--python` is a blocker |
 | Java | `pom.xml`, `build.gradle`, `build.gradle.kts` | _(quality-gates-java not yet provided)_ | NOT SUPPORTED |

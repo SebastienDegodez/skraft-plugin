@@ -1,8 +1,8 @@
 // Pure rules of the mutation gate (G6). No IO: the CLI runs the commands and reads the files.
 //
 // Mutation testing is the developer's responsibility and never runs in the pipeline: DELIVER
-// records G6 `not_run`. The developer runs /skraft-mutation, which asks them for the command of
-// each component and passes it here. The command runs their mutation tool and writes its scores
+// records no mutation entry (contract v7; G6 `not_run` before it). The developer runs
+// /skraft-mutation, which asks them for the command of each component and passes it here. The command runs their mutation tool and writes its scores
 // and surviving mutants as JSON to the file SKRAFT names in SKRAFT_MUTATION_RESULT: core and
 // boundary for a Clean Architecture component, global for a single project. SKRAFT holds every
 // scope to the bar and hands the survivors on to be killed.

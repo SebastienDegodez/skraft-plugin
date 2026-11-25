@@ -43,12 +43,6 @@ function manifest(pkg, name) {
 	return { file, data: JSON.parse(readFileSync(file, 'utf8')) }
 }
 
-export const packageVersion = (pkg, name) => manifest(pkg, name).data.version
-
-export function majorOf(version) {
-	return Number(String(version).split('.')[0])
-}
-
 // `{bin:vitest}`, `{bin:typescript:tsc}`: the JavaScript file a package exposes as a command.
 export function resolveBin(pkg, name, bin) {
 	const { file, data } = manifest(pkg, name)
@@ -93,4 +87,3 @@ export async function capture(command, args, { cwd, env = process.env, stdout, s
 
 // Every tool call is `node <bin file> ...`, with CI set so no watcher or prompt starts.
 export const nodeEnv = () => ({ ...process.env, CI: 'true', FORCE_COLOR: '0', NO_COLOR: '1' })
-export const runNode = (bin, args, options) => capture(process.execPath, [bin, ...args], { env: nodeEnv(), ...options })

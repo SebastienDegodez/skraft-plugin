@@ -1,6 +1,6 @@
 ---
 name: skraft-mutation
-description: Use when the developer runs /skraft-mutation to run their mutation testing now, see each scope's score against the bar and the surviving mutants. The only way SKRAFT runs mutation, since the pipeline never does and G6 stays not_run in every delivery.
+description: "Use when the developer runs /skraft-mutation to run their mutation testing now, see each scope's score against the bar and the surviving mutants. The only way SKRAFT runs mutation: the pipeline never does, the project's CI runs it."
 disable-model-invocation: true
 ---
 
@@ -58,7 +58,7 @@ Show the developer, from the gate's output:
   point to `.copilot-tracking/mutation/qg-mutation/<component>.log`;
 - exit 2: the reason as the gate gives it.
 
-The run never changes a delivery's G6: deliveries record it `not_run`.
+The run never changes a delivery's evidence log: no log records mutation.
 
 Kill survivors only when the developer asks: load `mutation-testing`, which says how, and rerun
 the same command.

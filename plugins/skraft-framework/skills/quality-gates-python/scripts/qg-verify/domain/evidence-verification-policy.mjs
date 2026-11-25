@@ -6,9 +6,17 @@ import { isConventionalCommitSubject } from './commit-convention.mjs'
 //   fail          — the substrate proves a gate failed or the log contradicts Git;
 //   inconclusive  — a claim cannot be checked (missing, malformed, altered evidence);
 //   pass          — every claim was checked against its substrate.
-// A `notice` finding records what the verdict does not turn on (G6 not run, v5 and later).
+// A v7 log carries only the verdicts its scripts wrote; commit.convention and test.integrity
+// are derived here from Git, never read from the log.
+// A `notice` finding records what the verdict does not turn on (G6 not run, v5 and v6).
 
-export const SUPPORTED_SCHEMAS = Object.freeze(['v1', 'v2', 'v3', 'v4', 'v5', 'v6'])
+export const SUPPORTED_SCHEMAS = Object.freeze(['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7'])
+
+// v7 names its gates `type.description`; architecture, coverage and mutation left the pipeline.
+// The log records the gates a command attests; qg-verify derives the two Git gates itself.
+export const V7_GATES = Object.freeze(['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core'])
+export const V7_DERIVED_GATES = Object.freeze(['commit.convention', 'test.integrity'])
+export const SCREENSHOTS_GATE = 'evidence.screenshots'
 
 // Gates every log of a schema version must carry (a gate may be not_applicable with a rationale).
 const REQUIRED_GATES = Object.freeze({
@@ -19,15 +27,18 @@ const REQUIRED_GATES = Object.freeze({
   v5: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11'],
   // v6 drops G10: the acceptance RED commit is the proof, no RED run is captured.
   v6: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G11'],
+  v7: V7_GATES,
 })
 // Schemas whose cycles carry a captured RED run (G10).
 const RED_CAPTURED = new Set(['v2', 'v3', 'v4', 'v5'])
 // Schemas where G6 may be not_run: mutation is the developer's.
 const MUTATION_OPTIONAL = new Set(['v5', 'v6'])
 const G6_SCOPES = Object.freeze(['core', 'boundary'])
-// Gates attested by the log structure rather than a runner exit: G7 by an empty grep
-// output, G8/G9/G10 by commits and test-integrity cycles (G10 up to v5).
-const STRUCTURAL_GATES = new Set(['G8', 'G9', 'G10'])
+// Gates attested by the log structure rather than a runner exit: G8/G9/G10 by commits and
+// test-integrity cycles (G10 up to v5). The no-mocks gate attests an empty scan output.
+const STRUCTURAL_GATES = new Set(['G8', 'G9', 'G10', 'commit.convention', 'test.integrity', SCREENSHOTS_GATE])
+const NO_MOCKS_GATES = new Set(['G7', 'test.no-mocks-core'])
+const commitGate = (version) => (version === 'v7' ? 'commit.convention' : 'G8')
 
 const INCONCLUSIVE = 'inconclusive'
 const FAIL = 'fail'
@@ -39,7 +50,9 @@ const versionOf = (log) => (typeof log?.$schema === 'string' ? log.$schema.match
 // v4 records one G6 entry per mutation scope; every other schema carries a single G6.
 const gateKey = (gate, version) => (version === 'v4' && gate.id === 'G6' ? `G6/${gate.scope}` : gate.id)
 
-// The files a log points at, so the application layer can read exactly those.
+const screenshotsOf = (gate) => (Array.isArray(gate?.screenshots) ? gate.screenshots.filter((shot) => shot && typeof shot === 'object') : [])
+
+// The text files a log points at, so the application layer can read exactly those.
 export const evidenceReferences = (log) => {
   const gates = Array.isArray(log?.gates) ? log.gates : []
   const cycles = Array.isArray(log?.test_integrity?.cycles) ? log.test_integrity.cycles : []
@@ -47,6 +60,61 @@ export const evidenceReferences = (log) => {
     ...gates.flatMap((gate) => [gate?.stdout_ref, gate?.exit_code_ref]),
     ...cycles.flatMap((cycle) => [cycle?.red_stdout_ref, cycle?.red_exit_code_ref, cycle?.red_snapshot_ref, cycle?.green_snapshot_ref]),
   ].filter(isText))]
+}
+
+// The binary captures a v7 log points at: screenshots are hashed byte for byte.
+export const screenshotReferences = (log) => {
+  const gates = Array.isArray(log?.gates) ? log.gates : []
+  return [...new Set(gates.filter((gate) => gate?.id === SCREENSHOTS_GATE).flatMap(screenshotsOf).map((shot) => shot.ref).filter(isText))]
+}
+
+// A story is frontend when it touches a Playwright test, a React package or a @visual scenario.
+const E2E_DIR = /(?:^|\/)tests\/e2e\//
+const PLAYWRIGHT_CONFIG = /(?:^|\/)playwright\.config\.[^/]+$/
+const PACKAGE_JSON = /(?:^|\/)package\.json$/
+const FEATURE_FILE = /\.feature$/
+const declaresReact = (content) => {
+  try {
+    const manifest = JSON.parse(content)
+    return ['dependencies', 'devDependencies', 'peerDependencies'].some((field) => Object.hasOwn(manifest?.[field] ?? {}, 'react'))
+  } catch {
+    return /"react"\s*:/.test(content)
+  }
+}
+
+// Paths whose content at repo_root_rev decides frontend detection.
+export const frontendProbes = (paths) => paths.filter((path) => PACKAGE_JSON.test(path) || FEATURE_FILE.test(path))
+
+// contentAt(path) → the file at repo_root_rev, or undefined when absent.
+export const frontendSignals = (paths, contentAt) => [...new Set(paths)].filter((path) => {
+  if (E2E_DIR.test(path) || PLAYWRIGHT_CONFIG.test(path)) return true
+  const content = contentAt(path)
+  if (typeof content !== 'string') return false
+  if (PACKAGE_JSON.test(path)) return declaresReact(content)
+  return FEATURE_FILE.test(path) && /(?:^|\s)@visual(?![\w-])/.test(content)
+})
+
+// A file the RED may hold as a test: a Gherkin feature, a file under a test folder or named
+// as a test. Production stubs committed with the RED are not tests: their GREEN may rewrite them.
+const TEST_DIR = /(?:^|\/)(?:tests?|__tests__|specs?|e2e)\//i
+const TEST_NAME = /(?:\.(?:test|spec)\.[^/]+|Tests?\.cs|(?:^|\/)test_[^/]+\.py|_test\.py)$/
+export const isTestPath = (path) => typeof path === 'string' && (FEATURE_FILE.test(path) || TEST_DIR.test(path) || TEST_NAME.test(path))
+const isTestCommit = (subject) => /^test\(/.test(subject ?? '')
+const deviates = (message) => /^PLAN_DEVIATION:/m.test(message ?? '')
+
+// v7 test.integrity, from Git alone. `red` are the DISTILL commits before the DELIVER base and
+// `delivered` the DELIVER commits, both oldest first, each { sha, subject, files }. Every test
+// file a `test` commit holds is guarded from then on; returns each later change to one of
+// them, for the application layer to read before and after.
+export const integrityChanges = (red, delivered) => {
+  const guarded = new Set(red.filter((commit) => isTestCommit(commit.subject)).flatMap((commit) => commit.files.filter(isTestPath)))
+  const atDeliverBase = [...guarded]
+  const changes = []
+  for (const commit of delivered) {
+    for (const file of commit.files) if (guarded.has(file)) changes.push({ sha: commit.sha, file })
+    if (isTestCommit(commit.subject)) for (const file of commit.files.filter(isTestPath)) guarded.add(file)
+  }
+  return { guarded: atDeliverBase, changes }
 }
 
 // A line removed or altered between RED and GREEN breaks G9: every RED line must still
@@ -87,6 +155,16 @@ const checkGate = (gate, version, facts, findings) => {
   if (gate.status === 'pass' && gate.metrics?.tests_failed > 0) {
     findings.push(finding(FAIL, 'TESTS_FAILED_WHILE_PASS', `${key} passes with ${gate.metrics.tests_failed} failed test(s)`, key))
   }
+  if (gate.id === SCREENSHOTS_GATE && version === 'v7') {
+    checkScreenshotFiles(gate, facts, findings)
+    return
+  }
+  // v7 keeps no stdout, exit code or hash: the status was written by the script that ran it,
+  // with the tree it ran on — a verdict from another tree than repo_root_rev's is stale.
+  if (version === 'v7') {
+    if (gate.tree !== facts.git.tree) findings.push(finding(INCONCLUSIVE, 'GATE_STALE', `${key} ran on another tree than repo_root_rev: run it again`, key))
+    return
+  }
   if (STRUCTURAL_GATES.has(gate.id)) return
 
   const stdout = facts.files.get(gate.stdout_ref)
@@ -101,10 +179,10 @@ const checkGate = (gate, version, facts, findings) => {
     }
   }
 
-  // G7 attests an absence: the grep for mocking symbols printed nothing.
-  if (gate.id === 'G7') {
+  // The no-mocks gate attests an absence: the scan for mocking symbols printed nothing.
+  if (NO_MOCKS_GATES.has(gate.id)) {
     if (gate.status === 'pass' && stdout !== undefined && stdout.content.trim() !== '') {
-      findings.push(finding(FAIL, 'MOCKS_FOUND', `G7 passes but ${gate.stdout_ref} lists mocking symbols`, key))
+      findings.push(finding(FAIL, 'MOCKS_FOUND', `${key} passes but ${gate.stdout_ref} lists mocking symbols`, key))
     }
     return
   }
@@ -117,6 +195,29 @@ const checkGate = (gate, version, facts, findings) => {
     findings.push(finding(INCONCLUSIVE, 'EXIT_MALFORMED', `${key} exit code file holds no integer`, key))
   } else if (gate.status === 'pass' && code !== 0) {
     findings.push(finding(FAIL, 'EXIT_CONTRADICTS_STATUS', `${key} passes but its runner exited ${code}`, key))
+  }
+}
+
+const checkScreenshotFiles = (gate, facts, findings) => {
+  for (const shot of screenshotsOf(gate)) {
+    const capture = facts.screenshots?.get(shot.ref)
+    if (!isText(shot.ref) || capture === undefined) {
+      findings.push(finding(INCONCLUSIVE, 'SCREENSHOT_MISSING', `screenshot ${shot.ref ?? '(none)'} is not on disk`, SCREENSHOTS_GATE))
+    } else if (shot.sha256 !== capture.sha256) {
+      findings.push(finding(INCONCLUSIVE, 'SCREENSHOT_HASH_MISMATCH', `screenshot sha256 differs from ${shot.ref}`, SCREENSHOTS_GATE))
+    }
+  }
+}
+
+// v7: a frontend story must show what it delivered; a screenshot gate needs captures.
+const checkScreenshots = (gates, facts, findings) => {
+  const gate = gates.find((entry) => entry.id === SCREENSHOTS_GATE)
+  const signals = Array.isArray(facts.frontend) ? facts.frontend : []
+  const shots = screenshotsOf(gate).length
+  if (signals.length > 0 && (gate === undefined || gate.status === 'not_applicable' || (gate.status === 'pass' && shots === 0))) {
+    findings.push(finding(FAIL, 'SCREENSHOTS_MISSING', `frontend story (${signals.join(', ')}) records no screenshot`, SCREENSHOTS_GATE))
+  } else if (gate?.status === 'pass' && shots === 0) {
+    findings.push(finding(INCONCLUSIVE, 'SCREENSHOTS_EMPTY', `${SCREENSHOTS_GATE} passes without any screenshot`, SCREENSHOTS_GATE))
   }
 }
 
@@ -137,13 +238,26 @@ const checkGateSet = (log, version, findings) => {
       findings.push(finding(INCONCLUSIVE, 'GATE_MISSING', `${id} is absent from the log`, id))
     }
   }
+  if (version === 'v7') {
+    for (const id of seen.keys()) {
+      if (V7_DERIVED_GATES.includes(id)) findings.push(finding(INCONCLUSIVE, 'GATE_DERIVED', `${id} is derived from Git by qg-verify, never recorded in the log`, id))
+      else if (!V7_GATES.includes(id) && id !== SCREENSHOTS_GATE) findings.push(finding(INCONCLUSIVE, 'GATE_UNKNOWN', `${id} is not a v7 gate`, id))
+    }
+  }
   return gates
 }
 
-const checkRevision = (log, facts, findings) => {
+const checkRevision = (log, version, facts, findings) => {
   const rev = log.repo_root_rev
   if (!facts.git.commits.get(rev)?.exists) {
     findings.push(finding(FAIL, 'REVISION_UNRESOLVED', `repo_root_rev ${rev} does not resolve`))
+    return
+  }
+  // v7: the evidence stays out of Git, so the log describes HEAD itself.
+  if (version === 'v7') {
+    const tracked = Array.isArray(facts.git.trackedEvidence) ? facts.git.trackedEvidence : []
+    if (tracked.length > 0) findings.push(finding(FAIL, 'EVIDENCE_COMMITTED', `evidence is tracked by Git: ${tracked.join(', ')}`))
+    if (facts.git.head !== rev) findings.push(finding(INCONCLUSIVE, 'REVISION_STALE', `repo_root_rev ${rev} is not HEAD`))
     return
   }
   // The log cannot hold the SHA of the commit that adds it: the evidence commit may sit on
@@ -156,33 +270,81 @@ const checkRevision = (log, facts, findings) => {
   }
 }
 
-const checkCommits = (log, facts, findings) => {
+const checkCommits = (log, version, facts, findings) => {
+  const gate = commitGate(version)
   const listed = new Set()
   for (const commit of log.commits_covered) {
     const actual = facts.git.commits.get(commit?.sha)
     if (!actual?.exists) {
-      findings.push(finding(FAIL, 'COMMIT_UNRESOLVED', `covered commit ${commit?.sha} does not resolve`, 'G8'))
+      findings.push(finding(FAIL, 'COMMIT_UNRESOLVED', `covered commit ${commit?.sha} does not resolve`, gate))
       continue
     }
     listed.add(commit.sha)
     if (commit.subject !== actual.subject) {
-      findings.push(finding(FAIL, 'COMMIT_SUBJECT_MISMATCH', `${commit.sha} subject is "${actual.subject}", not "${commit.subject}"`, 'G8'))
+      findings.push(finding(FAIL, 'COMMIT_SUBJECT_MISMATCH', `${commit.sha} subject is "${actual.subject}", not "${commit.subject}"`, gate))
     }
     const unknown = (commit.files_changed ?? []).filter((file) => !actual.files.includes(file))
     if (unknown.length > 0) {
-      findings.push(finding(FAIL, 'COMMIT_FILES_MISMATCH', `${commit.sha} does not change ${unknown.join(', ')}`, 'G8'))
+      findings.push(finding(FAIL, 'COMMIT_FILES_MISMATCH', `${commit.sha} does not change ${unknown.join(', ')}`, gate))
     }
     if (!isConventionalCommitSubject(actual.subject)) {
-      findings.push(finding(FAIL, 'COMMIT_NOT_CONVENTIONAL', `${commit.sha} subject "${actual.subject}" is not type(feature): subject`, 'G8'))
+      findings.push(finding(FAIL, 'COMMIT_NOT_CONVENTIONAL', `${commit.sha} subject "${actual.subject}" is not type(feature): subject`, gate))
     }
     if (!/^Signed-off-by: .+$/m.test(actual.message)) {
-      findings.push(finding(FAIL, 'COMMIT_UNSIGNED', `${commit.sha} carries no Signed-off-by trailer`, 'G8'))
+      findings.push(finding(FAIL, 'COMMIT_UNSIGNED', `${commit.sha} carries no Signed-off-by trailer`, gate))
     }
   }
   if (Array.isArray(facts.git.range)) {
     const missing = facts.git.range.filter((sha) => !listed.has(sha))
     if (missing.length > 0) {
-      findings.push(finding(FAIL, 'COMMITS_INCOMPLETE', `commits_covered omits ${missing.join(', ')} made since the phase base`, 'G8'))
+      findings.push(finding(FAIL, 'COMMITS_INCOMPLETE', `commits_covered omits ${missing.join(', ')} made since the phase base`, gate))
+    }
+  }
+}
+
+// v7 commit.convention: every commit since the DELIVER base, read from Git.
+const checkCommitsFromGit = (facts, findings) => {
+  const range = facts.git.range
+  if (!Array.isArray(range)) {
+    findings.push(finding(INCONCLUSIVE, 'BASE_UNKNOWN', 'no DELIVER base: the delivered commits cannot be listed', 'commit.convention'))
+    return
+  }
+  if (range.length === 0) findings.push(finding(INCONCLUSIVE, 'RANGE_EMPTY', 'no commit since the DELIVER base', 'commit.convention'))
+  for (const sha of range) {
+    const actual = facts.git.commits.get(sha)
+    if (!actual?.exists) {
+      findings.push(finding(INCONCLUSIVE, 'COMMIT_UNREADABLE', `${sha} cannot be read`, 'commit.convention'))
+      continue
+    }
+    if (!isConventionalCommitSubject(actual.subject)) {
+      findings.push(finding(FAIL, 'COMMIT_NOT_CONVENTIONAL', `${sha} subject "${actual.subject}" is not type(feature): subject`, 'commit.convention'))
+    }
+    if (!/^Signed-off-by: .+$/m.test(actual.message)) {
+      findings.push(finding(FAIL, 'COMMIT_UNSIGNED', `${sha} carries no Signed-off-by trailer`, 'commit.convention'))
+    }
+  }
+}
+
+// v7 test.integrity: a test the RED committed only grows; a replaced line needs a PLAN_DEVIATION.
+const checkIntegrityFromGit = (gates, facts, findings) => {
+  const integrity = facts.git.integrity
+  const acceptance = gates.find((gate) => gate.id === 'test.acceptance')
+  if (!integrity) {
+    findings.push(finding(INCONCLUSIVE, 'RED_BASE_UNKNOWN', 'no DISTILL base: the RED acceptance tests cannot be found', 'test.integrity'))
+    return
+  }
+  if (integrity.guarded.length === 0) {
+    if (acceptance?.status !== 'not_applicable') findings.push(finding(INCONCLUSIVE, 'RED_TESTS_MISSING', 'no test commit before DELIVER holds an acceptance test', 'test.integrity'))
+    return
+  }
+  for (const change of integrity.changes) {
+    if (typeof change.before !== 'string') continue
+    const tampered = typeof change.after !== 'string' || !onlyAdditions(change.before, change.after)
+    if (!tampered) continue
+    if (deviates(facts.git.commits.get(change.sha)?.message)) {
+      findings.push(finding(NOTICE, 'PLAN_DEVIATION', `${change.sha} rewrites ${change.file} under a PLAN_DEVIATION`, 'test.integrity'))
+    } else {
+      findings.push(finding(FAIL, 'TEST_TAMPERED', `${change.sha} removed or changed a line of ${change.file}`, 'test.integrity'))
     }
   }
 }
@@ -222,9 +384,10 @@ const verdictOf = (findings) => {
   return findings.some((f) => f.severity === INCONCLUSIVE) ? 'inconclusive' : 'pass'
 }
 
-// facts: { files: Map<ref, { content, sha256 }>, evidenceDir, git: { head, headParent,
-// headFiles, commits: Map<sha, { exists, subject, message, files }>, range?: sha[],
-// shows: Map<'sha:path', content> } }
+// facts: { files: Map<ref, { content, sha256 }>, screenshots?: Map<ref, { sha256 }>,
+// frontend?: path[], evidenceDir, git: { head, headParent, headFiles, trackedEvidence?: path[],
+// commits: Map<sha, { exists, subject, message, files }>, range?: sha[], shows: Map<'sha:path', content>,
+// tree?: tree of repo_root_rev (v7), integrity?: { guarded: path[], changes: [{ sha, file, before, after }] } (v7) } }
 export const verifyEvidence = (log, facts) => {
   const version = versionOf(log)
   if (!SUPPORTED_SCHEMAS.includes(version)) {
@@ -233,16 +396,23 @@ export const verifyEvidence = (log, facts) => {
   }
   const missing = ['story', 'repo_root_rev', 'produced_at', 'tech_adapter'].filter((field) => !isText(log[field]))
   if (!Array.isArray(log.gates)) missing.push('gates')
-  if (!Array.isArray(log.commits_covered)) missing.push('commits_covered')
-  if (!Array.isArray(log.test_integrity?.cycles)) missing.push('test_integrity.cycles')
+  if (version !== 'v7' && !Array.isArray(log.commits_covered)) missing.push('commits_covered')
+  if (version !== 'v7' && !Array.isArray(log.test_integrity?.cycles)) missing.push('test_integrity.cycles')
   if (missing.length > 0) {
     return { verdict: 'inconclusive', findings: [finding(INCONCLUSIVE, 'FIELD_MISSING', `missing or malformed: ${missing.join(', ')}`)] }
   }
 
   const findings = []
-  for (const gate of checkGateSet(log, version, findings)) checkGate(gate, version, facts, findings)
-  checkRevision(log, facts, findings)
-  checkCommits(log, facts, findings)
-  checkCycles(log, version, facts, findings)
+  const gates = checkGateSet(log, version, findings)
+  for (const gate of gates) checkGate(gate, version, facts, findings)
+  checkRevision(log, version, facts, findings)
+  if (version === 'v7') {
+    checkScreenshots(gates, facts, findings)
+    checkCommitsFromGit(facts, findings)
+    checkIntegrityFromGit(gates, facts, findings)
+  } else {
+    checkCommits(log, version, facts, findings)
+    checkCycles(log, version, facts, findings)
+  }
   return { verdict: verdictOf(findings), findings }
 }

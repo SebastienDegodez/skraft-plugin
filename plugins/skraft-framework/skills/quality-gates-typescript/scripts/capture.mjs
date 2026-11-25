@@ -1,32 +1,36 @@
 #!/usr/bin/env node
-// Runs one command without a shell from the package directory and deposits <name>.stdout
-// (stdout and stderr), <name>.exit and <name>.stdout.sha256 in the evidence directory.
-// `{bin:<package>}` or `{bin:<package>:<command>}` as the command runs that package's own
-// command file with node (`{bin:vitest}`, `{bin:typescript:tsc}`, `{bin:eslint}`), which works
-// the same on Windows. Exits with the command's own exit code.
+// Runs one command without a shell from the package directory and records the gate(s) it
+// attests in the story's evidence log (gate-log.mjs): pass on exit 0, fail otherwise. No
+// stdout, exit or hash file is kept. `{bin:<package>}` or `{bin:<package>:<command>}` as the
+// command runs that package's own command file with node (`{bin:vitest}`,
+// `{bin:typescript:tsc}`, `{bin:eslint}`), which works the same on Windows. Exits with the
+// command's own exit code.
 import { realpathSync } from 'node:fs'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from './gate-policy.mjs'
-import { binPlaceholder, capture, ensure, nodeEnv, packageRoot, repositoryRoot, sha256 } from './ts-toolchain.mjs'
+import { logTarget, recordGate } from './gate-log.mjs'
+import { binPlaceholder, capture, ensure, nodeEnv, packageRoot, repositoryRoot } from './ts-toolchain.mjs'
 
 export async function runCapture(input, command, args) {
-	ensure(/^[A-Za-z0-9._-]+$/.test(input.name), '--name is a plain file stem such as qg-tests')
 	const root = await repositoryRoot(input.root)
 	const pkg = await packageRoot(root, input.package)
-	const evidence = resolve(root, input.evidence)
-	await mkdir(evidence, { recursive: true })
-	const prefix = join(evidence, input.name)
-	for (const stale of [`${prefix}.stdout`, `${prefix}.exit`, `${prefix}.stdout.sha256`]) await rm(stale, { force: true })
+	const gates = input.gate.split(',').map((id) => id.trim()).filter(Boolean)
+	logTarget(root, input.log) // refuse before a long run, not after it
 	const bin = binPlaceholder(pkg, command)
-	const result = await capture(bin ? process.execPath : command, bin ? [bin, ...args] : args, { cwd: pkg, env: nodeEnv(), stdout: `${prefix}.stdout` })
-	const code = result.code ?? 1
-	if (result.error) await writeFile(`${prefix}.stdout`, `${result.error}\n`, { flag: 'a' })
-	await writeFile(`${prefix}.exit`, `${code}\n`)
-	const text = await readFile(`${prefix}.stdout`)
-	await writeFile(`${prefix}.stdout.sha256`, `${sha256(text)}\n`)
-	return { code, tail: text.toString('utf8').trimEnd().split(/\r?\n/).slice(-40).join('\n') }
+	const scratch = await mkdtemp(join(tmpdir(), 'skraft-capture-'))
+	try {
+		const file = join(scratch, 'output')
+		const result = await capture(bin ? process.execPath : command, bin ? [bin, ...args] : args, { cwd: pkg, env: nodeEnv(), stdout: file })
+		const code = result.code ?? 1
+		const output = (await readFile(file, 'utf8')) + (result.error ? `${result.error}\n` : '')
+		recordGate({ root, log: input.log, ids: gates, code, output, command: [command, ...args].join(' ') })
+		return { code, tail: output.trimEnd().split(/\r?\n/).slice(-40).join('\n') }
+	} finally {
+		await rm(scratch, { recursive: true, force: true })
+	}
 }
 
 async function main() {
@@ -34,9 +38,9 @@ async function main() {
 	const separator = argv.indexOf('--')
 	let code = 2
 	try {
-		ensure(separator > 0 && separator < argv.length - 1, 'Usage: capture.mjs --root <repo> [--package <dir>] --evidence <dir> --name <stem> -- <command> [args...]')
-		const input = parseArgs(argv.slice(0, separator), { options: ['root', 'package', 'evidence', 'name'] })
-		for (const required of ['root', 'evidence', 'name']) ensure(input[required], `--${required} is required`)
+		ensure(separator > 0 && separator < argv.length - 1, 'Usage: capture.mjs --root <repo> [--package <dir>] --log <evidence dir>/qg-<story>.json --gate <id>[,<id>] -- <command> [args...]')
+		const input = parseArgs(argv.slice(0, separator), { options: ['root', 'package', 'log', 'gate'] })
+		for (const required of ['root', 'log', 'gate']) ensure(input[required], `--${required} is required`)
 		const [command, ...args] = argv.slice(separator + 1)
 		const result = await runCapture(input, command, args)
 		process.stdout.write(`${result.tail}\nexit ${result.code}\n`)

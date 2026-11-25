@@ -1,15 +1,17 @@
 #!/usr/bin/env node
-// G7 — no mocking framework in the Domain/Application core or in its unit tests.
+// test.no-mocks-core — no mocking framework in the Domain/Application core or in its unit tests.
 // Scans every *.Domain and *.Application project (any depth: nested bounded contexts
 // included) and the *.Domain.*Tests, *.Application.*Tests and *.UnitTests projects;
 // integration tests are out of scope (in-process doubles are allowed there).
-// Evidence: qg-mocks.stdout (one "path:line:text" per hit, empty on pass), .exit, .sha256.
+// Prints one "path:line:text" per hit (empty on pass); with --log, records the gate in the
+// story's evidence log (gate-log.mjs). No stdout, exit or hash file is kept.
 // Exit: 0 pass | 1 hits found | 2 usage or layout error
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { absoluteDir, fromRoot, isEntry, main, parseArguments, sha256File, usageError } from './dotnet-toolchain.mjs'
+import { absoluteDir, isEntry, main, parseArguments, usageError } from './dotnet-toolchain.mjs'
+import { logTarget, recordGate } from './gate-log.mjs'
 
-const USAGE = 'Usage: no-mocks-in-core.mjs --root <dir> --evidence <dir>'
+const USAGE = 'Usage: no-mocks-in-core.mjs --root <dir> [--log <evidence dir>/qg-<story>.json]'
 const PRUNED = new Set(['bin', 'obj', 'node_modules', '.git'])
 const CORE = (name) => /\.(Domain|Application)$/.test(name)
 const SCANNED = (name) => CORE(name) || /\.(Domain|Application)\..*Tests$/.test(name) || /\.UnitTests$/.test(name)
@@ -43,15 +45,9 @@ function sources(root, dir) {
 	return files
 }
 
-export function runNoMocks(argv) {
-	const input = parseArguments(argv, { values: ['root', 'evidence'], usage: USAGE })
-	if (!input.root || !input.evidence) throw usageError(USAGE)
-	const root = absoluteDir(input.root)
-	if (!root) throw usageError('repository root not found')
-	const evidence = fromRoot(root, input.evidence)
-	mkdirSync(evidence, { recursive: true })
+// Returns { code, hits }: 0 pass, 1 hits found.
+export function scanNoMocks(root) {
 	if (projectDirs(root, CORE).length === 0) throw usageError(`no *.Domain or *.Application project under ${root}`)
-
 	const hits = []
 	for (const dir of projectDirs(root, SCANNED)) {
 		for (const file of sources(root, dir)) {
@@ -60,12 +56,24 @@ export function runNoMocks(argv) {
 			})
 		}
 	}
-	const stdout = join(evidence, 'qg-mocks.stdout')
-	writeFileSync(stdout, hits.length ? `${hits.join('\n')}\n` : '')
-	const status = hits.length ? 1 : 0
-	writeFileSync(join(evidence, 'qg-mocks.exit'), `${status}\n`)
-	writeFileSync(join(evidence, 'qg-mocks.stdout.sha256'), `${sha256File(stdout)}\n`)
-	return status
+	return { code: hits.length ? 1 : 0, hits }
+}
+
+export function recordNoMocks(root, log, { code, hits }) {
+	const output = code === 0 ? 'no mocking symbol in the core' : `${hits.join('\n')}\n${hits.length} mocking hit(s) in the core`
+	recordGate({ root, log, ids: ['test.no-mocks-core'], code, output, command: 'node no-mocks-in-core.mjs' })
+}
+
+export function runNoMocks(argv) {
+	const input = parseArguments(argv, { values: ['root', 'log'], usage: USAGE })
+	if (!input.root) throw usageError(USAGE)
+	const root = absoluteDir(input.root)
+	if (!root) throw usageError('repository root not found')
+	if (input.log) logTarget(root, input.log)
+	const result = scanNoMocks(root)
+	if (result.hits.length) process.stdout.write(`${result.hits.join('\n')}\n`)
+	if (input.log) recordNoMocks(root, input.log, result)
+	return result.code
 }
 
 if (isEntry(import.meta.url)) await main(() => runNoMocks(process.argv.slice(2)))

@@ -534,3 +534,22 @@ test('a v6 log has no G10 row: the acceptance RED commit is the proof', () => {
   assert.doesNotMatch(report, /^\| G10 \|/m)
   hasStatus(tableRow(report, 'G9'), 'UNVERIFIED')
 })
+
+test('a v7 log names its gates and drops architecture, mutation and coverage rows', () => {
+  const fixture = outcomeFixture()
+  fixture.quality.$schema = 'quality-gates-evidence/v7'
+  fixture.quality.gates = [
+    gate(fixture.files, 'test.acceptance', 'Acceptance test(s) pass', {
+      command: 'dotnet test Checkout.AcceptanceTests.csproj',
+      metrics: { tests_total: 7, tests_passed: 7, tests_failed: 0 },
+    }),
+    { id: 'evidence.screenshots', label: 'Frontend screenshots captured', status: 'pass',
+      screenshots: [{ ref: `${evidenceRoot}/screenshots/basket.png`, sha256: 'a'.repeat(64) }] },
+  ]
+  const report = renderOutcome(fixture)
+  assert.doesNotMatch(report, /^\| G(?:5|6|11) \|/m)
+  hasStatus(tableRow(report, 'test.unit'), 'UNVERIFIED')
+  const screenshots = tableRow(report, 'evidence.screenshots')
+  hasStatus(screenshots, 'UNVERIFIED')
+  assert.match(screenshots, /screenshots\/basket\.png/)
+})

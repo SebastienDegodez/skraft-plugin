@@ -1,13 +1,23 @@
-// Fixed identifiers from quality-gates-evidence-contract (v3); no score policy.
-const gateIds = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11']
+// Fixed identifiers from quality-gates-evidence-contract; no score policy.
+const legacyGateIds = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11']
+// v7 names its gates `type.description` and records only those a script ran (screenshots for
+// frontend stories only); commit.convention and test.integrity are derived from Git by qg-verify.
+const v7GateIds = ['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core']
+const SCREENSHOTS = 'evidence.screenshots'
 const MUTATION_SCOPES = ['core', 'boundary']
+// A missing or unreadable log is reported against the current contract (v7).
+const named = (quality) => !quality || quality.$schema === 'quality-gates-evidence/v7'
+const gateIdsOf = (quality) => (named(quality) ? [...v7GateIds, SCREENSHOTS] : legacyGateIds)
 // v4 records one G6 entry per mutation scope; v5 and earlier schemas carry a single G6.
 const scoped = (quality) => quality?.$schema === 'quality-gates-evidence/v4'
 const gateKey = (gate, quality) => (scoped(quality) && gate.id === 'G6' ? `G6/${gate.scope}` : gate.id)
 // v6 drops G10: the acceptance RED commit is the proof, no RED run is captured.
 const withoutRed = (quality) => quality?.$schema === 'quality-gates-evidence/v6'
-const rowIds = (quality) => gateIds.filter((id) => !(id === 'G10' && withoutRed(quality)))
-  .flatMap((id) => (id === 'G6' && scoped(quality) ? MUTATION_SCOPES.map((scope) => `G6/${scope}`) : [id]))
+const rowIds = (quality) => {
+  if (named(quality)) return [...v7GateIds, ...(quality?.gates.some((gate) => gate?.id === SCREENSHOTS) ? [SCREENSHOTS] : [])]
+  return legacyGateIds.filter((id) => !(id === 'G10' && withoutRed(quality)))
+    .flatMap((id) => (id === 'G6' && scoped(quality) ? MUTATION_SCOPES.map((scope) => `G6/${scope}`) : [id]))
+}
 const statuses = ['pass', 'fail', 'not_applicable']
 // v5+: a G6 the developer declared no mutation command for is not run, and reported as such.
 const notRun = (gate, quality) => gate.status === 'not_run' && gate.id === 'G6' && /^quality-gates-evidence\/v[56]$/.test(quality?.$schema)
@@ -68,24 +78,27 @@ export function parseQualityEvidence(raw, data) {
   if (typeof raw !== 'string') return { error: 'Missing quality evidence document' }
   let quality
   try { quality = JSON.parse(raw) } catch { return { error: 'Malformed quality evidence JSON' } }
-  if (!object(quality) || !/^quality-gates-evidence\/v[1-6]$/.test(quality.$schema)) {
+  if (!object(quality) || !/^quality-gates-evidence\/v[1-7]$/.test(quality.$schema)) {
     return { error: 'Unknown or missing quality evidence schema' }
   }
   if (quality.repo_root_rev !== data.revision || quality.story !== data.story) {
     return { error: 'Quality evidence revision or story mismatch' }
   }
   if (!text(quality.produced_at) || !Number.isFinite(Date.parse(quality.produced_at))
-    || !text(quality.producer) || !text(quality.tech_adapter)
-    || !Array.isArray(quality.gates) || !Array.isArray(quality.commits_covered)
+    || !text(quality.producer) || !text(quality.tech_adapter) || !Array.isArray(quality.gates)) {
+    return { error: 'Malformed quality evidence fields' }
+  }
+  // v7 lists no commit and no cycle: qg-verify reads them from Git.
+  if (!named(quality) && (!Array.isArray(quality.commits_covered)
     || !quality.commits_covered.every((commit) => object(commit) && revision(commit.sha)
       && text(commit.subject) && Array.isArray(commit.files_changed) && commit.files_changed.every(text))
     || !object(quality.test_integrity) || !Array.isArray(quality.test_integrity.cycles)
-    || !quality.test_integrity.cycles.every(object)) {
+    || !quality.test_integrity.cycles.every(object))) {
     return { error: 'Malformed quality evidence fields' }
   }
   const ids = new Set()
   for (const gate of quality.gates) {
-    if (!object(gate) || !gateIds.includes(gate.id) || ids.has(gateKey(gate, quality)) || !text(gate.label)) {
+    if (!object(gate) || !gateIdsOf(quality).includes(gate.id) || ids.has(gateKey(gate, quality)) || !text(gate.label)) {
       return { error: 'Malformed or duplicate quality gate identifier/label' }
     }
     ids.add(gateKey(gate, quality))
@@ -94,7 +107,8 @@ export function parseQualityEvidence(raw, data) {
 }
 
 export function qualityProofs(quality, qualityEvidenceRef) {
-  if (!quality) return []
+  // v7 keeps no stdout or exit file: a script wrote each status, qg-verify checked the log.
+  if (!quality || named(quality)) return []
   const refs = quality.gates.flatMap((gate) => [gate.stdout_ref, gate.exit_code_ref])
   refs.push(...quality.test_integrity.cycles.flatMap((cycle) => [cycle.red_stdout_ref, cycle.red_exit_code_ref]))
   return [...new Set(refs.map((ref) => resolveQualityReference(ref, qualityEvidenceRef)).filter(Boolean))]
@@ -126,7 +140,13 @@ function gateStatus(gate, quality, proofs, qualityRef) {
     || !Object.values(gate.metrics).every((value) => typeof value === 'number' && Number.isFinite(value) && value >= 0))) {
     return unverified('Malformed metrics')
   }
-  if (gate.id === 'G8' || gate.id === 'G9') return unverified('Git tree verification belongs to the reviewer')
+  if (['G8', 'G9', 'commit.convention', 'test.integrity'].includes(gate.id)) return unverified('Git tree verification belongs to the reviewer')
+  if (gate.id === SCREENSHOTS) return unverified('Screenshot hashes are verified by qg-verify')
+  if (named(quality)) {
+    if (!text(gate.command_executed)) return unverified('Missing runner command')
+    if (gate.status === 'fail' || gate.metrics?.tests_failed > 0) return { status: 'fail', reason: text(gate.summary) ? gate.summary : 'Declared failure or failing test metrics' }
+    return { status: 'pass', reason: text(gate.summary) ? gate.summary : 'Recorded by the adapter script' }
+  }
   let result
   if (gate.id === 'G10') {
     const cycles = quality.test_integrity.cycles
@@ -262,7 +282,7 @@ export function buildReportView(data, documents, parsed, proofs) {
   const criteria = data.criteria.map((criterion) => {
     const evidence = resolveQualityReference(criterion.evidence, data.qualityEvidenceRef)
     // The current contract has no per-test result bound to a criterion. Neither
-    // an aggregate G1 exit nor a test path in stdout establishes that outcome.
+    // an aggregate test.acceptance exit nor a test path in stdout establishes that outcome.
     return [criterion.id, criterion.description, criterion.test, forecast ? 'PLANNED' : 'UNVERIFIED',
       forecast ? data.testPlanRef : evidence || criterion.evidence]
   })
@@ -297,7 +317,8 @@ export function buildReportView(data, documents, parsed, proofs) {
   } else {
     const rows = gates.map(({ id, gate, status, reason }) => {
       const refs = id === 'G10' && gate ? quality.test_integrity.cycles.flatMap((cycle) => [cycle.red_stdout_ref, cycle.red_exit_code_ref])
-        : [gate?.stdout_ref, gate?.exit_code_ref]
+        : id === SCREENSHOTS && Array.isArray(gate?.screenshots) ? gate.screenshots.map((shot) => shot?.ref)
+          : [gate?.stdout_ref, gate?.exit_code_ref]
       const metrics = object(gate?.metrics) ? Object.entries(gate.metrics)
         .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
         .map(([key, value]) => `${key}: ${value}`).join('; ') : ''
@@ -309,8 +330,8 @@ export function buildReportView(data, documents, parsed, proofs) {
     view.review = documentContent(data.reviewRef, documents)
     view.changes = documentContent(data.changeLogRef, documents)
     view.aggregateNote = french
-      ? 'Les contrôles agrégés, y compris G1, restent distincts des résultats par critère. Sans preuve individuelle liée au test et au critère, le résultat reste UNVERIFIED.'
-      : 'Aggregate gates, including G1, remain separate from criterion outcomes. Without individual evidence bound to the test and criterion, the outcome remains UNVERIFIED.'
+      ? 'Les contrôles agrégés, y compris test.acceptance, restent distincts des résultats par critère. Sans preuve individuelle liée au test et au critère, le résultat reste UNVERIFIED.'
+      : 'Aggregate gates, including test.acceptance, remain separate from criterion outcomes. Without individual evidence bound to the test and criterion, the outcome remains UNVERIFIED.'
     view.reviewNote = french ? 'Le rendu vérifie les preuves locales, pas les objets Git ni le déploiement. La décision globale appartient à la revue.'
       : 'Rendering checks local proofs, not Git objects or deployment. The overall decision belongs to the reviewer.'
   }

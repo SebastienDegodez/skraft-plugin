@@ -25,6 +25,10 @@ Core is Domain and Application; boundary is API, Infrastructure and UI. For line
 Domain and Application are any folder (or .NET project) whose name ends with `domain` or
 `application`.
 
+Line coverage and mutation are executed by the project's CI, never by the pipeline: coverage
+with this minimal bar and no exclusion, mutation as its own CI step. No evidence log records
+them.
+
 TDD variant is Outside-In double-loop, always. `outside-in-tdd` owns the sequence.
 
 ## Enforcement
@@ -37,22 +41,21 @@ rationale that grants an exemption.
 | Clean Architecture boundaries | blocking |
 | TDD cycle respected | blocking |
 | Test integrity | blocking |
-| Mutation, in a delivery | never run: G6 `not_run`, reported |
+| Line coverage | executed by the project's CI, never by the pipeline |
+| Mutation | executed by the project's CI, never by the pipeline |
 | Mutation, in a `/skraft-mutation` run | every scope meets the bar |
 | Gherkin gate (user-approved scenarios) | blocking |
 | ADR for non-trivial decisions | blocking |
 | Object Calisthenics (Domain) | blocking |
 
-A gate that cannot run is not a passed gate. Report it as a failure and stop. The one
-exception is mutation: the pipeline never runs it, so G6 is `not_run`, never `pass`, and the
-report says so.
+A gate that cannot run is not a passed gate. Report it as a failure and stop. Coverage and
+mutation are not pipeline gates: never report them as passed by a delivery.
 
 ## Mutation is the developer's responsibility
 
 Mutation testing must be done on every story, and running it is the developer's
 responsibility, not SKRAFT's. SKRAFT ships no mutation tool, no mutation config and no
-scaffold, and the pipeline never runs mutation: every delivery records G6 `not_run`. The
-developer:
+scaffold, and the pipeline never runs mutation: the project's CI does. The developer:
 
 1. picks the tool (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…) and its configuration;
 2. runs `/skraft-mutation`, which asks for the command of each component (proposing one found in

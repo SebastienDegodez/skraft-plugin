@@ -17,14 +17,14 @@ La phase DELIVER implémente le code fonctionnel, guidé par les tests, avec une
 |---|---|
 | **Vient de** | **DISTILL** — les scénarios Gherkin, le plan de tests, le plan d'implémentation et le test d'acceptation RED |
 | **Ce qui entre** | Spécifications exécutables à implémenter, dans l'ordre du plan d'implémentation, avec la couche et le double du plan de tests pour chaque scénario ; contrats, index ADR, conventions de recherche et commandes de stack |
-| **Ce qui sort** | Code testé + évidence qualité (mutation, RED→GREEN) ; rapport de résultat à la fin ou au blocage |
+| **Ce qui sort** | Code testé + évidence qualité (tests, build, lint, RED→GREEN, captures d'écran pour une story frontend) ; rapport de résultat à la fin ou au blocage |
 | **Va vers** | La **Pull Request** — revue humaine puis livraison |
 | **Agent responsable** | `software-engineer` |
 | **Reviewer associé** | `software-engineer-reviewer` |
 
 ## Pourquoi cette phase existe
 
-Le code est le seul artefact qui compte en production. Le software-engineer applique l'Outside-In TDD : les Acceptance Test guident les tests unitaires, qui guident l'implémentation. Le Mutation Score vérifie que les tests protègent réellement le comportement. Le reviewer est read-only — il ne modifie jamais le code.
+Le code est le seul artefact qui compte en production. Le software-engineer applique l'Outside-In TDD : les Acceptance Test guident les tests unitaires, qui guident l'implémentation. Le score de mutation, lancé par la CI du projet, vérifie que les tests protègent réellement le comportement. Le reviewer est read-only — il ne modifie jamais le code.
 
 > « We grow working software, guided by tests, from the outside in. »
 > — Freeman, S. & Pryce, N., *Growing Object-Oriented Software, Guided by Tests*, 2009.
@@ -32,7 +32,7 @@ Le code est le seul artefact qui compte en production. Le software-engineer appl
 <div class="fil-rouge" markdown="1">
 <span class="fil-rouge__label">☕ Fil rouge — Starbucks <em>(exemple illustratif)</em></span>
 
-Le scénario entre. DELIVER implémente le calcul du total et l'attribution des points en cycles **RED → GREEN**, puis un **score de mutation** atteste que les tests protègent réellement la règle de fidélité. Le code part en Pull Request.
+Le scénario entre. DELIVER implémente le calcul du total et l'attribution des points en cycles **RED → GREEN** ; le journal d'évidence atteste chaque gate verte. Le code part en Pull Request, où la CI du projet calcule le **score de mutation** qui atteste que les tests protègent réellement la règle de fidélité.
 </div>
 
 ## Ce que produit l'agent
@@ -40,8 +40,8 @@ Le scénario entre. DELIVER implémente le calcul du total et l'attribution des 
 - Code implémenté selon le cycle RED → GREEN → REFACTOR.
 - Tests d'acceptation passants liés aux scénarios Gherkin.
 - Tests unitaires couvrant les invariants du Domain.
-- Mutation Score comme preuve empirique de la qualité des tests.
-- Journal d'évidence des quality gates, journal de changements et données de résultat pour le reviewer.
+- Captures d'écran du résultat frontend, pour une story frontend.
+- Journal d'évidence des quality gates (schéma v7, dans le répertoire d'évidence ignoré par Git), journal de changements et données de résultat pour le reviewer.
 
 ## Handoff, RED et rework
 
@@ -54,10 +54,14 @@ le plan de tests et le plan d'implémentation restent présents pendant le rewor
 Le RED est le commit `test` de DISTILL, qui porte le test d'acceptation de chaque scénario.
 L'engineer les rend verts groupe par groupe — les scénarios qui fixent une règle et ses cas
 limites —, un commit vert par groupe, la gate excluant les scénarios encore dus, le dernier
-groupe lançant toute la suite. Un seul dispatch livre tous les scénarios. La
-mutation par cycle est différentielle depuis le dernier commit du cycle précédent et est
-sautée quand aucun fichier de production cœur n'a changé. Seul le run final complet cœur
-puis frontière constitue l'évidence G6.
+groupe lançant toute la suite. Un seul dispatch livre tous les scénarios. Le
+pipeline ne lance ni mutation ni couverture : les deux sont des étapes de la CI du projet.
+Le journal d'évidence est écrit une seule fois, après le dernier commit de travail, par les
+scripts de l'adaptateur de la stack, dans
+`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`, que Git ignore : il
+contient les verdicts des gates et, pour une story frontend, les captures d'écran — rien
+d'autre. Rien n'est commité, aucun snapshot n'est pris : `qg-verify` lit les commits et les
+tests RED dans Git.
 
 Le reviewer prépare `diff-{story}.patch` et `files-{story}.txt` une seule fois, puis donne
 ces chemins aux lentilles. `quality-gates` reçoit aussi le plan de tests, `test-integrity`
@@ -94,15 +98,16 @@ résolus du projet consommateur, jamais dans le skill installé. Aucune surcharg
 entreprise, aucun profil ni nouvelle clé de configuration n'est introduit.
 L'intégration des modèles et la parité du rendu par défaut restent à valider.
 
-Le résultat projette les tests, build, contrôles statiques, couverture, mutation,
+Le résultat projette les tests, build, contrôles statiques, captures d'écran,
 revue, commits/fichiers et limites consignés dans du Markdown. Une preuve absente ou
 périmée reste non vérifiée ; les mesures ne sont pas inventées. Un résultat bloqué
 précise le travail incomplet. Les contrôles locaux des preuves et le verdict de revue
 persisté restent distincts : le rendu actuel laisse la vérification des objets Git
-G8/G9 au reviewer. Livré ne signifie pas déployé.
+`commit.convention`/`test.integrity` au reviewer. Livré ne signifie pas déployé.
 
 Pour le frontend, les producteurs existants capturent les preuves Playwright et les
-reviewers les vérifient. Seules les preuves déjà accessibles à distance reçoivent un
+reviewers les vérifient : une story frontend enregistre `evidence.screenshots`, et
+`qg-verify` la fait échouer sans capture d'écran (`SCREENSHOTS_MISSING`). Seules les preuves déjà accessibles à distance reçoivent un
 lien, avec leurs limites d'accès ; les preuves locales sont explicitement indisponibles
 à distance, jamais présentées comme des pièces jointes publiées. Le plafond de médias choisi
 au démarrage peut être nul et n'a pas de valeur par défaut imposée. Il limite les liens
@@ -165,8 +170,9 @@ capacité est active, sa lentille de fidélité rejoint le panel adverse du
 
 ## Les gates franchies ici
 
-Cette phase franchit les gates de livraison — tests RED/GREEN intègres, build vert,
-score de mutation au seuil (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
+Cette phase franchit les gates de livraison — tests RED/GREEN intègres, build et lint
+verts, aucun mock dans le cœur, convention de commit et, pour une story frontend, captures
+d'écran ; mutation et couverture tournent dans la CI du projet (voir le [catalogue des gates]({{ "/fr/reference/gates" | relative_url }})).
 Le reviewer indépendant émet son verdict avant que la livraison soit déclarée approuvée.
 Une **draft PR** peut déjà exister après création et push
 autorisés séparément ; son ouverture ne signifie pas que les gates de livraison sont franchies.
