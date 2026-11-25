@@ -6,7 +6,7 @@ const BASE = process.env.BASE_URL || 'http://localhost:4000/skraft-plugin'
 const PAGE = `${BASE}/explanation/pipeline`
 const PIPELINE_NODES = [
   'start', 'research', 'design', 'design_review', 'adr', 'distill',
-  'distill_review', 'deliver', 'gates', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit',
+  'distill_review', 'scenario_review', 'deliver', 'deliver_review', 'visuals', 'pr_writer', 'publish', 'exit',
 ]
 
 const viewer = (page) => page.locator('figure[data-workflow]').first()
@@ -18,7 +18,7 @@ test.describe('workflow viewer', () => {
     await expect(node(page, 'design')).toBeVisible()
     for (const id of PIPELINE_NODES) await expect(node(page, id)).toHaveCount(1)
     await expect(node(page, 'design_review')).toContainText('architecture-compliance')
-    await expect(node(page, 'gates').getByRole('img', { name: 'locked' })).toBeVisible()
+    await expect(node(page, 'gates')).toHaveCount(0)
   })
 
   test('switches the layout and the workflow from the toolbar', async ({ page }) => {
