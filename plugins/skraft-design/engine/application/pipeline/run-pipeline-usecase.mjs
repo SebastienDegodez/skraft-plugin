@@ -19,7 +19,7 @@ import { openActiveRun } from './active-run.mjs'
 import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
 import { deliveredGatesOf } from '../../domain/evidence/gate-names.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
-import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
+import { assignmentOf, modelOf, reviewAssignmentsOf, reworkAssignmentOf } from '../config/agent-models.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { policyLines } from '../../domain/config/infrastructure-policy.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -455,10 +455,14 @@ const skillsOf = ({ agentCatalog }, role, components) => findComponentSkills(age
  * so that a configuration changed since does not change it, else what the configuration says.
  * @param {Context} context @param {WorkStep} next
  */
-const phaseAssignment = ({ config, journal }, { node, resumed }) => {
-  if (resumed) return openStart(journal).assignment
-  return assignmentOf(config, { agent: /** @type {string} */ (node.agent), type: 'phase', named: node.model })
+const phaseAssignment = ({ config, journal }, next) => {
+  if (next.resumed) return openStart(journal).assignment
+  const wanted = { agent: /** @type {string} */ (next.node.agent), type: /** @type {const} */ ('phase'), named: next.node.model }
+  return isRework(next) ? reworkAssignmentOf(config, wanted) : assignmentOf(config, wanted)
 }
+
+/** A pass that fixes what was sent back, or applies a person's instruction; a new pass of fresh stories is none. @param {WorkStep} next */
+const isRework = ({ feedback, instruction }) => feedback.length > 0 || instruction !== null
 
 /** The step.started of the attempt a resumed run picks up: the last one journaled. @param {OpenJournal} journal */
 const openStart = (journal) => /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started'))

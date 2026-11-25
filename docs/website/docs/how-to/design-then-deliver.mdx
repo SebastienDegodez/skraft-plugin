@@ -79,7 +79,8 @@ Azure DevOps keeps its native story types.
 
 The engine leaves closed stories out without asking and lists them in the architecture PR. Each design pass
 handles at most 20 open stories. Research precedes design; three review lenses, a refuter and
-the engine verdict precede the architecture PR. New ADRs are marked Accepted on its branch, by
+the engine verdict precede the architecture PR. A pass that fixes findings or applies your answers
+runs on `assign.types.rework` (`standard` by default), never above the architect's own family. New ADRs are marked Accepted on its branch, by
 "architecture PR merge", and take effect only when you merge that PR; no separate ADR
 ratification is asked. The plugin publishes
 the architecture PR only with consent, and keeps research in one marked issue comment.

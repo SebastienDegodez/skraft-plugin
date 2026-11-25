@@ -81,7 +81,9 @@ Azure DevOps conserve ses types natifs de stories.
 
 Le moteur ecarte les stories fermees sans rien demander et les liste dans la PR d'architecture.
 Chaque passe traite au plus 20 stories ouvertes. La recherche precede la conception ;
-trois lentilles, un refutateur et le verdict du moteur precedent la PR d'architecture. Les nouveaux
+trois lentilles, un refutateur et le verdict du moteur precedent la PR d'architecture. Une passe qui
+corrige des constats ou applique vos reponses tourne sur `assign.types.rework` (`standard` par
+defaut), jamais au-dessus de la famille de l'architecte. Les nouveaux
 ADR sont marques Accepted sur sa branche, par "architecture PR merge", et ne prennent effet que si
 vous fusionnez cette PR ; aucune ratification distincte n'est demandee. Le plugin publie la PR seulement avec consentement
 et conserve la recherche dans un commentaire d'issue unique, marque.

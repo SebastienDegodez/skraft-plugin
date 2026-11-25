@@ -101,6 +101,8 @@ test('an epic runs separate reviewed passes of twenty stories and one remaining 
   assert.deepEqual(sizes, [20, 1])
   const events = (await deps.journal.lines('epic-42')).map((line) => JSON.parse(line))
   assert.equal(events.filter(({ type }) => type === 'architecture.pass-completed').length, 2)
+  // A pass that designs new stories is no rework: it keeps the architect's family.
+  assert.deepEqual(events.filter(({ type, agent: id }) => type === 'step.started' && id === 'design-solution-architect').map(({ assignment }) => assignment.family), ['planner', 'planner'])
 })
 
 test('excluding every architecture-blocked story stops without an empty architecture PR', async () => {
@@ -576,6 +578,9 @@ test('a pass the review sends back is told the files its findings cite, once eac
   await createRunPipeline(deps).run()
   const designs = host.agentRunner.dispatches.filter(({ agent: id }) => id === 'design-solution-architect')
   assert.equal(designs.length, 2)
+  // The pass that fixes the findings runs a tier down.
+  const started = host.events().filter(({ type }) => type === 'step.started')
+  assert.deepEqual(started.filter(({ agent: id }) => id === 'design-solution-architect').map(({ assignment }) => [assignment.family, assignment.source]), [['planner', 'agent'], ['standard', 'rework']])
   assert.ok(designs[1].prompt.includes('Files the findings cite, the only ones this pass reads again and changes unless a fix needs another: docs/architecture/contract.md, docs/architecture/context-map.md'), designs[1].prompt)
 })
 
@@ -742,4 +747,15 @@ test('the architecture pull request names each shared document the run changed p
   assert.match(body, /`docs\/architecture\/contexts\/checkout\/tactical-design\.md` is 16 KB, past the 15 KB a shared document keeps: split it/)
   assert.doesNotMatch(body, /billing\/tactical-design\.md` is/)
   assert.doesNotMatch(body, /42-card-checkout\.md` is/)
+})
+
+test('a rework never runs above the architect\'s own family: an architect a team puts on economy fixes its findings on economy', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: { assign: { agents: { 'design-solution-architect': 'economy' } } } })
+  await run.start({ issue: 42 })
+  host.agentRunner.review = lenses({ consistency: [says('consistency', 'fail', [finding('F1', 'high', 'The hash is named twice', { location: 'docs/architecture/context-map.md:4' })])], refuter: [refutes('confirmed')] })
+  const design = contextDesign('issue-42')(host)
+  host.agentRunner.behaviours.push(agent()(host), design, design)
+  await createRunPipeline(deps).run()
+  const families = host.events().filter(({ type, agent: id }) => type === 'step.started' && id === 'design-solution-architect').map(({ assignment }) => assignment.family)
+  assert.deepEqual(families, ['economy', 'economy'])
 })

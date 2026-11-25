@@ -6,7 +6,9 @@
  *
  * @typedef {'claude-code' | 'copilot'} Host
  * @typedef {'economy' | 'standard' | 'frontier' | 'premium'} Tier
- * @typedef {'phase' | 'lens' | 'refuter' | 'worker'} AgentType
+ * @typedef {'phase' | 'lens' | 'refuter' | 'worker' | 'rework'} AgentType
+ *   rework: a phase agent's pass that fixes what a review or the engine sent back, or applies a
+ *   person's answers; it runs on this type's family when that ranks below the agent's own (#669).
  * @typedef {'low' | 'medium' | 'high' | 'xhigh' | 'max'} Effort
  * @typedef {{ model?: string[], effort?: Effort }} HostSetting model: tried in order, the same effort for each
  * @typedef {{ tier?: Tier } & Partial<Record<Host, HostSetting>>} FamilySettings
@@ -15,7 +17,7 @@
  *   family: a family or `inherit`, null when the rule only sets an effort.
  * @typedef {{ default: string | null, types: Partial<Record<AgentType, Rule>>, agents: Record<string, Rule> }} Assign
  * @typedef {{ models: Models, assign: Assign }} ModelSettings
- * @typedef {'agent' | 'workflow' | 'type' | 'default' | 'escalation' | 'host'} FamilySource
+ * @typedef {'agent' | 'workflow' | 'type' | 'default' | 'escalation' | 'host' | 'rework'} FamilySource
  * @typedef {{ family: string | null, source: FamilySource }} Assignment family null: the host decides
  * @typedef {{ agent: string, type: AgentType, workflowFamily?: string | null }} AgentRef
  *   workflowFamily: what an ejected workflow names for it (`model=`, `@<family>`, `refuter=`).
@@ -26,7 +28,7 @@ export const HOSTS = Object.freeze(/** @type {Host[]} */ (['claude-code', 'copil
 export const TIERS = Object.freeze(/** @type {Tier[]} */ (['economy', 'standard', 'frontier', 'premium']))
 /** The strongest tier an escalation reaches: premium only by an explicit assignment. */
 const ESCALATION_CEILING = TIERS.indexOf('frontier')
-export const AGENT_TYPES = Object.freeze(/** @type {AgentType[]} */ (['phase', 'lens', 'refuter', 'worker']))
+export const AGENT_TYPES = Object.freeze(/** @type {AgentType[]} */ (['phase', 'lens', 'refuter', 'worker', 'rework']))
 export const EFFORTS = Object.freeze(/** @type {Effort[]} */ (['low', 'medium', 'high', 'xhigh', 'max']))
 /** The roles and the tier each one runs on unless `models.<role>.tier` says otherwise. */
 export const ROLES = Object.freeze(/** @type {Readonly<Record<string, Tier>>} */ ({ reviewer: 'economy', researcher: 'economy', implementer: 'standard', planner: 'frontier' }))
@@ -47,7 +49,7 @@ export const PLUGIN_DEFAULTS = Object.freeze({
   },
   assign: {
     default: 'implementer',
-    types: { lens: 'reviewer', worker: 'implementer' },
+    types: { lens: 'reviewer', worker: 'implementer', rework: 'standard' },
     agents: { 'design-solution-researcher': 'researcher', 'design-solution-architect': 'planner', 'design-pr-writer': 'economy' },
   },
 })
@@ -81,6 +83,18 @@ export const assignFamily = (ref, settings) => assignmentOf(firstNamed([...named
 export const assignRefuter = (ref, escalated, settings) => {
   const named = firstNamed(namedFamilies(ref, settings))
   return named === undefined ? { family: escalated, source: 'escalation' } : assignmentOf(named)
+}
+
+/**
+ * A rework's family: the rework type's when it ranks below the agent's own, which a rework never
+ * goes above; the agent's own otherwise, and when either is the host's choice or unranked.
+ * @param {Assignment} own @param {ModelSettings} settings @returns {Assignment}
+ */
+export const assignRework = (own, settings) => {
+  const family = ownOf(settings.assign.types, 'rework')?.family
+  if (family == null || family === INHERIT || own.family === null) return own
+  const [lower, higher] = [tierOf(family, settings.models), tierOf(own.family, settings.models)]
+  return lower !== null && higher !== null && TIERS.indexOf(lower) < TIERS.indexOf(higher) ? { family, source: 'rework' } : own
 }
 
 /** @typedef {[FamilySource, string | null | undefined]} Named */
