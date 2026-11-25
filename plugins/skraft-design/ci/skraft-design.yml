@@ -1,0 +1,135 @@
+# skraft-design in CI (#662). Copy this file into the project as .github/workflows/skraft-design.yml.
+#
+# - Run it by hand (workflow_dispatch) with one issue or one epic: the design runs in mode "ci".
+#   When it waits on a person, the engine publishes the draft pull request with every pending
+#   question, and this job keeps the run's tracking folder as an artifact.
+# - Answer in that draft with one comment: /skraft-answer {"key":"…","answer":…}. The comment
+#   resumes the same run: the engine records it only when its author has write access to the
+#   repository (admin, maintain or write) and it answers the pending question; then the design
+#   goes on, and pauses again or ends with the architecture pull request.
+#
+# Secrets:
+# - SKRAFT_DESIGN_JOURNAL_KEY: 64 hexadecimal characters (`openssl rand -hex 32`); the journal is
+#   signed with it, so the job that resumes verifies what the pausing job wrote.
+# - ANTHROPIC_API_KEY: the Claude Code host that conducts the agents.
+# Variables:
+# - SKRAFT_PLUGIN_REF: the skraft-plugin ref the plugin is taken from (a tag), main by default.
+
+name: skraft-design
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Story issue number (leave empty with epic)
+        required: false
+      epic:
+        description: Epic issue number (leave empty with issue)
+        required: false
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: skraft-design-${{ github.event.issue.number || github.event.inputs.epic || github.event.inputs.issue }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  design:
+    # A comment resumes only a design draft, and only when it is a reply; the engine checks the
+    # author's access before anything runs.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/skraft-answer '))
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SKRAFT_DESIGN_JOURNAL_KEY: ${{ secrets.SKRAFT_DESIGN_JOURNAL_KEY }}
+      PLUGIN: ${{ github.workspace }}/.skraft-plugin/plugins/skraft-design
+    steps:
+      - name: Find the design branch of the draft
+        id: target
+        if: github.event_name == 'issue_comment'
+        run: |
+          head="$(gh pr view "${{ github.event.issue.number }}" --repo "$GITHUB_REPOSITORY" --json headRefName --jq .headRefName)"
+          case "$head" in design/*) ;; *) echo "not a design draft: $head"; exit 1 ;; esac
+          echo "branch=$head" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.target.outputs.branch || github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: SebastienDegodez/skraft-plugin
+          ref: ${{ vars.SKRAFT_PLUGIN_REF || 'main' }}
+          path: .skraft-plugin
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Restore the run this reply resumes
+        if: github.event_name == 'issue_comment'
+        env:
+          BRANCH: ${{ steps.target.outputs.branch }}
+        run: |
+          name="skraft-design-${BRANCH//\//-}"
+          id="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name&per_page=1" --jq '.artifacts[0].id // empty')"
+          if [ -z "$id" ]; then echo "no kept run for $BRANCH"; exit 1; fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/run.zip"
+          mkdir -p .copilot-tracking/skraft-design-runs
+          unzip -q -o "$RUNNER_TEMP/run.zip" -d .copilot-tracking/skraft-design-runs
+
+      - name: Record the reply
+        if: github.event_name == 'issue_comment'
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+        run: |
+          printf '%s' "$COMMENT" > "$RUNNER_TEMP/comment.md"
+          node "$PLUGIN/engine/drivers/cli/ci-reply.mjs" --author "$AUTHOR" --comment-file "$RUNNER_TEMP/comment.md"
+
+      - name: Install Claude Code
+        run: npm install --global @anthropic-ai/claude-code
+
+      - name: Design
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE: ${{ github.event.inputs.issue }}
+          EPIC: ${{ github.event.inputs.epic }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            scope="issue #$ISSUE"; [ -n "$EPIC" ] && scope="epic #$EPIC"
+            task="Use the skraft-design skill to design the architecture of $scope with mode ci."
+          else
+            task="Use the skraft-design skill to resume the active architecture run: call skraft_design_next."
+          fi
+          printf '%s\n\n%s\n' "$task The workspace is $GITHUB_WORKSPACE." \
+            "This is a CI run: never answer a question yourself. When the engine waits, report its result and stop." > "$RUNNER_TEMP/prompt.txt"
+          claude -p --plugin-dir "$PLUGIN" --permission-mode acceptEdits \
+            --allowedTools "mcp__plugin_skraft-design_skraft-design,Agent,Read,Write,Edit,Glob,Grep,Skill,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(mkdir -p:*)" \
+            < "$RUNNER_TEMP/prompt.txt"
+
+      - name: Name the kept run
+        id: kept
+        if: always()
+        run: |
+          branch="$(git branch --show-current)"
+          echo "name=skraft-design-${branch//\//-}" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the run for the next reply
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.kept.outputs.name }}
+          path: .copilot-tracking/skraft-design-runs/
+          include-hidden-files: true
+          overwrite: true
+          retention-days: 30
