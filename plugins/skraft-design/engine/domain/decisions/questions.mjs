@@ -1,6 +1,7 @@
 import { CONFIG_FILE } from '../config/skraft-config.mjs'
 import { inert } from '../reporting/markdown-safety.mjs'
 import { causeLines } from '../pipeline/incidents.mjs'
+import { readQuestionAnswers } from '../architecture/open-questions.mjs'
 
 /**
  * The questions a run asks a human, and how an answer to one is read. A question node of the
@@ -273,7 +274,7 @@ const cell = (text) => {
  * @returns {string | null}
  */
 export const instructionOf = (question) => {
-  if (question?.kind !== BLOCKED && question?.kind !== REVIEW_CEILING) return null
+  if (!REOPENING.includes(/** @type {string} */ (question?.kind))) return null
   return QUESTIONS[question.kind].options.includes(/** @type {string} */ (question.answer)) ? null : question.answer
 }
 
@@ -297,7 +298,18 @@ export const decideUsage = ({ kind, options }) => (takesInstruction(kind) ? [...
  * @param {{ answer: unknown, reason?: unknown }} given
  * @returns {AnswerReading}
  */
-export const readAnswer = (question, given) => (takesInstruction(question.kind) ? readInstruction(question, given) : readOption(question, given))
+/** The questions whose instruction runs a step again on a new pass: a block, a review at its ceiling, the architect's open questions. */
+const REOPENING = Object.freeze([BLOCKED, REVIEW_CEILING, 'architecture-questions'])
+
+/**
+ * The answer a question takes: the architect's open questions take one answer per question
+ * (#662), an instruction question words of a person's own, any other question one of its options.
+ * @param {any} question @param {{ answer: unknown, reason?: unknown }} given
+ */
+export const readAnswer = (question, given) => {
+  if (question.kind === 'architecture-questions') return readQuestionAnswers(question.questions ?? [], given.answer)
+  return takesInstruction(question.kind) ? readInstruction(question, given) : readOption(question, given)
+}
 
 /**
  * One of the question's options, in any case, and for a refusal a reason, kept on one line.

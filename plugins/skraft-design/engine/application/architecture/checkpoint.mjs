@@ -20,7 +20,8 @@ const scopeCheckpoint = async (context) => {
 
 /**
  * The content questions the pass left on the stories it kept: one decision holds them all, so a
- * person answers them together and the review reads the design they settle (#662).
+ * person answers them together, the answers run the design again once, and the review reads the
+ * design they settle (#662). The same questions left again are not asked again.
  */
 const questionsCheckpoint = async ({ deps, slug, journal }) => {
   const issues = currentStories(journal.events).map(({ number }) => number)
@@ -28,7 +29,7 @@ const questionsCheckpoint = async ({ deps, slug, journal }) => {
   if (questions.length === 0) return null
   const hash = await deps.hasher.sha256(JSON.stringify(questions))
   const key = `architecture-questions-${passIndex(journal.events)}-${hash.slice(0, 12)}`
-  const question = await contextQuestion(journal, { key, kind: 'architecture-questions', text: questionsText(questions), step: 'design_review', details: { questions } })
+  const question = await contextQuestion(journal, { key, kind: 'architecture-questions', text: questionsText(questions), step: 'design', details: { questions } })
   if (!question.answer) return waitingFor(slug, question)
   return question.answer === 'STOP' ? stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.') : null
 }

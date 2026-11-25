@@ -84,3 +84,36 @@ export const questionsText = (questions) => [
   `The solution architect left ${questions.length} question(s) for a person; answer each by its id with one of its options, or write STOP.`,
   ...questions.flatMap(questionLines),
 ].join('\n')
+
+const ANSWERS_SHAPE = 'answer every question by its id in one JSON object, such as {"Q1":"A","Q2":"your own words"}, or write STOP'
+
+/** The answers as an object; null when the text holds none. @param {unknown} answer */
+const answersOf = (answer) => {
+  const value = typeof answer === 'string' ? parsed(answer) : answer
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? /** @type {Record<string, unknown>} */ (value) : null
+}
+
+/** One answer as the architect reads it: the option a person chose, or their own words. @param {OpenQuestion} question @param {string} given */
+const answerLine = ({ id, issue, criterion, options }, given) => {
+  const option = options.find((each) => each.id.toUpperCase() === given.trim().toUpperCase())
+  const said = option ? `${option.id} — ${option.label}` : given.trim().replace(/\s+/g, ' ')
+  return `${id} (#${issue} ${criterion}): ${said}`
+}
+
+/**
+ * A person's answers to every open question, as the instruction the architect's next pass reads,
+ * one line per question; STOP alone ends the run. A set that leaves a question unanswered, or
+ * answers one the run did not ask, is refused naming it.
+ * @param {OpenQuestion[]} questions @param {unknown} answer
+ * @returns {{ ok: true, answer: string, reason: null } | { ok: false, reason: string }}
+ */
+export const readQuestionAnswers = (questions, answer) => {
+  if (typeof answer === 'string' && answer.trim().toUpperCase() === 'STOP') return { ok: true, answer: 'STOP', reason: null }
+  const answers = answersOf(answer)
+  if (answers === null) return { ok: false, reason: ANSWERS_SHAPE }
+  const unknown = Object.keys(answers).filter((id) => !questions.some((question) => question.id === id))
+  if (unknown.length > 0) return { ok: false, reason: `no open question has the id ${unknown.join(', ')}; ${ANSWERS_SHAPE}` }
+  const missing = questions.filter(({ id }) => !filled(answers[id])).map(({ id }) => id)
+  if (missing.length > 0) return { ok: false, reason: `${missing.join(', ')} has no answer; ${ANSWERS_SHAPE}` }
+  return { ok: true, answer: questions.map((question) => answerLine(question, /** @type {string} */ (answers[question.id]))).join('\n'), reason: null }
+}

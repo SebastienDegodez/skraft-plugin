@@ -38,6 +38,7 @@ Before reading the workspace or making decisions, load `design-architecture-patt
    - `question`: one question, in the story's language;
    - `options`: two or more, each `{"id":"A","label":"…","consequence":"…"}`;
    - `assumption`: the `id` of the option your design follows meanwhile.
+   A pass opened with a person's answers applies each one, then rewrites the file with the questions still open only, `[]` when none is.
    A blocked result is only for a pass that can design nothing; a story you cannot design at all goes to `details/blocked-stories.json`.
 
 ## Inputs

@@ -335,3 +335,35 @@ test('open questions that offer one option, or assume none of theirs, are refuse
   assert.ok(failures.includes('details/open-questions.json: Q1: it offers at least two options.'), failures.join('|'))
   assert.ok(failures.includes('details/open-questions.json: Q2: its assumption is the id of one of its options.'), failures.join('|'))
 })
+
+test('answering every open question runs the architect once more with each answer, then the review; a partial set changes nothing', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42')
+  await run.start({ epic: 42 })
+  const architect = (questions) => agent({ work: async ({ workspace, git, tracking }) => {
+    for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories) {
+      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      await workspace.write(path, briefOf(current))
+      git.change(path)
+    }
+    await tracking.write('epic-42', 'details/open-questions.json', JSON.stringify(questions))
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), architect(OPEN_QUESTIONS))
+  const paused = await createRunPipeline(deps).run()
+  const view = await createObserve(deps).view()
+  assert.deepEqual(view.question?.questions?.map(({ id, options }) => [id, options.map((option) => option.id)]), [['Q1', ['A', 'B']], ['Q2', ['KEEP', 'EMPTY']]])
+  const decide = (answer) => createDecide(deps).decide({ key: paused.question.key, answer })
+  const partial = await decide(JSON.stringify({ Q1: 'a' }))
+  assert.equal(partial.code, 'invalid-answer')
+  assert.match(partial.reason, /Q2/)
+  assert.equal(host.events().some(({ type, key }) => type === 'question.answered' && key === paused.question.key), false)
+  const full = await decide(JSON.stringify({ Q1: 'a', Q2: 'Keep it, and warn the customer' }))
+  assert.equal(full.ok, true, full.reason)
+  host.agentRunner.behaviours.push(architect([]))
+  const finished = await createRunPipeline(deps).run()
+  assert.equal(finished.status, 'done', finished.reason)
+  const designs = host.agentRunner.dispatches.filter(({ agent: id }) => id === 'design-solution-architect')
+  assert.equal(designs.length, 2)
+  assert.match(designs[1].prompt, /Q1 \(#42 AC-1\): A — Through the HTTP entry point/)
+  assert.match(designs[1].prompt, /Q2 \(#43 AC-1\): Keep it, and warn the customer/)
+  assert.deepEqual(host.agentRunner.reviewed().map(({ agent: id }) => id), ['design-consistency-lens', 'design-architecture-compliance-lens', 'design-fitness-lens'])
+})

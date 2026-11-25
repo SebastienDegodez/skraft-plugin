@@ -22,7 +22,9 @@ export const reasonOf = (run) => run.finished?.reason ?? waitingOn(run)?.text ??
 export const waitingOn = (run) => {
   const asked = run.question
   if (asked === null || asked.answer !== null) return null
-  return { key: asked.key, kind: asked.kind, text: asked.text, options: asked.options, refusals: asked.refusals, header: asked.header }
+  const waiting = { key: asked.key, kind: asked.kind, text: asked.text, options: asked.options, refusals: asked.refusals, header: asked.header }
+  // The architect's open questions reach the host one by one, each with its own options (#662).
+  return asked.questions ? { ...waiting, questions: asked.questions } : waiting
 }
 
 /**

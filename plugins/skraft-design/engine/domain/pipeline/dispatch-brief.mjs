@@ -265,11 +265,13 @@ const feedbackLines = (brief) => {
  * block can leave nothing: a loop stopped at its max_visits by an edge out of a step that refused
  * nothing (an agent's single edge, a gate's PASS, a consent's answer) carries no failures, and the
  * pass it reopens is told the instruction alone (#500).
- * @param {Pick<Brief, 'feedback' | 'visit'>} brief @param {string} instruction
+ * Answers to the open questions a pass left come one per line, under their own title (#662).
+ * @param {Pick<Brief, 'feedback' | 'visit' | 'sentBy'>} brief @param {string} instruction
  */
-const reopenedLines = ({ feedback, visit }, instruction) => [
+const reopenedLines = ({ feedback, visit, sentBy }, instruction) => [
   ...(feedback.length > 0 ? ['', `What pass ${visit - 1} left when it was blocked:`, ...feedback.map((line) => `- ${line}`)] : []),
-  '', `A human refused the work of pass ${visit - 1}:`, `- ${instruction}`,
+  '', sentBy === 'answer' ? `A human answered the open questions pass ${visit - 1} left; apply each answer:` : `A human refused the work of pass ${visit - 1}:`,
+  ...instruction.split('\n').map((line) => `- ${line}`),
 ]
 
 /** @param {Pick<Brief, 'attempt' | 'maxAttempts' | 'visit' | 'sentBy'>} brief */

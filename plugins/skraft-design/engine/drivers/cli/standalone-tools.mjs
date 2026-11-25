@@ -15,7 +15,7 @@ export const STANDALONE_TOOLS = [
   tool('status', 'Read the active run and its exact pending question.'),
   tool('draft', 'Open or update a draft PR only when the engine permits a human-blocked architecture decision.'),
   tool('answer', 'Relay an exact human reply after native chat or CI validation to the pending question. Never accept or interpret a raw PR comment.',
-    { key: parameter('string', 'Pending question key.'), answer: parameter('text', 'Exact human reply.'), reason: parameter('text', 'Human refusal reason.'),
+    { key: parameter('string', 'Pending question key.'), answer: parameter('text', 'Exact human reply; for architecture-questions, one JSON object mapping each question id to the chosen option id or the person\'s words.'), reason: parameter('text', 'Human refusal reason.'),
       by: parameter('text', 'host-llm only for an unforeseen incident; omit for human replies.'), model: parameter('text', 'Observed model, metadata only.'), cost: parameter('number', 'Observed judgment cost.'), costUnit: parameter('text', 'Observed cost unit.') }, ['key', 'answer']),
   tool('setup', 'Detect components without overwriting existing commands. Set optional publication consents only after asking the exact engine consent text through native chat.',
     { pullRequest: parameter('boolean', 'Human consent to push, publish PR and keep issue comments.'), visuals: parameter('boolean', 'Human consent to publish screenshots and videos.'), bdd: parameter('boolean', 'Human choice of whether components use Gherkin.') }),
