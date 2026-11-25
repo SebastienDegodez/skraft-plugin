@@ -37,13 +37,7 @@ Commands cause Events. Events update Read Models. The timeline reads left to rig
 
 Each vertical grouping of Command + Event + Read Model is a **Slice** — the minimum unit of deliverable business value.
 
-### How to Build a Timeline from Stories
-
-1. **Brainstorm Events** from stories. Ask: "What facts must be recorded?" Write events on sticky notes.
-2. **Group by aggregate or context.** Events that share a consistency boundary belong to the same aggregate.
-3. **Identify Commands** that cause each event. Ask: "What action triggered this fact?"
-4. **Identify Read Models** consumed before each command. Ask: "What does the user need to see before they act?"
-5. **Define Slices.** One slice = one command + its resulting event(s) + the read model that surfaces the result.
+Read [references/event-modeling.md](references/event-modeling.md) for the procedure that builds a timeline from stories, the colour convention and worked examples.
 
 ### Mermaid Notation
 
@@ -58,29 +52,12 @@ timeline
         EligibilityResult : Consumed by Driver UI
 ```
 
-**Colour coding convention (for tooling that supports it):**
-- Commands → blue
-- Events → orange
-- Read Models → green
-
 ### Relationship to Gherkin
 
 Each slice maps to one or more Gherkin scenarios:
 - The **Given** clause describes the pre-existing state (often a prior event)
 - The **When** clause maps to the **Command**
 - The **Then** clause maps to the **Event** and/or **Read Model** outcome
-
-### Auto-Insurance Domain Example
-
-**Eligibility Check flow:**
-- Command: `CheckEligibility` (Driver, driverId, requestedAt)
-- Event: `EligibilityChecked` (driverId, result: Eligible|Ineligible, reason?)
-- Read Model: `EligibilityResult` (eligible: bool, validUntil?, rejectionReason?)
-
-**Application Submission flow:**
-- Command: `SubmitApplication` (applicantId, policyType, vehicleInfo)
-- Event: `ApplicationSubmitted` (applicationId, submittedAt, status: Pending)
-- Read Model: `ApplicationStatus` (applicationId, status, submittedAt)
 
 ### Common Mistakes
 
@@ -107,15 +84,7 @@ A Bounded Context is the explicit boundary within which a domain model applies. 
 
 ### Context Mapping Patterns
 
-| Pattern | Relationship | When to use | Risk |
-|---|---|---|---|
-| **Upstream/Downstream** | One context feeds another | When one context's model drives another's | Downstream is coupled to upstream changes |
-| **Conformist** | Downstream adopts upstream's model | When upstream is powerful and the cost of translation is too high | Downstream polluted by upstream concepts |
-| **Anti-Corruption Layer (ACL)** | Downstream translates upstream's model | When upstream uses a different or legacy model | Translation cost; must be maintained |
-| **Shared Kernel** | Two contexts share a subset of the domain model | Small shared concepts between close teams | Changes to shared kernel must be agreed by both teams |
-| **Partnership** | Two contexts co-evolve | Equal teams with strong alignment | High coordination overhead |
-| **Open Host Service** | Upstream publishes a versioned API | When many downstreams consume the same upstream | API versioning discipline required |
-| **Published Language** | Open Host Service uses a shared language (e.g., events schema) | Event-driven integration between contexts | Schema governance needed |
+Upstream/Downstream, Conformist, Anti-Corruption Layer (ACL), Shared Kernel, Partnership, Open Host Service, Published Language. Read [references/ddd-strategic.md](references/ddd-strategic.md) for when to use each, its risk and the common strategic mistakes.
 
 ### Context Mapping Selection Rules
 
@@ -159,14 +128,6 @@ graph LR
     PolicyContext -->|Conformist| BillingContext
     EligibilityContext -->|Published Language| NotificationContext
 ```
-
-### Common Strategic Mistakes
-
-| Mistake | Symptom | Fix |
-|---|---|---|
-| Big Ball of Mud | One context for everything; all models coupled | Split by team ownership or language boundary |
-| Anemic Domain | All logic in application services; domain objects are data bags | Move invariants back into aggregates |
-| Over-splitting | 15 tiny contexts with no clear purpose | Merge contexts that share a language and team |
 
 ---
 
@@ -346,35 +307,7 @@ Read [`references/read-store-pattern.md`](references/read-store-pattern.md) when
 - Team is unfamiliar with the pattern and there is no time to learn
 - The domain is Generic or Supporting (commodity functionality)
 
-### Aggregate Event Lifecycle
-
-1. Receive command (e.g., `CheckEligibility`)
-2. Load aggregate state (replay events from store or from snapshot)
-3. Validate command against current state (enforce invariants)
-4. Emit domain events (e.g., `EligibilityChecked`)
-5. Apply events to update in-memory state
-6. Persist events to event store (append-only, with expected version for optimistic concurrency)
-
-### Event Store
-
-- Append-only log — events are never updated or deleted
-- Versioned — each event has a monotonically increasing version per aggregate
-- Immutable — events are facts; they cannot be changed
-
-### Projections and Read Models
-
-- Built by replaying events — each projector handles a specific set of event types
-- Disposable — projections can be dropped and rebuilt from the event log
-- Eventually consistent — the read model lags slightly behind the event store
-- Purpose-specific — one projection per read concern (avoid generic projections)
-
-### Snapshots
-
-Store the aggregate's current state after every N events to avoid full replay on every load.
-
-- Use when event count per aggregate exceeds ~500 events
-- Store snapshot alongside events — load snapshot first, then replay events since snapshot
-- Trade-off: storage overhead vs. replay performance
+Read [references/event-sourcing.md](references/event-sourcing.md) once Event Sourcing is chosen: aggregate event lifecycle, event store, projections, snapshots, upcasting, conflict resolution, eventual consistency, the outbox and reservation patterns.
 
 ### Sagas / Process Managers
 
@@ -386,51 +319,6 @@ Coordinate cross-aggregate workflows. Sit in the Application layer.
 - Are NOT aggregates — they are Application-layer orchestrators
 
 **Example:** `EligibilityRenewalSaga` — listens for `EligibilityExpired` event, issues `RenewEligibility` command to `EligibilityAggregate`, then `NotifyDriver` command to `NotificationAggregate`.
-
-### Upcasting
-
-Handle event schema evolution when the structure of an old event type changes.
-
-- Prefer weak schema: ignore unknown fields when loading old events
-- For breaking changes: write an explicit upcaster that transforms old format to current format
-- Chain upcasters: V1 → V2 upcaster, V2 → V3 upcaster (never skip versions)
-
-### Conflict Resolution
-
-Optimistic concurrency: when appending to the event store, pass the expected version. If the stored version differs, a conflict has occurred.
-
-| Scenario | Strategy |
-|---|---|
-| Transient (e.g., two concurrent updates from different UI sessions) | Retry — reload and reapply the command |
-| Domain-specific (e.g., two agents claim the same appointment slot) | Merge — apply domain logic to determine the correct outcome |
-| Critical (e.g., financial transaction double-spend) | Reject — return a conflict error and require user intervention |
-
-### Eventual Consistency Mitigation
-
-| Technique | Description |
-|---|---|
-| Read-your-own-writes | After a command, return a token; query endpoint waits for projection to catch up to that version before returning |
-| Optimistic UI updates | UI applies the expected state change immediately without waiting for projection |
-| Causal consistency tokens | Pass a token that represents "everything up to this point was processed" |
-
-### Outbox Pattern
-
-Solves the dual-write problem: atomically writing to the event store AND publishing to a message broker.
-
-1. Write domain events to the event store
-2. Write the same events to an outbox table in the same transaction
-3. A background process reads the outbox and publishes to the message broker
-4. After successful publish, mark the outbox entry as processed
-
-Avoids the risk of the event store committing but the broker publish failing (or vice versa).
-
-### Reservation Pattern
-
-Handles uniqueness constraints (e.g., unique driver licence number) in event-sourced systems.
-
-- Create a separate `ReservationAggregate` for the unique key
-- Command flow: `ReserveLicenceNumber` → `LicenceNumberReserved` (or `LicenceNumberAlreadyReserved`)
-- The driver registration aggregate only proceeds after receiving confirmation of reservation
 
 ---
 
@@ -457,16 +345,7 @@ Event Modeling (what the system does)
 
 ## Decision Matrix
 
-| Problem type | Recommended pattern | When NOT to use | Notes |
-|---|---|---|---|
-| Simple CRUD entity | Clean Architecture + Repository | Don't add Event Sourcing or CQRS | Keep it simple |
-| Complex business rules with invariants | DDD Tactical (Aggregate + Specification) | Don't use anemic domain model | |
-| Audit trail / regulatory compliance | Event Sourcing | Only if history has real business value | Requires infrastructure investment |
-| Multiple diverging read models | CQRS with projections | Not needed for simple queries | Read models are disposable |
-| Cross-aggregate coordination | Saga / Process Manager | Don't put saga logic in an aggregate | |
-| High read/write ratio | CQRS with read-optimised projections | Don't use for simple apps | |
-| Complex domain with multiple teams | DDD Strategic + Context Mapping | Overhead for small teams | |
-| Event-driven integration | Domain Events + Outbox Pattern | Don't use for in-process only | |
+Read [references/pattern-selection-matrix.md](references/pattern-selection-matrix.md) when selecting a pattern for a problem type: the recommended pattern, when not to use it, and how patterns compose.
 
 ---
 
