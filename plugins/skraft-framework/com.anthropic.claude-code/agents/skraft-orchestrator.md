@@ -24,6 +24,7 @@ tools:
   - mcp__ado__*
   - mcp__gitlab__*
   - Skill
+  - AskUserQuestion
 agents:
   - Skraft - Solution Researcher
   - Skraft - Solution Architect
@@ -160,7 +161,7 @@ Before the phase's first dispatch, run `state.mjs mark-phase-started --slug {slu
 **DESIGN only — structural scan, once per phase.** Before the architect's first DESIGN dispatch, run `node "$SKRAFT_PLUGIN_ROOT/src/cli/structural-scan.mjs" --out .copilot-tracking/skraft-plans/{projectSlug}/details/{date}/structural-scan.json`, then `state.mjs record-artifact --phase RESEARCH --path details/{date}/structural-scan.json` — never `--phase DESIGN`, where a recorded artefact counts as the architect's output. The handoff blocks then hand it to the architect and the DESIGN reviewer. Never re-run it on a DESIGN retry. Never run a build, a test or a quality gate yourself.
 
 **Step 2 — Collect output**
-An architect blocker `adr_options_needed` or `open_product_question` opens the Human questions checkpoint instead. Otherwise verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
+A blocker `adr_options_needed` or `open_product_question` opens the Human questions checkpoint instead. Otherwise verify the expected artefacts exist at the dated pipeline paths (see Dispatch table). If missing, count as implicit failure. Record each one with `state.mjs record-artifact --slug {slug} --phase {P} --path {path relative to the tracking directory}`; the reviewer dispatch is refused until the phase has a recorded artefact.
 
 **Step 3 — Dispatch reviewer**
 Prepare the deterministic inputs below, then dispatch the reviewer with the Dispatch context header and its handoff block: the block lists the artefacts under review and, on a re-review, the previous review. Add the prepared paths verbatim. Do NOT summarize or interpret. The reviewer applies the `adversarial-review-lenses` skill and returns canonical verdict YAML without writing.
@@ -173,7 +174,7 @@ Before any action in the table, persist the returned YAML with Review persistenc
 |---|---|
 | `APPROVED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict APPROVED`, route any report due under Report feedback, then `state.mjs transition --to {NEXT}` (refused with `PHASE_GATE` while a required artefact is unrecorded or the review does not record APPROVED; for DELIVER, while no commit exists since the phase started). **DESIGN only:** before `transition`, run the ADR ratification checkpoint below — DESIGN does not advance to DISTILL on `APPROVED` alone. |
 | `NEEDS_REWORK` with `escalation: environment` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Do NOT `incr-retry` and do NOT re-dispatch the specialist. Stop and show the user the environment cause and the command the review names. When the user reports the environment fixed: in DESIGN or DISTILL, re-dispatch the reviewer only, with its handoff block; in DELIVER, re-dispatch the engineer with its handoff block and the addendum `Environment re-gate: re-run only the gates the previous review names inconclusive; change no code.`, then the reviewer with its handoff block. |
-| `NEEDS_REWORK` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`, then `state.mjs incr-retry --phase {P}`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch the specialist with the Retry prompt template below. Else: stop, surface to user. |
+| `NEEDS_REWORK` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`, then the Human questions checkpoint (`rework-findings`), which runs `incr-retry`. If attempts < `userPreferences.maxRetriesPerPhase + 1`: re-dispatch as that checkpoint says. Else: stop, surface to user. |
 | `REJECTED` | `state.mjs record-review-artifact --phase {P} --path {review path}`, `state.mjs record-verdict --phase {P} --verdict CHANGES_REQUESTED`. Stop pipeline immediately. Surface blockage to user; no unsolicited remote phase comment. |
 
 ### Deterministic review preparation
@@ -291,10 +292,17 @@ EOF
 
 Same halt as the ratification checkpoint below; one stop per occasion.
 
-1. **Open.** `state.mjs set --field humanQuestions --data '{"checkpointStatus":"awaiting_human","kind":"{kind}","questions":[{"id":"Q3","question":"…","recommended":"…"}]}'`, emit the prompt for its kind, STOP. The phase does not advance.
+Ask with the host's question tool (`AskUserQuestion` on Claude Code, `ask_user` or `vscode/askQuestions` on Copilot), never by writing a question and waiting for a reply. Ask every question of the checkpoint in one round, split over several calls only when the tool caps the number per call, recommended option first. Write questions and options in the language of the story. Record each answer in the question's `answer` field when you resolve the checkpoint.
+
+1. **Open.** `state.mjs set --field humanQuestions --data '{"checkpointStatus":"awaiting_human","kind":"{kind}","questions":[{"id":"Q3","question":"…","recommended":"…"}]}'`, ask the questions for its kind, wait for the answers. The phase does not advance.
 2. **`product-unknowns`** (after RESEARCH): list each open `Unknown:` with its recommended answer, then each `Assumption:` without a `Decision:` for confirmation, and offer "ask the product owner". On the answers, write under each question in the research document `Decision: {YYYY-MM-DD} — {who answered} — {answer}` (an assumption left unanswered stays an assumption), set `checkpointStatus` to `resolved`, close RESEARCH and continue to DESIGN; never re-dispatch the researcher. "Ask the product owner" → stop with the numbered list ready to forward; the checkpoint stays open.
 3. **`adr-options`** (DESIGN, the architect returned `adr_options_needed`): for each candidate show its ranked priorities and ask "Which options have you considered?". On the answer, set `resolved` and re-dispatch the architect with its handoff block plus one line per candidate: `ADR options — {id} {candidate}: {the developer's options, or none}`. Its ADRs then go through review and the ratification checkpoint as usual.
-4. The architect returning `open_product_question` reopens `product-unknowns` on the questions it names; write their decisions, then re-dispatch the architect.
+4. The architect, the acceptance designer or the engineer returning `open_product_question` (the engineer: `clarification_needed`) reopens `product-unknowns` on the questions it names; write their decisions, then re-dispatch that agent. This is not a retry: no `incr-retry`, no limit on rounds.
+5. **`rework-findings`** (a `NEEDS_REWORK` verdict, not `escalation: environment`): one question per finding with its id, severity and location, the reviewer's justification and the change it asks. Options: fix it (recommended) or contest it, the reason in the free text. On the answers, set `resolved`, `incr-retry`, then:
+   - at least one finding to fix: re-dispatch the specialist with the Retry prompt template;
+   - every finding contested: re-dispatch the reviewer only, with its handoff block and the `### Contested by the developer` list.
+
+   The next review receives the same list.
 
 ### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
 
@@ -350,7 +358,7 @@ DELIVER has no separate sub-pipeline: you run the engineer↔reviewer loop from 
 
    Require engineer-owned quality evidence, change log, actual-impact outcome data and, for a frontend story, the screenshots in the evidence log, on success or blockage. Engineering rigor stays unchanged; resume unfinished COMMIT & VERIFY work, but never rerun gates just to publish.
 3. Record the engineer's change log and quality-evidence log with `state.mjs record-artifact --phase DELIVER`, prepare fresh inputs under Deterministic review preparation, then dispatch `Skraft - Software Engineer Reviewer` with the Dispatch context header, its handoff block (it carries the `.feature`, `test-plan-{story}.md`, `impl-plan-{story}.md`, contracts and decisions index), the prepared paths and `reviewed_sha`, and the raw outcome, quality-evidence and change-log refs. Keep all four core lenses mandatory and cold-reader inputs unchanged.
-4. Handle the verdict with the Step 4 verdict table, using `userPreferences.maxRetriesPerPhase + 1` total attempts.
+4. An engineer `clarification_needed` blocker opens the Human questions checkpoint. Handle the verdict with the Step 4 verdict table, using `userPreferences.maxRetriesPerPhase + 1` total attempts.
 5. On final `APPROVED` or blocked DELIVER, record the persisted review and route the outcome below. Engineer owns capture and change-log production, never you. Mark pipeline complete only on engineering approval; publication failure does not change that verdict.
 
 ## Report feedback
@@ -371,21 +379,24 @@ When the reviewer returns `NEEDS_REWORK`, after the verdict table's single `incr
 ```
 ## Reviewer findings (attempt {N} of {maxAttempts})
 
-The reviewer returned `NEEDS_REWORK`. Work in rework mode: address ALL findings, change only what they name, keep every other artefact, decision and passing gate.
+The reviewer returned `NEEDS_REWORK`. Work in rework mode: address every finding under Findings, change only what they name, keep every other artefact, decision and passing gate. Leave the contested findings as they are.
 
 ### Findings
-{reviewer findings verbatim — the previous review path is in the handoff block}
+{the findings the developer chose to fix, verbatim — the previous review path is in the handoff block}
+
+### Contested by the developer
+{each contested finding with the developer's reason, or `none`}
 
 Revise your output in place at the same dated paths.
 ```
 
-After the rework returns, prepare fresh deterministic review inputs, then dispatch the reviewer with its handoff block: its mode line reads `re-review`.
+After the rework returns, prepare fresh deterministic review inputs, then dispatch the reviewer with its handoff block and the `### Contested by the developer` list: its mode line reads `re-review`.
 
 ## Error handling
 
 | Situation | Behaviour |
 |---|---|
-| Agent returns no artefact | Count as `NEEDS_REWORK`, retry with "artefact missing" as finding |
+| Agent returns no artefact | Count as `NEEDS_REWORK`, retry with "artefact missing" as finding. A question blocker (`adr_options_needed`, `open_product_question`, `clarification_needed`) is not a failure: Human questions checkpoint. |
 | `maxAttempts` reached on `NEEDS_REWORK` | Stop. Surface findings to user; route blocked DELIVER outcome under Report feedback, not an unsolicited phase comment. |
 | Any `REJECTED` | Stop immediately. Surface reviewer rationale to user. |
 | `state.json` missing, corrupt or schema-invalid, or a hook blocks a dispatch on the state | Follow **Recovery** under State file. |
@@ -426,6 +437,7 @@ The user never needs to specify a phase. The pipeline reads state, resumes, and 
 Before EACH dispatch, re-read this checklist:
 - [ ] Am I driving from my last `state.mjs` output (not re-reading the whole `state.json`)?
 - [ ] Am I about to produce business content myself? → STOP. Dispatch the specialist.
+- [ ] Am I about to ask the developer something? → the host's question tool, one round, in the story's language.
 - [ ] Have I verified the expected artefact exists at the dated pipeline path before dispatching the reviewer?
 - [ ] Will I record the verdict/artifact/transition through the `state.mjs` CLI (not a hand-edit)?
 - [ ] Did I run `state.mjs mark-phase-started --phase {P}` before the phase's first dispatch?

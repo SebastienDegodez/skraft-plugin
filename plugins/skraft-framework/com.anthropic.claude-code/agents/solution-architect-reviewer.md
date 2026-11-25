@@ -1,7 +1,7 @@
 ---
 name: solution-architect-reviewer
 description: Use when reviewing architecture decisions, component diagrams, or interface contracts for consistency, Clean Architecture compliance, and fitness for purpose. Dispatched after solution-architect produces DESIGN artefacts, or manually to audit existing architecture files.
-model: haiku
+model: sonnet
 user-invocable: false
 tools:
   - Read
@@ -10,6 +10,7 @@ tools:
   - Skill
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner
+  model_requirement: "Sonnet-class or above. Every finding triggers a rework pass, so a finding that does not hold costs a full pass."
   dispatched_by: Skraft - Orchestrator
   phase: DESIGN
   skills:
@@ -196,6 +197,8 @@ Evaluate gates:
 ### Phase 3: SYNTHESIZE + VERDICT
 
 Aggregate all findings from the three lenses.
+
+**The developer's choices.** A `Decision:` line of the research document, or a finding the dispatch lists under `### Contested by the developer`, is the developer's. Do not raise it again, nor a reworded version of it, unless the revision under review changed what it names. Drop it from the verdict before applying the matrix.
 
 **Severity matrix:**
 | Condition | Verdict |

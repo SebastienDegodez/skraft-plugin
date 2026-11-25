@@ -1,7 +1,7 @@
 ---
 name: Skraft - Acceptance Designer Reviewer
 description: Use when reviewing BDD scenarios, test plans, or implementation plans for completeness, business alignment, and testability gaps. Dispatched after acceptance-designer produces DISTILL artefacts, or manually to audit existing Gherkin scenarios.
-model: claude-haiku-5.5
+model: claude-sonnet-5.5
 user-invocable: false
 tools:
   - read/readFile
@@ -9,6 +9,7 @@ tools:
   - skill
 metadata:
   cost_role_class: reviewer  # B12 target class — never promote to planner (genesis token-economy)
+  model_requirement: "Sonnet-class or above. Every finding triggers a rework pass, so a finding that does not hold costs a full pass."
   dispatched_by: Skraft - Orchestrator
   phase: DISTILL
   genesis_patterns:
@@ -115,6 +116,8 @@ Evaluate 4 lenses independently. Each lens sees only its designated inputs — f
 ---
 
 ### Phase 3: SYNTHESIZE + VERDICT
+
+**The developer's choices.** A `Decision:` line of the research document, or a finding the dispatch lists under `### Contested by the developer`, is the developer's. Do not raise it again, nor a reworded version of it, unless the revision under review changed what it names. Drop it from the verdict before applying the matrix.
 
 Apply the severity matrix (from `acceptance-review-criteria` skill):
 
