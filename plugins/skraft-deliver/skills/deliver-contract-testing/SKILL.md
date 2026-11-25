@@ -6,7 +6,7 @@ description: >
   API contracts across DESIGN → DISTILL → DELIVER phases. Provider contract
   tests are written only for a component whose brief line says
   `contract testing: on`; this skill routes to the matching
-  `contract-testing-<stack>` skill.
+  `deliver-contract-testing-<stack>` skill.
 ---
 
 # Contract Testing
@@ -32,11 +32,11 @@ contracts/{api}.yaml        .apiexamples.yaml                MicrocksContainer
 
 ## When to write provider contract tests
 
-Contract testing is off by default. A component turns it on with `"contractTesting": true` in `skraft-deliver-config.json`; its brief line then reads `contract testing: on` and the brief lists this skill and the component's `contract-testing-<stack>` skill.
+Contract testing is off by default. A component turns it on with `"contractTesting": true` in `skraft-deliver-config.json`; its brief line then reads `contract testing: on` and the brief lists this skill and the component's `deliver-contract-testing-<stack>` skill.
 
 Without a brief, read the component's `contractTesting` in `skraft-deliver-config.json`; absent means off.
 
-- `contract testing: on` → write the provider contract test for the component's API through its `contract-testing-<stack>` skill (section 3).
+- `contract testing: on` → write the provider contract test for the component's API through its `deliver-contract-testing-<stack>` skill (section 3).
 - `contract testing: off` → write no provider contract test and no `contract-testing-*` wiring. Sections 1 and 2 still apply when a Microcks mock needs a downstream contract.
 
 | Component stack | Skill |
@@ -191,7 +191,7 @@ return "DefaultExample"
 
 ## 3. Testcontainers Setup (DELIVER phase)
 
-> **The provider test recipe lives in the component's `contract-testing-<stack>`
+> **The provider test recipe lives in the component's `deliver-contract-testing-<stack>`
 > skill** (table above). The .NET snippets below are the reference those
 > skills point back to.
 

@@ -7,11 +7,11 @@ description: Use when organizing unit and integration test suites, placing execu
 
 ## Overview
 
-Defines **where** to test and **with which doubles** in a Clean Architecture solution. Language-agnostic. Does NOT redefine the TDD cycle — that is owned by `design-outside-in-tdd`.
+Defines **where** to test and **with which doubles** in a Clean Architecture solution. Language-agnostic. Does NOT define the TDD cycle, which belongs to the delivery plugin, skraft-deliver.
 
 **Core principle:** every test enters through **one boundary** and asserts at the next boundary. Choice of double follows the layer, not convenience.
 
-**REQUIRED SUB-SKILL:** Use `design-outside-in-tdd` for the RED → SYNTHESIZE-GREEN → COMMIT cycle. This skill only routes you to the correct layer and doubles.
+This skill only routes a test to the correct layer and doubles; a design names them, skraft-deliver writes the tests.
 
 ## The Iron Rule for Domain Tests
 
@@ -79,7 +79,7 @@ not "which ticket created it?"
 - Every scenario of the story has its binding from DISTILL on; the scenarios not delivered yet
   fail until the story's one green. Never exclude `@walking-skeleton`, a whole feature or a tag of
   a scenario from the runner: the engineer filters a group's scenarios by their numbers while it
-  works (`design-outside-in-tdd`).
+  works.
 - Declare the folders actually read by each runner in the component's `bdd` list, relative to
   its root. One pair per independent runner/binding scope, not one global pair per language.
   Existing confirmed paths are not moved by configuration detection.

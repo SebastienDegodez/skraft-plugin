@@ -22,7 +22,8 @@ const STORY_PIPELINE = 'pipeline.skraft.dot'
  * @param {{ order: string[], nodes: Record<string, { kind: string, phase: string|null, agent: string|null, lenses: string[] }> }} workflow
  * @returns {{ phases: Array<{ phase: string, specialist: string }>, agents: string[] }}
  *   phases: each phase in run order with the first agent it dispatches (none when only reviews and gates run in it);
- *   agents: every agent the workflow dispatches, its lenses (`<lens>-lens`) and the refuter included
+ *   agents: every agent the workflow dispatches, its lenses (`<lens>-lens`) and the refuter included, and those
+ *   a standalone engine starts beside them (replay judge, reply interpreter)
  */
 export function workflowAgents(workflow, prefix = '') {
   const nodes = workflow.order.map((id) => workflow.nodes[id])
@@ -37,6 +38,8 @@ export function workflowAgents(workflow, prefix = '') {
     ...reviews.flatMap((node) => node.lenses.map((lens) => `${prefix}${lens}-lens`)),
     ...(reviews.length ? [`${prefix}${REFUTER}`] : []),
     ...(prefix && nodes.some((node) => node.agent === `${prefix}software-engineer`) ? [`${prefix}replay-judge`] : []),
+    // The design engine starts the reply interpreter on a CI reply to the architect's open questions (#662).
+    ...(prefix && nodes.some((node) => node.agent === `${prefix}solution-architect`) ? [`${prefix}reply-interpreter`] : []),
   ]
   return { phases, agents: [...new Set(agents)] }
 }

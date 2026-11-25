@@ -920,14 +920,13 @@ export class InMemoryPullRequests {
 /** The plugin's own `workflows/pipeline.skraft.dot`, read once: the default every test runs. */
 export const BUILT_IN_WORKFLOW = readFileSync(new URL('../../../../plugins/skraft-design/workflows/pipeline.skraft.dot', import.meta.url), 'utf8')
 
-export const BUILT_IN_REVIEW = readFileSync(new URL('../../../../plugins/skraft-design/workflows/review.skraft.dot', import.meta.url), 'utf8')
 
 export class InMemoryWorkflowSource {
   /**
    * @param {string} [text] @param {Record<string, string>} [called] the plugin's other workflows, by file
    * @param {string} [name] the workflow a run follows, by its base name
    */
-  constructor(text = BUILT_IN_WORKFLOW, called = { review: BUILT_IN_REVIEW }, name = 'pipeline') {
+  constructor(text = BUILT_IN_WORKFLOW, called = {}, name = 'pipeline') {
     this.text = text
     this.workflows = called
     this.name = name
