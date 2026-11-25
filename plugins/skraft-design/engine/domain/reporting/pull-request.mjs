@@ -241,7 +241,7 @@ const decisionLines = (facts) => {
 }
 
 /** @param {import('./run-status.mjs').WaitingQuestion | null} question @param {Words} words */
-const pendingDecisionLines = (question, words) => {
+export const pendingDecisionLines = (question, words) => {
   if (question === null) return []
   if (question.questions) return openQuestionLines(question, words)
   const key = code(question.key)

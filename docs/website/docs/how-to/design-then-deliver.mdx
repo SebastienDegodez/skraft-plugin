@@ -95,7 +95,8 @@ consequence. Before the review, the run waits on one decision that holds them al
 - **In CI**, copy `plugins/skraft-design/ci/skraft-design.yml` into `.github/workflows/`, add the
   secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) and `ANTHROPIC_API_KEY`, then run it
   with an issue or an epic. When the run waits, the engine publishes a draft pull request that
-  lists every question and the reply to copy. Answer in one comment:
+  lists every question and the reply to copy; while nothing is designed yet, such as a question of
+  scope at the start, it asks on the issue or epic instead. Answer in one comment:
 
 ```text
 /skraft-answer {"key":"<key from the draft>","answer":{"Q1":"A","Q2":"your own words"}}
@@ -103,7 +104,7 @@ consequence. Before the review, the run waits on one decision that holds them al
 
 Anyone with write access to the repository may answer; any other comment, or a reply that leaves
 a question out, records nothing. A question of scope, such as a closed story, stops a CI run at
-once with the same draft.
+once.
 
 ## 3. Merge, then deliver {/* #deliver */}
 

@@ -3,7 +3,9 @@
 # - Run it by hand (workflow_dispatch) with one issue or one epic: the design runs in mode "ci".
 #   When it waits on a person, the engine publishes the draft pull request with every pending
 #   question, and this job keeps the run's tracking folder as an artifact.
-# - Answer in that draft with one comment: /skraft-answer {"key":"…","answer":…}. The comment
+#   While nothing is designed yet (a question of scope, before any commit), the engine asks on the
+#   issue or epic instead, since GitHub opens no pull request without a commit.
+# - Answer in that draft, or on that issue, with one comment: /skraft-answer {"key":"…","answer":…}. The comment
 #   resumes the same run: the engine records it only when its author has write access to the
 #   repository (admin, maintain or write) and it answers the pending question; then the design
 #   goes on, and pauses again or ends with the architecture pull request.
@@ -41,23 +43,33 @@ permissions:
 
 jobs:
   design:
-    # A comment resumes only a design draft, and only when it is a reply; the engine checks the
+    # A comment resumes only a design run, and only when it is a reply; the engine checks the
     # author's access before anything runs.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/skraft-answer '))
+      startsWith(github.event.comment.body, '/skraft-answer ')
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
       SKRAFT_DESIGN_JOURNAL_KEY: ${{ secrets.SKRAFT_DESIGN_JOURNAL_KEY }}
       PLUGIN: ${{ github.workspace }}/.skraft-plugin/plugins/skraft-design
     steps:
-      - name: Find the design branch of the draft
+      - name: Find the design branch the reply answers
         id: target
         if: github.event_name == 'issue_comment'
+        env:
+          NUMBER: ${{ github.event.issue.number }}
+          ON_PULL_REQUEST: ${{ github.event.issue.pull_request && 'yes' || '' }}
         run: |
-          head="$(gh pr view "${{ github.event.issue.number }}" --repo "$GITHUB_REPOSITORY" --json headRefName --jq .headRefName)"
-          case "$head" in design/*) ;; *) echo "not a design draft: $head"; exit 1 ;; esac
+          if [ -n "$ON_PULL_REQUEST" ]; then
+            head="$(gh pr view "$NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName --jq .headRefName)"
+          else
+            head=""
+            for candidate in "design/epic-$NUMBER" "design/issue-$NUMBER"; do
+              if gh api "repos/$GITHUB_REPOSITORY/branches/$candidate" --silent 2>/dev/null; then head="$candidate"; break; fi
+            done
+          fi
+          case "$head" in design/*) ;; *) echo "no design run answers #$NUMBER"; exit 1 ;; esac
           echo "branch=$head" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

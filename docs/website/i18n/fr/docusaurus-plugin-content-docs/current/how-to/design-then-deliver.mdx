@@ -96,7 +96,9 @@ consequence. Avant la revue, le run attend une seule decision qui les regroupe t
 - **En CI**, copiez `plugins/skraft-design/ci/skraft-design.yml` dans `.github/workflows/`, ajoutez
   les secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) et `ANTHROPIC_API_KEY`, puis
   lancez-le avec une issue ou une epique. Quand le run attend, le moteur publie une PR en brouillon
-  qui liste chaque question et la reponse a recopier. Repondez en un seul commentaire :
+  qui liste chaque question et la reponse a recopier ; tant que rien n'est concu, comme pour une
+  question de perimetre au depart, il pose la question sur l'issue ou l'epique. Repondez en un seul
+  commentaire :
 
 ```text
 /skraft-answer {"key":"<cle du brouillon>","answer":{"Q1":"A","Q2":"vos propres mots"}}
@@ -104,7 +106,7 @@ consequence. Avant la revue, le run attend une seule decision qui les regroupe t
 
 Toute personne qui a le droit d'ecriture sur le depot peut repondre ; tout autre commentaire, ou
 une reponse qui oublie une question, n'enregistre rien. Une question de perimetre, comme une story
-fermee, arrete tout de suite un run CI avec le meme brouillon.
+fermee, arrete tout de suite un run CI.
 
 ## 3. Fusionner, puis livrer {/* #deliver */}
 

@@ -65,7 +65,9 @@ once, and STOP ends the run.
 
 `skraft_design_start` takes `mode`, `interactive` by default or `ci`. An interactive run asks its
 questions through the host's native chat. A CI run that waits on a person publishes its draft pull
-request itself, every question in its body; a scope question stops it at once. A
+request itself, every question in its body; while its branch holds no commit (GitHub opens no
+pull request without one), it pushes the branch and asks in one marked comment on the issue or
+epic instead. A scope question stops it at once. A
 `/skraft-answer` comment is recorded by `engine/drivers/cli/ci-reply.mjs`, without a model, only
 when the forge says its author has `admin`, `maintain` or `write` access, with the provenance
 `pr-comment`. Between the pausing and the resuming job, the run's tracking folder travels as a

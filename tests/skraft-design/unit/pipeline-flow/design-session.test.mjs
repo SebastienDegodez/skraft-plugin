@@ -396,13 +396,20 @@ test('in CI the engine publishes the draft itself, every open question in its bo
   assert.ok(body.includes(`/skraft-answer {"key":"${settled.question.key}","answer":{"Q1":"<option or your words>","Q2":"<option or your words>"}}`), body)
 })
 
-test('a closed story in CI stops at once with the exclusion question in the draft', async () => {
+test('a closed story in CI stops at once and, nothing designed yet, asks on the epic with the branch pushed', async () => {
   const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
   const settled = await draftInCi(deps, await run.start({ epic: 42, mode: 'ci' }))
   assert.equal(settled.status, 'waiting', settled.reason)
   assert.equal(settled.question.kind, 'architecture-exclusions')
   assert.equal(settled.draft?.ok, true, settled.draft?.reason)
-  assert.match(host.codeHost.pullRequests[0].body, /Options: `CONTINUE`, `STOP`/)
+  assert.equal(settled.draft.on, 'issue')
+  assert.equal(host.codeHost.pullRequests.length, 0)
+  const asked = host.codeHost.comments.filter(({ body }) => body.startsWith('<!-- skraft-design:question:v1 -->'))
+  assert.equal(asked.length, 1)
+  assert.equal(asked[0].number, 42)
+  assert.match(asked[0].body, /Options: `CONTINUE`, `STOP`/)
+  assert.ok(asked[0].body.includes(`/skraft-answer {"key":"${settled.question.key}","answer":"<option>"}`), asked[0].body)
+  assert.ok(host.events().some(({ type, write, outcome }) => type === 'forge.write' && write === 'push' && outcome === 'applied'))
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
@@ -462,8 +469,10 @@ test('what a blocked architect pass wrote is committed with the pass that resume
 
 test('a pull request a previous run of the branch left closed does not stop a new run publishing; one this run opened and a person closed does', async () => {
   const codeHost = new InMemoryCodeHost({ open: [{ number: 6, head: 'checkout', state: 'closed' }] })
-  const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { codeHost, config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
-  const settled = await draftInCi(deps, await run.start({ epic: 42, mode: 'ci' }))
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { codeHost, config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  const settled = await draftInCi(deps, await createRunPipeline(deps).run())
   assert.equal(settled.draft?.ok, true, settled.draft?.reason)
   const opened = host.codeHost.pullRequests.filter(({ state }) => state === 'open')
   assert.deepEqual(opened.map(({ number }) => number === 6), [false])
