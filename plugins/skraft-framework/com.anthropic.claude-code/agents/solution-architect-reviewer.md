@@ -170,9 +170,9 @@ Evaluate gates:
 
 | Gate | Definition | Severity |
 |---|---|---|
-| G7 | Every story from DISCUSS maps to at least one trigger (Command or Query) in the event model. Stories whose triggers are pure reads need a Query, not a Command/Event pair. | HIGH |
-| G8 | Every **Command** has at least one corresponding domain event. Queries are exempt from this gate. No dangling commands. | HIGH |
-| G9 | No aggregate, bounded context, or Event Sourcing adoption is introduced without a traceable story justification (YAGNI). | MEDIUM |
+| G7 | Every story from DISCUSS maps to at least one trigger (Command or Query) in the event model. Stories whose triggers are pure reads need a Query, not a Command/Event pair. A trigger enters from outside the use case (a user, another context, the clock, the application start): a step inside one use case modelled as a Command or a Query is a finding. | HIGH |
+| G8 | Every **Command** has at least one domain event for its successful outcome. Queries are exempt from this gate. No dangling commands. A rejection that changes no state is an error result of the Command, not a domain event; a rejection the business records or reacts to is a domain event. Neither is required. | HIGH |
+| G9 | No aggregate, repository, domain event, bounded context, or Event Sourcing adoption is introduced without a traceable story justification (YAGNI). | MEDIUM |
 | G11 | For every ADR adopting a complexity-adding pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}`: the Context section cites at least one admissible force, AND `Alternatives Rejected` contains a `"do without the pattern"` row evaluated on technical merits. `"Consistency with existing code"` alone is **not** admissible. | HIGH |
 | G15 | Every `Proposed` ADR of this pass passes `adr-eligibility-gate`: none is in its Never-an-ADR list (baseline, a choice an existing doc or `Accepted` ADR settles, a context relationship, a choice confined to one bounded context, a future need, the Command/Query classification), and each lists ranked priorities before its options and judges every option against them. | HIGH |
 | G17 | Only when the stories involve authentication or authorization, personal data, or an externally exposed interface: the contracts name who may invoke each exposed Command and Query, mark personal-data fields, validate external input at the boundary, and carry no secret. Otherwise `not applicable`. | HIGH |
@@ -182,7 +182,7 @@ Evaluate gates:
 
 **How to check G8:** List all entries classified as **Command** in contracts (skip Queries). For each Command, verify at least one domain event appears in contracts or diagrams that corresponds to a successful outcome.
 
-**How to check G9:** List all aggregates, bounded contexts, and patterns. For each, verify a story explicitly requires it. Flag any element that exists "in anticipation of future needs."
+**How to check G9:** List all aggregates, repositories, domain events, bounded contexts, and patterns. For each, ask the question the YAGNI Detection Heuristics of `architecture-review-criteria` give for it, and verify a story explicitly requires it. Flag any element that exists "in anticipation of future needs."
 
 **How to check G11:** Open each ADR that ratifies a complexity-adding pattern. Confirm the Context cites a force from the admissible list (read/write asymmetry; audit trail; cross-service transactional boundary; contention hotspot; regulatory-driven separation). Confirm the `Alternatives Rejected` table includes `"do without the pattern"` with technical reasoning. Finding is HIGH if either is missing.
 

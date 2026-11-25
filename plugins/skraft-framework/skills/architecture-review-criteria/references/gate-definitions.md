@@ -169,24 +169,27 @@ Evaluates: diagrams + contracts + stories
 
 ---
 
-### G7 — Every Story Has a Command or Event
+### G7 — Every Story Has a Trigger
 
 **Lens:** fitness-lens
 **Severity:** HIGH
 
-**Definition:** Every story from `stories-{milestone}.md` maps to at least one command, domain event, or read model in the event model or contracts.
+**Definition:** Every story from `stories-{milestone}.md` maps to at least one Command or Query in the event model or contracts; a pure-read story uses a Query. A trigger enters from outside the use case: a user, another context, the clock, the application start. A call between two steps of one use case is no trigger and needs no Command or Query.
 
 **Step-by-step check:**
 1. List all story IDs from `stories-{milestone}.md` (e.g., US-01, US-02, US-03).
 2. Open all `event-model-{story}.md` and `contracts-{story}.md` files.
-3. For each story ID, search for at least one reference — a command name, event name, or read model — that corresponds to that story's trigger or outcome.
-4. Any story with no corresponding element → G7 HIGH fail.
+3. For each story ID, search for at least one Command or Query that corresponds to that story's trigger.
+4. Any story with no corresponding trigger → G7 HIGH fail.
+5. Any Command or Query that is a step inside one use case → G7 HIGH fail.
 
 **Auto-fail examples:**
-- Story US-03 (Driver renews eligibility before expiry) exists in `stories-milestone-1.md`. No `RenewEligibility` command or `EligibilityRenewed` event appears in any event model. → G7 HIGH fail.
+- Story US-03 (Driver renews eligibility before expiry) exists in `stories-milestone-1.md`. No `RenewEligibility` command appears in any event model. → G7 HIGH fail.
+- `NormalizeName` and `ComputeHash` are modelled as Queries: both are steps inside `ImportCatalog`. → G7 HIGH fail.
 
 **Pass examples:**
 - US-01 maps to `CheckEligibility` command and `EligibilityChecked` event. US-02 maps to `DenyEligibility` command and `EligibilityDenied` event. US-03 maps to `RenewEligibility` command. All stories covered. → G7 pass.
+- `LoadCatalog` is the Command the application start triggers. → G7 pass.
 
 ---
 
@@ -195,19 +198,20 @@ Evaluates: diagrams + contracts + stories
 **Lens:** fitness-lens
 **Severity:** HIGH
 
-**Definition:** Every command in the contracts has at least one corresponding domain event. A command with no domain event cannot be verified and represents an incomplete design.
+**Definition:** Every command in the contracts has at least one domain event for its successful outcome. A command with no domain event cannot be verified and represents an incomplete design. A rejection that changes no state is an error result of the command, not a domain event; a rejection the business records or reacts to is a domain event. Neither is required.
 
 **Step-by-step check:**
 1. List all commands from `contracts-{story}.md`.
-2. For each command, find its corresponding domain event(s) in contracts or diagrams.
-3. Any command with no corresponding event → G8 HIGH fail.
+2. For each command, find the domain event(s) of its successful outcome in contracts or diagrams.
+3. Any command with no event for its successful outcome → G8 HIGH fail. A missing rejection event is no finding.
 
 **Auto-fail examples:**
 - `RenewEligibility` command is defined in contracts. No `EligibilityRenewed` event appears in contracts or diagrams. → G8 HIGH fail.
 - `ArchiveDriver` command is defined. No corresponding event. → G8 HIGH fail.
 
 **Pass examples:**
-- `CheckEligibility` → `EligibilityChecked` (success path) + `EligibilityDenied` (rejection path). Both events defined. → G8 pass.
+- `CheckEligibility` → `EligibilityChecked` + `EligibilityDenied` (the denial is kept and shown). → G8 pass.
+- `SubmitProposal` → `ProposalSubmitted`; an invalid proposal returns an error, no event. → G8 pass.
 
 ---
 
@@ -219,7 +223,7 @@ Evaluates: diagrams + contracts + stories
 **Definition:** Every aggregate, bounded context, Event Sourcing adoption, Saga, or pattern introduction must trace back to at least one story in `stories-{milestone}.md`. No element is introduced "in anticipation of future needs."
 
 **Step-by-step check:**
-1. List all structural elements: aggregates, bounded contexts, patterns (Event Sourcing, Saga, CQRS variants).
+1. List all structural elements: aggregates, repositories, domain events, bounded contexts, patterns (Event Sourcing, Saga, CQRS variants).
 2. For each element, find the story that necessitates it.
 3. If the element is justified only by "future requirements" or "might be useful" → G9 MEDIUM fail.
 
@@ -227,6 +231,8 @@ Evaluates: diagrams + contracts + stories
 - Diagram includes a `FraudDetectionContext` bounded context. No story in the current milestone involves fraud detection. → G9 MEDIUM fail.
 - `EligibilityRenewalSaga` is designed but no story in scope involves a multi-step renewal workflow across aggregates. → G9 MEDIUM fail.
 - Event Sourcing is applied to `EligibilityAggregate` but neither an audit trail nor a temporal query story exists in the current milestone. → G9 MEDIUM fail.
+- `AlgorithmCatalogAggregate` with `IAlgorithmCatalogRepository`: the catalog is loaded once at start and never changed; a self-validating value object behind an Application loading interface holds the rule. → G9 MEDIUM fail.
+- A rejection event no story observes and that changes no state. → G9 MEDIUM fail.
 
 **Pass examples:**
 - `EligibilityAggregate` is introduced. Story US-01 (eligibility check) requires it. → G9 pass.
