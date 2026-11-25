@@ -107,3 +107,8 @@ for (const plugin of ['skraft-framework', 'skraft-backlog']) {
     })
   }
 }
+
+test('tools contract accepts the native question tool of each host', () => {
+  assert.deepEqual(validateAgentTools(descriptor('tools: [Read, AskUserQuestion]'), { client: 'claude' }).tools, ['Read', 'AskUserQuestion'])
+  assert.deepEqual(validateAgentTools(descriptor('tools: [read, ask_user, vscode/askQuestions]'), { client: 'copilot' }).tools, ['read', 'ask_user', 'vscode/askQuestions'])
+})

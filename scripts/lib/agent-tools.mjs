@@ -11,11 +11,15 @@ const copilotTools = new Set([
   'search/codebase', 'search/fileSearch', 'search/textSearch', 'search/usages', 'search/listDirectory',
   'execute/runInTerminal', 'execute/getTerminalOutput', 'execute/killTerminal',
   'execute/sendToTerminal', 'execute/testFailure',
+  // https://code.visualstudio.com/docs/agents/reference/tools-reference (VS Code question carousel)
+  'vscode/askQuestions',
+  // Copilot CLI question tool (https://github.blog/changelog/2026-01-21-github-copilot-cli-plan-before-you-build-steer-as-you-go/)
+  'ask_user',
 ])
 
 // https://code.claude.com/docs/en/tools-reference
 // https://code.claude.com/docs/en/sub-agents#restrict-which-tools-a-subagent-can-use
-const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'WebFetch', 'TaskOutput', 'TaskStop', 'Agent', 'Skill'])
+const claudeTools = new Set(['Read', 'Write', 'Edit', 'Grep', 'Glob', 'Bash', 'WebFetch', 'TaskOutput', 'TaskStop', 'Agent', 'Skill', 'AskUserQuestion'])
 const externalServers = ['graphify', 'github', 'ado', 'gitlab']
 const historicalTools = new Map([
   ['TaskOutput', 'TaskOutput was removed in Claude Code 2.1.277; use Read on the background output file on newer versions.'],

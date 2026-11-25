@@ -103,13 +103,13 @@
     },
     "humanQuestions": {
       "x-owner": "orchestrator",
-      "description": "Questions only a human answers: open research Unknown product questions after RESEARCH (kind product-unknowns), options for an eligible ADR candidate in DESIGN (kind adr-options). awaiting_human until answered; the phase does not advance meanwhile.",
+      "description": "Questions only a human answers: open research Unknown product questions after RESEARCH (kind product-unknowns), options for an eligible ADR candidate in DESIGN (kind adr-options), the findings of a NEEDS_REWORK review the developer fixes or contests (kind rework-findings). awaiting_human until answered; the phase does not advance meanwhile.",
       "type": "object",
       "required": ["checkpointStatus", "questions"],
       "additionalProperties": false,
       "properties": {
         "checkpointStatus": { "enum": ["none", "awaiting_human", "resolved"] },
-        "kind": { "enum": ["product-unknowns", "adr-options"] },
+        "kind": { "enum": ["product-unknowns", "adr-options", "rework-findings"] },
         "questions": {
           "type": "array",
           "items": {
@@ -119,7 +119,8 @@
             "properties": {
               "id": { "type": "string", "minLength": 1 },
               "question": { "type": "string", "minLength": 1 },
-              "recommended": { "type": "string" }
+              "recommended": { "type": "string" },
+              "answer": { "type": "string" }
             }
           }
         }

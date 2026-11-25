@@ -198,6 +198,8 @@ Evaluate gates:
 
 Aggregate all findings from the three lenses.
 
+**The developer's choices.** A `Decision:` line of the research document, or a finding the dispatch lists under `### Contested by the developer`, is the developer's. Do not raise it again, nor a reworded version of it, unless the revision under review changed what it names. Drop it from the verdict before applying the matrix.
+
 **Severity matrix:**
 | Condition | Verdict |
 |---|---|
