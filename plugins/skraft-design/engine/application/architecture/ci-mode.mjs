@@ -1,6 +1,7 @@
 import { createDraftPublication } from '../publish/draft-publication-usecase.mjs'
 import { architectureEvents } from './story-briefs.mjs'
 import { askOnIssue } from './ask-on-issue.mjs'
+import { openActiveRun } from '../pipeline/active-run.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { waitingOn } from '../../domain/reporting/run-status.mjs'
 
@@ -35,4 +36,28 @@ export const draftInCi = async (deps, outcome) => {
 const designed = async (deps, events) => {
   const base = deriveRun(events).base.find(({ component }) => component === null)
   return base === undefined || (await deps.sourceControl.head('.')) !== base.sha
+}
+
+/** The events that put a question in front of people: a draft opened or updated after it was asked, or its issue comment. */
+const PUBLISHING = Object.freeze(['pull-request.opened', 'pull-request.updated'])
+
+/** @param {any[]} events @param {string} key */
+const published = (events, key) => {
+  const asked = events.findLast((event) => event.type === 'question.asked' && event.key === key)?.at ?? ''
+  return events.some((event) => (event.type === 'architecture.question-posted' && event.key === key) || (PUBLISHING.includes(event.type) && event.at >= asked))
+}
+
+/**
+ * What a CI job ends on: a run that waits on a question nobody can read fails the job, so the
+ * question is not lost while the job reads as passed; a run that waits on a published question,
+ * or on no one, passes it (#662).
+ * @param {any} deps
+ */
+export const checkInCi = async (deps) => {
+  const opened = await openActiveRun(deps, null)
+  if (!opened.ok) return { ok: false, code: opened.outcome.code, reason: opened.outcome.reason }
+  const question = waitingOn(deriveRun(opened.journal.events))
+  if (question === null) return { ok: true, code: null, reason: 'the run waits on no one' }
+  if (published(opened.journal.events, question.key)) return { ok: true, code: null, reason: 'the question the run waits on is published' }
+  return { ok: false, code: 'question-unpublished', reason: `the run waits on ${question.key}, which neither a draft nor an issue comment holds: publish it again (skraft_design_draft)` }
 }

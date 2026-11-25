@@ -35,3 +35,16 @@ test('a reply with no run to answer is refused, naming why', async (t) => {
   assert.notEqual(outcome.code, 'not-an-answer')
   assert.equal(outcome.ok, false)
 })
+
+test('the CI check fails a job that has no design run to account for, naming why', async (t) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skraft design check ')))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  spawnSync('git', ['init', '--quiet', '--initial-branch=main', root])
+  writeFileSync(join(root, 'skraft-design-config.json'), JSON.stringify(CONFIG))
+  const check = fileURLToPath(new URL('../../../../plugins/skraft-design/engine/drivers/cli/ci-check.mjs', import.meta.url))
+  const result = spawnSync(process.execPath, [check], { cwd: root, encoding: 'utf8', env: { ...process.env, HOME: root } })
+  assert.equal(result.status, 1, result.stderr)
+  const outcome = JSON.parse(result.stdout.trim().split('\n').at(-1))
+  assert.equal(outcome.ok, false)
+  assert.ok(outcome.reason, result.stdout)
+})

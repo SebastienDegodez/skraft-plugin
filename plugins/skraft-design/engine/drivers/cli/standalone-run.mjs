@@ -15,7 +15,7 @@ import { chosenForge, forgeAdapters } from '../../application/config/forge.mjs'
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
 import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { unsettledConsents } from '../../domain/decisions/consents.mjs'
-import { draftInCi } from '../../application/architecture/ci-mode.mjs'
+import { checkInCi, draftInCi } from '../../application/architecture/ci-mode.mjs'
 import { createCommentAnswer } from '../../application/decisions/comment-answer-usecase.mjs'
 
 export const runStandalone = async ([operation, encoded], services, console) => {
@@ -70,17 +70,21 @@ const adaptersFor = async (services) => {
 const execute = (operation, args, deps, services, log) =>
   dispatchSimple(operation, args, deps, services) ?? executePipeline(operation, args, deps, services, log)
 
-const dispatchSimple = (operation, args, deps, services) => {
-  if (operation === 'setup') return setup(deps, services, args)
-  if (operation === 'answer') return createDecide(deps).decide(args)
+/** The operations that run one use case and hand back its outcome; the pipeline's own run through the loop. */
+const SIMPLE = Object.freeze({
+  setup: (args, deps, services) => setup(deps, services, args),
+  answer: (args, deps) => createDecide(deps).decide(args),
   // A reply a CI workflow read in the draft; ci-reply.mjs alone asks it, no MCP tool offers it (#662).
-  if (operation === 'reply') return createCommentAnswer(deps).answer(args)
-  if (operation === 'precheck') return createPrecheck(deps).precheck()
-  if (operation === 'status') return createObserve(deps).view()
-  if (operation === 'draft') return createDraftPublication(deps).publish()
-  if (operation === 'report') return createObserve(deps).report()
-  return null
-}
+  reply: (args, deps) => createCommentAnswer(deps).answer(args),
+  // What a CI job ends on; ci-check.mjs alone asks it, no MCP tool offers it (#662).
+  'ci-check': (args, deps) => checkInCi(deps),
+  precheck: (args, deps) => createPrecheck(deps).precheck(),
+  status: (args, deps) => createObserve(deps).view(),
+  draft: (args, deps) => createDraftPublication(deps).publish(),
+  report: (args, deps) => createObserve(deps).report(),
+})
+
+const dispatchSimple = (operation, args, deps, services) => (Object.hasOwn(SIMPLE, operation) ? SIMPLE[operation](args, deps, services) : null)
 
 // A CI run that comes to wait on a person publishes its draft before it hands back (#662).
 const executePipeline = async (operation, args, deps, services, log) => {

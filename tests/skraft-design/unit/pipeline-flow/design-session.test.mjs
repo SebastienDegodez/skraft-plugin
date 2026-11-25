@@ -10,7 +10,7 @@ import { createDecide } from '../../../../plugins/skraft-design/engine/applicati
 import { createDraftPublication } from '../../../../plugins/skraft-design/engine/application/publish/draft-publication-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-design/engine/application/pipeline/observe-usecase.mjs'
 import { openActiveRun } from '../../../../plugins/skraft-design/engine/application/pipeline/active-run.mjs'
-import { draftInCi } from '../../../../plugins/skraft-design/engine/application/architecture/ci-mode.mjs'
+import { draftInCi, checkInCi } from '../../../../plugins/skraft-design/engine/application/architecture/ci-mode.mjs'
 import { createCommentAnswer } from '../../../../plugins/skraft-design/engine/application/decisions/comment-answer-usecase.mjs'
 
 const story = (number, state = 'open') => ({ number, title: 'Card checkout', body: 'AC-1: the receipt is visible.', state, labels: [], story: true, forge: 'github', repository: 'shop/checkout' })
@@ -526,4 +526,20 @@ test('in CI a block met after something is committed goes to the draft, and a re
   assert.equal(instruction.ok, true, instruction.reason)
   const [answered] = host.events().filter(({ type, key }) => type === 'question.answered' && key === question.key)
   assert.equal(answered.answer, 'Prove it through the HTTP entry point, and move the browser proof to the UI story.')
+})
+
+test('a CI job fails when its run waits on a question no draft and no issue comment holds, and passes once one does', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  host.codeHost.fails.create = 'GraphQL: Something went wrong'
+  const refused = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(refused.draft?.ok, false)
+  const failing = await checkInCi(deps)
+  assert.equal(failing.ok, false)
+  assert.equal(failing.code, 'question-unpublished')
+  assert.match(failing.reason, new RegExp(refused.question.key))
+  delete host.codeHost.fails.create
+  assert.equal((await createDraftPublication(deps).publish()).ok, true)
+  assert.deepEqual(await checkInCi(deps), { ok: true, code: null, reason: 'the question the run waits on is published' })
 })

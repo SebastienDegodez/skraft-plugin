@@ -29,7 +29,8 @@ on:
         description: Epic issue number (leave empty with issue)
         required: false
   issue_comment:
-    types: [created]
+    # edited: a reply corrected in place; the engine refuses a key that is already answered.
+    types: [created, edited]
 
 concurrency:
   group: skraft-design-${{ github.event.issue.number || github.event.inputs.epic || github.event.inputs.issue }}
@@ -124,10 +125,14 @@ jobs:
             task="Use the skraft-design skill to resume the active architecture run: call skraft_design_next."
           fi
           printf '%s\n\n%s\n' "$task The workspace is $GITHUB_WORKSPACE." \
-            "This is a CI run: never answer a question yourself. When the engine waits, report its result and stop." > "$RUNNER_TEMP/prompt.txt"
+            "This is a CI run: never answer a question yourself. When the engine waits, report its result and stop. Run every agent in the foreground and wait for its final reply: never end your turn while an agent is still running." > "$RUNNER_TEMP/prompt.txt"
           claude -p --plugin-dir "$PLUGIN" --permission-mode acceptEdits \
             --allowedTools "mcp__plugin_skraft-design_skraft-design,Agent,Read,Write,Edit,Glob,Grep,Skill,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(mkdir -p:*)" \
             < "$RUNNER_TEMP/prompt.txt"
+
+      # Fails the job when the run waits on a question no draft and no issue comment holds.
+      - name: Check the question reached people
+        run: node "$PLUGIN/engine/drivers/cli/ci-check.mjs"
 
       - name: Name the kept run
         id: kept
