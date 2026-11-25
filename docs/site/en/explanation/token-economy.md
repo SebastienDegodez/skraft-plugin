@@ -137,8 +137,9 @@ Clean Architecture, zero dependencies) reads each agent's `cost_role_class` and
 resolved concrete model. The current policy pins the Copilot descriptors:
 `reviewer` and `researcher → gpt-6-luna` or `claude-haiku-5.5`, `implementer → claude-sonnet-5.5`,
 `planner → claude-opus-5.5`; Claude Code descriptors keep the `haiku`, `sonnet` and `opus`
-aliases. The Sonnet floor raises the two exceptions
-(`software-engineer`, `software-engineer-reviewer`). One source of truth; a CI linter
+aliases. The Sonnet floor raises `software-engineer` and the three pipeline reviewers
+(`solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`):
+a finding that does not hold costs a rework pass. One source of truth; a CI linter
 (`resolve-model --check`) fails if an agent drifts from the policy. Together with cache
 discipline, that resolver is the principal governor of spend at present — and now the
 only one: the depth dial that used to share the job is gone, so the quality side of a

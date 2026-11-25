@@ -142,8 +142,9 @@ plancher `model_requirement` de chaque agent, puis **pinne le champ `model:`** d
 descripteur `.md` au modèle concret résolu. La politique actuelle pinne les descripteurs
 Copilot : `reviewer` et `researcher → gpt-6-luna` ou `claude-haiku-5.5`, `implementer → claude-sonnet-5.5`,
 `planner → claude-opus-5.5` ; les descripteurs Claude Code gardent les alias `haiku`, `sonnet`
-et `opus`. Le plancher Sonnet relève les deux exceptions
-(`software-engineer`, `software-engineer-reviewer`). Une seule source de vérité ; un
+et `opus`. Le plancher Sonnet relève `software-engineer` et les trois reviewers du pipeline
+(`solution-architect-reviewer`, `acceptance-designer-reviewer`, `software-engineer-reviewer`) :
+un finding qui ne tient pas coûte une passe de reprise. Une seule source de vérité ; un
 linter CI (`resolve-model --check`) échoue si un agent dérive de la politique. Avec la
 discipline de cache, ce résolveur constitue le gouverneur principal de la dépense à
 l'heure actuelle — et désormais le seul : le curseur de profondeur qui partageait ce
