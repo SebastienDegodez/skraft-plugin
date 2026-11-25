@@ -15,6 +15,7 @@ import { chosenForge, forgeAdapters } from '../../application/config/forge.mjs'
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
 import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { unsettledConsents } from '../../domain/decisions/consents.mjs'
+import { draftInCi } from '../../application/architecture/ci-mode.mjs'
 
 export const runStandalone = async ([operation, encoded], services, console) => {
   try {
@@ -78,11 +79,12 @@ const dispatchSimple = (operation, args, deps, services) => {
   return null
 }
 
+// A CI run that comes to wait on a person publishes its draft before it hands back (#662).
 const executePipeline = async (operation, args, deps, services, log) => {
   const run = createDesignRun(deps)
   const prepared = operation === 'start' ? await run.start(args) : await run.prepare()
-  if (prepared.status !== 'ready') return prepared
-  return advance(operation, deps, services, log, prepared)
+  if (prepared.status !== 'ready') return draftInCi(deps, prepared)
+  return draftInCi(deps, await advance(operation, deps, services, log, prepared))
 }
 
 const advance = async (operation, deps, services, log, prepared) => {

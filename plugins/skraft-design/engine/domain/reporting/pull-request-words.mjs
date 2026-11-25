@@ -12,6 +12,9 @@ export const PULL_REQUEST_FILE = 'pull-request.md'
 /** A noun that a count does not change. @param {string} word @returns {Noun} */
 const invariable = (word) => Object.freeze({ one: word, many: word })
 
+/** The reply that answers every open question at once, each id holding what the person writes there. @param {string} key @param {string[]} ids @param {string} placeholder */
+const replyAll = (key, ids, placeholder) => JSON.stringify({ key, answer: Object.fromEntries(ids.map((id) => [id, placeholder])) })
+
 const EN = Object.freeze({
   /** Whether a count takes the plural. @param {number} count */
   many: (count) => count !== 1,
@@ -66,6 +69,8 @@ const EN = Object.freeze({
   pendingDecision: (question, key) => `Human decision pending: ${question} (key ${key})`,
   pendingOptions: (options) => `Options: ${options}`,
   pendingReply: (key) => `Reply in a PR comment with: \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
+  pendingQuestions: (count, key) => `Human answers pending: the solution architect left ${count} question(s) (key ${key})`,
+  pendingReplyAll: (key, ids) => `Reply in one PR comment with: \`/skraft-answer ${replyAll(key, ids, '<option or your words>')}\``,
   /** @param {string} node @param {string} reason */
   noDecision: 'None recorded: no ADR was proposed for acceptance on merge in this run.',
   noRed: 'None recorded: no red commit was accepted in this run.',
@@ -130,6 +135,8 @@ const FR = Object.freeze({
   pendingDecision: (question, key) => `Décision humaine attendue : ${question} (clé ${key})`,
   pendingOptions: (options) => `Choix : ${options}`,
   pendingReply: (key) => `Répondez dans un commentaire de PR avec : \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
+  pendingQuestions: (count, key) => `Réponses humaines attendues : l'architecte a laissé ${count} question(s) (clé ${key})`,
+  pendingReplyAll: (key, ids) => `Répondez dans un seul commentaire de PR avec : \`/skraft-answer ${replyAll(key, ids, '<option ou vos mots>')}\``,
   noDecision: 'Aucune consignée : aucun ADR proposé ne sera accepté à la fusion dans ce run.',
   noRed: 'Aucune consignée : aucun commit red n\'a été accepté dans ce run.',
   redHeader: '| Commit | Sujet |',

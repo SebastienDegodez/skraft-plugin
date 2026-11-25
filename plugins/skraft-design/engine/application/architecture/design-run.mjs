@@ -4,6 +4,7 @@ import { createReadiness } from './readiness.mjs'
 import { normalBody } from '../../domain/architecture/brief.mjs'
 import { contextQuestion, stopped, stopRun, waitingFor } from './context.mjs'
 import { runIdentity } from './run-identity.mjs'
+import { MODES } from './ci-mode.mjs'
 
 export const createDesignRun = (deps) => Object.freeze({
   start: (request) => start(deps, request),
@@ -11,6 +12,8 @@ export const createDesignRun = (deps) => Object.freeze({
 })
 
 const start = async (deps, request) => {
+  const mode = request.mode ?? 'interactive'
+  if (!MODES.includes(mode)) return { status: 'refused', ok: false, code: 'invalid-mode', reason: `mode is ${MODES.join(' or ')}.` }
   const scope = await createReadiness(deps).check(request)
   if (!scope.ok) return { status: 'refused', ...scope }
   const identity = await runIdentity(deps, `${request.epic ? 'epic' : 'issue'}-${scope.root.number}`)
@@ -18,7 +21,7 @@ const start = async (deps, request) => {
   const { slug } = identity
   const branched = await deps.architectureRepository.branch({ name: `design/${slug}`, existing: identity.existing })
   if (!branched.ok) return { status: 'refused', ...branched }
-  return initializeScope(deps, slug, scope)
+  return initializeScope(deps, slug, { ...scope, mode })
 }
 
 const initializeScope = async (deps, slug, scope) => {
@@ -33,7 +36,7 @@ const initializeScope = async (deps, slug, scope) => {
 const keepScope = async (deps, { slug, journal }, scope) => {
   const stories = []
   for (const story of scope.stories) stories.push({ ...story, bodySha256: await deps.hasher.sha256(normalBody(story.body)) })
-  await journal.append('architecture.scope', { root: scope.root, stories, excluded: scope.excluded, batchSize: 20 })
+  await journal.append('architecture.scope', { root: scope.root, stories, excluded: scope.excluded, batchSize: 20, mode: scope.mode })
 }
 
 const prepare = async (deps) => {

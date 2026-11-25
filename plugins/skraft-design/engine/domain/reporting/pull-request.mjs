@@ -243,6 +243,7 @@ const decisionLines = (facts) => {
 /** @param {import('./run-status.mjs').WaitingQuestion | null} question @param {Words} words */
 const pendingDecisionLines = (question, words) => {
   if (question === null) return []
+  if (question.questions) return openQuestionLines(question, words)
   const key = code(question.key)
   const options = question.options.map(code).join(', ')
   return [
@@ -251,6 +252,19 @@ const pendingDecisionLines = (question, words) => {
     `  ${words.pendingReply(question.key)}`,
   ]
 }
+
+/**
+ * The architect's open questions, each with its options, and one reply that answers them all (#662).
+ * @param {any} question @param {Words} words
+ */
+const openQuestionLines = (question, words) => [
+  `- ${words.pendingQuestions(question.questions.length, code(question.key))}`,
+  ...question.questions.flatMap((asked) => [
+    `  - ${inert(oneLine(`${asked.id} (#${asked.issue} ${asked.criterion}): ${asked.question}`))}`,
+    ...asked.options.map((option) => `    - ${code(option.id)}: ${inert(oneLine(`${option.label} — ${option.consequence}`))}`),
+  ]),
+  `  ${words.pendingReplyAll(question.key, question.questions.map(({ id }) => id))}`,
+]
 
 /** @param {RedCommit[]} reds @param {Words} words */
 const redLines = (reds, words) => (reds.length === 0

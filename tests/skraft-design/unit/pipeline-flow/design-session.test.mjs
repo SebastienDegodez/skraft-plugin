@@ -9,6 +9,7 @@ import { createDecide } from '../../../../plugins/skraft-design/engine/applicati
 import { createDraftPublication } from '../../../../plugins/skraft-design/engine/application/publish/draft-publication-usecase.mjs'
 import { createObserve } from '../../../../plugins/skraft-design/engine/application/pipeline/observe-usecase.mjs'
 import { openActiveRun } from '../../../../plugins/skraft-design/engine/application/pipeline/active-run.mjs'
+import { draftInCi } from '../../../../plugins/skraft-design/engine/application/architecture/ci-mode.mjs'
 
 const story = (number, state = 'open') => ({ number, title: 'Card checkout', body: 'AC-1: the receipt is visible.', state, labels: [], story: true, forge: 'github', repository: 'shop/checkout' })
 const session = (stories = [story(42)], slug = 'issue-42', options = {}) => {
@@ -366,4 +367,52 @@ test('answering every open question runs the architect once more with each answe
   assert.match(designs[1].prompt, /Q1 \(#42 AC-1\): A — Through the HTTP entry point/)
   assert.match(designs[1].prompt, /Q2 \(#43 AC-1\): Keep it, and warn the customer/)
   assert.deepEqual(host.agentRunner.reviewed().map(({ agent: id }) => id), ['design-consistency-lens', 'design-architecture-compliance-lens', 'design-fitness-lens'])
+})
+
+const questioningArchitect = (host, slug) => agent({ work: async ({ workspace, git, tracking }) => {
+  for (const current of JSON.parse(await tracking.read(slug, 'plans/architecture-pass.json')).stories) {
+    const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+    await workspace.write(path, briefOf(current))
+    git.change(path)
+  }
+  await tracking.write(slug, 'details/open-questions.json', JSON.stringify(OPEN_QUESTIONS))
+} })(host)
+
+test('in CI the engine publishes the draft itself, every open question in its body with one reply form for all', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  assert.equal((await run.start({ epic: 42, mode: 'ci' })).status, 'ready')
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  const settled = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(settled.status, 'waiting', settled.reason)
+  assert.equal(settled.draft?.ok, true, settled.draft?.reason)
+  assert.equal(host.codeHost.pullRequests.length, 1)
+  const [{ draft, body }] = host.codeHost.pullRequests
+  assert.equal(draft, true)
+  assert.match(body, /Q1 \(#42 AC-1\): How is the receipt proved in this slice\?/)
+  assert.match(body, /`A`: Through the HTTP entry point — The browser proof waits for the UI story\./)
+  assert.match(body, /`EMPTY`: Empty it — The customer starts again\./)
+  assert.ok(body.includes(`/skraft-answer {"key":"${settled.question.key}","answer":{"Q1":"<option or your words>","Q2":"<option or your words>"}}`), body)
+})
+
+test('a closed story in CI stops at once with the exclusion question in the draft', async () => {
+  const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  const settled = await draftInCi(deps, await run.start({ epic: 42, mode: 'ci' }))
+  assert.equal(settled.status, 'waiting', settled.reason)
+  assert.equal(settled.question.kind, 'architecture-exclusions')
+  assert.equal(settled.draft?.ok, true, settled.draft?.reason)
+  assert.match(host.codeHost.pullRequests[0].body, /Options: `CONTINUE`, `STOP`/)
+  assert.equal(host.agentRunner.dispatches.length, 0)
+})
+
+test('an interactive run publishes no draft while it waits, and a mode the engine does not know is refused', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42 })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  const settled = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(settled.status, 'waiting')
+  assert.equal(settled.draft, undefined)
+  assert.equal(host.codeHost.pullRequests.length, 0)
+  const refused = await session([story(42)], 'issue-42').run.start({ issue: 42, mode: 'nightly' })
+  assert.equal(refused.status, 'refused')
+  assert.equal(refused.code, 'invalid-mode')
 })

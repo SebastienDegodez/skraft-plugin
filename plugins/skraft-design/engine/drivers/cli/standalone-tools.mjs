@@ -9,7 +9,8 @@ const tool = (operation, description, parameters = {}, required = []) => ({
 
 export const STANDALONE_TOOLS = [
   tool('start', 'Start or resume architecture design for exactly one issue or epic. No story delivery or product test execution.',
-    { issue: parameter('count', 'Story issue number.'), epic: parameter('count', 'Epic or Feature number.') }),
+    { issue: parameter('count', 'Story issue number.'), epic: parameter('count', 'Epic or Feature number.'),
+      mode: parameter('string', 'interactive (default) when a developer runs it, ci when a CI workflow does: a CI run waiting on a person publishes its draft pull request.') }),
   tool('next', 'Advance this design run. Dispatch only the returned agents with their exact prompts; save each final reply unchanged, then call record. Never dispatch from a worker.'),
   tool('record', 'Consume saved worker replies and advance the same run.'),
   tool('status', 'Read the active run and its exact pending question.'),
