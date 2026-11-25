@@ -106,7 +106,9 @@ const pythonArgs = () => (opts.python ? ['--python', resolve(opts.python)] : [])
 const LOG = join('.copilot-tracking', 'skraft-plans', 'smoke', 'evidence', 'qg-smoke.json')
 const runGate = (ctx, script, gate, ...args) => {
   const log = join(ctx.repo, LOG)
-  const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--log', log, ...args], { cwd: ctx.repo, encoding: 'utf8' })
+  // Relative to the copy: the scripts resolve --log against the real repository root, and an
+  // absolute temp path can name it differently (/var vs /private/var on macOS, 8.3 names on Windows).
+  const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--log', LOG, ...args], { cwd: ctx.repo, encoding: 'utf8' })
   const entry = existsSync(log) ? JSON.parse(readFileSync(log, 'utf8')).gates?.find((recorded) => recorded.id === gate) : undefined
   const recorded = entry ? (entry.status === (result.status === 0 ? 'pass' : 'fail') ? '' : `logged ${entry.status} for exit ${result.status}`) : `no ${gate} entry in ${LOG}`
   return { status: recorded ? null : result.status, line: entry?.summary ?? '', stderr: [recorded, result.stderr ?? '', result.stdout ?? ''].filter(Boolean).join('\n') }
