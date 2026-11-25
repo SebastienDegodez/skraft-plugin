@@ -93,6 +93,18 @@ stimuli:
             - 'files=$(git ls-files --others --exclude-standard -- "docs/adr/adr-*.md"); [ -z "$files" ] || ! grep -qiE "command ?/ ?query classification|classification of (every|each|the) trigger|\bCQS\b" $files'
           expected_exit_code: 0
           timeout: 30s
+      # The loyalty reduction is a calculation: nothing changes state, so no invariant has to
+      # hold across changes. architecture-patterns admits a repository only for an aggregate,
+      # and an aggregate only for such an invariant, so neither may appear here.
+      - type: run-command
+        name: No repository is designed for a calculation that changes no state
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - '! grep -rqE "\\bI?[A-Z][A-Za-z]*Repository\\b" .copilot-tracking/skraft-plans/pricing/details'
+          expected_exit_code: 0
+          timeout: 30s
       - type: diff-contains
         name: Design artefacts land in the DESIGN artefact location
         config:
