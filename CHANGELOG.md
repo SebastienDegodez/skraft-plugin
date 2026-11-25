@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.18.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.17.2...v1.18.0) (2026-11-25)
+
+### ✨ Features
+
+* **skraft-framework:** developer questions through the host's question tool, lighter outside-in-tdd, DESIGN and DISTILL reviewers on Sonnet ([#660](https://github.com/SebastienDegodez/skraft-plugin/issues/660)) ([6f90f32](https://github.com/SebastienDegodez/skraft-plugin/commit/6f90f3271e022e97e28d7917c8f480290008d435))
+
 ## [1.17.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.17.1...v1.17.2) (2026-11-25)
 
 ### 🐛 Bug Fixes
