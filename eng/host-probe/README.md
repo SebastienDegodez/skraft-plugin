@@ -127,3 +127,17 @@ Tests: `tests/tooling/host-probe/` runs the probe against a simulated SDK.
 CI: `.github/workflows/copilot-host-smoke.yml` runs the probe on the pinned CLI with no login and no
 secret, and requires only the checks that hold without a login; the host refuses every workflow
 run there.
+
+## The standalone plugins
+
+`copilot-standalone-probe.mjs` measures how the Copilot host loads skraft-design and skraft-deliver,
+with no model call: one headless session per plugin, `pluginDirectories` on it, its lists read.
+
+```bash
+npm run probe:copilot:standalone -- --sdk ~/.cache/copilot/pkg/<platform>/<version>/copilot-sdk
+```
+
+It checks that each plugin's MCP server lists every tool of its engine, the name the host gives
+each tool, that every agent and skill is listed, and that an agent is offered a server tool exactly
+when its `tools:` names it as the descriptors do. The CLI it starts is the `index.js` next to the
+SDK folder unless `COPILOT_CLI_PATH` names one; the report goes to `host-probe-results/copilot-standalone.json`.

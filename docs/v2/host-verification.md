@@ -5,6 +5,23 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### 2026-11-25 — skraft-design et skraft-deliver sous Copilot, sans appel de modèle (branche feat/standalone-design-deliver)
+
+Mesuré par `eng/host-probe/copilot-standalone-probe.mjs` (`npm run probe:copilot:standalone`) : une session SDK headless
+par plugin, `pluginDirectories` sur `plugins/skraft-design` puis `plugins/skraft-deliver`, sur un dépôt Git temporaire ;
+CLI Copilot **1.0.111**, SDK 1.0.111, Node v22.22.2, linux-x64. Aucun message envoyé, aucun crédit.
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| le serveur MCP du plugin démarre et liste chaque outil de son moteur (`rpc.mcp.list`, `rpc.mcp.listTools`) | Copilot CLI **1.0.111** | pass | `skraft-design` : les 9 outils `skraft_design_*` ; `skraft-deliver` : les 8 outils `skraft_deliver_*` |
+| nom donné à l'agent principal pour chaque outil du serveur | Copilot CLI **1.0.111** | pass | `<serveur>-<outil>`, tirets gardés : `skraft-design-skraft_design_start`, `skraft-deliver-skraft_deliver_next` |
+| chaque agent de `com.github.copilot/agents/` est listé par la session (`rpc.agent.list`) | Copilot CLI **1.0.111** | pass | sous `<plugin>:<agent>` : `skraft-design:design-reply-interpreter`, `skraft-deliver:deliver-software-engineer` ; un agent de plugin ne peut pas être l'agent principal d'une session (`Custom agent 'skraft-design:design-reply-interpreter' not found` à `createSession`) |
+| chaque skill de `skills/` est listée par la session (`rpc.skills.list`) | Copilot CLI **1.0.111** | pass | les 10 skills du design et celles de skraft-deliver |
+| un agent dont `tools:` nomme `skraft-design/skraft_design_precheck` (forme des descripteurs) reçoit l'outil, un agent qui en nomme un autre ne le reçoit pas | Copilot CLI **1.0.111** | pass | offert sous `skraft-design-skraft_design_precheck` ; de même pour `skraft-deliver/skraft_deliver_precheck` |
+| un agent dont `tools:` nomme `skraft-deliver/skraft_deliver_repl` ou `skraft_deliver_repl_reset` les reçoit | Copilot CLI **1.0.111** | fail | le serveur MCP de skraft-deliver n'expose aucun outil REPL : les descripteurs de `deliver-software-engineer`, `deliver-acceptance-designer` et `deliver-quality-gates-lens` les déclarent dans les deux arbres, Claude Code compris |
+| un agent dont `tools:` est une liste vide (l'interprète des réponses) ne reçoit que ce que l'hôte donne toujours | Copilot CLI **1.0.111** | pass | `tools: []` : `skill` et `sql` seuls ; sans `tools:`, les 28 outils de la session ; `tools: [view]` : `view`, `skill`, `sql` |
+| un agent dont `tools:` est une liste vide sous Claude Code | Claude Code | not measured | — |
+
 ### 2026-11-25 — skraft-design sur un dépôt réel : outils MCP d'un plugin à tiret, questions en `claude -p` (branche feat/standalone-design-deliver)
 
 Mesuré sur `freecompub/microcks-foundry`, épique #1, plugin chargé par `claude -p --plugin-dir plugins/skraft-design`
