@@ -90,7 +90,10 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'files=$(git ls-files --others --exclude-standard -- "docs/adr/adr-*.md"); [ -z "$files" ] || ! grep -qiE "command ?/ ?query classification|classification of (every|each|the) trigger|\bCQS\b" $files'
+            # ADRs added or changed since the fixture's first commit, committed, staged or not.
+            # Only what an ADR ratifies counts: its title and its Decision section. A CQRS-bus ADR
+            # that names the CQS baseline it departs from is not a classification ADR.
+            - 'base=$(git rev-list --max-parents=0 HEAD 2>/dev/null | tail -n1); files=$( { git diff --name-only --diff-filter=AM "${base:-4b825dc642cb6eb9a060e54bf8d69288fbee4904}" -- "docs/adr/adr-*.md"; git ls-files --others --exclude-standard -- "docs/adr/adr-*.md"; } | sort -u); for f in $files; do title=$(grep -m1 "^# " "$f"); decision=$(awk "/^## Decision/{f=1;next} /^## /{f=0} f" "$f"); if printf "%s\n" "$title" | grep -qiE "command ?/ ?query classification" || { printf "%s\n" "$title" | grep -qE "\bCQS\b" && ! printf "%s\n" "$title" | grep -qE "\bCQRS\b"; } || printf "%s\n" "$decision" | grep -qiE "command ?/ ?query classification|classification of (every|each|the) trigger"; then echo "classification ADR: $f"; exit 1; fi; done'
           expected_exit_code: 0
           timeout: 30s
       - type: diff-contains

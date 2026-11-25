@@ -16,7 +16,19 @@ The matrix is the supervised-execution artefact for the cross-artefact consisten
 | `{story-id}` | story metadata | e.g. `story-41` |
 | `{concept-name}` | persona Phase 9 | one row per structural concept the stories rely on |
 | `{adr-truth}` | ADR-{NNN}, otherwise `contracts` | the classification of the source of truth |
-| `{cell-value}` | grep result (Phase 9 EXEC step) | classification as found in that artefact |
+| `{cell-value}` | grep result (Phase 9 EXEC step) | classification as found in that artefact; `n/a` when that artefact does not carry the concept's kind (see Required artefacts) |
+
+---
+
+## Required artefacts per concept kind
+
+An artefact must name a concept only when it carries that kind; every other cell reads `n/a` and is never a mismatch.
+
+| Kind | event model | diagrams | contracts |
+|---|---|---|---|
+| Command, Query, Domain Event, Read Model | required | n/a | required |
+| Aggregate, Repository, Gateway, Domain Service | n/a | required | required |
+| Entity, Value Object | n/a | n/a | required |
 
 ---
 
@@ -115,7 +127,7 @@ Ranked priorities of each ELIGIBLE candidate: `1. … 2. …`
 |---|---|---|---|
 | `LABEL_DRIFT` | Same concept, different vocabulary (e.g. `VO` vs `Value Object` vs `ValueObject`). | Back-propagate: rewrite the upstream artefact to use the ADR's spelling. | 1 per artefact |
 | `CLASSIFICATION_DRIFT` | Same concept, incompatible category (`Command` vs `Query`, `Entity` vs `Value Object`, `Aggregate` vs `Domain Service`). | Back-propagate: rewrite the upstream artefact to align on the ADR. | 1 per artefact, then HALT `decision_drift` |
-| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or contracts define a `Repository` the diagram never drew). | **HALT immediately. No back-propagation.** This signals a real decision gap that the architect must resolve by revisiting the ADR set or the upstream artefact, not by silent rewrite. | 0 |
+| `STRUCTURAL_DRIFT` | The concept exists in one artefact and is missing from another that must carry it (Required artefacts above), e.g. contracts define a `Repository` the diagram never drew. A Value Object absent from the event model is `n/a`, not drift. | **HALT immediately. No back-propagation.** This signals a real decision gap that the architect must resolve by revisiting the ADR set or the upstream artefact, not by silent rewrite. | 0 |
 
 ---
 
@@ -151,7 +163,7 @@ The append-only constraint of tracked decision directories (`docs/adr/`, `detail
   "story": "{story-id}",
   "concept": "{concept-name}",
   "adr_says": "{adr-truth}",
-  "adr_path": "docs/adr/adr-{NNN}-{slug}.md",
+  "adr_path": "docs/adr/adr-{NNN}-{slug}.md, or the contracts path when no ADR covers the concept (the row's source of truth)",
   "artefact_says": "{cell-value}",
   "artefact_path": ".copilot-tracking/skraft-plans/{project-slug}/details/{date}/{artefact}-{story-id}.md",
   "cause": "STRUCTURAL_DRIFT | CLASSIFICATION_DRIFT (post-retry)",
