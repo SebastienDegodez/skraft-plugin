@@ -2,7 +2,7 @@
 
 ## Overview
 
-This file provides the blank ADR template for direct copy-paste and filled examples from the auto-insurance (MonAssurance) domain. Every ADR opens with the YAML header of `SKILL.md`'s template: the engine refuses an ADR whose header has no `decision:` key, however its body states the decision.
+This file provides the blank ADR template for direct copy-paste, the file naming rules, the row of the decision index, the ADR Quality Checklist and filled examples from the auto-insurance (MonAssurance) domain. Every ADR opens with the YAML header of the Blank Template below: the engine refuses an ADR whose header has no `decision:` key, however its body states the decision.
 
 ---
 
@@ -60,6 +60,57 @@ ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Rej
 
 {The architecture test, rule or fitness check that fails when the code departs from this decision, in any stack. None possible: "None possible, because …".}
 ```
+
+---
+
+## File Naming
+
+`adr-{NNN}-{slug}.md`
+
+Examples:
+- `adr-001-cqrs-bus-eligibility.md`
+- `adr-002-aggregate-boundary-eligibility.md`
+- `adr-003-event-sourcing-eligibility.md` *(slug names the topic; verdict lives in the `Status:` field — `Accepted` or `Rejected`)*
+
+Rules:
+- Numbers are three digits, zero-padded: `001`, not `1`
+- Slugs are lowercase kebab-case, derived from the short title
+- **Slugs name the SUBJECT, never the verdict.** Forbidden suffixes: `-rejected`, `-accepted`, `-deprecated`, `-superseded`. The verdict lives in `Status:`.
+- Gaps in numbering are forbidden — never skip a number
+- Numbers are never reused — a deprecated ADR keeps its number
+
+---
+
+## Decision index row — `docs/adr/decisions-index.md`
+
+```markdown
+<!-- markdownlint-disable-file -->
+# ADR decision index (append-only digest)
+
+| ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |
+|---|---|---|---|---|---|---|
+| 001 | CQRS dispatch bus | Accepted | CQRS+Bus | Introduce ICommandBus/IQueryBus pipeline over unchanged CQS | alice 2026-05-01 | 2026-05-01 |
+| 007 | Event Sourcing for Policy | Proposed | Event Sourcing | Store Policy as events to answer the premium on any past date | — | 2026-06-23 |
+```
+
+---
+
+## ADR Quality Checklist
+
+Before writing the final ADR, verify:
+
+- [ ] **Single decision** — the ADR captures exactly one choice, not a bundle of decisions
+- [ ] **Clear decision statement** — starts with "We will…" or "We have decided to…"; no ambiguity
+- [ ] **Context explains the why** — the forces that made this decision necessary are described
+- [ ] **Consequences include negatives** — no decision is trade-off-free; if you can't name a downside, keep thinking
+- [ ] **Alternatives are genuine** — rejected alternatives are real options that were seriously considered, not strawmen
+- [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set", against the ranked drivers
+- [ ] **Confirmation** — the check that fails when the code departs from the decision, or why none is possible
+- [ ] **Status is set** — `Proposed` when drafting, `Accepted` when ratified
+- [ ] **Supersession is linked** — if this supersedes another ADR, both are updated: the old one's status, the new one's `Supersedes:` line
+- [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values and Value Object inventories go in the DESIGN details.
+- [ ] **Autonomous** — the ADR records one technical decision and reads on its own. No code reference: no `#file:<path>[:start[-end]]` citation, no file path, no `path:line`. No user story, acceptance criterion identifier, ticket or issue number, not even the story that raised it: that link lives in `docs/adr/decisions-index.md`. No other ADR: the only `ADR-NNN` it names is its own and the one it replaces, on its `Supersedes:` or `Amends:` line.
+- [ ] **No version** — name technologies or families ("Red Hat UBI base images", "a client-side router"), never a version, image tag, digest or package version; when a version matters, state the capability it brings. Versions live in manifests (`.csproj`, `package.json`, Dockerfile `ARG`, CI).
 
 ---
 
@@ -185,6 +236,74 @@ We will not apply Event Sourcing to the `PolicyRenewalAggregate`. State will be 
 ## Confirmation
 
 An architecture test fails when a type of `PolicyContext` depends on an event store.
+```
+
+---
+
+## Filled Example 3: CQRS Dispatch Bus over a CQS Baseline
+
+> **Note on baseline vs decision.** CQS at method level (one `ICommandHandler<>` per command, one `IQueryHandler<,>` per query, no method that both mutates and returns a domain value) is the project's clean-architecture baseline — enforced by the `clean-architecture-*` skill and by NetArchTest rules. It is **not** an ADR topic. What follows is an ADR for **CQRS+Bus**: the introduction of dispatch bus interfaces (`ICommandBus`, `IQueryBus`) and a pipeline through which every handler is invoked. Adopting a bus is a structural commitment with cross-cutting consequences (DI registration strategy, pipeline behaviors, testing surface) — that is what makes it ADR-worthy.
+
+```markdown
+---
+adr: 1
+title: Introduce a CQRS Dispatch Bus for Application Handlers
+status: Accepted
+chosen: CQRS+Bus
+decision: >
+  We will introduce a command bus and a query bus in the Application layer, through which the API layer invokes every handler.
+supersedes: null
+date: 2026-05-01
+ratified_by: "alice 2026-05-01"
+---
+
+# ADR-001: Introduce a CQRS Dispatch Bus for Application Handlers
+
+**Status:** Accepted
+**Date:** 2026-05-01
+
+## Context
+
+The project's baseline is CQS at the method level: every use case is implemented as either an `ICommandHandler<TCommand>` or an `IQueryHandler<TQuery, TResult>`, registered by convention. Today, the API layer injects each handler directly through the DI container.
+
+Three cross-cutting concerns have appeared on multiple handlers and are starting to be copied by hand: input validation, structured logging around every dispatch, and a unit-of-work boundary around command execution. Implementing each of these as a per-handler decorator wired manually in DI does not scale: the registration code becomes a `switch` over handler types and new behaviors require touching every registration site.
+
+A dispatch bus (`ICommandBus` / `IQueryBus`) lets us wrap handler invocation in an ordered pipeline of behaviors registered once. The handler implementations themselves remain unchanged — the bus is a structural addition over an unchanged CQS surface.
+
+**Decision drivers, ranked:** 1. one place per cross-cutting behaviour 2. handlers and their registration unchanged 3. a direct call path
+
+## Decision
+
+We will introduce a command bus and a query bus in the Application layer; the API layer injects them instead of individual handlers, and every dispatch runs through one ordered pipeline of behaviours (validation, logging, a unit of work around commands). Handler interfaces and their convention-based registration do not change.
+
+## Consequences
+
+**Positive:**
+- Cross-cutting behaviors live in one place per behavior, not duplicated across handlers
+- API layer depends on two stable interfaces instead of N handler interfaces
+- New cross-cutting concerns are added by registering a behavior, not by editing every handler or every DI registration
+
+**Negative / trade-offs:**
+- One extra indirection between caller and handler — stack traces and `Find Usages` are slightly less direct
+- Pipeline order becomes part of the architecture and must be documented; reordering behaviors is a real change
+- Test setup for code that calls the bus must either stub the bus or run the full pipeline
+
+**Neutral:**
+- The CQS baseline is unchanged — every existing handler keeps its interface and is reachable directly for unit tests
+- No message broker, queue, or out-of-process dispatch is introduced — this remains in-process
+
+## Alternatives Rejected
+
+| Alternative | Reason rejected |
+|---|---|
+| Keep direct handler injection, no bus (the baseline before this ADR) | Cross-cutting concerns force per-handler decorators registered by hand; the DI module becomes a `switch` over handler types and every new behavior touches every registration site |
+| Add the behaviors as plain decorators registered per handler in DI, without a bus | Equivalent runtime semantics, but the registration code grows as O(handlers × behaviors) instead of O(behaviors); pipeline order is implicit in registration order across N call sites |
+| Use a third-party mediator library | Adds an external dependency for a thin abstraction this project can own in ~50 lines; the library's full surface (notifications, request/response, streams) is wider than needed |
+| Full CQRS with separate read/write data stores | Out of scope of this ADR — that decision concerns the data tier, not the dispatch tier, and would warrant its own ADR if the read load required it |
+
+## Confirmation
+
+An architecture test fails when a type of the API layer depends on a handler interface rather than on the command bus or the query bus.
 ```
 
 ---

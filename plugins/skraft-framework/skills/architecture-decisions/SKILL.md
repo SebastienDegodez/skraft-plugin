@@ -17,132 +17,9 @@ Architecture Decision Records (ADRs) are lightweight documents that capture arch
 
 ## ADR Template
 
-### Blank Template
+Read [references/adr-template.md](references/adr-template.md) before writing or rewriting an ADR, never from memory: the Blank Template, the file naming rules, the row of the decision index, the ADR Quality Checklist and filled examples.
 
-```markdown
----
-adr: {NNN}                    # int, matches filename
-title: {Short Title}
-status: Proposed             # Proposed | Accepted | Rejected | Deprecated | Superseded
-chosen: {picked option}      # one token/phrase — the option adopted
-decision: >                  # ONE sentence: the verdict in plain words
-  {We will ... / We will not adopt ... because ...}
-supersedes: {ADR-MMM | null}
-date: {YYYY-MM-DD}
-ratified_by: null            # "{human} {YYYY-MM-DD}" — set ONLY on Accept/Reject
----
-
-# ADR-{NNN}: {Short Title}
-
-**Status:** Proposed | Accepted | Rejected | Deprecated | Superseded by ADR-{NNN}
-**Date:** {YYYY-MM-DD}
-
-## Context
-
-{Describe the situation and the forces that led to this decision. What problem were you solving? What constraints were in play? Why was a decision needed at all?}
-
-**Decision drivers, ranked:** 1. {the force, quality attribute or constraint that matters most} 2. {…}
-
-## Decision
-
-{State the decision clearly and directly. Start with "We will..." or "We have decided to...". One paragraph, maximum. Avoid explaining why here — that belongs in Context and Alternatives.}
-
-## Consequences
-
-**Positive:**
-- {benefit 1}
-- {benefit 2}
-
-**Negative / trade-offs:**
-- {trade-off 1}
-- {trade-off 2}
-
-**Neutral:**
-- {change that is neither good nor bad but worth noting}
-
-## Alternatives Rejected
-
-| Alternative | Reason rejected |
-|---|---|
-| {option A} | {why not chosen — specific, not a strawman} |
-| {option B} | {why not chosen — specific, not a strawman} |
-
-## Confirmation
-
-{The architecture test, rule or fitness check that fails when the code departs from this decision, in any stack. None possible: "None possible, because …".}
-```
-
-### Filled Example — Auto Insurance Domain
-
-> **Note on baseline vs decision.** CQS at method level (one `ICommandHandler<>` per command, one `IQueryHandler<,>` per query, no method that both mutates and returns a domain value) is the project's clean-architecture baseline — enforced by the `clean-architecture-*` skill and by NetArchTest rules. It is **not** an ADR topic. What follows is an ADR for **CQRS+Bus**: the introduction of dispatch bus interfaces (`ICommandBus`, `IQueryBus`) and a pipeline through which every handler is invoked. Adopting a bus is a structural commitment with cross-cutting consequences (DI registration strategy, pipeline behaviors, testing surface) — that is what makes it ADR-worthy.
-
-```markdown
-# ADR-001: Introduce a CQRS Dispatch Bus for Application Handlers
-
-**Status:** Accepted
-**Date:** 2026-05-01
-
-## Context
-
-The project's baseline is CQS at the method level: every use case is implemented as either an `ICommandHandler<TCommand>` or an `IQueryHandler<TQuery, TResult>`, registered by convention. Today, the API layer injects each handler directly through the DI container.
-
-Three cross-cutting concerns have appeared on multiple handlers and are starting to be copied by hand: input validation, structured logging around every dispatch, and a unit-of-work boundary around command execution. Implementing each of these as a per-handler decorator wired manually in DI does not scale: the registration code becomes a `switch` over handler types and new behaviors require touching every registration site.
-
-A dispatch bus (`ICommandBus` / `IQueryBus`) lets us wrap handler invocation in an ordered pipeline of behaviors registered once. The handler implementations themselves remain unchanged — the bus is a structural addition over an unchanged CQS surface.
-
-**Decision drivers, ranked:** 1. one place per cross-cutting behaviour 2. handlers and their registration unchanged 3. a direct call path
-
-## Decision
-
-We will introduce a command bus and a query bus in the Application layer; the API layer injects them instead of individual handlers, and every dispatch runs through one ordered pipeline of behaviours (validation, logging, a unit of work around commands). Handler interfaces and their convention-based registration do not change.
-
-## Consequences
-
-**Positive:**
-- Cross-cutting behaviors live in one place per behavior, not duplicated across handlers
-- API layer depends on two stable interfaces instead of N handler interfaces
-- New cross-cutting concerns are added by registering a behavior, not by editing every handler or every DI registration
-
-**Negative / trade-offs:**
-- One extra indirection between caller and handler — stack traces and `Find Usages` are slightly less direct
-- Pipeline order becomes part of the architecture and must be documented; reordering behaviors is a real change
-- Test setup for code that calls the bus must either stub the bus or run the full pipeline
-
-**Neutral:**
-- The CQS baseline is unchanged — every existing handler keeps its interface and is reachable directly for unit tests
-- No message broker, queue, or out-of-process dispatch is introduced — this remains in-process
-
-## Alternatives Rejected
-
-| Alternative | Reason rejected |
-|---|---|
-| Keep direct handler injection, no bus (the baseline before this ADR) | Cross-cutting concerns force per-handler decorators registered by hand; the DI module becomes a `switch` over handler types and every new behavior touches every registration site |
-| Add the behaviors as plain decorators registered per handler in DI, without a bus | Equivalent runtime semantics, but the registration code grows as O(handlers × behaviors) instead of O(behaviors); pipeline order is implicit in registration order across N call sites |
-| Use a third-party mediator library | Adds an external dependency for a thin abstraction this project can own in ~50 lines; the library's full surface (notifications, request/response, streams) is wider than needed |
-| Full CQRS with separate read/write data stores | Out of scope of this ADR — that decision concerns the data tier, not the dispatch tier, and would warrant its own ADR if the read load required it |
-
-## Confirmation
-
-An architecture test fails when a type of the API layer depends on a handler interface rather than on the command bus or the query bus.
-```
-
----
-
-## File Naming
-
-`adr-{NNN}-{slug}.md`
-
-Examples:
-- `adr-001-cqrs-bus-eligibility.md`
-- `adr-002-aggregate-boundary-eligibility.md`
-- `adr-003-event-sourcing-eligibility.md` *(slug names the topic; verdict lives in the `Status:` field — `Accepted` or `Rejected`)*
-
-Rules:
-- Numbers are three digits, zero-padded: `001`, not `1`
-- Slugs are lowercase kebab-case, derived from the short title
-- **Slugs name the SUBJECT, never the verdict.** Forbidden suffixes: `-rejected`, `-accepted`, `-deprecated`, `-superseded`. The verdict lives in `Status:`.
-- Gaps in numbering are forbidden — never skip a number
-- Numbers are never reused — a deprecated ADR keeps its number
+Every ADR opens with the YAML header of that template, before its `# ADR-{NNN}` title: `adr`, `title`, `status`, `chosen`, `decision` (one sentence), `supersedes`, `date`, `ratified_by`. Its body holds Context with the ranked decision drivers, Decision, Consequences, Alternatives Rejected and Confirmation.
 
 ---
 
@@ -206,21 +83,13 @@ The full ADR body is the *rationale*. No reader (the ratification question, the 
 
 ### Per-ADR decision header
 
-Every ADR file begins with the YAML frontmatter shown in the Blank Template above, **before** the `# ADR-{NNN}` title. A reader reads ONLY this frontmatter (the first ~10 lines) to obtain `status`, `chosen`, and the one-line `decision`. Load the prose body solely when the *rationale* is needed (e.g. re-evaluating a supersession). Keep the header free of dynamic noise — no timestamps beyond `date`, no per-run paths — so it stays a stable prefix.
+Every ADR file begins with the YAML frontmatter of the Blank Template, **before** the `# ADR-{NNN}` title. A reader reads ONLY this frontmatter (the first ~10 lines) to obtain `status`, `chosen`, and the one-line `decision`. Load the prose body solely when the *rationale* is needed (e.g. re-evaluating a supersession). Keep the header free of dynamic noise — no timestamps beyond `date`, no per-run paths — so it stays a stable prefix.
 
 ### Project-global decision index — `docs/adr/decisions-index.md`
 
 An append-only registry, sibling of `docs/adr/supersessions.md`. One row per ADR aggregates the header fields. One read of this file yields every decision in the project without opening a single ADR body.
 
-```markdown
-<!-- markdownlint-disable-file -->
-# ADR decision index (append-only digest)
-
-| ADR | Title | Status | Chosen | Decision (1 line) | Ratified by | Date |
-|---|---|---|---|---|---|---|
-| 001 | CQRS dispatch bus | Accepted | CQRS+Bus | Introduce ICommandBus/IQueryBus pipeline over unchanged CQS | alice 2026-05-01 | 2026-05-01 |
-| 007 | Event Sourcing for Policy | Proposed | Event Sourcing | Store Policy as events to answer the premium on any past date | — | 2026-06-23 |
-```
+Its header row and an example: [references/adr-template.md](references/adr-template.md).
 
 Write rule: when an ADR is first committed (`Status: Proposed`), append its row with `Ratified by: —`. On the ratification status flip, update **only** the `Status` and `Ratified by` cells of that row in place — once the ADR is `Accepted`, the row is never removed and never reordered (numbering stays monotonic, matching the supersession-registry doctrine); while it is `Proposed`, edit the row in place with its ADR.
 
@@ -308,7 +177,7 @@ A choice argued from a future need fails Q4 too: "identical today but may diverg
 
 ### Q5 — Does the choice have genuine trade-offs?
 
-Score it against the 5 Universal Forces (Trade-off Framework below).
+Score it against the 5 Universal Forces: Simplicity, Consistency, Performance, Evolvability, Team capability. Read [references/decision-drivers.md](references/decision-drivers.md) for the question each force asks, the scoring table to put in Context when the decision is hard, and the signs of an analysis that is not genuine: no ADR has only upsides.
 
 Fewer than two alternatives genuinely possible → `NON-DECISION`. High on all five → `NOT ELIGIBLE — no genuine trade-offs; should be baseline`. Tension between at least two forces → `ELIGIBLE — genuine trade-off`.
 
@@ -353,62 +222,13 @@ Destination: none; reuse the upstream shape
 2. Judge each option against those drivers, in their order; the reason an alternative is rejected names the driver it loses on.
 3. Each row of `Alternatives Rejected` is an approach the research document evaluated, or says why it is new to it.
 4. `## Confirmation` names the architecture test, rule or fitness check that proves the decision holds, by what it checks, never by its file; "None possible, because …" when none can, never left out.
+5. Before the final ADR, check it against the ADR Quality Checklist of [references/adr-template.md](references/adr-template.md).
 
 Every candidate carries a `Destination: <document> § <section>`; a `NOT ELIGIBLE` choice is written in place there. Write an ADR only for an `ELIGIBLE` candidate. Gate failures map to review findings: DOC-AS-ADR (Q0, Q0b, Q1b), ADR-INFLATION (Q1, Q3), GOOD-PRACTICE ADR (Q2), BASELINE DRIFT (Q1 + Q3), UNRAISED QUESTION (Q4), NON-DECISION (Q5).
 
 ---
 
-## Trade-off Framework
-
-Every ADR must demonstrate genuine trade-off analysis — not a decision with only upsides.
-
-### The 5 Universal Forces
-
-| Force | Question |
-|---|---|
-| **Simplicity** | Does this make the system easier to understand and change? |
-| **Consistency** | Does this fit the patterns already established in this codebase? |
-| **Performance** | Does this meet the performance requirements without over-engineering? |
-| **Evolvability** | Does this make future changes easier or harder? |
-| **Team capability** | Can the current team maintain this without a steep learning curve? |
-
-### Trade-off Analysis Template
-
-```
-| Force | Option A | Option B | Weight |
-|---|---|---|---|
-| Simplicity | High | Low | High |
-| Consistency | High | Medium | Medium |
-| Performance | Medium | High | Low |
-| Evolvability | High | High | High |
-| Team capability | High | Low | High |
-| → Score | 4.2 | 2.8 | |
-```
-
-Use this table in the Context section when the decision is genuinely hard. Skip it for obvious decisions.
-
----
-
-## ADR Quality Checklist
-
-Before writing the final ADR, verify:
-
-- [ ] **Single decision** — the ADR captures exactly one choice, not a bundle of decisions
-- [ ] **Clear decision statement** — starts with "We will…" or "We have decided to…"; no ambiguity
-- [ ] **Context explains the why** — the forces that made this decision necessary are described
-- [ ] **Consequences include negatives** — no decision is trade-off-free; if you can't name a downside, keep thinking
-- [ ] **Alternatives are genuine** — rejected alternatives are real options that were seriously considered, not strawmen
-- [ ] **Alternatives explain the rejection** — not "too complex" but "too complex because X and Y are not needed given the current story set", against the ranked drivers
-- [ ] **Confirmation** — the check that fails when the code departs from the decision, or why none is possible
-- [ ] **Status is set** — `Proposed` when drafting, `Accepted` when ratified
-- [ ] **Supersession is linked** — if this supersedes another ADR, both are updated: the old one's status, the new one's `Supersedes:` line
-- [ ] **Decision level** — Context, a one-sentence decision, Consequences, Alternatives on about one page; signatures, route trees, enum values and Value Object inventories go in the DESIGN details.
-- [ ] **Autonomous** — the ADR records one technical decision and reads on its own. No code reference: no `#file:<path>[:start[-end]]` citation, no file path, no `path:line`. No user story, acceptance criterion identifier, ticket or issue number, not even the story that raised it: that link lives in `docs/adr/decisions-index.md`. No other ADR: the only `ADR-NNN` it names is its own and the one it replaces, on its `Supersedes:` or `Amends:` line.
-- [ ] **No version** — name technologies or families ("Red Hat UBI base images", "a client-side router"), never a version, image tag, digest or package version; when a version matters, state the capability it brings. Versions live in manifests (`.csproj`, `package.json`, Dockerfile `ARG`, CI).
-
----
-
 ## References
 
-- [adr-template.md](references/adr-template.md) — Blank template + filled auto-insurance examples, each with its YAML header
-- [decision-drivers.md](references/decision-drivers.md) — Trade-off analysis framework and decision scenarios
+- [adr-template.md](references/adr-template.md) — Blank Template, file naming, decision index row, ADR Quality Checklist, filled auto-insurance examples, each with its YAML header
+- [decision-drivers.md](references/decision-drivers.md) — the 5 Universal Forces, trade-off analysis table, decision scenarios, red flags
