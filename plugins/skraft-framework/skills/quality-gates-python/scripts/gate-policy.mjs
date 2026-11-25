@@ -1,6 +1,6 @@
 // Pure rules of the Python quality gates: arguments, the Domain/Application core, coverage
-// verdicts, mock detection. No I/O here; the runners own processes and files. Mutation testing
-// is the developer's (/skraft-mutation): nothing here runs or configures a mutation tool.
+// verdicts, mock detection. No I/O here; the runners own processes and files. skraft does no
+// mutation testing in Python: nothing here runs or configures a mutation tool.
 
 function ensure(condition, message) {
 	if (!condition) throw new Error(message)

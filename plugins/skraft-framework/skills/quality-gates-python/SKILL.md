@@ -41,9 +41,9 @@ with no import-linter contract records G5 `fail`: `clean-architecture-python` re
 
 ## G6 — Mutation score
 
-Never run in a delivery. This adapter runs no mutation tool or gate and ships no mutation
-config: record G6 `not_run` with the rationale `G6 not run: mutation testing runs outside the
-pipeline; the developer runs /skraft-mutation.`, never `pass`, and tell the developer.
+skraft does no mutation testing in Python, in a delivery or through `/skraft-mutation`. This
+adapter runs no mutation tool or gate and ships no mutation config: record G6 `not_run` with the
+rationale `G6 not run: skraft does no mutation testing in Python.`, never `pass`.
 
 ## G7 — No mocks in Domain/Application
 

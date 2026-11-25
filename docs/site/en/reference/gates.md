@@ -235,10 +235,11 @@ repository owner accepted that trade deliberately — quality is not negotiable.
 > **Mutation is the developer's responsibility.** It must be done on every story, but
 > SKRAFT ships no mutation tool, config or scaffold, and the pipeline never runs it: every
 > delivery records G6 `not_run` with its rationale — never `pass`, never silent, `qg-verify`
-> and the report both show it. You choose the tool (Stryker.NET, StrykerJS, cosmic-ray, mutmut,
-> PIT…), configure it, and run `/skraft-mutation` when you choose. It asks for each component's
-> command, proposing one found in `CONTRIBUTING.md`, and warns when the command is a full run
-> (no `--since`, `{baseSha}`, delta or incremental option). That command writes its scores as
+> and the report both show it. You choose the tool (Stryker.NET, StrykerJS, PIT…), configure
+> it, and run `/skraft-mutation` when you choose. It asks for each component's command,
+> proposing one found in `CONTRIBUTING.md`, and warns when the command is a full run (no
+> `--since`, `{baseSha}`, delta or incremental option). SKRAFT does no mutation testing in
+> Python: a Python component keeps G6 `not_run`. That command writes its scores as
 > JSON to the file named by `SKRAFT_MUTATION_RESULT`: `core` and `boundary` for a Clean
 > Architecture component, `global` for a single project, each with its surviving mutants as
 > `file:line detail` lines unless the team leaves them out. The gate holds every scope to 80%

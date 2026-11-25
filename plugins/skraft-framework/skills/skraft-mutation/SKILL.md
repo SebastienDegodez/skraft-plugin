@@ -19,9 +19,10 @@ Mutation testing is the developer's responsibility: you never write their mutati
 install a tool, pick one for them, or store their command in a config file.
 
 1. Read `CONTRIBUTING.md`, `.github/CONTRIBUTING.md` and `docs/CONTRIBUTING.md` when they
-   exist. A mutation command written there (Stryker, PIT, mutmut, cosmic-ray, a project script)
+   exist. A mutation command written there (Stryker, PIT, a project script)
    is a proposal: offer it as the first option of the question, with the folder it runs in.
-2. Ask for each component its name, the folder its command runs in (`.` for the root) and the
+2. Never take a Python component (`pyproject.toml`): skraft does no mutation testing in
+   Python; tell the developer when one is named. Ask for each other component its name, the folder its command runs in (`.` for the root) and the
    command. Without a proposal, ask the same question with no option filled in.
 3. The command must write its scores as JSON to the file named by the `SKRAFT_MUTATION_RESULT`
    environment variable: `{ "scopes": [{ "name": "core", "score": 97.6, "survivors": ["src/Domain/Order.cs:12 Equality -> age > 18"] }, { "name": "boundary", "score": 85.7, "survivors": [] }] }`;

@@ -54,7 +54,7 @@ responsibility, not SKRAFT's. SKRAFT ships no mutation tool, no mutation config 
 scaffold, and the pipeline never runs mutation: every delivery records G6 `not_run`. The
 developer:
 
-1. picks the tool (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…) and its configuration;
+1. picks the tool (Stryker.NET, StrykerJS, PIT…) and its configuration;
 2. runs `/skraft-mutation`, which asks for the command of each component (proposing one found in
    `CONTRIBUTING.md`) and warns when the command is a full run rather than an incremental one;
 3. makes that command compute the scores and write them as JSON to the file named by

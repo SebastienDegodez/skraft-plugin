@@ -127,7 +127,8 @@ MUST include a `rationale` field explaining why. `not_applicable` is **never** a
 for `fail` or for missing evidence.
 
 G6 is always `status: "not_run"`, with the `rationale` `G6 not run: mutation testing runs
-outside the pipeline; the developer runs /skraft-mutation.` No mutation runs in a delivery, so
+outside the pipeline; the developer runs /skraft-mutation.` (a Python component: `G6 not run:
+skraft does no mutation testing in Python.`). No mutation runs in a delivery, so
 G6 cites no `qg-mutation.*` capture. `qg-verify` passes it and reports a `notice`
 (`G6_NOT_RUN`) so the report shows it.
 

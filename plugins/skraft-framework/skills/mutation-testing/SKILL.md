@@ -57,7 +57,7 @@ For each real survivor:
 ## Accept Proven Equivalent Mutants
 
 Use only the tool's source-level, single-construct suppression, with a reason: Stryker
-`// Stryker disable once <Mutator>: <reason>`, cosmic-ray `# pragma: no mutate -- <reason>`.
+`// Stryker disable once <Mutator>: <reason>`.
 Never broaden the tool's config, exclude files, or lower its threshold to buy the score: the
 developer owns that config, and you do not edit it to buy the score.
 

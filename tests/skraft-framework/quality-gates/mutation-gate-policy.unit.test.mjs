@@ -35,7 +35,7 @@ test('a run the gate cannot place is a problem naming it, never a silent skip', 
 test('a command with no base or incremental option is a full run, and is warned', () => {
 	const warn = (command) => fullRunWarning({ name: 'api', command })
 	assert.match(warn('dotnet stryker'), /^warning: api runs a full mutation \(no --since, \{baseSha\}, delta or incremental option\)/)
-	for (const command of ['dotnet stryker --since:{baseSha}', 'dotnet stryker --since main', 'npx stryker run --incremental', 'mvn pitest:mutationCoverage -DwithHistory', 'cosmic-ray --diff', 'mutmut run --paths-to-mutate $(git diff --name-only)', 'npm run mutation:delta', 'node m.mjs --changed']) {
+	for (const command of ['dotnet stryker --since:{baseSha}', 'dotnet stryker --since main', 'npx stryker run --incremental', 'mvn pitest:mutationCoverage -DwithHistory', 'npm run mutation:delta', 'node m.mjs --changed']) {
 		assert.equal(warn(command), null, command)
 	}
 })

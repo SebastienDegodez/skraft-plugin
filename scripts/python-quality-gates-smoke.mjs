@@ -48,7 +48,7 @@ const { values: opts } = parseArgs({
 
 const USAGE = `usage: node scripts/python-quality-gates-smoke.mjs [--python <interpreter>] [--keep]
 
-  --python  use this interpreter (pytest, coverage, cosmic-ray 8.x installed) instead of a fresh .venv
+  --python  use this interpreter (pytest and coverage installed) instead of a fresh .venv
   --keep    keep the throwaway copy and its evidence on success
 `
 

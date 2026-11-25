@@ -243,10 +243,11 @@ ou recu de completion supplementaire.
 > mais SKRAFT ne fournit ni outil de mutation, ni configuration, ni scaffold, et le pipeline ne
 > la lance jamais : chaque livraison enregistre G6 `not_run` avec sa justification — jamais
 > `pass`, jamais silencieuse, `qg-verify` et le rapport l'affichent. Vous choisissez l'outil
-> (Stryker.NET, StrykerJS, cosmic-ray, mutmut, PIT…), vous le configurez, et vous lancez
-> `/skraft-mutation` quand vous le décidez. Il demande la commande de chaque composant, en
-> proposant celle trouvée dans `CONTRIBUTING.md`, et alerte quand la commande est un run complet
-> (sans `--since`, `{baseSha}`, delta ni option incrémentale). Cette commande écrit ses scores en
+> (Stryker.NET, StrykerJS, PIT…), vous le configurez, et vous lancez `/skraft-mutation` quand
+> vous le décidez. Il demande la commande de chaque composant, en proposant celle trouvée dans
+> `CONTRIBUTING.md`, et alerte quand la commande est un run complet (sans `--since`, `{baseSha}`,
+> delta ni option incrémentale). SKRAFT ne fait aucune mutation en Python : un composant Python
+> garde G6 `not_run`. Cette commande écrit ses scores en
 > JSON dans le fichier désigné par `SKRAFT_MUTATION_RESULT` : `core` et `boundary` pour un
 > composant Clean Architecture, `global` pour un mono-projet, chacun avec ses mutants survivants
 > en lignes `fichier:ligne détail`, sauf si l'équipe les omet. La gate exige 80 % sur chaque

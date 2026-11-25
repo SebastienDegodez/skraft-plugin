@@ -65,7 +65,7 @@ Approve without asking:
 - build/test .NET: dotnet restore/build/test/format, dotnet tool restore, dotnet tool run dotnet-stryker
 - build/test JS/TS: npm ci, npm test, npm run lint/build/e2e, npx playwright test, npx stryker, npx tsc, npx eslint
 - build/test Java: mvn/./mvnw compile/test/verify, gradle/./gradlew build/test/check, pitest
-- build/test Python: pytest, python -m pytest, ruff, mypy, mutmut, uv sync/run, pip install inside a venv
+- build/test Python: pytest, python -m pytest, ruff, mypy, uv sync/run, pip install inside a venv
 - node: scripts under the skraft plugin folder
 - curl/wget: GET to allowedUrls domains
 - mcp skraft: doctor, init, status, report, journal, gate, workflow_check, workflow_diff
