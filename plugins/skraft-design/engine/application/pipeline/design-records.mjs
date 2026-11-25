@@ -3,6 +3,7 @@ import { inAdrFolder, indexOf, isAdr, isMatrix, recordFailures, registryOf, reli
 import { readOrName, regularFile, textsOf } from '../shared/workspace-reading.mjs'
 import { storyBriefFailures } from '../architecture/story-briefs.mjs'
 import { sharedCitationProblems } from '../../domain/decisions/adr-citations.mjs'
+import { glossaryProblems } from '../../domain/architecture/glossary.mjs'
 
 /**
  * @typedef {{
@@ -29,7 +30,7 @@ export const checkDesignRecords = async (deps, { slug, base }) => {
 const sharedFailures = async ({ workspace }, paths) => {
   const shared = paths.filter((path) => /^(?:docs\/architecture\/|docs\/domain\/event-model\/)/.test(path) && !path.startsWith('docs/architecture/stories/') && path.endsWith('.md'))
   const texts = await textsOf(shared, (path) => workspace.read(path))
-  return texts.flatMap(({ path, text }) => text === null ? [] : sharedCitationProblems(path, text))
+  return texts.flatMap(({ path, text }) => text === null ? [] : [...sharedCitationProblems(path, text), ...glossaryProblems(path, text)])
 }
 /**
  * The working-copy paths the run changed in each of its repositories.

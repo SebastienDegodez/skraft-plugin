@@ -257,7 +257,20 @@ const missingLines = ({ missing, attempt, maxAttempts, visit }) => (missing.leng
 const feedbackLines = (brief) => {
   if (brief.instruction !== null) return reopenedLines(brief, brief.instruction)
   if (brief.feedback.length === 0) return []
-  return ['', feedbackTitle(brief), ...brief.feedback.map((line) => `- ${line}`)]
+  return ['', feedbackTitle(brief), ...brief.feedback.map((line) => `- ${line}`), ...citedFilesLines(brief)]
+}
+
+/** Where a review finding holds, as the engine writes it: `<lens> <id> <gate> <severity> at <path>:<line>: …`. */
+const FINDING_AT = /^\S+ \S+ \S+ \S+ at ([^\s:]+):\d+:/
+
+/**
+ * A pass the review sends back reads again and changes the files its findings cite, once each in
+ * the order they come, and no other unless a fix needs it: it does not reread the whole corpus (#662).
+ * @param {Pick<Brief, 'feedback' | 'sentBy'>} brief
+ */
+const citedFilesLines = ({ feedback, sentBy }) => {
+  const files = [...new Set(feedback.map((line) => FINDING_AT.exec(line)?.[1]).filter((path) => path !== undefined))]
+  return sentBy === 'review' && files.length > 0 ? ['', `Files the findings cite, the only ones this pass reads again and changes unless a fix needs another: ${files.join(', ')}`] : []
 }
 
 /**

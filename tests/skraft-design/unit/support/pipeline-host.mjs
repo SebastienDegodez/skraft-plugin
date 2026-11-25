@@ -342,7 +342,7 @@ export const refutes = (verdict, reason = `${verdict} by the patch`) => answerYa
 export const lenses = (byLens) => {
   const queues = Object.fromEntries(Object.entries(byLens).map(([name, answers]) => [name, [...answers]]))
   return (dispatch) => {
-    const name = dispatch.agent === 'design-finding-refuter' ? 'refuter' : dispatch.agent.replace(/-lens$/, '')
+    const name = dispatch.agent === 'design-finding-refuter' ? 'refuter' : dispatch.agent.replace(/^design-/, '').replace(/-lens$/, '')
     const next = queues[name]?.shift()
     if (next !== undefined) return next
     return name === 'refuter' ? refutes('confirmed') : says(name, 'pass')

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash, createHmac } from 'node:crypto'
-import { agent, pipelineHost, SETTLED_PUBLISH } from '../support/pipeline-host.mjs'
+import { agent, finding, lenses, pipelineHost, refutes, says, SETTLED_PUBLISH } from '../support/pipeline-host.mjs'
 import { InMemoryCodeHost } from '../support/in-memory-host.mjs'
 import { createDesignRun } from '../../../../plugins/skraft-design/engine/application/architecture/design-run.mjs'
 import { createAgentLoop } from '../../../../plugins/skraft-design/engine/drivers/cli/agent-loop.mjs'
@@ -553,4 +553,45 @@ test('the architecture pull request lists the stories the run left out and why',
   const outcome = await createRunPipeline(deps).run()
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.match(host.codeHost.pullRequests[0].body, /- Story #43 left out: the issue is closed/)
+})
+
+test('a pass the review sends back is told the files its findings cite, once each, and to change only those', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42')
+  await run.start({ issue: 42 })
+  host.agentRunner.review = lenses({
+    consistency: [says('consistency', 'fail', [
+      finding('F1', 'high', 'ContractRevision sits inside the ManagedApi boundary', { location: 'docs/architecture/contract.md:24' }),
+      finding('F2', 'high', 'The relation label differs from ARCHITECTURE.md', { location: 'docs/architecture/context-map.md:52' }),
+      finding('F3', 'high', 'The hash is named twice', { location: 'docs/architecture/contract.md:40' }),
+    ])],
+    refuter: [refutes('confirmed'), refutes('confirmed'), refutes('confirmed')],
+  })
+  const design = agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    const path = 'docs/architecture/stories/42-card-checkout.md'
+    await workspace.write(path, briefOf(current))
+    git.change(path)
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), design, design)
+  await createRunPipeline(deps).run()
+  const designs = host.agentRunner.dispatches.filter(({ agent: id }) => id === 'design-solution-architect')
+  assert.equal(designs.length, 2)
+  assert.ok(designs[1].prompt.includes('Files the findings cite, the only ones this pass reads again and changes unless a fix needs another: docs/architecture/contract.md, docs/architecture/context-map.md'), designs[1].prompt)
+})
+
+test('a context map the pass changes without its glossary is refused, so every document names things one way', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42')
+  await run.start({ issue: 42 })
+  const mapping = (map) => agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    await workspace.write('docs/architecture/stories/42-card-checkout.md', briefOf(current))
+    await workspace.write('docs/architecture/context-map.md', map)
+    git.change('docs/architecture/stories/42-card-checkout.md', 'docs/architecture/context-map.md')
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), mapping('# Context map\n\n## Contexts\n- Checkout\n'),
+    mapping('# Context map\n\n## Glossary\n\n| Term | Context | Meaning |\n| --- | --- | --- |\n| Receipt | Checkout | What the customer keeps |\n'))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
+  assert.deepEqual(failures, ['docs/architecture/context-map.md: name every term the documents share once, in a ## Glossary table (term, context, meaning), and use it verbatim everywhere.'])
 })
