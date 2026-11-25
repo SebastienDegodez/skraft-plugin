@@ -84,7 +84,8 @@ the architecture PR only with consent, and keeps research in one marked issue co
 The architecture lasts by bounded context: `docs/architecture/context-map.md` with its glossary,
 and `docs/architecture/contexts/<context>/` with `tactical-design.md` and one
 `event-model/<slice>.md` per slice, rewritten in place. A run's briefs sit apart in
-`docs/architecture/runs/<run>/`, so they go together once delivered.
+`docs/architecture/runs/<run>/`, so they go together once delivered. When another open design
+branch changes one of the same contexts, the run asks before it publishes.
 
 Read each `docs/architecture/runs/<run>/<number>-<slug>.md`: its header records the issue identity,
 body fingerprint, components, criteria, ADRs and shared documents.

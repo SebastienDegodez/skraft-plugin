@@ -20,7 +20,7 @@ const session = (stories = [story(42)], slug = 'issue-42', options = {}) => {
   const deps = { ...host.deps,
     hasher: { sha256: async (text) => createHash('sha256').update(text).digest('hex'), hmacSha256: async (key, text) => createHmac('sha256', key).update(text).digest('hex') },
     architectureForge: { read: async () => ({ ok: true, issue: story(42) }), descendants: async () => ({ ok: true, stories }), research: async () => ({ ok: true, body: 'Previous investigation.' }) },
-    architectureRepository: { branch: async (request) => { branches.push(request); return { ok: true } } },
+    architectureRepository: { branch: async (request) => { branches.push(request); return { ok: true } }, concurrent: async () => ({ ok: true, branches: options.concurrent ?? [] }) },
   }
   const run = createDesignRun(deps)
   const loop = createAgentLoop({ adapters: deps, log: () => {}, then: { next: 'next', record: 'record', review: () => 'review' } })
@@ -640,4 +640,39 @@ test('once every pass is accepted the engine pins in each brief the documents it
   assert.ok(text.endsWith('\n-->\n\n# Checkout\n'), text)
   const pinning = host.git.engineCommits.find(({ message }) => /pin the documents/.test(message))
   assert.deepEqual(pinning?.paths, ['docs/architecture/runs/issue-42/42-card-checkout.md'])
+})
+
+const contextDesign = (slug) => agent({ work: async ({ workspace, git, tracking }) => {
+  const [current] = JSON.parse(await tracking.read(slug, 'plans/architecture-pass.json')).stories
+  const brief = `docs/architecture/runs/${slug}/42-card-checkout.md`
+  const design = 'docs/architecture/contexts/checkout/tactical-design.md'
+  await workspace.write(brief, briefOf(current))
+  await workspace.write(design, '# Checkout\n')
+  git.change(brief, design)
+} })
+
+test('a design whose contexts an open design branch also changes asks before its pull request; continuing publishes it', async () => {
+  const other = { branch: 'design/epic-7', paths: ['docs/architecture/contexts/checkout/event-model/pay.md', 'docs/architecture/contexts/billing/tactical-design.md'] }
+  const { host, deps, run } = session([story(42)], 'issue-42', { concurrent: [other] })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42')(host))
+  const paused = await createRunPipeline(deps).run()
+  assert.equal(paused.status, 'waiting', paused.reason)
+  assert.equal(paused.question.kind, 'architecture-concurrent')
+  assert.deepEqual(paused.question.options, ['CONTINUE', 'STOP'])
+  assert.match(paused.question.text, /design\/epic-7 also changes the context checkout/)
+  assert.equal(host.agentRunner.dispatches.some(({ agent: id }) => id === 'design-pr-writer'), false)
+  assert.equal((await createDecide(deps).decide({ key: paused.question.key, answer: 'CONTINUE' })).ok, true)
+  const finished = await createRunPipeline(deps).run()
+  assert.equal(finished.status, 'done', finished.reason)
+})
+
+test('an open design branch on other contexts asks nothing', async () => {
+  const other = { branch: 'design/epic-7', paths: ['docs/architecture/contexts/billing/tactical-design.md'] }
+  const { host, deps, run } = session([story(42)], 'issue-42', { concurrent: [other] })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42')(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.equal(host.events().some(({ type, kind }) => type === 'question.asked' && kind === 'architecture-concurrent'), false)
 })

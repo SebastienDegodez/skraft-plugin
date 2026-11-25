@@ -86,6 +86,11 @@ with `"pins"`: the SHA-256 of each cited document's text, newlines normalised. D
 brief whose pinned document reads otherwise on the merged base (`architecture-stale`, naming the
 file). A brief at version 1, without pins, still reads.
 
+Before its pull request, a design run lists the other open `design/*` branches of origin and
+what each changes since it left the merged base. One that changes a context folder this run
+changes asks a person (`architecture-concurrent`: CONTINUE or STOP); two pull requests could
+otherwise each merge without a conflict and still change what the other designed.
+
 ## Merged-base reads
 
 Delivery resolves the configured base branch on the configured remote, obtains its commit,

@@ -3,10 +3,12 @@ import { acceptedBriefFailures, allIncluded, blockedStories, currentStories, pas
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { publishResearch } from './publish-research.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { concurrencyCheckpoint } from './concurrent-designs.mjs'
 import { OPEN_QUESTIONS_FILE, openQuestions, questionsText } from '../../domain/architecture/open-questions.mjs'
 
 export const architectureCheckpoint = async (context, next) => {
   if (next.node?.id === 'design') return researchCheckpoint(context)
+  if (next.node?.id === 'pr_writer') return concurrencyCheckpoint(context)
   if (next.node?.id !== 'design_review') return null
   return (await scopeCheckpoint(context)) ?? questionsCheckpoint(context)
 }

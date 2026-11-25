@@ -84,7 +84,8 @@ et conserve la recherche dans un commentaire d'issue unique, marque.
 L'architecture dure par bounded context : `docs/architecture/context-map.md` avec son glossaire,
 et `docs/architecture/contexts/<contexte>/` avec `tactical-design.md` et un fichier
 `event-model/<tranche>.md` par tranche, reecrits en place. Les briefs d'un run sont a part dans
-`docs/architecture/runs/<run>/`, pour partir ensemble une fois livres.
+`docs/architecture/runs/<run>/`, pour partir ensemble une fois livres. Quand une autre branche
+de design ouverte change un des memes contextes, le run demande avant de publier.
 
 Lisez chaque `docs/architecture/runs/<run>/<number>-<slug>.md` : son en-tete garde l'identite de
 l'issue, l'empreinte du corps, les composants, criteres, ADR et documents communs.

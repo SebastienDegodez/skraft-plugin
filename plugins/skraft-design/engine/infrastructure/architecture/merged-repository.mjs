@@ -12,7 +12,48 @@ export const createMergedRepository = ({ commandRunner, sourceControl, base = 'm
   snapshot: () => snapshot(commandRunner, sourceControl, base),
   unmerged: (issue, baseSha) => unmerged(commandRunner, sourceControl, issue, baseSha),
   branch: (request) => startBranch(commandRunner, sourceControl, base, request),
+  concurrent: (request) => concurrent(commandRunner, sourceControl, base, request),
 })
+
+/**
+ * The other open design branches of origin and what each changes since the merged base; a branch
+ * already merged into it changes nothing any more (#669).
+ * @param {any} runner @param {any} sourceControl @param {string} base @param {{ own: string | null }} request
+ */
+const concurrent = async (runner, sourceControl, base, { own }) => {
+  const merged = await snapshot(runner, sourceControl, base)
+  if (!merged.ok) return merged
+  const others = await otherDesigns(runner, own)
+  if (others === null) return failed('Open design branches could not be listed.')
+  return compared(runner, sourceControl, merged.sha, others)
+}
+
+/** The design branches of origin other than this run's, each with its tip. @param {any} runner @param {string | null} own */
+const otherDesigns = async (runner, own) => {
+  const heads = textOf(await git(runner, ['ls-remote', '--heads', 'origin', 'refs/heads/design/*']))
+  if (heads === null) return null
+  return lines(heads).map((line) => line.split(/\s+/)).map(([sha, ref]) => ({ sha, branch: ref.replace('refs/heads/', '') })).filter(({ branch }) => branch !== own)
+}
+
+/** Each other branch that still changes something, with what it changes. */
+const compared = async (runner, sourceControl, baseSha, others) => {
+  const branches = []
+  for (const other of others) {
+    const paths = await openChanges(runner, sourceControl, baseSha, other.sha)
+    if (paths === null) return failed(`The design branch ${other.branch} could not be compared with the merged base.`)
+    if (paths.length > 0) branches.push({ branch: other.branch, paths })
+  }
+  return { ok: true, branches }
+}
+
+/** What a branch changes since it left the merged base; none once it is merged into it. */
+const openChanges = async (runner, sourceControl, baseSha, sha) => {
+  if (!/^[a-f0-9]{40,64}$/.test(sha)) return null
+  if ((await sourceControl.filesAt('.', sha)) === null && !succeeded(await git(runner, ['fetch', '--no-tags', '--no-recurse-submodules', 'origin', sha]))) return null
+  // Three dots: from where the branch left the base, so a branch already merged into it changes nothing.
+  const diff = textOf(await git(runner, ['diff', '--name-only', `${baseSha}...${sha}`]))
+  return diff === null ? null : lines(diff)
+}
 
 const startBranch = async (runner, sourceControl, base, { name, existing }) => {
   if (!/^(?:design|deliver)\/(?:issue|epic)-\d+(?:-run-\d+)?$/.test(name)) return failed('The run branch name is invalid.')

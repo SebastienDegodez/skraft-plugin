@@ -1,9 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { appendFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { mkdtemp, realpath, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { createNodeAdapters } from '../../../../plugins/skraft-design/engine/infrastructure/node-adapters.mjs'
 import { createMergedRepository } from '../../../../plugins/skraft-design/engine/infrastructure/architecture/merged-repository.mjs'
@@ -48,4 +48,23 @@ test('a run branch still refuses any other tracked change, .gitignore included',
   git(work, 'checkout', '--', '.gitignore')
   appendFileSync(join(work, 'README.md'), 'edit\n')
   assert.equal((await repository.branch({ name: 'design/epic-7', existing: false })).code, 'architecture-repository-unavailable')
+})
+
+test('the open design branches of origin come with what each changes since the merged base; a merged one changes nothing', async (t) => {
+  const { work, repository } = await cloneWith(t)
+  const commitOn = (branch, path) => {
+    git(work, 'switch', '--quiet', '-c', branch, 'origin/main')
+    mkdirSync(join(work, dirname(path)), { recursive: true })
+    writeFileSync(join(work, path), '# changed\n')
+    git(work, 'add', path)
+    git(work, 'commit', '--quiet', '-m', `design ${branch}`)
+    git(work, 'push', '--quiet', 'origin', `HEAD:${branch}`)
+  }
+  commitOn('design/epic-7', 'docs/architecture/contexts/checkout/tactical-design.md')
+  commitOn('design/epic-8', 'docs/architecture/contexts/billing/tactical-design.md')
+  git(work, 'push', '--quiet', 'origin', 'HEAD:main')
+  git(work, 'switch', '--quiet', '-c', 'design/issue-42', 'origin/main')
+  const found = await repository.concurrent({ own: 'design/issue-42' })
+  assert.equal(found.ok, true, found.reason)
+  assert.deepEqual(found.branches, [{ branch: 'design/epic-7', paths: ['docs/architecture/contexts/checkout/tactical-design.md'] }])
 })

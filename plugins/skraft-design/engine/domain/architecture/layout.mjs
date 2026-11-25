@@ -16,3 +16,11 @@ export const laidOut = (path) => !ARCHITECTURE_DOCUMENT.test(path) || LAID_OUT.t
 
 /** Why a document the run created is refused. @param {string} path */
 export const layoutProblem = (path) => `${path}: write it under docs/architecture/contexts/<context>/, as tactical-design.md or event-model/<slice>.md.`
+
+const CONTEXT_FOLDER = new RegExp(`^docs/architecture/contexts/(${KEBAB})/`)
+
+/** The bounded context a document belongs to; null for one outside a context folder. @param {string} path */
+export const contextOf = (path) => CONTEXT_FOLDER.exec(path)?.[1] ?? null
+
+/** The contexts a set of documents touches, once each, in their order. @param {string[]} paths */
+export const contextsOf = (paths) => [...new Set(paths.map(contextOf).filter((name) => name !== null))]
