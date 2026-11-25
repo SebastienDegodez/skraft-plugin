@@ -676,3 +676,24 @@ test('an open design branch on other contexts asks nothing', async () => {
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.equal(host.events().some(({ type, kind }) => type === 'question.asked' && kind === 'architecture-concurrent'), false)
 })
+
+/** The developer's own settings, the publication consent kept for one repository. */
+const consentFor = (repository) => JSON.stringify({ repositories: { [repository]: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } } })
+
+test('a design runs and publishes on a working copy with no skraft-design-config.json, with the consent its developer keeps for this repository', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: null, user: consentFor('github.com/acme/shop') })
+  assert.equal((await run.start({ issue: 42 })).status, 'ready')
+  host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42')(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.equal(host.codeHost.pullRequests.length, 1)
+  assert.equal(host.workspace.files.has('skraft-design-config.json'), false)
+})
+
+test('a consent kept for another repository publishes nothing on this one', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: null, user: consentFor('github.com/acme/billing') })
+  await run.start({ issue: 42 })
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.code, 'configuration-incomplete')
+  assert.equal(host.agentRunner.dispatches.length, 0)
+})

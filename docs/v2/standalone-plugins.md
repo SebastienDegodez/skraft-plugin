@@ -113,9 +113,9 @@ match, so another repository's issue with the same number is not accepted.
 | Surface | Design | Delivery |
 | --- | --- | --- |
 | Install identity | `skraft-design` | `skraft-deliver` |
-| Team configuration | `skraft-design-config.json` | `skraft-deliver-config.json` |
+| Team configuration | `skraft-design-config.json`, optional | `skraft-deliver-config.json` |
 | Local configuration | `skraft-design-config.local.json` | `skraft-deliver-config.local.json` |
-| User settings and journal keys | `~/.skraft-design/` | `~/.skraft-deliver/` |
+| User settings, publication consent per repository, journal keys | `~/.skraft-design/` | `~/.skraft-deliver/` |
 | Tracking | `.copilot-tracking/skraft-design-runs/` | `.copilot-tracking/skraft-deliver-runs/` |
 | Workflow overrides | `.skraft-design/` | `.skraft-deliver/` |
 | Agent identifier prefix | `design-` | `deliver-` |

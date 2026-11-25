@@ -45,7 +45,7 @@ export const API = Object.freeze({
  *   git?: InMemoryGit, machine?: ScriptedMachine, catalog?: InMemoryAgentCatalog,
  *   workflow?: string, clock?: FixedClock, answers?: Array<{ answer: string, reason?: string } | null>, user?: string, codeHost?: InMemoryCodeHost,
  *   tracking?: InMemoryTracking, owner?: string, journalKeys?: import('./in-memory-host.mjs').InMemoryJournalKeys,
- * }} [options] config: the rest of skraft-design-config.json, where a run of a workflow that asks the publish-consent or the
+ * }} [options] config: the rest of skraft-design-config.json, null for a working copy with none, where a run of a workflow that asks the publish-consent or the
  *   reporting-consent question finds publish.pullRequest or publish.visuals set to false unless config
  *   says otherwise, so that no question waits on a consent; files: more files of the working copy;
  *   answers: what the human at the host answers, in order; user: the text of ~/.skraft-design/config.json;
@@ -73,7 +73,7 @@ export const pipelineHost = ({
     agentRunner: new ScriptedAgentRunner(behaviours),
     human: new ScriptedHuman(answers, { scenarioReviews }),
     progress: new RecordingProgress(),
-    workspace: new InMemoryWorkspace({ 'skraft-design-config.json': JSON.stringify({ ...answered, ...config, components }), ...DOCS_FOLDERS, 'docs/architecture/context-map.md': '# Context map\n', ...files }),
+    workspace: new InMemoryWorkspace({ ...(config === null ? {} : { 'skraft-design-config.json': JSON.stringify({ ...answered, ...config, components }) }), ...DOCS_FOLDERS, 'docs/architecture/context-map.md': '# Context map\n', ...files }),
     userSettings: new InMemoryUserSettings(user),
     sourceControl: git,
     commandRunner: machine ?? new ScriptedMachine({ clock }),

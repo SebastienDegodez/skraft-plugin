@@ -16,7 +16,7 @@ import { forgeMissing } from '../config/forge.mjs'
  */
 
 /** What the developer runs to settle the configuration. */
-const SETTLE = 'run /skraft-init'
+const SETTLE = 'answer the publication consent of skraft_design_setup'
 
 /** @param {Context} context @returns {Promise<RunOutcome | null>} null: the run may start */
 export const cannotStart = async (context) => configurationIncomplete(context)
@@ -28,7 +28,7 @@ const configurationIncomplete = (context) => {
     ...unsettledConsents(context.config.publish, consentsAsked(publicationsOf(context))).map(stateLine),
   ]
   if (unsettled.length === 0) return null
-  return { status: 'refused', slug: context.slug, phase: null, code: 'configuration-incomplete', reason: `skraft is not initialised: ${SETTLE} (${unsettled.join(', ')})` }
+  return { status: 'refused', slug: context.slug, phase: null, code: 'configuration-incomplete', reason: `skraft-design has no publication consent for this repository: ${SETTLE} (${unsettled.join(', ')})` }
 }
 
 /**

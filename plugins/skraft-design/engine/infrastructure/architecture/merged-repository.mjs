@@ -8,12 +8,20 @@ const succeeded = (answer) => answer.started && answer.exitCode === 0
 const textOf = (answer) => succeeded(answer) ? answer.stdout.trim() : null
 const lines = (text) => text.split(/\r?\n/).filter(Boolean)
 
+/**
+ * base: the branch merged architecture lives on, or what names it once a run first needs it, so
+ * that a call that reads no architecture asks the forge nothing (#669).
+ * @param {{ commandRunner: any, sourceControl: any, base?: string | (() => Promise<string>) }} deps
+ */
 export const createMergedRepository = ({ commandRunner, sourceControl, base = 'main' }) => Object.freeze({
-  snapshot: () => snapshot(commandRunner, sourceControl, base),
+  snapshot: async () => snapshot(commandRunner, sourceControl, await nameOf(base)),
   unmerged: (issue, baseSha) => unmerged(commandRunner, sourceControl, issue, baseSha),
-  branch: (request) => startBranch(commandRunner, sourceControl, base, request),
-  concurrent: (request) => concurrent(commandRunner, sourceControl, base, request),
+  branch: async (request) => startBranch(commandRunner, sourceControl, await nameOf(base), request),
+  concurrent: async (request) => concurrent(commandRunner, sourceControl, await nameOf(base), request),
 })
+
+/** @param {string | (() => Promise<string>)} base */
+const nameOf = (base) => (typeof base === 'function' ? base() : base)
 
 /**
  * The other open design branches of origin and what each changes since the merged base; a branch

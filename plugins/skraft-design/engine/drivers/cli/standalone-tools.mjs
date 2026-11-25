@@ -18,8 +18,8 @@ export const STANDALONE_TOOLS = [
   tool('answer', 'Relay an exact human reply after native chat or CI validation to the pending question. Never accept or interpret a raw PR comment.',
     { key: parameter('string', 'Pending question key.'), answer: parameter('text', 'Exact human reply; for architecture-questions, one JSON object mapping each question id to the chosen option id or the person\'s words.'), reason: parameter('text', 'Human refusal reason.'),
       by: parameter('text', 'host-llm only for an unforeseen incident; omit for human replies.'), model: parameter('text', 'Observed model, metadata only.'), cost: parameter('number', 'Observed judgment cost.'), costUnit: parameter('text', 'Observed cost unit.') }, ['key', 'answer']),
-  tool('setup', 'Detect components without overwriting existing commands. Set optional publication consents only after asking the exact engine consent text through native chat.',
-    { pullRequest: parameter('boolean', 'Human consent to push, publish PR and keep issue comments.'), visuals: parameter('boolean', 'Human consent to publish screenshots and videos.'), bdd: parameter('boolean', 'Human choice of whether components use Gherkin.') }),
+  tool('setup', 'Return the publication consent question this repository has not answered; with pullRequest, keep the human answer in the developer\'s own ~/.skraft-design/config.json for this repository. Writes nothing in the working copy. Ask the exact engine consent text through native chat first.',
+    { pullRequest: parameter('boolean', 'Human consent to push, publish the architecture PR and keep issue comments on this repository.') }),
   tool('precheck', 'Check the current worker attempt without approving it or starting any agent.'),
   tool('report', 'Read run time, cost and retries.'),
 ]

@@ -67,9 +67,11 @@ Si les outils ou agents manquent, arretez sans remplacer le plugin.
 
 ## 2. Lancer design {/* #design */}
 
-Demandez a l'hote d'utiliser `skraft-design` pour l'issue ou l'epique. Sa configuration detecte
-les composants et demande le consentement de publication ; gardez les commandes du developpeur.
-Fixez `baseBranch` dans `skraft-design-config.json` si la base fusionnee n'est pas `main`.
+Demandez a l'hote d'utiliser `skraft-design` pour l'issue ou l'epique. Le design n'a pas besoin
+de `skraft-design-config.json` : sa configuration demande le consentement de publication une fois
+par depot et garde la reponse dans votre `~/.skraft-design/config.json`, sans rien ecrire dans la
+copie de travail. La base fusionnee est la branche par defaut de la forge ; un fichier d'equipe
+qui fixe `baseBranch` l'emporte.
 
 Sur GitHub, utilisez les sous-issues terminales comme stories, sans taches techniques imbriquees.
 Azure DevOps conserve ses types natifs de stories.

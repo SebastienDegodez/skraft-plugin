@@ -1,4 +1,4 @@
-import { basename, dirname } from 'node:path'
+import { dirname } from 'node:path'
 import { appendFile, mkdir } from 'node:fs/promises'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createArchitectureForge } from '../../infrastructure/architecture/forge.mjs'
@@ -9,11 +9,10 @@ import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDraftPublication } from '../../application/publish/draft-publication-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
 import { createPrecheck } from '../../application/pipeline/precheck-usecase.mjs'
-import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
-import { loadConfig } from '../../application/config/bases.mjs'
+import { loadConfig, workingRepository } from '../../application/config/bases.mjs'
 import { chosenForge, forgeAdapters } from '../../application/config/forge.mjs'
-import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
+import { withRepositoryConsent } from '../../domain/config/skraft-config.mjs'
+import { PUBLISH_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { unsettledConsents } from '../../domain/decisions/consents.mjs'
 import { checkInCi, draftInCi } from '../../application/architecture/ci-mode.mjs'
 import { createCommentAnswer } from '../../application/decisions/comment-answer-usecase.mjs'
@@ -64,15 +63,25 @@ const adaptersFor = async (services) => {
   const { forge } = await chosenForge(adapters, config.config.forge)
   const { codeHost } = await forgeAdapters(adapters, config.config.forge)
   return { ok: true, adapters: { ...adapters, agentHost: services.host, codeHost, architectureForge: createArchitectureForge({ ...adapters, codeHost, forge }),
-    architectureRepository: createMergedRepository({ ...adapters, base: config.config.baseBranch ?? 'main' }) } }
+    architectureRepository: createMergedRepository({ ...adapters, base: mergedBase(codeHost, config.config) }) } }
 }
+
+// The branch merged architecture lives on: baseBranch when the configuration names one, else the
+// forge's default branch, asked once and only when a run needs it, so a repository with no
+// skraft-design-config.json needs none (#669).
+const mergedBase = (codeHost, { baseBranch }) => {
+  if (baseBranch) return baseBranch
+  let named = null
+  return () => (named ??= codeHost.defaultBranch().then((branch) => branch ?? 'main'))
+}
+
 
 const execute = (operation, args, deps, services, log) =>
   dispatchSimple(operation, args, deps, services) ?? executePipeline(operation, args, deps, services, log)
 
 /** The operations that run one use case and hand back its outcome; the pipeline's own run through the loop. */
 const SIMPLE = Object.freeze({
-  setup: (args, deps, services) => setup(deps, services, args),
+  setup: (args, deps) => setup(deps, args),
   answer: (args, deps) => createDecide(deps).decide(args),
   // A reply a CI workflow read in the draft; ci-reply.mjs alone asks it, no MCP tool offers it (#662).
   reply: (args, deps) => createCommentAnswer(deps).answer(args),
@@ -100,22 +109,20 @@ const advance = async (operation, deps, services, log, prepared) => {
   return prepared.notice ? { ...result, notice: prepared.notice } : result
 }
 
-const setup = async (deps, services, args) => {
-  const configured = await createConfigureComponents(deps).configure({ workingCopyName: basename(services.cwd) })
-  if (!configured.ok) return configured
-  let text = await deps.workspace.read(CONFIG_FILE)
-  if (args.pullRequest !== undefined) text = withPublishSetting(JSON.parse(text), 'pullRequest', args.pullRequest)
-  if (args.visuals !== undefined) text = withPublishSetting(JSON.parse(text), 'visuals', args.visuals)
-  const config = JSON.parse(text)
-  if (args.bdd !== undefined) config.components = config.components.map((component) => ({ ...component, bdd: component.bdd ?? args.bdd }))
-  await deps.workspace.write(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
-  return configuredResult(deps, configured)
+/**
+ * The publication consent, kept in the developer's own ~/.skraft-design/config.json for this
+ * repository; nothing written in the working copy, whose skraft-design-config.json stays optional (#669).
+ */
+const setup = async (deps, args) => {
+  if (args.pullRequest === undefined) return consentQuestions(deps)
+  const repository = await workingRepository(deps.sourceControl)
+  if (repository === null) return { ok: false, code: 'repository-unnamed', reason: 'The working copy has no Git remote naming its repository, so no consent can be kept for it.' }
+  await deps.userSettings.write(withRepositoryConsent(await deps.userSettings.read(), repository, 'pullRequest', args.pullRequest))
+  return consentQuestions(deps)
 }
 
-const configuredResult = async (deps, configured) => {
+const consentQuestions = async (deps) => {
   const effective = await loadConfig(deps)
   if (!effective.ok) return effective
-  return { ...configured, questions: unsettledConsents(effective.config.publish, ['pullRequest']).map(({ key }) => ({
-    key, text: key === 'pullRequest' ? PUBLISH_CONSENT_TEXT : CONSENT_TEXT, options: ['YES', 'NO'],
-  })) }
+  return { ok: true, questions: unsettledConsents(effective.config.publish, ['pullRequest']).map(({ key }) => ({ key, text: PUBLISH_CONSENT_TEXT, options: ['YES', 'NO'] })) }
 }

@@ -33,7 +33,7 @@ const publishOpenedRun = async (deps, { slug, journal }) => {
 const publishEligibleDraft = async (deps, slug, journal) => {
   const config = await loadConfig(deps)
   if (!config.ok) return refused(slug, 'config-invalid', config.reason)
-  if (config.config.publish.pullRequest !== true) return refused(slug, 'publication-not-consented', 'Draft publication requires publish.pullRequest consent in skraft-design-config.json')
+  if (config.config.publish.pullRequest !== true) return refused(slug, 'publication-not-consented', 'Draft publication requires the publication consent for this repository (skraft_design_setup)')
   const loaded = await loadWorkflow(deps, { agents: false })
   if (!loaded.ok) return refused(slug, 'workflow-invalid', loaded.reason)
   return guarded(slug, () => publishPullRequest(deps, {

@@ -10,6 +10,10 @@
 #   repository (admin, maintain or write) and it answers the pending question; then the design
 #   goes on, and pauses again or ends with the architecture pull request.
 #
+# - The workflow gives the publication consent for this repository (ci-consent.mjs), in the job's
+#   own home: committing this file is the team's consent. No skraft-design-config.json is needed;
+#   the merged base is the repository's default branch unless one sets baseBranch.
+#
 # Secrets:
 # - SKRAFT_DESIGN_JOURNAL_KEY: 64 hexadecimal characters (`openssl rand -hex 32`); the journal is
 #   signed with it, so the job that resumes verifies what the pausing job wrote.
@@ -108,6 +112,9 @@ jobs:
         run: |
           printf '%s' "$COMMENT" > "$RUNNER_TEMP/comment.md"
           node "$PLUGIN/engine/drivers/cli/ci-reply.mjs" --author "$AUTHOR" --comment-file "$RUNNER_TEMP/comment.md"
+
+      - name: Consent to publish on this repository
+        run: node "$PLUGIN/engine/drivers/cli/ci-consent.mjs"
 
       - name: Install Claude Code
         run: npm install --global @anthropic-ai/claude-code

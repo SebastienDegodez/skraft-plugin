@@ -67,9 +67,10 @@ If tools or worker agents are missing, stop rather than substituting another plu
 
 ## 2. Run design {/* #design */}
 
-Ask the host to use `skraft-design` for the issue or epic. Its setup detects components and
-asks publication consent; keep developer commands. Set `baseBranch` in `skraft-design-config.json`
-when the merged base is not `main`.
+Ask the host to use `skraft-design` for the issue or epic. Design needs no
+`skraft-design-config.json`: its setup asks publication consent once per repository and keeps
+the answer in your own `~/.skraft-design/config.json`, writing nothing in the working copy. The
+merged base is the forge's default branch; a team file that sets `baseBranch` overrides it.
 
 On GitHub, use terminal sub-issues as stories; do not nest technical tasks under them.
 Azure DevOps keeps its native story types.

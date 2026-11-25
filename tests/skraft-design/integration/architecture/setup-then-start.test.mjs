@@ -68,3 +68,15 @@ test('the open design branches of origin come with what each changes since the m
   assert.equal(found.ok, true, found.reason)
   assert.deepEqual(found.branches, [{ branch: 'design/epic-7', paths: ['docs/architecture/contexts/checkout/tactical-design.md'] }])
 })
+
+test('a run branch starts from the branch the forge names when the configuration names none, asked only once a run needs it', async (t) => {
+  const { work, adapters } = await cloneWith(t)
+  git(work, 'push', '--quiet', 'origin', 'HEAD:develop')
+  git(join(dirname(work), 'origin.git'), 'symbolic-ref', 'HEAD', 'refs/heads/develop')
+  git(work, 'push', '--quiet', 'origin', '--delete', 'main')
+  const asked = []
+  const repository = createMergedRepository({ ...adapters, base: async () => { asked.push('develop'); return 'develop' } })
+  assert.deepEqual(asked, [])
+  assert.deepEqual(await repository.branch({ name: 'design/epic-7', existing: false }), { ok: true })
+  assert.deepEqual(asked, ['develop'])
+})

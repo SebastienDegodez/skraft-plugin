@@ -17,7 +17,7 @@ export const askOnIssue = async (deps, { slug, question }) => {
   if (!opened.ok) return { ok: false, slug, code: opened.outcome.code, reason: opened.outcome.reason }
   const loaded = await loadConfig(deps)
   if (!loaded.ok) return { ok: false, slug, code: 'config-invalid', reason: loaded.reason }
-  if (loaded.config.publish.pullRequest !== true) return { ok: false, slug, code: 'publication-not-consented', reason: 'Asking on the issue requires publish.pullRequest consent in skraft-design-config.json' }
+  if (loaded.config.publish.pullRequest !== true) return { ok: false, slug, code: 'publication-not-consented', reason: 'Asking on the issue requires the publication consent for this repository (skraft_design_setup)' }
   const { codeHost } = await forgeAdapters(deps, loaded.config.forge)
   const pushed = await pushedBranch(opened.journal, codeHost, await codeHost.currentBranch())
   if (!pushed.ok) return { ok: false, slug, code: 'not-pushed', reason: pushed.reason }

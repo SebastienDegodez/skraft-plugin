@@ -70,8 +70,9 @@ export { HOSTS } from './model-assignment.mjs'
  *   the object skraft-design-config.local.json holds, {} when absent.
  * @typedef {ValidConfig | { ok: false, errors: string[] }} ConfigReading
  * @typedef {ValidConfig | { ok: false, invalid: InvalidFile[] }} LayeredReading
- * @typedef {{ user?: string | null, team: string | null, local?: string | null }} ConfigTexts
- *   each file's content, null when the file is absent.
+ * @typedef {{ user?: string | null, team: string | null, local?: string | null, repository?: string | null }} ConfigTexts
+ *   each file's content, null when the file is absent; repository: the working copy's, `<host>/<path>`,
+ *   whose answers the developer's own file keeps under repositories.
  */
 
 export const CONFIG_FILE = 'skraft-design-config.json'
@@ -132,7 +133,33 @@ export const readConfigLayers = (texts) => {
   const layers = LAYERS.map((layer) => readLayer(layer, texts[layer.key] ?? null))
   const invalid = layers.filter(({ errors }) => errors.length > 0).map(({ file, errors }) => ({ file, errors }))
   if (invalid.length > 0) return { ok: false, invalid }
-  return mergedReading(layers.map(({ raw }) => raw))
+  const [user, team, local] = layers.map(({ raw }) => raw)
+  return mergedReading([user, ownAnswersFor(user, texts.repository ?? null), team, local])
+}
+
+/** Where the developer's own file keeps their answers for one repository (#669). */
+export const REPOSITORIES_KEY = 'repositories'
+
+/**
+ * The publication consents the developer's own file keeps for this repository, a layer over the
+ * rest of their file; null when it keeps none, or no repository is named.
+ * @param {Record<string, any> | null} user @param {string | null} repository @returns {Record<string, any> | null}
+ */
+const ownAnswersFor = (user, repository) => {
+  const kept = repository === null ? undefined : user?.[REPOSITORIES_KEY]?.[repository]
+  return isRecord(kept) && isRecord(kept.publish) ? { publish: kept.publish } : null
+}
+
+/**
+ * The developer's own file with one consent kept for one repository, every other key kept.
+ * @param {string | null} text @param {string} repository @param {import('../decisions/consents.mjs').ConsentKey} key @param {boolean} value
+ */
+export const withRepositoryConsent = (text, repository, key, value) => {
+  const raw = text === null ? {} : JSON.parse(text)
+  const repositories = isRecord(raw[REPOSITORIES_KEY]) ? raw[REPOSITORIES_KEY] : {}
+  const own = isRecord(repositories[repository]) ? repositories[repository] : {}
+  const publish = JSON.parse(withPublishSetting(own, key, value)).publish
+  return `${JSON.stringify({ ...raw, [REPOSITORIES_KEY]: { ...repositories, [repository]: { ...own, publish } } }, null, 2)}\n`
 }
 
 /** Why a configuration is refused: each invalid file with its errors. @param {InvalidFile[]} invalid */
@@ -201,7 +228,7 @@ const reportRank = (raw, errors) => {
 
 /**
  * The layers merged over the plugin's defaults, checked as a whole.
- * @param {Array<Record<string, any> | null>} raws user, team, local; null for an absent file
+ * @param {Array<Record<string, any> | null>} raws user, the user's answers for this repository, team, local; null for an absent file
  * @returns {LayeredReading}
  */
 const mergedReading = (raws) => {
@@ -212,7 +239,7 @@ const mergedReading = (raws) => {
   const components = componentsOf(merged.components ?? [], errors)
   errors.push(...unrankedFamilies(settings))
   if (errors.length > 0) return { ok: false, invalid: [{ file: MERGED, errors }] }
-  return { ok: true, present: raws[1] !== null, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw: raws[1] ?? {}, local: raws[2] ?? {} }
+  return { ok: true, present: raws[2] !== null, config: { ...settings, components: /** @type {Component[]} */ (components) }, raw: raws[2] ?? {}, local: raws[3] ?? {} }
 }
 
 /**
