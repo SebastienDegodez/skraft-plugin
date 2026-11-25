@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-25T07:48:32.265Z",
+  "generated": "2026-11-25T08:46:40.451Z",
   "sessions": [
     {
       "id": "scheduled/2026-09-28/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
@@ -11323,6 +11323,357 @@
         "pr-656"
       ],
       "mtime": 1795592908609.335
+    },
+    {
+      "id": "pr/658/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 0)",
+      "url": "sessions/pr/658/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-658"
+      ],
+      "mtime": 1795596397060.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 1)",
+      "url": "sessions/pr/658/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-658"
+      ],
+      "mtime": 1795596397060.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2",
+      "name": "acceptance-designer / Absent acceptance criteria halt the distillation (main, run 2)",
+      "url": "sessions/pr/658/acceptance-designer/absent-acceptance-criteria-halt-the-distillation--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "absent-acceptance-criteria-halt-the-distillation",
+        "pr-658"
+      ],
+      "mtime": 1795596397059.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 0)",
+      "url": "sessions/pr/658/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-658"
+      ],
+      "mtime": 1795596397060.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 1)",
+      "url": "sessions/pr/658/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-658"
+      ],
+      "mtime": 1795596397060.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2",
+      "name": "acceptance-designer / Agreed criteria become an executable specification that fails on business meaning (main, run 2)",
+      "url": "sessions/pr/658/acceptance-designer/agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "agreed-criteria-become-an-executable-specification-that-fails-on-business-meaning",
+        "pr-658"
+      ],
+      "mtime": 1795596397061.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 0)",
+      "url": "sessions/pr/658/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-658"
+      ],
+      "mtime": 1795596397060.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 1)",
+      "url": "sessions/pr/658/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-658"
+      ],
+      "mtime": 1795596397061.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2",
+      "name": "acceptance-designer / An undecided tier is escalated rather than given an invented price (main, run 2)",
+      "url": "sessions/pr/658/acceptance-designer/an-undecided-tier-is-escalated-rather-than-given-an-invented-price--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer",
+        "main",
+        "an-undecided-tier-is-escalated-rather-than-given-an-invented-price",
+        "pr-658"
+      ],
+      "mtime": 1795596397062.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 0)",
+      "url": "sessions/pr/658/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "pr-658"
+      ],
+      "mtime": 1795596397093.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 1)",
+      "url": "sessions/pr/658/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "pr-658"
+      ],
+      "mtime": 1795596397094.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2",
+      "name": "acceptance-designer-reviewer / A specification that drifted from the agreed criteria is not certified (main, run 2)",
+      "url": "sessions/pr/658/acceptance-designer-reviewer/a-specification-that-drifted-from-the-agreed-criteria-is-not-certified--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "a-specification-that-drifted-from-the-agreed-criteria-is-not-certified",
+        "pr-658"
+      ],
+      "mtime": 1795596397095.2576
+    },
+    {
+      "id": "pr/658/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 0)",
+      "url": "sessions/pr/658/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "pr-658"
+      ],
+      "mtime": 1795596397094.2578
+    },
+    {
+      "id": "pr/658/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 1)",
+      "url": "sessions/pr/658/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "pr-658"
+      ],
+      "mtime": 1795596397095.2576
+    },
+    {
+      "id": "pr/658/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2",
+      "name": "acceptance-designer-reviewer / Pressure to correct the specification does not turn the reviewer into its author (main, run 2)",
+      "url": "sessions/pr/658/acceptance-designer-reviewer/pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-reviewer",
+        "main",
+        "pressure-to-correct-the-specification-does-not-turn-the-reviewer-into-its-author",
+        "pr-658"
+      ],
+      "mtime": 1795596397095.2576
+    },
+    {
+      "id": "pr/658/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run0",
+      "name": "acceptance-designer-throughput / Fourteen-criteria pricing story becomes an executable specification (main, run 0)",
+      "url": "sessions/pr/658/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-throughput",
+        "main",
+        "fourteen-criteria-pricing-story-becomes-an-executable-specification",
+        "pr-658"
+      ],
+      "mtime": 1795596397117.2576
+    },
+    {
+      "id": "pr/658/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run1",
+      "name": "acceptance-designer-throughput / Fourteen-criteria pricing story becomes an executable specification (main, run 1)",
+      "url": "sessions/pr/658/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-throughput",
+        "main",
+        "fourteen-criteria-pricing-story-becomes-an-executable-specification",
+        "pr-658"
+      ],
+      "mtime": 1795596397122.2576
+    },
+    {
+      "id": "pr/658/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run2",
+      "name": "acceptance-designer-throughput / Fourteen-criteria pricing story becomes an executable specification (main, run 2)",
+      "url": "sessions/pr/658/acceptance-designer-throughput/fourteen-criteria-pricing-story-becomes-an-executable-specification--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "acceptance-designer-throughput",
+        "main",
+        "fourteen-criteria-pricing-story-becomes-an-executable-specification",
+        "pr-658"
+      ],
+      "mtime": 1795596397118.2576
+    },
+    {
+      "id": "pr/658/commit-convention/finish-the-approved-customer-guide-issue--main--run0",
+      "name": "commit-convention / Finish the approved customer guide issue (main, run 0)",
+      "url": "sessions/pr/658/commit-convention/finish-the-approved-customer-guide-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "finish-the-approved-customer-guide-issue",
+        "pr-658"
+      ],
+      "mtime": 1795596397126.2576
+    },
+    {
+      "id": "pr/658/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0",
+      "name": "commit-convention / Record a customer guide increment while the issue remains open (main, run 0)",
+      "url": "sessions/pr/658/commit-convention/record-a-customer-guide-increment-while-the-issue-remains-open--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-a-customer-guide-increment-while-the-issue-remains-open",
+        "pr-658"
+      ],
+      "mtime": 1795596397126.2576
+    },
+    {
+      "id": "pr/658/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0",
+      "name": "commit-convention / Record the approved guide edit without a known issue (main, run 0)",
+      "url": "sessions/pr/658/commit-convention/record-the-approved-guide-edit-without-a-known-issue--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "commit-convention",
+        "main",
+        "record-the-approved-guide-edit-without-a-known-issue",
+        "pr-658"
+      ],
+      "mtime": 1795596397126.2576
+    },
+    {
+      "id": "pr/658/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run0",
+      "name": "software-engineer-throughput / Fourteen-scenario .NET pricing story reaches GREEN (main, run 0)",
+      "url": "sessions/pr/658/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "software-engineer-throughput",
+        "main",
+        "fourteen-scenario-net-pricing-story-reaches-green",
+        "pr-658"
+      ],
+      "mtime": 1795596397151.2576
+    },
+    {
+      "id": "pr/658/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run1",
+      "name": "software-engineer-throughput / Fourteen-scenario .NET pricing story reaches GREEN (main, run 1)",
+      "url": "sessions/pr/658/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "software-engineer-throughput",
+        "main",
+        "fourteen-scenario-net-pricing-story-reaches-green",
+        "pr-658"
+      ],
+      "mtime": 1795596397153.2576
+    },
+    {
+      "id": "pr/658/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run2",
+      "name": "software-engineer-throughput / Fourteen-scenario .NET pricing story reaches GREEN (main, run 2)",
+      "url": "sessions/pr/658/software-engineer-throughput/fourteen-scenario-net-pricing-story-reaches-green--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "software-engineer-throughput",
+        "main",
+        "fourteen-scenario-net-pricing-story-reaches-green",
+        "pr-658"
+      ],
+      "mtime": 1795596397154.2576
+    },
+    {
+      "id": "pr/658/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run0",
+      "name": "software-engineer-throughput-designed / Fourteen-scenario .NET pricing story reaches GREEN (main, run 0)",
+      "url": "sessions/pr/658/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run0.jsonl",
+      "tags": [
+        "pr",
+        "software-engineer-throughput-designed",
+        "main",
+        "fourteen-scenario-net-pricing-story-reaches-green",
+        "pr-658"
+      ],
+      "mtime": 1795596397175.2576
+    },
+    {
+      "id": "pr/658/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run1",
+      "name": "software-engineer-throughput-designed / Fourteen-scenario .NET pricing story reaches GREEN (main, run 1)",
+      "url": "sessions/pr/658/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run1.jsonl",
+      "tags": [
+        "pr",
+        "software-engineer-throughput-designed",
+        "main",
+        "fourteen-scenario-net-pricing-story-reaches-green",
+        "pr-658"
+      ],
+      "mtime": 1795596397176.2576
+    },
+    {
+      "id": "pr/658/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run2",
+      "name": "software-engineer-throughput-designed / Fourteen-scenario .NET pricing story reaches GREEN (main, run 2)",
+      "url": "sessions/pr/658/software-engineer-throughput-designed/fourteen-scenario-net-pricing-story-reaches-green--main--run2.jsonl",
+      "tags": [
+        "pr",
+        "software-engineer-throughput-designed",
+        "main",
+        "fourteen-scenario-net-pricing-story-reaches-green",
+        "pr-658"
+      ],
+      "mtime": 1795596397177.2576
     }
   ]
 }
