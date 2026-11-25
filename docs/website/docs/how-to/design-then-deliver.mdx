@@ -74,7 +74,7 @@ when the merged base is not `main`.
 On GitHub, use terminal sub-issues as stories; do not nest technical tasks under them.
 Azure DevOps keeps its native story types.
 
-The engine excludes closed stories and asks whether to continue without them. Each design pass
+The engine leaves closed stories out without asking and lists them in the architecture PR. Each design pass
 handles at most 20 open stories. Research precedes design; three review lenses, a refuter and
 the engine verdict precede the architecture PR. New ADRs are marked Accepted on its branch, by
 "architecture PR merge", and take effect only when you merge that PR; no separate ADR
@@ -95,8 +95,8 @@ consequence. Before the review, the run waits on one decision that holds them al
 - **In CI**, copy `plugins/skraft-design/ci/skraft-design.yml` into `.github/workflows/`, add the
   secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) and `ANTHROPIC_API_KEY`, then run it
   with an issue or an epic. When the run waits, the engine publishes a draft pull request that
-  lists every question and the reply to copy; while nothing is designed yet, such as a question of
-  scope at the start, it asks on the issue or epic instead. Answer in one comment:
+  lists every question and the reply to copy; while nothing is designed yet, such as a researcher
+  that cannot go on, it asks on the issue or epic instead. Answer in one comment:
 
 ```text
 /skraft-answer
@@ -107,8 +107,7 @@ Q2: your own words
 A question with options takes one word, such as `/skraft-answer continue`.
 
 Anyone with write access to the repository may answer; any other comment, or a reply that leaves
-a question out, records nothing. A question of scope, such as a closed story, stops a CI run at
-once.
+a question out, records nothing. A story the architect cannot design stops a CI run at once.
 
 ## 3. Merge, then deliver {/* #deliver */}
 

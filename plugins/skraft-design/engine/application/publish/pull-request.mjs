@@ -215,12 +215,23 @@ const trackedDocuments = async ({ files }, slug, paths) => {
  * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {import('../../domain/journal/run-state.mjs').RunState} run
  * @param {import('../../domain/reporting/language.mjs').Language} language
  */
+/**
+ * The stories the run left out: the closed ones of its scope, then those a person excluded when the
+ * architect could not design them, with the architect's reason.
+ * @param {any[]} events @returns {Array<{ issue: number, reason: string | null }>}
+ */
+const excludedStories = (events) => [
+  ...(events.find((event) => event.type === 'architecture.scope')?.excluded ?? []).map(({ issue }) => ({ issue, reason: null })),
+  ...events.filter((event) => event.type === 'architecture.excluded').flatMap((event) => event.stories.map(({ issue, reason }) => ({ issue, reason }))),
+]
+
 const journalFacts = (events, run, language) => ({
   reds: redCommits(events),
   evidence: qualityEvidence(events),
   review: reviewFacts(events),
   status: statusLine(run, language),
   pendingQuestion: waitingOn(run),
+  excluded: excludedStories(events),
   report: runReport(events),
   models: modelsOf(events),
 })

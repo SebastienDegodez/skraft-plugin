@@ -74,7 +74,7 @@ Fixez `baseBranch` dans `skraft-design-config.json` si la base fusionnee n'est p
 Sur GitHub, utilisez les sous-issues terminales comme stories, sans taches techniques imbriquees.
 Azure DevOps conserve ses types natifs de stories.
 
-Le moteur exclut les stories fermees et demande de continuer sans elles ou d'arreter.
+Le moteur ecarte les stories fermees sans rien demander et les liste dans la PR d'architecture.
 Chaque passe traite au plus 20 stories ouvertes. La recherche precede la conception ;
 trois lentilles, un refutateur et le verdict du moteur precedent la PR d'architecture. Les nouveaux
 ADR sont marques Accepted sur sa branche, par "architecture PR merge", et ne prennent effet que si
@@ -97,7 +97,7 @@ consequence. Avant la revue, le run attend une seule decision qui les regroupe t
   les secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) et `ANTHROPIC_API_KEY`, puis
   lancez-le avec une issue ou une epique. Quand le run attend, le moteur publie une PR en brouillon
   qui liste chaque question et la reponse a recopier ; tant que rien n'est concu, comme pour une
-  question de perimetre au depart, il pose la question sur l'issue ou l'epique. Repondez en un seul
+  recherche qui ne peut pas avancer, il pose la question sur l'issue ou l'epique. Repondez en un seul
   commentaire :
 
 ```text
@@ -109,8 +109,8 @@ Q2: vos propres mots
 Une question a options prend un seul mot, comme `/skraft-answer continue`.
 
 Toute personne qui a le droit d'ecriture sur le depot peut repondre ; tout autre commentaire, ou
-une reponse qui oublie une question, n'enregistre rien. Une question de perimetre, comme une story
-fermee, arrete tout de suite un run CI.
+une reponse qui oublie une question, n'enregistre rien. Une story que l'architecte ne peut pas
+concevoir arrete tout de suite un run CI.
 
 ## 3. Fusionner, puis livrer {/* #deliver */}
 

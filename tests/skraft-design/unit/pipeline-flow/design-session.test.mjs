@@ -41,20 +41,15 @@ test('a story creates an isolated resumable run and hands only research to the h
   assert.deepEqual(branches, [{ name: 'design/issue-42', existing: false }])
 })
 
-test('an epic with closed stories waits for native human consent and resumes the same journal', async () => {
+test('an epic leaves its closed stories out without asking, in one journal that keeps them', async () => {
   const { host, deps, run } = session([story(42), story(43, 'closed')])
-  const waiting = await run.start({ epic: 42 })
-  assert.equal(waiting.status, 'waiting', waiting.reason)
-  assert.deepEqual(waiting.question.options, ['CONTINUE', 'STOP'])
-  assert.equal((await createDraftPublication(deps).publish()).code, 'draft-not-allowed')
+  const started = await run.start({ epic: 42 })
+  assert.equal(started.status, 'ready', started.reason)
   assert.equal(host.agentRunner.dispatches.length, 0)
-  const { createDecide } = await import('../../../../plugins/skraft-design/engine/application/decisions/decide-usecase.mjs')
-  const answered = await createDecide(deps).decide({ key: waiting.question.key, answer: 'CONTINUE' })
-  assert.equal(answered.ok, true, answered.reason)
-  assert.equal((await run.prepare()).status, 'ready')
   const events = (await deps.journal.lines('epic-42')).map((line) => JSON.parse(line))
-  assert.equal(events.filter(({ type }) => type === 'run.started').length, 1)
-  assert.equal(events.find(({ type }) => type === 'question.answered').by, 'decide')
+  assert.equal(events.some(({ type }) => type === 'question.asked'), false)
+  assert.deepEqual(events.find(({ type }) => type === 'architecture.scope').excluded.map(({ issue }) => issue), [43])
+  assert.deepEqual(JSON.parse(await host.tracking.read('epic-42', 'plans/architecture-pass.json')).stories.map(({ number }) => number), [42])
 })
 
 test('research and reviewed story architecture publish a single research comment and architecture PR', async () => {
@@ -396,21 +391,20 @@ test('in CI the engine publishes the draft itself, every open question in its bo
   assert.ok(body.includes('  ```text\n  /skraft-answer\n  Q1: <option or your words>\n  Q2: <option or your words>\n  ```'), body)
 })
 
-test('a closed story in CI stops at once and, nothing designed yet, asks on the epic with the branch pushed', async () => {
-  const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
-  const settled = await draftInCi(deps, await run.start({ epic: 42, mode: 'ci' }))
+test('a researcher blocked in CI, nothing designed yet, asks on the epic with the branch pushed', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent({ result: { status: 'blocked', summary: 'Two questions need the product owner.' } })(host))
+  const settled = await draftInCi(deps, await createRunPipeline(deps).run())
   assert.equal(settled.status, 'waiting', settled.reason)
-  assert.equal(settled.question.kind, 'architecture-exclusions')
   assert.equal(settled.draft?.ok, true, settled.draft?.reason)
   assert.equal(settled.draft.on, 'issue')
   assert.equal(host.codeHost.pullRequests.length, 0)
   const asked = host.codeHost.comments.filter(({ body }) => body.startsWith('<!-- skraft-design:question:v1 -->'))
   assert.equal(asked.length, 1)
   assert.equal(asked[0].number, 42)
-  assert.match(asked[0].body, /Options: `CONTINUE`, `STOP`/)
-  assert.ok(asked[0].body.includes(`/skraft-answer {"key":"${settled.question.key}","answer":"<option>"}`), asked[0].body)
+  assert.match(asked[0].body, /Options: `STOP`/)
   assert.ok(host.events().some(({ type, write, outcome }) => type === 'forge.write' && write === 'push' && outcome === 'applied'))
-  assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
 test('an interactive run publishes no draft while it waits, and a mode the engine does not know is refused', async () => {
@@ -498,12 +492,15 @@ test('a reply in free lines under /skraft-answer, one per question, answers them
   assert.match(answered.answer, /Q2 \(#43 AC-1\): keep it, and warn the customer/)
 })
 
-test('a one-word reply under /skraft-answer answers the one decision a CI run waits on, without its key', async () => {
-  const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
-  const { question } = await draftInCi(deps, await run.start({ epic: 42, mode: 'ci' }))
+test('a one-line reply under /skraft-answer answers the one decision a CI run waits on, without its key', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent({ result: { status: 'blocked', summary: 'Two questions need the product owner.' } })(host))
+  await draftInCi(deps, await createRunPipeline(deps).run())
+  const { question } = await createObserve(deps).view()
   host.codeHost.permissions = { maintainer: 'write' }
-  assert.equal((await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer continue' })).ok, true)
-  assert.deepEqual(host.events().filter(({ type, key }) => type === 'question.answered' && key === question.key).map(({ answer }) => answer), ['CONTINUE'])
+  assert.equal((await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer stop' })).ok, true)
+  assert.deepEqual(host.events().filter(({ type, key }) => type === 'question.answered' && key === question.key).map(({ answer }) => answer), ['STOP'])
 })
 
 test('in CI a block met after something is committed goes to the draft, and a reply in several lines is the instruction', async () => {
@@ -542,4 +539,18 @@ test('a CI job fails when its run waits on a question no draft and no issue comm
   delete host.codeHost.fails.create
   assert.equal((await createDraftPublication(deps).publish()).ok, true)
   assert.deepEqual(await checkInCi(deps), { ok: true, code: null, reason: 'the question the run waits on is published' })
+})
+
+test('the architecture pull request lists the stories the run left out and why', async () => {
+  const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories
+    const path = 'docs/architecture/stories/42-card-checkout.md'
+    await workspace.write(path, briefOf(current))
+    git.change(path)
+  } })(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  assert.match(host.codeHost.pullRequests[0].body, /- Story #43 left out: the issue is closed/)
 })

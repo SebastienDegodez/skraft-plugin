@@ -2,7 +2,7 @@ import { createInit } from '../pipeline/init-usecase.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { createReadiness } from './readiness.mjs'
 import { normalBody } from '../../domain/architecture/brief.mjs'
-import { contextQuestion, stopped, stopRun, waitingFor } from './context.mjs'
+import { stopped } from './context.mjs'
 import { runIdentity } from './run-identity.mjs'
 import { MODES } from './ci-mode.mjs'
 
@@ -46,7 +46,8 @@ const prepare = async (deps) => {
   if (!scope) return stopped(opened.slug, 'architecture-scope-missing', 'Start design with an issue or epic first.')
   const binding = await bindScope(deps, opened, scope)
   if (binding) return binding
-  return exclusions(opened, scope)
+  // A closed story of the epic is left out without asking: the scope keeps it, the pull request lists it.
+  return { status: 'ready', slug: opened.slug }
 }
 
 const bindScope = async (deps, { slug, journal }, scope) => {
@@ -58,11 +59,4 @@ const bindScope = async (deps, { slug, journal }, scope) => {
   await deps.files.write(slug, 'plans/prior-research.md', previous.body ?? 'No previous research comment.')
   await journal.append('architecture.bound', { artifacts: ['plans/architecture-scope.json', 'plans/architecture-pass.json', 'plans/prior-research.md'] })
   return null
-}
-const exclusions = async ({ slug, journal }, scope) => {
-  if (scope.excluded.length === 0) return { status: 'ready', slug }
-  const text = `Stories excluded: ${scope.excluded.map(({ issue, reason }) => `#${issue}: ${reason}`).join('; ')} Continue without them or stop?`
-  const question = await contextQuestion(journal, { key: 'architecture-exclusions', kind: 'architecture-exclusions', text })
-  if (!question.answer) return waitingFor(slug, question)
-  return question.answer === 'CONTINUE' ? { status: 'ready', slug } : stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.')
 }
