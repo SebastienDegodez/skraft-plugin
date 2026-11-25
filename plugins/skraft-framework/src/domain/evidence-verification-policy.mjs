@@ -6,14 +6,16 @@ import { isConventionalCommitSubject } from './commit-convention.mjs'
 //   fail          — the substrate proves a gate failed or the log contradicts Git;
 //   inconclusive  — a claim cannot be checked (missing, malformed, altered evidence);
 //   pass          — every claim was checked against its substrate.
+// A v7 log carries only the verdicts its scripts wrote; commit.convention and test.integrity
+// are derived here from Git, never read from the log.
 // A `notice` finding records what the verdict does not turn on (G6 not run, v5 and v6).
 
 export const SUPPORTED_SCHEMAS = Object.freeze(['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7'])
 
 // v7 names its gates `type.description`; architecture, coverage and mutation left the pipeline.
-export const V7_GATES = Object.freeze([
-  'test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core', 'commit.convention', 'test.integrity',
-])
+// The log records the gates a command attests; qg-verify derives the two Git gates itself.
+export const V7_GATES = Object.freeze(['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core'])
+export const V7_DERIVED_GATES = Object.freeze(['commit.convention', 'test.integrity'])
 export const SCREENSHOTS_GATE = 'evidence.screenshots'
 
 // Gates every log of a schema version must carry (a gate may be not_applicable with a rationale).
@@ -92,6 +94,29 @@ export const frontendSignals = (paths, contentAt) => [...new Set(paths)].filter(
   return FEATURE_FILE.test(path) && /(?:^|\s)@visual(?![\w-])/.test(content)
 })
 
+// A file the RED may hold as a test: a Gherkin feature, a file under a test folder or named
+// as a test. Production stubs committed with the RED are not tests: their GREEN may rewrite them.
+const TEST_DIR = /(?:^|\/)(?:tests?|__tests__|specs?|e2e)\//i
+const TEST_NAME = /(?:\.(?:test|spec)\.[^/]+|Tests?\.cs|(?:^|\/)test_[^/]+\.py|_test\.py)$/
+export const isTestPath = (path) => typeof path === 'string' && (FEATURE_FILE.test(path) || TEST_DIR.test(path) || TEST_NAME.test(path))
+const isTestCommit = (subject) => /^test\(/.test(subject ?? '')
+const deviates = (message) => /^PLAN_DEVIATION:/m.test(message ?? '')
+
+// v7 test.integrity, from Git alone. `red` are the DISTILL commits before the DELIVER base and
+// `delivered` the DELIVER commits, both oldest first, each { sha, subject, files }. Every test
+// file a `test` commit holds is guarded from then on; returns each later change to one of
+// them, for the application layer to read before and after.
+export const integrityChanges = (red, delivered) => {
+  const guarded = new Set(red.filter((commit) => isTestCommit(commit.subject)).flatMap((commit) => commit.files.filter(isTestPath)))
+  const atDeliverBase = [...guarded]
+  const changes = []
+  for (const commit of delivered) {
+    for (const file of commit.files) if (guarded.has(file)) changes.push({ sha: commit.sha, file })
+    if (isTestCommit(commit.subject)) for (const file of commit.files.filter(isTestPath)) guarded.add(file)
+  }
+  return { guarded: atDeliverBase, changes }
+}
+
 // A line removed or altered between RED and GREEN breaks G9: every RED line must still
 // be there, in order, in the GREEN file (additions are free).
 export const onlyAdditions = (red, green) => {
@@ -132,6 +157,12 @@ const checkGate = (gate, version, facts, findings) => {
   }
   if (gate.id === SCREENSHOTS_GATE && version === 'v7') {
     checkScreenshotFiles(gate, facts, findings)
+    return
+  }
+  // v7 keeps no stdout, exit code or hash: the status was written by the script that ran it,
+  // with the tree it ran on — a verdict from another tree than repo_root_rev's is stale.
+  if (version === 'v7') {
+    if (gate.tree !== facts.git.tree) findings.push(finding(INCONCLUSIVE, 'GATE_STALE', `${key} ran on another tree than repo_root_rev: run it again`, key))
     return
   }
   if (STRUCTURAL_GATES.has(gate.id)) return
@@ -209,7 +240,8 @@ const checkGateSet = (log, version, findings) => {
   }
   if (version === 'v7') {
     for (const id of seen.keys()) {
-      if (!V7_GATES.includes(id) && id !== SCREENSHOTS_GATE) findings.push(finding(INCONCLUSIVE, 'GATE_UNKNOWN', `${id} is not a v7 gate`, id))
+      if (V7_DERIVED_GATES.includes(id)) findings.push(finding(INCONCLUSIVE, 'GATE_DERIVED', `${id} is derived from Git by qg-verify, never recorded in the log`, id))
+      else if (!V7_GATES.includes(id) && id !== SCREENSHOTS_GATE) findings.push(finding(INCONCLUSIVE, 'GATE_UNKNOWN', `${id} is not a v7 gate`, id))
     }
   }
   return gates
@@ -270,32 +302,54 @@ const checkCommits = (log, version, facts, findings) => {
   }
 }
 
-// v7 keeps no snapshot: each test file is read from Git at its RED and GREEN commits.
-const checkCyclesFromGit = (log, facts, findings) => {
-  for (const cycle of log.test_integrity.cycles) {
-    const label = `cycle ${cycle?.cycle ?? '?'}`
-    const testFiles = Array.isArray(cycle?.test_files) ? cycle.test_files.filter(isText) : []
-    if (testFiles.length === 0) {
-      findings.push(finding(INCONCLUSIVE, 'TEST_FILE_MISSING', `${label} names no test file`, 'test.integrity'))
+// v7 commit.convention: every commit since the DELIVER base, read from Git.
+const checkCommitsFromGit = (facts, findings) => {
+  const range = facts.git.range
+  if (!Array.isArray(range)) {
+    findings.push(finding(INCONCLUSIVE, 'BASE_UNKNOWN', 'no DELIVER base: the delivered commits cannot be listed', 'commit.convention'))
+    return
+  }
+  if (range.length === 0) findings.push(finding(INCONCLUSIVE, 'RANGE_EMPTY', 'no commit since the DELIVER base', 'commit.convention'))
+  for (const sha of range) {
+    const actual = facts.git.commits.get(sha)
+    if (!actual?.exists) {
+      findings.push(finding(INCONCLUSIVE, 'COMMIT_UNREADABLE', `${sha} cannot be read`, 'commit.convention'))
       continue
     }
-    for (const testFile of testFiles) {
-      const atRed = facts.git.shows.get(`${cycle.red_commit}:${testFile}`)
-      const atGreen = facts.git.shows.get(`${cycle.green_commit}:${testFile}`)
-      if (atRed === undefined || atGreen === undefined) {
-        findings.push(finding(INCONCLUSIVE, 'TEST_FILE_UNRESOLVED', `${label} ${testFile} does not resolve at its RED and GREEN commits`, 'test.integrity'))
-      } else if (!onlyAdditions(atRed, atGreen)) {
-        findings.push(finding(FAIL, 'TEST_TAMPERED', `${label} removed or changed a line of ${testFile} between RED and GREEN`, 'test.integrity'))
-      }
+    if (!isConventionalCommitSubject(actual.subject)) {
+      findings.push(finding(FAIL, 'COMMIT_NOT_CONVENTIONAL', `${sha} subject "${actual.subject}" is not type(feature): subject`, 'commit.convention'))
+    }
+    if (!/^Signed-off-by: .+$/m.test(actual.message)) {
+      findings.push(finding(FAIL, 'COMMIT_UNSIGNED', `${sha} carries no Signed-off-by trailer`, 'commit.convention'))
+    }
+  }
+}
+
+// v7 test.integrity: a test the RED committed only grows; a replaced line needs a PLAN_DEVIATION.
+const checkIntegrityFromGit = (gates, facts, findings) => {
+  const integrity = facts.git.integrity
+  const acceptance = gates.find((gate) => gate.id === 'test.acceptance')
+  if (!integrity) {
+    findings.push(finding(INCONCLUSIVE, 'RED_BASE_UNKNOWN', 'no DISTILL base: the RED acceptance tests cannot be found', 'test.integrity'))
+    return
+  }
+  if (integrity.guarded.length === 0) {
+    if (acceptance?.status !== 'not_applicable') findings.push(finding(INCONCLUSIVE, 'RED_TESTS_MISSING', 'no test commit before DELIVER holds an acceptance test', 'test.integrity'))
+    return
+  }
+  for (const change of integrity.changes) {
+    if (typeof change.before !== 'string') continue
+    const tampered = typeof change.after !== 'string' || !onlyAdditions(change.before, change.after)
+    if (!tampered) continue
+    if (deviates(facts.git.commits.get(change.sha)?.message)) {
+      findings.push(finding(NOTICE, 'PLAN_DEVIATION', `${change.sha} rewrites ${change.file} under a PLAN_DEVIATION`, 'test.integrity'))
+    } else {
+      findings.push(finding(FAIL, 'TEST_TAMPERED', `${change.sha} removed or changed a line of ${change.file}`, 'test.integrity'))
     }
   }
 }
 
 const checkCycles = (log, version, facts, findings) => {
-  if (version === 'v7') {
-    checkCyclesFromGit(log, facts, findings)
-    return
-  }
   for (const cycle of log.test_integrity.cycles) {
     const label = `cycle ${cycle?.cycle ?? '?'}`
     const red = facts.files.get(cycle?.red_snapshot_ref)
@@ -332,7 +386,8 @@ const verdictOf = (findings) => {
 
 // facts: { files: Map<ref, { content, sha256 }>, screenshots?: Map<ref, { sha256 }>,
 // frontend?: path[], evidenceDir, git: { head, headParent, headFiles, trackedEvidence?: path[],
-// commits: Map<sha, { exists, subject, message, files }>, range?: sha[], shows: Map<'sha:path', content> } }
+// commits: Map<sha, { exists, subject, message, files }>, range?: sha[], shows: Map<'sha:path', content>,
+// tree?: tree of repo_root_rev (v7), integrity?: { guarded: path[], changes: [{ sha, file, before, after }] } (v7) } }
 export const verifyEvidence = (log, facts) => {
   const version = versionOf(log)
   if (!SUPPORTED_SCHEMAS.includes(version)) {
@@ -341,8 +396,8 @@ export const verifyEvidence = (log, facts) => {
   }
   const missing = ['story', 'repo_root_rev', 'produced_at', 'tech_adapter'].filter((field) => !isText(log[field]))
   if (!Array.isArray(log.gates)) missing.push('gates')
-  if (!Array.isArray(log.commits_covered)) missing.push('commits_covered')
-  if (!Array.isArray(log.test_integrity?.cycles)) missing.push('test_integrity.cycles')
+  if (version !== 'v7' && !Array.isArray(log.commits_covered)) missing.push('commits_covered')
+  if (version !== 'v7' && !Array.isArray(log.test_integrity?.cycles)) missing.push('test_integrity.cycles')
   if (missing.length > 0) {
     return { verdict: 'inconclusive', findings: [finding(INCONCLUSIVE, 'FIELD_MISSING', `missing or malformed: ${missing.join(', ')}`)] }
   }
@@ -350,9 +405,14 @@ export const verifyEvidence = (log, facts) => {
   const findings = []
   const gates = checkGateSet(log, version, findings)
   for (const gate of gates) checkGate(gate, version, facts, findings)
-  if (version === 'v7') checkScreenshots(gates, facts, findings)
   checkRevision(log, version, facts, findings)
-  checkCommits(log, version, facts, findings)
-  checkCycles(log, version, facts, findings)
+  if (version === 'v7') {
+    checkScreenshots(gates, facts, findings)
+    checkCommitsFromGit(facts, findings)
+    checkIntegrityFromGit(gates, facts, findings)
+  } else {
+    checkCommits(log, version, facts, findings)
+    checkCycles(log, version, facts, findings)
+  }
   return { verdict: verdictOf(findings), findings }
 }

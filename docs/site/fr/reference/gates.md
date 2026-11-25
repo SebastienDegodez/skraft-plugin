@@ -165,9 +165,11 @@ Statut : active, identifiants inchangés.
 
 ## DELIVER — gates d'évidence (schéma v7)
 
-Producteur : `software-engineer`, qui écrit `qg-{story}.json` une seule fois, après le dernier
-commit de travail de la story. Vérificateur : `qg-verify`, qui re-résout chaque affirmation
-contre les fichiers et l'arbre Git — personne ne rejoue une gate. Le producteur le lance
+Producteur : les scripts de l'adaptateur de la stack, lancés par `software-engineer` une seule
+fois, après le dernier commit de travail de la story : chacun inscrit le verdict d'une gate dans
+`qg-{story}.json` à partir du code de sortie de sa commande — aucun agent ne tape un statut.
+Vérificateur : `qg-verify`, qui contrôle le journal et déduit `commit.convention` et
+`test.integrity` de Git — personne ne rejoue une gate. Le producteur le lance
 avant de rendre la main, le `software-engineer-reviewer` le relance, et `quality-gates-lens`
 rapporte son résultat. Schéma : `quality-gates-evidence/v7`. Chaque gate ci-dessous bloque.
 
@@ -177,9 +179,9 @@ rapporte son résultat. Schéma : `quality-gates-evidence/v7`. Chaque gate ci-de
 | `test.unit` | G2 | All unit tests pass | La suite unitaire complète est verte ; sur .NET elle inclut les tests d'architecture. | active |
 | `build.compile` | G3 | Build passes | Compilation / vérification de types réussie. | active |
 | `build.lint` | G4 | Static analysis pass | Linter / analyseur sans problème bloquant ; porte les règles de frontières de la stack (ESLint `boundaries/*`, Python `import-linter`). | active |
-| `test.no-mocks-core` | G7 | No mocks in Domain/Application core | Le scan de l'adaptateur sur les projets Domain/Application et leurs tests unitaires n'a rien imprimé. | active |
-| `commit.convention` | G8 | Conventional commit policy | Le message Git complet de chaque commit couvert respecte le scope fonctionnel, la référence d'issue optionnelle et le sign-off. | active |
-| `test.integrity` | G9 | No test tampering (RED→GREEN integrity) | Pour chaque cycle, chaque fichier de test n'a changé que par AJOUT entre ses commits RED et GREEN, lu avec `git show`. | active |
+| `test.no-mocks-core` | G7 | No mocks in Domain/Application core | Le scan de l'adaptateur sur les projets Domain/Application et leurs tests unitaires n'a rien trouvé. | active |
+| `commit.convention` | G8 | Conventional commit policy | Chaque commit depuis la base DELIVER, lu dans Git : message complet avec scope fonctionnel, référence d'issue optionnelle et sign-off. | active, déduite par `qg-verify` (jamais dans le journal) |
+| `test.integrity` | G9 | No test tampering (RED→GREEN integrity) | Chaque fichier de test qu'un commit `test` contient depuis la base DISTILL ne fait que grandir ensuite (`git show`), sauf si le commit porte `PLAN_DEVIATION:`. | active, déduite par `qg-verify` (jamais dans le journal) |
 | `evidence.screenshots` | — | Frontend screenshots captured | Le résultat frontend de la story est montré par au moins une capture d'écran hachée. | nouvelle en v7, requise pour une story frontend |
 
 ### Gates retirées
@@ -193,8 +195,9 @@ rapporte son résultat. Schéma : `quality-gates-evidence/v7`. Chaque gate ci-de
 
 Un log v7 ne porte jamais `arch.boundaries`, `ci.coverage`, `ci.mutation` ni aucun
 identifiant `G<N>` : `qg-verify` rapporte un identifiant inconnu en `inconclusive`
-(`GATE_UNKNOWN`). Les logs v1–v6 se vérifient encore avec leurs identifiants `G<N>`, leurs
-snapshots et leur commit d'évidence seule.
+(`GATE_UNKNOWN`), et un identifiant déduit inscrit dans le journal aussi (`GATE_DERIVED`). Les
+logs v1–v6 se vérifient encore avec leurs identifiants `G<N>`, leurs captures, leurs snapshots
+et leur commit d'évidence seule.
 
 Les 100 % de couverture de lignes sur Domain et Application et la barre de mutation restent
 la règle craft de `skraft-quality-bar` ; ils sont exécutés par la CI du projet, jamais par
@@ -205,14 +208,16 @@ le pipeline.
 | Élément | Valeur |
 | --- | --- |
 | Répertoire | `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/` — un par story |
-| Contenu | `qg-{story}.json`, chaque capture (`.stdout`, `.exit`, `.stdout.sha256`) et `screenshots/` |
+| Contenu | `qg-{story}.json` (verdicts seuls) et, pour une story frontend, `screenshots/` — rien d'autre : aucun fichier `.stdout`, `.exit` ni empreinte |
+| Gardé pour la QA | les captures d'écran et le plan de tests (`details/{date}/test-plan-{story}.md`) |
 | `.gitignore` du consommateur | `.copilot-tracking/skraft-plans/*/evidence/` |
 | Commité | Rien : aucun commit d'évidence, aucun snapshot. `repo_root_rev` vaut `HEAD`. |
+| `GATE_STALE` | `inconclusive` : un verdict a été inscrit sur un autre arbre que celui de `repo_root_rev` — relancer la gate |
 | Sortie de `qg-verify` | `0` pass, `1` fail, `2` inconclusive |
 | `EVIDENCE_COMMITTED` | `fail` : un fichier du répertoire d'évidence est suivi par Git |
 | `SCREENSHOTS_MISSING` | `fail` : une story frontend n'enregistre aucune capture d'écran |
 
-Une story est **frontend** quand ses commits couverts touchent un fichier `.feature`
+Une story est **frontend** quand un commit depuis la base DELIVER touche un fichier `.feature`
 contenant un scénario `@visual`, un chemin sous `tests/e2e/`, un `package.json` déclarant
 `react`, ou un fichier `playwright.config.*`.
 
@@ -227,9 +232,9 @@ jamais en remplacement d'un `fail` ou d'une évidence manquante. Une story non f
 - **Issue :** pour une issue connue, terminer le corps par `Refs: #N` pour le travail
   intermédiaire ou `Closes #N` uniquement lorsque toute l'issue est réellement terminée et
   que toutes les gates requises passent. Omettre la ligne si l'issue est inconnue.
-- **Vérification :** `qg-verify` contrôle la syntaxe, le sign-off et que le sujet déclaré
-  est bien le sujet réel ; `quality-gates-lens` contrôle le scope fonctionnel et la ligne
-  d'issue.
+- **Vérification :** `qg-verify` lit chaque commit depuis la base DELIVER dans Git et
+  contrôle la syntaxe et le sign-off ; `quality-gates-lens` contrôle le scope fonctionnel et
+  la ligne d'issue.
 
 ---
 
@@ -306,8 +311,8 @@ Sur l'évidence DELIVER (`qg-verify`), la règle est plate :
 | Constat | Verdict |
 | --- | --- |
 | ≥ 1 gate `fail`, politique de commit violée, ligne retirée entre RED et GREEN, `EVIDENCE_COMMITTED` ou `SCREENSHOTS_MISSING` | `fail` |
-| Log absent ou mal formé, identifiant de gate inconnu, fichier référencé inaccessible, sha256 discordant, `repo_root_rev` différent de `HEAD` | `inconclusive` |
-| Chaque gate applicable est `pass` et chaque référence se résout | `pass` |
+| Log absent ou mal formé, identifiant de gate inconnu ou déduit, capture d'écran inaccessible ou sha256 discordant, verdict d'un autre arbre (`GATE_STALE`), `repo_root_rev` différent de `HEAD`, base DELIVER ou DISTILL inconnue | `inconclusive` |
+| Chaque gate applicable est `pass` sur l'arbre de `HEAD` et Git confirme les commits et les tests RED | `pass` |
 
 Sur la revue DELIVER, tout constat `blocker`, `high` ou `medium`, ou toute lentille
 `inconclusive`, donne `NEEDS_REWORK` ; `low` seul ou tout passé donne `APPROVED`.

@@ -1,15 +1,16 @@
-// qg-collect: every .NET gate, the covered commits, the evidence log and its verification in
-// one command — one turn of the engineer instead of ten. Nothing is committed.
+// qg-collect: every .NET gate, the evidence log of verdicts and its verification in one
+// command — one turn of the engineer instead of ten. Nothing is committed, and the log (plus
+// any screenshot) is the only file left in the evidence directory.
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, before, describe, it } from 'node:test'
 
-import { parseCycle, trxMetrics } from '../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/qg-collect.mjs'
+import { trxMetrics } from '../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/qg-collect.mjs'
 
 const SCRIPTS = fileURLToPath(new URL('../../../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/', import.meta.url))
 const COLLECT = join(SCRIPTS, 'qg-collect.mjs')
@@ -47,7 +48,7 @@ const write = (root, path, text) => {
   writeFileSync(join(root, path), text)
 }
 
-// A story: base, one RED commit with two acceptance tests, then one green per scenario.
+// A story: base, DISTILL's RED commit with two acceptance tests, then (DELIVER) one green per scenario.
 const story = (name, { ignore = true } = {}) => {
   const root = join(workspace, name)
   mkdirSync(root)
@@ -61,25 +62,24 @@ const story = (name, { ignore = true } = {}) => {
   write(root, 'src/Shop.Application/Shop.Application.csproj', '<Project />\n')
   git('add', '.')
   git('commit', '--quiet', '-m', 'chore(shop): base')
-  const base = git('rev-parse', 'HEAD')
+  const distill = git('rev-parse', 'HEAD')
   const test = 'tests/Shop.UnitTest/CheckoutAcceptanceTests.cs'
   write(root, test, '// S1\n// S2\n')
   git('add', '.')
   git('commit', '--quiet', '-s', '-m', 'test(shop): acceptance tests S1–S2')
-  const red = git('rev-parse', 'HEAD')
+  const base = git('rev-parse', 'HEAD')
   const greens = ['S1', 'S2'].map((scenario) => {
     write(root, `src/Shop.Application/${scenario}.cs`, `// ${scenario}\n`)
     git('add', '.')
     git('commit', '--quiet', '-s', '-m', `feat(shop): ${scenario}`)
     return git('rev-parse', 'HEAD')
   })
-  return { root, git, base, red, greens, test }
+  return { root, git, distill, base, greens, test }
 }
 
-const collect = ({ root, base, red, greens, test }, env = {}, extra = []) =>
-  spawnSync(process.execPath, [COLLECT, '--root', root, '--evidence', '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout',
-    '--story', 'checkout', '--base', base,
-    '--cycle', `1:${red}:${greens[0]}:${test}`, '--cycle', `2:${red}:${greens[1]}:${test}`, ...extra], {
+const LOG = '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout/qg-checkout.json'
+const collect = ({ root, distill, base }, env = {}, extra = []) =>
+  spawnSync(process.execPath, [COLLECT, '--root', root, '--log', LOG, '--base', base, '--red-base', distill, ...extra], {
     cwd: root, encoding: 'utf8', env: { ...process.env, SKRAFT_DOTNET: fakeDotnet, ...env },
   })
 
@@ -95,15 +95,16 @@ describe('qg-collect', () => {
     const evidence = join(repo.root, '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout')
     const log = JSON.parse(readFileSync(join(evidence, 'qg-checkout.json'), 'utf8'))
     assert.equal(log.$schema, 'quality-gates-evidence/v7')
-    assert.deepEqual(log.gates.map((gate) => gate.id), ['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core', 'commit.convention', 'test.integrity'])
+    assert.deepEqual(log.gates.map((gate) => gate.id), ['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core'])
     assert.deepEqual(log.gates[0].metrics, { tests_total: 15, tests_passed: 15, tests_failed: 0 })
-    assert.equal(log.gates[0].stdout_ref, 'evidence/2026-11-20/checkout/qg-tests.stdout')
+    assert.deepEqual([log.gates[0].status, log.gates[0].summary], ['pass', 'Passed!'])
+    assert.equal(log.gates[4].summary, 'no mocking symbol in the core')
     assert.equal(log.repo_root_rev, head)
-    assert.equal(log.commits_covered.length, 3)
-    assert.deepEqual(log.test_integrity.cycles[1], { cycle: 2, test_files: [repo.test], red_commit: repo.red, green_commit: repo.greens[1] })
+    assert.equal(log.commits_covered, undefined)
+    assert.equal(log.test_integrity, undefined)
     assert.equal(repo.git('rev-parse', 'HEAD'), head)
     assert.equal(repo.git('status', '--porcelain'), '')
-    assert.equal(existsSync(join(evidence, 'snapshots')), false)
+    assert.deepEqual(readdirSync(evidence), ['qg-checkout.json'])
   })
 
   it('refuses an evidence directory Git does not ignore', () => {
@@ -138,7 +139,8 @@ describe('qg-collect', () => {
 
     assert.equal(result.status, 0, result.stdout + result.stderr)
     const evidence = join(repo.root, '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout')
-    for (const name of ['qg-arch.exit', 'qg-coverage.exit', 'qg-mutation.exit']) assert.equal(existsSync(join(evidence, name)), false, name)
+    const log = JSON.parse(readFileSync(join(evidence, 'qg-checkout.json'), 'utf8'))
+    for (const id of ['arch.boundaries', 'ci.coverage', 'ci.mutation']) assert.equal(log.gates.some((gate) => gate.id === id), false, id)
   })
 
   it('refuses --mutation-gate: the pipeline never runs mutation', () => {
@@ -159,12 +161,24 @@ describe('qg-collect', () => {
     assert.equal(existsSync(join(repo.root, '.copilot-tracking/skraft-plans/shop/evidence/2026-11-20/checkout/qg-checkout.json')), true)
   })
 
-  it('refuses a malformed cycle or a missing cycle', () => {
-    assert.throws(() => parseCycle('1:abc:def'), /is not <k>:<red sha>:<green sha>:<file>/)
-    assert.deepEqual(parseCycle('2:abcdef1:1234567:tests\\A.cs'), { cycle: 2, red: 'abcdef1', green: '1234567', file: 'tests/A.cs' })
-    const result = spawnSync(process.execPath, [COLLECT, '--root', '.', '--evidence', 'ev', '--story', 's', '--base', 'HEAD'], { encoding: 'utf8' })
-    assert.equal(result.status, 2)
-    assert.match(result.stderr, /one --cycle per delivered scenario is required/)
+  it('needs a log path named after the story, and takes no cycle any more', () => {
+    const repo = story('usage')
+    const bad = spawnSync(process.execPath, [COLLECT, '--root', repo.root, '--log', '.copilot-tracking/skraft-plans/shop/evidence/x/log.json'], { encoding: 'utf8' })
+    assert.equal(bad.status, 2)
+    assert.match(bad.stderr, /is not <evidence dir>\/qg-<story>\.json/)
+    const cycle = collect(repo, {}, ['--cycle', '1:abc:def:t.cs'])
+    assert.equal(cycle.status, 2, cycle.stdout + cycle.stderr)
+  })
+
+  it('fails a GREEN that rewrites a line of the RED acceptance test', () => {
+    const repo = story('tampered')
+    write(repo.root, repo.test, '// S1 changed\n// S2\n')
+    repo.git('commit', '--quiet', '-s', '-am', 'feat(shop): S2 again')
+
+    const result = collect(repo)
+
+    assert.equal(result.status, 1, result.stdout + result.stderr)
+    assert.match(result.stdout, /TEST_TAMPERED/)
   })
 
   it('reads TRX counters', () => {

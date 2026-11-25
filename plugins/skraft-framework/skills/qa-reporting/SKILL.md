@@ -30,8 +30,8 @@ description: >-
 2. Forecast: project existing approved AC/design and DISTILL plans into criteria,
    planned tests and sourced expected impact. Do not invent criteria, replan work
    or describe planned tests as passing.
-3. Outcome: reuse the approved forecast/plan and actual evidence, change log and
-   media manifest. State expected versus observed impact, missing proofs and
+3. Outcome: reuse the approved forecast/plan and actual evidence (the evidence log and its screenshots)
+   and the change log. State expected versus observed impact, missing proofs and
    blockers, including when delivery stopped. Delivery is not deployment proof.
 4. Preserve source metrics, statuses and limitations. Missing evidence stays
    unverified; aggregate gate success or screenshots alone do not prove an AC.

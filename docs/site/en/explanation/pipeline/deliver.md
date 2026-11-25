@@ -56,9 +56,10 @@ engineer makes them green group by group — the scenarios that pin one rule and
 with one green commit per group, the gate excluding the scenarios still owed, and the last group
 running the whole suite. One dispatch delivers every scenario.
 The pipeline runs neither mutation nor coverage: both are steps of the project's CI. The
-evidence log is written once, after the last work commit, into
+evidence log is written once, after the last work commit, by the stack adapter's scripts, into
 `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`, which Git ignores:
-nothing is committed, no snapshot is taken.
+it holds the gate verdicts and, for a frontend story, the screenshots — nothing else. Nothing is
+committed, no snapshot is taken: `qg-verify` reads the commits and the RED tests from Git.
 
 The reviewer prepares `diff-{story}.patch` and `files-{story}.txt` once, then hands those
 paths to the lenses. `quality-gates` also receives the test plan, `test-integrity` receives

@@ -20,6 +20,7 @@ export const createGitRepository = ({ cwd }) => {
     head: () => git(['rev-parse', 'HEAD'])?.trim() || null,
     parentOf: (sha) => (SHA.test(sha ?? '') ? git(['rev-parse', '--verify', '--quiet', `${sha}^`])?.trim() || null : null),
     filesOf,
+    treeOf: (sha) => (SHA.test(sha ?? '') ? git(['rev-parse', '--verify', '--quiet', `${sha}^{tree}`])?.trim() || null : null),
     commit: (sha) => {
       if (!SHA.test(sha ?? '') || git(['cat-file', '-e', `${sha}^{commit}`]) === null) return { exists: false }
       return {
