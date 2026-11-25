@@ -2,6 +2,7 @@ import { createDraftPublication } from '../publish/draft-publication-usecase.mjs
 import { architectureEvents } from './story-briefs.mjs'
 import { askOnIssue } from './ask-on-issue.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { waitingOn } from '../../domain/reporting/run-status.mjs'
 
 /** How a design run is driven: a developer's host asks people natively, CI asks them in the draft (#662). */
 export const MODES = Object.freeze(['interactive', 'ci'])
@@ -20,7 +21,9 @@ export const draftInCi = async (deps, outcome) => {
   if (outcome.status !== 'waiting' || outcome.slug === null) return outcome
   const events = await architectureEvents(deps, outcome.slug)
   if (modeOf(events) !== 'ci') return outcome
-  const draft = (await designed(deps, events)) ? await createDraftPublication(deps).publish() : await askOnIssue(deps, outcome)
+  // The question as the run holds it: an agent's block hands back no question in its outcome.
+  const asked = { slug: outcome.slug, question: waitingOn(deriveRun(events)) }
+  const draft = (await designed(deps, events)) ? await createDraftPublication(deps).publish() : await askOnIssue(deps, asked)
   return { ...outcome, draft }
 }
 

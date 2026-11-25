@@ -32,11 +32,12 @@ const jsonReply = (rest) => {
   return { ok: true, key: typeof reply.key === 'string' ? reply.key.trim() : null, answer: reply.answer }
 }
 
-/** The free form: one line per question, or one line for an option. @param {string[]} lines @returns {CommentReading} */
+/** The free form: one line per question, or the person's words. @param {string[]} lines @returns {CommentReading} */
 const freeReply = (lines) => {
   const answers = lines.map((line) => QUESTION_LINE.exec(line))
   if (answers.every((match) => match !== null)) return { ok: true, key: null, answer: Object.fromEntries(answers.map((match) => [match[1].toUpperCase(), match[2].trim()])) }
-  return lines.length === 1 ? { ok: true, key: null, answer: lines[0] } : { ok: false, reason: NOT_A_REPLY }
+  // Anything else is the person's words, in one line: an option, or an instruction written over several lines.
+  return { ok: true, key: null, answer: lines.join(' ') }
 }
 
 /**

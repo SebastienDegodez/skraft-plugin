@@ -1,8 +1,12 @@
 import { waitingOn } from './run-status.mjs'
 
 const DRAFTABLE_QUESTIONS = new Set(['architecture-blocked', 'architecture-pass'])
-/** Decisions a developer answers in the chat; only a CI run, which has none, asks them in the draft (#662). */
-const CI_DRAFTABLE_QUESTIONS = new Set(['architecture-exclusions', 'architecture-questions'])
+/**
+ * Decisions a developer answers in the chat; only a CI run, which has none, asks them in the draft
+ * (#662): the architect's questions, the excluded stories, an agent's block and a review at its
+ * ceiling. Before anything is committed a CI run asks on its issue instead.
+ */
+const CI_DRAFTABLE_QUESTIONS = new Set(['architecture-exclusions', 'architecture-questions', 'blocked', 'review-ceiling'])
 
 /** @param {any} run @param {string} kind */
 const draftable = (run, kind) => DRAFTABLE_QUESTIONS.has(kind) || (run.mode === 'ci' && CI_DRAFTABLE_QUESTIONS.has(kind))
