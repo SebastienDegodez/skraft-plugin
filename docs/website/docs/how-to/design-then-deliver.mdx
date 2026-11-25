@@ -71,6 +71,8 @@ Ask the host to use `skraft-design` for the issue or epic. Design needs no
 `skraft-design-config.json`: its setup asks publication consent once per repository and keeps
 the answer in your own `~/.skraft-design/config.json`, writing nothing in the working copy. The
 merged base is the forge's default branch; a team file that sets `baseBranch` overrides it.
+A brief cites each component by its root (`services/api`): the team file's components, else the
+projects the run detects in the working copy. A brief citing any other root is refused.
 
 On GitHub, use terminal sub-issues as stories; do not nest technical tasks under them.
 Azure DevOps keeps its native story types.

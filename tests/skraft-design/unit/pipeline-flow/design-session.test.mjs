@@ -280,8 +280,8 @@ test('a Proposed ADR already on the merge base cannot be auto-accepted by the ar
   assert.equal(host.events().some(({ type, step }) => type === 'step.recorded' && step === 'adr'), false)
 })
 
-const briefOf = (current) => `<!-- skraft-architecture-brief:v1\n${JSON.stringify({ version: 1, issue: current.number, forge: current.forge, repository: current.repository,
-  bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: [] })}\n-->\n\n# Checkout\n`
+const briefOf = (current, components = ['api']) => `<!-- skraft-architecture-brief:v1\n${JSON.stringify({ version: 1, issue: current.number, forge: current.forge, repository: current.repository,
+  bodySha256: current.bodySha256, components, criteria: [{ id: 'AC-1', components, adrs: [] }], adrs: [], documents: [] })}\n-->\n\n# Checkout\n`
 const OPEN_QUESTIONS = [
   { id: 'Q1', issue: 42, criterion: 'AC-1', question: 'How is the receipt proved in this slice?',
     options: [{ id: 'A', label: 'Through the HTTP entry point', consequence: 'The browser proof waits for the UI story.' },
@@ -642,11 +642,11 @@ test('once every pass is accepted the engine pins in each brief the documents it
   assert.deepEqual(pinning?.paths, ['docs/architecture/runs/issue-42/42-card-checkout.md'])
 })
 
-const contextDesign = (slug) => agent({ work: async ({ workspace, git, tracking }) => {
+const contextDesign = (slug, components) => agent({ work: async ({ workspace, git, tracking }) => {
   const [current] = JSON.parse(await tracking.read(slug, 'plans/architecture-pass.json')).stories
   const brief = `docs/architecture/runs/${slug}/42-card-checkout.md`
   const design = 'docs/architecture/contexts/checkout/tactical-design.md'
-  await workspace.write(brief, briefOf(current))
+  await workspace.write(brief, briefOf(current, components))
   await workspace.write(design, '# Checkout\n')
   git.change(brief, design)
 } })
@@ -681,9 +681,9 @@ test('an open design branch on other contexts asks nothing', async () => {
 const consentFor = (repository) => JSON.stringify({ repositories: { [repository]: { publish: { pullRequest: true, questionVersions: { pullRequest: 2 } } } } })
 
 test('a design runs and publishes on a working copy with no skraft-design-config.json, with the consent its developer keeps for this repository', async () => {
-  const { host, deps, run } = session([story(42)], 'issue-42', { config: null, user: consentFor('github.com/acme/shop') })
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: null, user: consentFor('github.com/acme/shop'), files: { 'package.json': '{"name":"shop"}' } })
   assert.equal((await run.start({ issue: 42 })).status, 'ready')
-  host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42')(host))
+  host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42', ['.'])(host))
   const outcome = await createRunPipeline(deps).run()
   assert.equal(outcome.status, 'done', outcome.reason)
   assert.equal(host.codeHost.pullRequests.length, 1)
@@ -696,4 +696,29 @@ test('a consent kept for another repository publishes nothing on this one', asyn
   const outcome = await createRunPipeline(deps).run()
   assert.equal(outcome.code, 'configuration-incomplete')
   assert.equal(host.agentRunner.dispatches.length, 0)
+})
+
+/** An architect whose brief cites these components for its one criterion. */
+const citing = (slug, components) => agent({ work: async ({ workspace, git, tracking }) => {
+  const [current] = JSON.parse(await tracking.read(slug, 'plans/architecture-pass.json')).stories
+  const path = `docs/architecture/runs/${slug}/42-card-checkout.md`
+  await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify({ version: 1, issue: current.number, forge: current.forge, repository: current.repository,
+    bodySha256: current.bodySha256, components, criteria: [{ id: 'AC-1', components, adrs: [] }], adrs: [], documents: [] })}\n-->\n\n# Checkout\n`)
+  git.change(path)
+} })
+
+/** A monorepo with no skraft-design-config.json: a .NET service and a React front end. */
+const MONOREPO = Object.freeze({ 'services/api/Api.csproj': '<Project Sdk="Microsoft.NET.Sdk.Web" />', 'web/package.json': '{"name":"web","dependencies":{"react":"19.0.0"}}' })
+
+test('without a configuration, the run lists the projects it detects as the components, and a brief citing one the working copy has not got is refused naming them', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: null, user: consentFor('github.com/acme/shop'), files: MONOREPO })
+  await run.start({ issue: 42 })
+  const wrong = citing('issue-42', ['services/api', 'services/payments'])(host)
+  host.agentRunner.behaviours.push(agent()(host), wrong, wrong, wrong, wrong)
+  await createRunPipeline(deps).run()
+  assert.deepEqual(JSON.parse(await host.tracking.read('issue-42', 'plans/components.json')), [{ root: 'services/api', stack: 'dotnet' }, { root: 'web', stack: 'react' }])
+  const architect = host.agentRunner.dispatches.find(({ agent: name }) => name === 'design-solution-architect')
+  assert.match(JSON.stringify(architect), /plans\/components\.json/)
+  const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
+  assert.ok(failures.some((line) => line.includes('services/payments') && line.includes('services/api, web')), failures.join('|'))
 })

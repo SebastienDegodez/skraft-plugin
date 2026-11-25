@@ -5,6 +5,7 @@ import { normalBody } from '../../domain/architecture/brief.mjs'
 import { stopped } from './context.mjs'
 import { runIdentity } from './run-identity.mjs'
 import { MODES } from './ci-mode.mjs'
+import { COMPONENTS_FILE, designComponents } from './design-components.mjs'
 
 export const createDesignRun = (deps) => Object.freeze({
   start: (request) => start(deps, request),
@@ -57,6 +58,7 @@ const bindScope = async (deps, { slug, journal }, scope) => {
   await deps.files.write(slug, 'plans/architecture-scope.json', JSON.stringify(scope, null, 2))
   await deps.files.write(slug, 'plans/architecture-pass.json', JSON.stringify({ stories: scope.stories.slice(0, 20) }, null, 2))
   await deps.files.write(slug, 'plans/prior-research.md', previous.body ?? 'No previous research comment.')
-  await journal.append('architecture.bound', { artifacts: ['plans/architecture-scope.json', 'plans/architecture-pass.json', 'plans/prior-research.md'] })
+  await deps.files.write(slug, COMPONENTS_FILE, JSON.stringify(await designComponents(deps), null, 2))
+  await journal.append('architecture.bound', { artifacts: ['plans/architecture-scope.json', 'plans/architecture-pass.json', 'plans/prior-research.md', COMPONENTS_FILE] })
   return null
 }

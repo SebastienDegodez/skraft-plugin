@@ -1,3 +1,4 @@
+import { unknownComponents } from './design-components.mjs'
 import { adrStatus, briefFolder, briefProblem, citedPaths, freshnessOf, isBriefPath, normalBody, readBrief, writeBrief } from '../../domain/architecture/brief.mjs'
 import { OPEN_QUESTIONS_FILE, questionsProblems } from '../../domain/architecture/open-questions.mjs'
 
@@ -45,7 +46,7 @@ const storyFailures = async (deps, slug, story) => {
   const brief = readBrief(text)
   if (brief === null) return [`${path}: the brief is unreadable: ${briefProblem(text)}.`]
   if (freshnessOf(brief, story) !== 'current') return [headerFailure(path, brief, story)]
-  return dependenciesExist(deps, brief)
+  return [...(await unknownComponents(deps, slug, brief)).map((failure) => `${path}: ${failure}`), ...await dependenciesExist(deps, brief)]
 }
 
 const HEADER_FIELDS = ['issue', 'forge', 'repository', 'bodySha256']
