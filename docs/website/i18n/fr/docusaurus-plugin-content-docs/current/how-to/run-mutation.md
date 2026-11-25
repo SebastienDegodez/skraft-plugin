@@ -20,8 +20,9 @@ avec le skill `skraft-mutation`.
 Demandez `/skraft-init mutation` à votre agent, ou écrivez-les vous-même sous `commands.mutation` de
 chaque composant dans `skraft-config.json`. skraft ne détient aucune commande de mutation d'aucune
 pile : l'agent en propose une par composant, que vous confirmez ou réécrivez. Rien n'est installé :
-Stryker, PIT ou mutmut, et leur configuration, sont à vous d'ajouter. Pour laisser un composant de
-côté, ne lui donnez pas de clé `mutation`.
+Stryker ou PIT, et leur configuration, sont à vous d'ajouter. Pour laisser un composant de côté,
+ne lui donnez pas de clé `mutation`. skraft ne fait aucune mutation en Python : un composant Python
+n'a pas de clé `mutation`.
 
 La commande écrit son résultat, score déjà calculé, dans le fichier que nomme la variable
 d'environnement `SKRAFT_MUTATION_RESULT`, ou laisse le rapport que son outil écrit au chemin par défaut

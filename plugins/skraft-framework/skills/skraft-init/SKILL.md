@@ -205,13 +205,13 @@ developer's session.
 
    `./mvnw` or `./gradlew` replace `mvn` or `gradle` when the project ships them. For any other
    tool, or one writing elsewhere, propose a command that writes its result to the file
-   `SKRAFT_MUTATION_RESULT` names; mutmut alone (`python -m mutmut run`) writes no report the
-   recipe reads.
+   `SKRAFT_MUTATION_RESULT` names. A Python component (`pyproject.toml`) gets no `mutation`
+   key and no proposal: skraft does no mutation testing in Python.
 2. Show each component's `mutation` command, one line each, and ask the developer to confirm it,
    rewrite it, or leave the component out. Write each confirmed line yourself into
    `commands.mutation` of the component in `skraft-config.json`; a component left out gets no
    `mutation` key and nothing else.
-3. Install nothing and write no configuration of the tool (Stryker, PIT, mutmut): no scaffold.
+3. Install nothing and write no configuration of the tool (Stryker, PIT): no scaffold.
    Name what the command needs that the working copy lacks (the tool, its plugin, its
    configuration file) and leave it to the developer.
 4. A command the developer writes either writes its result, score already computed, to the file

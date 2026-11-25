@@ -19,9 +19,9 @@ skill.
 
 Ask your agent for `/skraft-init mutation`, or write them yourself under `commands.mutation` of
 each component in `skraft-config.json`. skraft holds no mutation command of any stack: the agent
-proposes one per component, and you confirm or rewrite it. Nothing is installed: Stryker, PIT or
-mutmut, and their configuration, are yours to add. To leave a component out, give it no
-`mutation` key.
+proposes one per component, and you confirm or rewrite it. Nothing is installed: Stryker or PIT,
+and their configuration, are yours to add. To leave a component out, give it no `mutation` key.
+skraft does no mutation testing in Python: a Python component has no `mutation` key.
 
 The command either writes its result, score already computed, to the file the environment
 variable `SKRAFT_MUTATION_RESULT` names, or leaves the report its tool writes at the tool's

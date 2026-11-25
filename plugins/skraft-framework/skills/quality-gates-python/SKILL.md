@@ -1,6 +1,6 @@
 ---
 name: quality-gates-python
-description: Use in a Python component (`pyproject.toml`) to pick or check the gate command lines of its skraft-config.json entry, or to read and kill the surviving mutants of the developer's own mutation run. Provides the bundled coverage and no-mocks scripts (Node, no shell) that run pytest, import-linter and coverage.py from the project's virtual environment.
+description: Use in a Python component (`pyproject.toml`) to pick or check the gate command lines of its skraft-config.json entry. Provides the bundled coverage and no-mocks scripts (Node, no shell) that run pytest, import-linter and coverage.py from the project's virtual environment.
 ---
 
 # Quality Gates — Python
@@ -13,9 +13,8 @@ pipeline, when the developer asks for a gate, run its command line below from th
 root and report its exit code and verdict line. Thresholds come from `skraft-quality-bar`
 and live in the scripts; no caller argument changes them.
 
-Mutation testing is the developer's: skraft runs no mutation tool and ships no mutation
-script or config. The developer picks the tool (cosmic-ray, mutmut), writes its config and
-runs it apart from the pipeline.
+skraft does no mutation testing in Python: no mutation tool, script, config or
+`commands.mutation` for a Python component, in the pipeline or in the mutation workflow.
 
 `<skill>` is the absolute path of the folder holding this SKILL.md; the scripts are in the
 scripts/ folder next to this SKILL.md, never in the consumer repository. Every script runs with
@@ -57,26 +56,3 @@ The core is every Python source under a folder whose name ends with `domain` or 
 - `coverage-core.mjs` runs the suite under coverage.py with the core folders as
   sources and fails below 100%, on a failing test, on a core file never imported, or on a
   `# pragma: no cover` in the core. `--threshold` is refused.
-
-## Read the survivors
-
-When the developer hands over the survivors of their own mutation run, each one as a file, a
-line and an operator:
-
-| Survivor | Action |
-|---|---|
-| Real gap: a behavior change no test catches | Write ONE test at the exact edge, through the use case, asserting the observable outcome |
-| Equivalent: no observable difference (removed log call, dead path, `typing.final`, arithmetic on an unused value) | Suppress it on its own line with a reason; never write a test for it |
-
-```python
-# Survivor: amount <= 0 → amount < 0
-def test_a_zero_amount_is_rejected() -> None: ...
-```
-
-```python
-@final  # pragma: no mutate -- typing.final has no runtime effect
-```
-
-A pragma always carries its reason. Never add `excluded-modules`, filters or a lower threshold
-to buy a score. A test that kills no mutant is noise:
-delete it.

@@ -252,6 +252,6 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.mutation_smoke }}
         run: node scripts/dotnet-quality-gates-smoke.mjs
 
-      - name: Run the Python gate scripts on a real project (real cosmic-ray)
+      - name: Run the Python gate scripts on a real project (real pytest and coverage)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.mutation_smoke }}
         run: node scripts/python-quality-gates-smoke.mjs
