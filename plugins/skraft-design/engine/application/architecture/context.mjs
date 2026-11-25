@@ -1,10 +1,10 @@
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { questionOf } from '../../domain/decisions/questions.mjs'
 
-export const contextQuestion = async (journal, { key, kind, text, step = 'readiness' }) => {
+export const contextQuestion = async (journal, { key, kind, text, step = 'readiness', details = {} }) => {
   const found = deriveRun(journal.events).questions[key]
   if (found) return found
-  const asked = { ...questionOf(kind, key, text), step, visit: 1, subjects: [] }
+  const asked = { ...questionOf(kind, key, text), ...details, step, visit: 1, subjects: [] }
   await journal.append('question.asked', asked)
   return { ...asked, answer: null }
 }

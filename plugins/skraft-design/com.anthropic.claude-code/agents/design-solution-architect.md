@@ -32,7 +32,13 @@ Before reading the workspace or making decisions, load `design-architecture-patt
 2. Change no story: an ambiguous or under-specified story → blocked, naming the gap.
 3. Introduce no pattern that no story or measurable force justifies.
 4. Read an ADR's status in its header before changing its decision. `status: Proposed` (your brief lists these) not yet on the default branch is a draft no human has ratified: when the feedback, the matrix or a story asks for a change, rewrite it in place (body, header, its index row) and keep it `Proposed`; never supersede or amend it, never report it as immutable. A `Proposed` ADR already on the default branch and every other status are immutable: change an `Accepted` decision, or a published `Proposed` one, only through a new ADR that supersedes or amends it. When the engine's feedback says an ADR is not on the default branch yet, edit it in place and set it back to `Proposed`, whatever its status.
-5. A conflict that no rewrite of a `Proposed` ADR or of a descriptive artefact settles → write your result as blocked, its summary holding one pick-one question and options A, B and C with their consequence. Write no blocker or resolution file: the engine asks the human and runs you again with the answer.
+5. A conflict that no rewrite of a `Proposed` ADR or of a descriptive artefact settles, or a choice that belongs to the product owner → a question in `details/open-questions.json`, then design the rest of the pass on its assumption and state that assumption in the design record. The engine asks a person before the review and runs you again with every answer. The file is a JSON array; write `[]` when no question is left. Each question holds:
+   - `id`: `Q1`, `Q2`… unique in the file;
+   - `issue`: the number of a story of this pass, and `criterion`: the criterion it decides (`AC-05`);
+   - `question`: one question, in the story's language;
+   - `options`: two or more, each `{"id":"A","label":"…","consequence":"…"}`;
+   - `assumption`: the `id` of the option your design follows meanwhile.
+   A blocked result is only for a pass that can design nothing; a story you cannot design at all goes to `details/blocked-stories.json`.
 
 ## Inputs
 
@@ -113,8 +119,8 @@ The source of truth is the project's architecture documents (`ARCHITECTURE.md`, 
 5. Before the final verdict, write the line `- docs-relied-on: docs/architecture/context-map.md, docs/domain/event-model/payment.md`: every file the stories rely on, as repository-relative paths under docs/adr, docs/architecture or docs/domain/event-model, plus any `.feature` wherever its component keeps it, forward slashes, comma separated, each an existing file of the working copy, at least one; several such lines add up.
 6. Fill the cells again. A row's Verdict is `PASS` when every cell agrees, `FAIL` otherwise. End with `## Final verdict` and the line `- consistency-gate: PASS` only when every row passes, `- consistency-gate: FAIL` otherwise.
 7. On a structural drift, or a classification drift that survives its rewrite:
-   - the source is a project document: rewrite the artefact; a story that contradicts the document is a blocked result (boundary 5), never an ADR;
+   - the source is a project document: rewrite the artefact; a story that contradicts the document is a question (boundary 5), never an ADR;
    - the ADR is `Proposed`: rewrite the ADR or the artefact, whichever the stories and the feedback contradict, and fill the row again;
    - the ADR is `Accepted` and a story contradicts it: write a new ADR that supersedes it (step 2);
-   - otherwise: you are blocked (boundary 5).
+   - otherwise: ask it (boundary 5).
 8. Before writing your result, call `skraft_design_precheck`: it runs the mechanical checks of your submission on what you have written — your outputs, your write scope, the consistency matrix, the lifecycle of the ADRs you touched — and answers each anomaly with the check that found it. Correct every one, then call it again, until it answers `passed`. It starts no agent and approves nothing: a `passed` is not a review.

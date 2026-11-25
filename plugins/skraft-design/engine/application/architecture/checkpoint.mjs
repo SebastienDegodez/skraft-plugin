@@ -2,14 +2,35 @@ import { contextQuestion, stopped, stopRun, waitingFor } from './context.mjs'
 import { acceptedBriefFailures, allIncluded, blockedStories, currentStories, passIndex } from './story-briefs.mjs'
 import { publishResearch } from './publish-research.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
+import { OPEN_QUESTIONS_FILE, openQuestions, questionsText } from '../../domain/architecture/open-questions.mjs'
 
 export const architectureCheckpoint = async (context, next) => {
   if (next.node?.id === 'design') return researchCheckpoint(context)
   if (next.node?.id !== 'design_review') return null
+  return (await scopeCheckpoint(context)) ?? questionsCheckpoint(context)
+}
+
+/** The stories the architect could not design: a person keeps the others or stops, before any review. */
+const scopeCheckpoint = async (context) => {
   const stories = currentStories(context.journal.events)
   const blocked = await blockedStories(context.deps, context.slug, stories)
   if (!blocked.ok || blocked.stories.length === 0) return null
   return consentToExclusions(context, blocked.stories)
+}
+
+/**
+ * The content questions the pass left on the stories it kept: one decision holds them all, so a
+ * person answers them together and the review reads the design they settle (#662).
+ */
+const questionsCheckpoint = async ({ deps, slug, journal }) => {
+  const issues = currentStories(journal.events).map(({ number }) => number)
+  const questions = openQuestions(await deps.files.read(slug, OPEN_QUESTIONS_FILE), issues)
+  if (questions.length === 0) return null
+  const hash = await deps.hasher.sha256(JSON.stringify(questions))
+  const key = `architecture-questions-${passIndex(journal.events)}-${hash.slice(0, 12)}`
+  const question = await contextQuestion(journal, { key, kind: 'architecture-questions', text: questionsText(questions), step: 'design_review', details: { questions } })
+  if (!question.answer) return waitingFor(slug, question)
+  return question.answer === 'STOP' ? stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.') : null
 }
 
 const researchCheckpoint = async (context) => {

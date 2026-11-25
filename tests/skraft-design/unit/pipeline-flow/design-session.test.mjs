@@ -281,3 +281,57 @@ test('a Proposed ADR already on the merge base cannot be auto-accepted by the ar
   assert.match(await host.workspace.read(adr), /status: Proposed/)
   assert.equal(host.events().some(({ type, step }) => type === 'step.recorded' && step === 'adr'), false)
 })
+
+const briefOf = (current) => `<!-- skraft-architecture-brief:v1\n${JSON.stringify({ version: 1, issue: current.number, forge: current.forge, repository: current.repository,
+  bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: [] })}\n-->\n\n# Checkout\n`
+const OPEN_QUESTIONS = [
+  { id: 'Q1', issue: 42, criterion: 'AC-1', question: 'How is the receipt proved in this slice?',
+    options: [{ id: 'A', label: 'Through the HTTP entry point', consequence: 'The browser proof waits for the UI story.' },
+      { id: 'B', label: 'In a browser now', consequence: 'A front-end component joins this slice.' }], assumption: 'A' },
+  { id: 'Q2', issue: 43, criterion: 'AC-1', question: 'Does a declined card keep the basket?',
+    options: [{ id: 'KEEP', label: 'Keep it', consequence: 'A retry reuses the basket.' },
+      { id: 'EMPTY', label: 'Empty it', consequence: 'The customer starts again.' }], assumption: 'KEEP' },
+]
+
+test('an architect pass that leaves content questions is done, and the run waits on one decision holding each with its options', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42')
+  await run.start({ epic: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
+    for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories) {
+      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      await workspace.write(path, briefOf(current))
+      git.change(path)
+    }
+    await tracking.write('epic-42', 'details/open-questions.json', JSON.stringify(OPEN_QUESTIONS))
+  } })(host))
+  const paused = await createRunPipeline(deps).run()
+  assert.equal(paused.status, 'waiting', paused.reason)
+  assert.equal(paused.question.kind, 'architecture-questions')
+  assert.deepEqual(paused.question.questions.map(({ id, issue, options }) => [id, issue, options.map((option) => option.id)]),
+    [['Q1', 42, ['A', 'B']], ['Q2', 43, ['KEEP', 'EMPTY']]])
+  assert.match(paused.question.text, /Q1 \(#42 AC-1\): How is the receipt proved in this slice\?/)
+  assert.match(paused.question.text, /B: In a browser now — A front-end component joins this slice\./)
+  const design = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design')
+  assert.deepEqual(design.map(({ outcome }) => outcome), ['done'])
+  assert.deepEqual(host.agentRunner.reviewed(), [])
+})
+
+test('open questions that offer one option, or assume none of theirs, are refused naming the file and the rule', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42')
+  await run.start({ epic: 42 })
+  const [first, second] = OPEN_QUESTIONS
+  const malformed = [{ ...first, options: first.options.slice(0, 1) }, { ...second, assumption: 'MAYBE' }]
+  const wrong = agent({ work: async ({ workspace, git, tracking }) => {
+    for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories) {
+      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      await workspace.write(path, briefOf(current))
+      git.change(path)
+    }
+    await tracking.write('epic-42', 'details/open-questions.json', JSON.stringify(malformed))
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host), wrong, wrong, wrong, wrong)
+  await createRunPipeline(deps).run()
+  const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
+  assert.ok(failures.includes('details/open-questions.json: Q1: it offers at least two options.'), failures.join('|'))
+  assert.ok(failures.includes('details/open-questions.json: Q2: its assumption is the id of one of its options.'), failures.join('|'))
+})

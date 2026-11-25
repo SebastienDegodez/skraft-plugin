@@ -45,6 +45,7 @@ const QUESTIONS = Object.freeze({
   'architecture-exclusions': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Scope', instruction: false }),
   'architecture-blocked': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Blocked', instruction: false }),
   'architecture-pass': Object.freeze({ options: Object.freeze(['NEXT', 'COMPLETE']), refusals: Object.freeze([]), header: 'Pass', instruction: false }),
+  'architecture-questions': Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Questions', instruction: true }),
   'adr-merge-acceptance': Object.freeze({ options: Object.freeze([ADR_ACCEPTED_ON_MERGE]), refusals: Object.freeze([]), header: 'ADR', instruction: false }),
   'scenario-review': Object.freeze({ options: Object.freeze(['APPROVED', 'REVISE']), refusals: Object.freeze(['REVISE']), header: 'Scenarios', instruction: false }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),

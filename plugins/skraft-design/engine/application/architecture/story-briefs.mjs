@@ -1,4 +1,5 @@
 import { adrStatus, briefProblem, citedPaths, freshnessOf, isBriefPath, readBrief } from '../../domain/architecture/brief.mjs'
+import { OPEN_QUESTIONS_FILE, questionsProblems } from '../../domain/architecture/open-questions.mjs'
 
 export const architectureEvents = async (deps, slug) => (await deps.journal.lines(slug)).map((line) => JSON.parse(line))
 export const passIndex = (events) => events.filter((event) => event.type === 'architecture.pass-completed').length
@@ -31,7 +32,7 @@ export const storyBriefFailures = async (deps, slug) => {
   if (!blocked.ok) return ['details/blocked-stories.json must list only this pass\'s blocked stories and their reasons.']
   const failures = []
   for (const story of stories.filter(({ number }) => !blocked.stories.some((item) => item.issue === number))) failures.push(...await storyFailures(deps, story))
-  return failures
+  return [...failures, ...questionsProblems(await deps.files.read(slug, OPEN_QUESTIONS_FILE), stories.map(({ number }) => number))]
 }
 
 const storyFailures = async (deps, story) => {
