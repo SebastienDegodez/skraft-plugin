@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.18.2](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.18.1...v1.18.2) (2026-11-25)
+
+### 🐛 Bug Fixes
+
+* **skraft-framework:** address [#656](https://github.com/SebastienDegodez/skraft-plugin/issues/656) review on DESIGN matrix, ADR gate, checkpoint resume and eval ([#672](https://github.com/SebastienDegodez/skraft-plugin/issues/672)) ([7643fd9](https://github.com/SebastienDegodez/skraft-plugin/commit/7643fd93ec84be47370254c72f2b0afdf8c0468c)), closes [#670](https://github.com/SebastienDegodez/skraft-plugin/issues/670) [#671](https://github.com/SebastienDegodez/skraft-plugin/issues/671) [#670](https://github.com/SebastienDegodez/skraft-plugin/issues/670) [#670](https://github.com/SebastienDegodez/skraft-plugin/issues/670) [#670](https://github.com/SebastienDegodez/skraft-plugin/issues/670) [#654](https://github.com/SebastienDegodez/skraft-plugin/issues/654)
+
 ## [1.18.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.18.0...v1.18.1) (2026-11-25)
 
 ### ⚡ Performance
