@@ -13,6 +13,13 @@ import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const flags = new Set(process.argv.slice(2))
+// Run from the pre-push hook, Git exports the pushed repository (GIT_DIR and its kin) to this
+// process. A test that spawns `git` in its own temporary repository would inherit them and act on
+// the developer's repository instead: move branches, commit fixtures, set an identity. The gates
+// run with none of them; each finds its repository from its working directory, as in CI.
+const GIT_REPOSITORY_VARIABLES = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_PREFIX', 'GIT_QUARANTINE_PATH']
+const gateEnv = Object.fromEntries(Object.entries(process.env).filter(([name]) => !GIT_REPOSITORY_VARIABLES.includes(name)))
+
 const withMutation = flags.has('--mutation') || flags.has('-m')
 const withDotnet = flags.has('--dotnet')
 
@@ -52,7 +59,7 @@ const fastGates = [
 
 const run = (gate) => {
   process.stdout.write(`\n▶ ${gate.name}\n`)
-  const result = spawnSync(gate.cmd, gate.args, { stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
+  const result = spawnSync(gate.cmd, gate.args, { env: gateEnv, stdio: gate.quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit' })
   return { name: gate.name, ok: result.status === 0 }
 }
 
