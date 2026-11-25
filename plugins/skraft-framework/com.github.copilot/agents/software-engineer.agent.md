@@ -58,7 +58,7 @@ metadata:
     - Source code commits (conventional commits)
     - .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md
     - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json (quality-gates evidence log, Git-ignored, never committed)
-    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (captured stdout, exit codes and screenshots the evidence log references, Git-ignored, never committed)
+    - .copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (the screenshots of a frontend story, Git-ignored, never committed)
   model_requirement: "Sonnet-class or above. This agent requires multi-constraint reasoning (Clean Architecture + Object Calisthenics + Iron Rule). Low-tier models (Haiku, Flash, mini) are NOT supported."
 ---
 
@@ -147,7 +147,7 @@ Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this pa
 - Do NOT re-author the acceptance test or alter its input / expected values (Iron Rule of tests).
 - Identify entry boundaries and expected outward effects from the existing acceptance tests + the impl-plan row of the active group. Use the use case boundary and production code that row names.
 - Respect the test-plan row of the active scenario: every test you write uses its layer, use case boundary and double type, and a Domain unit test exists only where the test-plan plans one with an `Extraction Reason`. Deviate only when a loaded skill forbids the planned choice, and record `PLAN_DEVIATION: {row} — {planned} → {actual} — {rule}` in the execution journal.
-- Then deliver the scenarios group by group, in the impl-plan's group order, until the LAST one (`outside-in-tdd` → All Acceptance Tests First, step 4); without groups in the plan, consecutive scenarios through the same use case that pin one rule or its edge cases form one group, with ONE green commit naming them (`feat(feature): <rule> S4–S7`); a scenario on its own is a group of one. First run the group's tests filtered to it: a scenario that already passes is covered by an earlier one — confirm with the deletion test, write no code for it, record no cycle, and name the covering scenario on its change-log line. The red acceptance tests left after a green commit are the scenarios still owed, never a blocker and never a reason to hand over. This dispatch ends only when every acceptance test passes and the whole suite is green, or on a blocker you report. Never park a pending scenario with `Skip` / `[Ignore]`: it stays an active, failing test.
+- Then deliver the scenarios group by group, in the impl-plan's group order, until the LAST one (`outside-in-tdd` → All Acceptance Tests First, step 4); without groups in the plan, consecutive scenarios through the same use case that pin one rule or its edge cases form one group, with ONE green commit naming them (`feat(feature): <rule> S4–S7`); a scenario on its own is a group of one. First run the group's tests filtered to it: a scenario that already passes is covered by an earlier one — confirm with the deletion test, write no code for it, and name the covering scenario on its change-log line. The red acceptance tests left after a green commit are the scenarios still owed, never a blocker and never a reason to hand over. This dispatch ends only when every acceptance test passes and the whole suite is green, or on a blocker you report. Never park a pending scenario with `Skip` / `[Ignore]`: it stays an active, failing test.
 
 ### 2. RED (inner loop)
 - The OUTER acceptance test is your first red. When it states the rule with its examples, go from its red to the code and write no unit test of your own. Otherwise write the failing test of the next rule it does not pin down: one test, or one parametrized test whose rows triangulate that rule (`craft-discipline` C11), never rows of two rules.
@@ -171,27 +171,27 @@ Do not enter PREPARE, RED, SYNTHESIZE-GREEN, or code COMMIT & VERIFY for this pa
 - Use `git commit -s` with `type(feature): subject`, e.g. `feat(loyalty-discount): apply member pricing`. For a known issue, end the body with `Refs: #N` for intermediate work or `Closes #N` (no colon) only when the whole issue is genuinely finished and all required gates pass. Omit the issue line when unknown.
 - **Architecture, coverage and mutation never run in the story**: you run no coverage command, no separate architecture gate, no mutation tool, mutation gate or `/skraft-mutation`, at any point of the story, and write no mutation command, config or result. The project's CI runs coverage and mutation; the developer runs `/skraft-mutation`. Never record an architecture, coverage or mutation entry in the evidence log. Tell the developer in the handover.
 - Write `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md` once, after the evidence log, one line per commit since the DELIVER base, taken from `git log`, in the same turn as the outcome JSON (create the dated subfolder if needed; markdown file starts with `<!-- markdownlint-disable-file -->`).
-- **Deposit the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v7, gate ids `test.acceptance`, `test.unit`, `build.compile`, `build.lint`, `test.no-mocks-core`, `commit.convention`, `test.integrity`, `evidence.screenshots`) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). Nothing under `evidence/` is ever committed — not the log, not a capture, not a screenshot:
-  - Before the first capture, `git check-ignore -q` on the story's evidence directory must succeed; otherwise add `.copilot-tracking/skraft-plans/*/evidence/` to `.gitignore` in a work commit.
-  - In a .NET solution, run the adapter's `qg-collect.mjs` once — it runs every gate, writes the log and runs `qg-verify` — with one `--cycle` per scenario that has a green commit, never one for a rework commit, and one `--screenshot` per screenshot of a frontend story.
-  - Elsewhere, run each gate command or script into `evidence/{date}/{story}/`, record one `test_integrity` cycle per scenario (its acceptance test file, the `test` commit that holds it red and its green commit), assemble `evidence/{date}/{story}/qg-{story}.json` per that contract with `repo_root_rev` = `HEAD`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`.
+- **Record the quality-gates evidence log, once, after the story's last work commit.** Load `quality-gates-evidence-contract` (schema v7, recorded gates `test.acceptance`, `test.unit`, `build.compile`, `build.lint`, `test.no-mocks-core`, `evidence.screenshots`; `commit.convention` and `test.integrity` are derived from Git by `qg-verify`) and the adapter of every stack the repository holds (`quality-gates-dotnet`, `quality-gates-javascript`, `quality-gates-python`, `quality-gates-typescript`). The evidence directory holds the log and the screenshots, nothing else, and nothing under it is ever committed. Never write or edit the log yourself: every status comes from the adapter's scripts.
+  - In a .NET solution, run the adapter's `qg-collect.mjs --root . --log {evidence dir}/qg-{story}.json` once — it runs every gate, records each verdict and runs `qg-verify` — with one `--screenshot` per screenshot of a frontend story.
+  - Elsewhere, run each gate through the adapter's `capture.mjs --log {that log} --gate <id>` or its no-mocks script, record screenshots or a `not_applicable` gate with its `gate-log.mjs`, then run `node "$SKRAFT_PLUGIN_ROOT/src/cli/qg-verify.mjs" --log {that log}`.
+  - The scripts refuse an evidence directory Git does not ignore: add `.copilot-tracking/skraft-plans/*/evidence/` to `.gitignore` in a work commit.
   - Hand over only on `"verdict": "pass"`, or report the failing gate. A missing or malformed log is `inconclusive` (NEEDS_REWORK), so a hidden failure fails harder than a disclosed one.
 
 ### Outcome handoff (success or blockage)
 
-Write the outcome JSON in the turn that writes the change log. You own quality evidence, change log, actual-impact outcome JSON
-and media manifest; never delegate their production to the orchestrator. Reuse
-the approved test plan and captured gate outputs, not raw full logs or
+Write the outcome JSON in the turn that writes the change log. You own quality evidence (the log and its screenshots), change log and actual-impact outcome
+JSON; never delegate their production to the orchestrator. Reuse
+the approved test plan and the recorded gate verdicts, not raw full logs or
 new verdict prose. Source actual impact to tests/changes; disclose missing proofs
 and blockers even when delivery stops. Leave `reviewRef` for router binding.
 
 For a frontend story — its commits touch a `@visual` scenario, `tests/e2e/`, a `package.json`
 declaring `react` or a `playwright.config.*` — load `playwright-evidence`: capturing at least one
 success screenshot during the story's real E2E run is mandatory, recorded in
-`evidence.screenshots`; `qg-verify` fails a frontend story without one. Retain all local
-failure/correctness evidence, and honor report media selection without uploads. Never rerun gates solely for reporting. Return exact
-repository-root-relative outcome, quality-evidence, change-log and
-manifest refs plus full source revision and limitations; use dispatched paths,
+`evidence.screenshots`; `qg-verify` fails a frontend story without one. Write no media
+manifest: the log's `evidence.screenshots` lists them. Honor report media selection without uploads. Never rerun gates solely for reporting. Return exact
+repository-root-relative outcome, quality-evidence and change-log refs plus
+full source revision and limitations; use dispatched paths,
 not current-date guesses. No publication or pipeline-state writes.
 
 ## Rework mode (handoff mode `rework`)
@@ -199,12 +199,12 @@ not current-date guesses. No publication or pipeline-state writes.
 When the handoff block's mode line reads `rework`, the previous review's findings are the whole scope of this pass:
 
 1. Read the previous review the block names. Skip PREPARE's planning: the plans, the acceptance tests and your previous commits stand.
-2. Fix each finding with the smallest change. A production change still goes RED → SYNTHESIZE-GREEN → COMMIT through a test. A finding that only asks for a stronger test is one `test` commit that adds assertions and removes or rewrites no line; a stricter assertion that must replace one carries `PLAN_DEVIATION: <old assertion> → <new assertion>` in its body (`outside-in-tdd` → commits by pass). Never record a rework commit as a `test_integrity` cycle.
+2. Fix each finding with the smallest change. A production change still goes RED → SYNTHESIZE-GREEN → COMMIT through a test. A finding that only asks for a stronger test is one `test` commit that adds assertions and removes or rewrites no line; a stricter assertion that must replace one carries `PLAN_DEVIATION: <old assertion> → <new assertion>` in its body (`outside-in-tdd` → commits by pass).
 3. Re-run only the gates your change invalidates:
-   - production or test code changed → the affected tests, then a new evidence log;
-   - only commit messages, the change log or evidence metadata changed → regenerate the evidence log from the existing captures with `repo_root_rev` = `HEAD`, and re-run `qg-verify`; never re-run tests;
-   - the dispatch carries `Environment re-gate` → change no code; re-run only the gate captures the previous review names inconclusive, regenerate the evidence log, and re-run `qg-verify`.
-4. Keep every captured output your change does not invalidate.
+   - production or test code changed → every gate again (`qg-collect` on .NET): a verdict recorded on another tree is stale;
+   - only commit messages or the change log changed → `gate-log.mjs --log {that log} --restamp` moves the log to the new `HEAD` (it refuses when the code changed), then re-run `qg-verify`; never re-run tests;
+   - the dispatch carries `Environment re-gate` → change no code; re-run only the gates the previous review names inconclusive, then re-run `qg-verify`.
+4. Keep every recorded verdict your change does not invalidate.
 
 ## Test-wiring workers (fan-out, B1)
 When a slice needs **test infrastructure** rather than business logic, fan out to an internal worker, then verify its output yourself. The worker returns a structured result; it never commits. YOU integrate the returned files into the scenario's working copy; they land in its green commit.

@@ -25,7 +25,7 @@ permissions:
 
 env:
   PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
-  PLAYWRIGHT_JUNIT_OUTPUT_NAME: .copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${{ inputs.story_id }}/evidence/reports/results.xml
+  PLAYWRIGHT_JUNIT_OUTPUT_NAME: playwright-report/results.xml
   SKRAFT_STORY_ID: ${{ inputs.story_id }}
   CI: true
 
@@ -68,7 +68,7 @@ jobs:
       # ── Run E2E Tests ─────────────────────────────────────────────────────
       - name: Run Playwright tests
         id: playwright-tests
-        continue-on-error: true          # allow manifest write even on failure
+        continue-on-error: true          # allow the report upload even on failure
         run: npx playwright test --reporter=html,junit
 
       # ── Upload Artifacts ───────────────────────────────────────────────────
@@ -150,7 +150,7 @@ Set in `playwright.config.ts`:
 
 ```typescript
 reporter: process.env.CI
-  ? [['github'], ['html', { outputFolder: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports` }], ['junit', { outputFile: `.copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }]]
+  ? [['github'], ['html', { outputFolder: 'playwright-report' }], ['junit', { outputFile: 'playwright-report/results.xml' }]]
   : [['html']],
 ```
 

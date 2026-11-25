@@ -14,7 +14,7 @@ Basket retained locally; deployment not recorded.
 
 | Critère | Description | Test | Statut | Preuve |
 | --- | --- | --- | --- | --- |
-| AC-1 | Retain the basket | tests/basket.test.mjs | UNVERIFIED | qa/tests.stdout |
+| AC-1 | Retain the basket | tests/basket.test.mjs | UNVERIFIED | qa/quality.json |
 
 La traçabilité associe les critères aux tests et références déclarés, sans prouver leur exécution ni leur résultat. Les références locales ne sont pas des preuves accessibles à distance.
 
@@ -24,13 +24,11 @@ qa/quality.json
 
 | ID | Gate | Status | Command | References | Reported metrics | Evidence check |
 | --- | --- | --- | --- | --- | --- | --- |
-| test.acceptance | Basket test | pass | node --test tests/basket.test.mjs | qa/tests.stdout; qa/tests.exit | tests_total: 1; tests_passed: 1; tests_failed: 0 | exit=0 |
+| test.acceptance | Basket test | pass | node --test tests/basket.test.mjs |  | tests_total: 1; tests_passed: 1; tests_failed: 0 | One basket test passed. |
 | test.unit |  | UNVERIFIED |  |  |  | Missing gate evidence |
 | build.compile |  | UNVERIFIED |  |  |  | Missing gate evidence |
 | build.lint |  | UNVERIFIED |  |  |  | Missing gate evidence |
 | test.no-mocks-core |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| commit.convention |  | UNVERIFIED |  |  |  | Missing gate evidence |
-| test.integrity |  | UNVERIFIED |  |  |  | Missing gate evidence |
 
 ## Revue persistée
 

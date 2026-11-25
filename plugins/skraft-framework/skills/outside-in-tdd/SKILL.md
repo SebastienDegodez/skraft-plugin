@@ -363,7 +363,7 @@ This skill decides **in what order** you take them and what "done" means for one
 - Unit tests only if needed to decompose a complex GREEN.
 - The AT drives ALL implementation. A later scenario's test may go green before its turn because an
   earlier scenario's code already covers it — that is correct. Confirm it with the deletion test
-  rather than assuming it; record no cycle for it, and name the earlier scenario on its change-log
+  rather than assuming it; write no code for it, and name the earlier scenario on its change-log
   line.
 
 ## Concentric Circle Expansion

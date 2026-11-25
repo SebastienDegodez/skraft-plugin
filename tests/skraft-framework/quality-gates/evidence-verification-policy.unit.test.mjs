@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { evidenceReferences, frontendProbes, frontendSignals, onlyAdditions, verifyEvidence } from '../../../plugins/skraft-framework/src/domain/evidence-verification-policy.mjs'
+import { evidenceReferences, frontendProbes, frontendSignals, integrityChanges, isTestPath, onlyAdditions, verifyEvidence } from '../../../plugins/skraft-framework/src/domain/evidence-verification-policy.mjs'
 
 // A v4 log whose every claim checks out against `facts`; each test breaks one claim.
 const file = (content, sha256 = `sha-${content}`) => ({ content, sha256 })
@@ -261,30 +261,37 @@ test('v6 G6 may be not_run, like v5', () => {
   assert.equal(only(run((l) => { v6(l); l.gates[5] = { id: 'G6', label: 'm', status: 'skipped' } })).detail, 'G6 status skipped is not pass, fail or not_applicable (or not_run)')
 })
 
-// v7: `type.description` ids, no architecture/coverage/mutation, no snapshot, evidence kept out of Git.
+// v7: `type.description` ids, verdicts only (no stdout, exit or hash), evidence kept out of Git;
+// commit.convention and test.integrity derived from the DELIVER range.
+const gate7 = (id, extra = {}) => ({ id, label: id, status: 'pass', summary: 'ok', tree: 'ttttttt', ...extra })
 const v7Log = () => ({
   $schema: 'quality-gates-evidence/v7', story: 's', produced_at: 't', tech_adapter: 'quality-gates-dotnet', repo_root_rev: 'aaaaaaa',
-  commits_covered: [{ sha: 'aaaaaaa', subject: 'feat(s): x', files_changed: ['src/a.cs'] }],
-  gates: [
-    passing('test.acceptance', 'g1'), passing('test.unit', 'g2'), passing('build.compile', 'g3'), passing('build.lint', 'g4'),
-    { id: 'test.no-mocks-core', label: 'mocks', status: 'pass', stdout_ref: 'ev/mocks.out', stdout_sha256: 'sha-' },
-    { id: 'commit.convention', label: 'c', status: 'pass' }, { id: 'test.integrity', label: 'c', status: 'pass' },
-  ],
-  test_integrity: { cycles: [{ cycle: 1, test_files: ['t.cs'], red_commit: 'bbbbbbb', green_commit: 'aaaaaaa' }] },
+  gates: ['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core'].map((id) => gate7(id)),
 })
+const signed = (subject) => ({ exists: true, subject, message: `${subject}\n\nSigned-off-by: E <e@x>\n`, files: ['src/a.cs', 't.cs'] })
 const shot = { ref: 'ev/shots/home.png', sha256: 'png-sha' }
 const screenshots = (list = [shot]) => ({ id: 'evidence.screenshots', label: 'Screenshots', status: 'pass', screenshots: list })
+const v7Facts = () => ({
+  files: new Map(),
+  screenshots: new Map([[shot.ref, { sha256: shot.sha256 }]]),
+  frontend: [],
+  evidenceDir: 'tracking/evidence/d/s',
+  git: {
+    head: 'aaaaaaa', headParent: 'bbbbbbb', headFiles: ['src/a.cs'], trackedEvidence: [],
+    commits: new Map([['aaaaaaa', signed('feat(s): x')]]),
+    range: ['aaaaaaa'],
+    tree: 'ttttttt',
+    shows: new Map(),
+    integrity: { guarded: ['t.cs'], changes: [{ sha: 'aaaaaaa', file: 't.cs', before: 'a\n', after: 'a\nb\n' }] },
+  },
+})
 const runV7 = (breakLog = () => {}, breakFacts = () => {}) => {
-  const log = v7Log(); const facts = baseFacts()
-  facts.files = new Map([...facts.files].filter(([ref]) => !['ev/r.cs', 'ev/g.cs', 'ev/red.out', 'ev/red.exit'].includes(ref)))
-  facts.git.trackedEvidence = []
-  facts.screenshots = new Map([[shot.ref, { sha256: shot.sha256 }]])
-  facts.frontend = []
+  const log = v7Log(); const facts = v7Facts()
   breakLog(log); breakFacts(facts)
   return verifyEvidence(log, facts)
 }
 
-test('a v7 log with no committed evidence and no snapshot passes', () => {
+test('a v7 log of verdicts only passes: no stdout, no commit list, no cycle', () => {
   assert.deepEqual(runV7(), { verdict: 'pass', findings: [] })
 })
 
@@ -294,25 +301,63 @@ test('v7 refuses committed evidence and an evidence commit on top of the log', (
   assert.deepEqual(only(runV7(() => {}, evidenceOnlyHead)), { severity: 'inconclusive', code: 'REVISION_STALE', detail: 'repo_root_rev aaaaaaa is not HEAD' })
 })
 
-test('v7 gate set: retired and legacy ids are not v7 gates', () => {
+test('v7 gate set: retired, legacy and derived ids are not recorded gates', () => {
   assert.deepEqual(only(runV7((l) => { l.gates = l.gates.filter((g) => g.id !== 'build.lint') })), { severity: 'inconclusive', code: 'GATE_MISSING', detail: 'build.lint is absent from the log', gate: 'build.lint' })
   for (const id of ['ci.coverage', 'ci.mutation', 'arch.boundaries', 'G5']) {
-    assert.deepEqual(only(runV7((l) => { l.gates.push(passing(id, 'g1')) })), { severity: 'inconclusive', code: 'GATE_UNKNOWN', detail: `${id} is not a v7 gate`, gate: id })
+    assert.deepEqual(only(runV7((l) => { l.gates.push(gate7(id)) })), { severity: 'inconclusive', code: 'GATE_UNKNOWN', detail: `${id} is not a v7 gate`, gate: id })
+  }
+  for (const id of ['commit.convention', 'test.integrity']) {
+    assert.deepEqual(only(runV7((l) => { l.gates.push(gate7(id)) })), { severity: 'inconclusive', code: 'GATE_DERIVED', detail: `${id} is derived from Git by qg-verify, never recorded in the log`, gate: id })
   }
   assert.deepEqual(codes(runV7((l) => { l.gates[1] = { id: 'test.unit', label: 'u', status: 'not_run', rationale: 'x' } })), ['STATUS_INVALID'])
 })
 
-test('v7 named gates keep the stdout, exit and empty-scan checks', () => {
-  assert.deepEqual(only(runV7(() => {}, (f) => { f.files.set('ev/g2.exit', file('1')) })), { severity: 'fail', code: 'EXIT_CONTRADICTS_STATUS', detail: 'test.unit passes but its runner exited 1', gate: 'test.unit' })
-  assert.deepEqual(only(runV7(() => {}, (f) => { f.files.set('ev/mocks.out', file('using Moq;', 'sha-')) })), { severity: 'fail', code: 'MOCKS_FOUND', detail: 'test.no-mocks-core passes but ev/mocks.out lists mocking symbols', gate: 'test.no-mocks-core' })
-  assert.equal(only(runV7((l) => { l.commits_covered[0].subject = 'feat(s): y' })).gate, 'commit.convention')
+test('v7 statuses come from the log alone: a fail fails, no file is read', () => {
+  assert.deepEqual(only(runV7((l) => { l.gates[1].status = 'fail' })), { severity: 'fail', code: 'GATE_FAILED', detail: 'test.unit records status fail', gate: 'test.unit' })
+  assert.equal(only(runV7((l) => { l.gates[0].metrics = { tests_failed: 2 } })).code, 'TESTS_FAILED_WHILE_PASS')
+  assert.equal(only(runV7((l) => { l.gates[4] = { id: 'test.no-mocks-core', label: 'm', status: 'not_applicable' } })).code, 'RATIONALE_MISSING')
+  assert.equal(runV7((l) => { l.gates[4] = { id: 'test.no-mocks-core', label: 'm', status: 'not_applicable', rationale: 'no core' } }).verdict, 'pass')
 })
 
-test('v7 test integrity reads every test file from Git at RED and GREEN', () => {
-  assert.deepEqual(only(runV7(() => {}, (f) => { f.git.shows.set('aaaaaaa:t.cs', 'b\n') })), { severity: 'fail', code: 'TEST_TAMPERED', detail: 'cycle 1 removed or changed a line of t.cs between RED and GREEN', gate: 'test.integrity' })
-  assert.deepEqual(only(runV7(() => {}, (f) => { f.git.shows.delete('bbbbbbb:t.cs') })), { severity: 'inconclusive', code: 'TEST_FILE_UNRESOLVED', detail: 'cycle 1 t.cs does not resolve at its RED and GREEN commits', gate: 'test.integrity' })
-  assert.equal(only(runV7((l) => { l.test_integrity.cycles[0].test_files.push('u.cs') })).code, 'TEST_FILE_UNRESOLVED')
-  assert.equal(only(runV7((l) => { delete l.test_integrity.cycles[0].test_files })).code, 'TEST_FILE_MISSING')
+test('v7: a verdict recorded on another tree than repo_root_rev is stale', () => {
+  assert.deepEqual(only(runV7((l) => { l.gates[2].tree = 'ooooooo' })), { severity: 'inconclusive', code: 'GATE_STALE', detail: 'build.compile ran on another tree than repo_root_rev: run it again', gate: 'build.compile' })
+  assert.equal(only(runV7((l) => { delete l.gates[0].tree })).code, 'GATE_STALE')
+  assert.equal(runV7((l) => { l.gates[4] = { id: 'test.no-mocks-core', label: 'm', status: 'not_applicable', rationale: 'no core' } }, (f) => { f.git.tree = 'ttttttt' }).verdict, 'pass')
+})
+
+test('v7 commit.convention reads every commit of the DELIVER range from Git', () => {
+  assert.deepEqual(only(runV7(() => {}, (f) => { f.git.commits.set('aaaaaaa', { ...signed('wip'), subject: 'wip' }) })), { severity: 'fail', code: 'COMMIT_NOT_CONVENTIONAL', detail: 'aaaaaaa subject "wip" is not type(feature): subject', gate: 'commit.convention' })
+  assert.equal(only(runV7(() => {}, (f) => { f.git.commits.set('aaaaaaa', { ...signed('feat(s): x'), message: 'feat(s): x\n' }) })).code, 'COMMIT_UNSIGNED')
+  assert.equal(only(runV7(() => {}, (f) => { f.git.range = undefined })).code, 'BASE_UNKNOWN')
+  assert.equal(only(runV7(() => {}, (f) => { f.git.range = [] })).code, 'RANGE_EMPTY')
+  assert.equal(only(runV7(() => {}, (f) => { f.git.range = ['ddddddd'] })).code, 'COMMIT_UNREADABLE')
+})
+
+test('v7 test.integrity: a RED test only grows, unless the commit records a PLAN_DEVIATION', () => {
+  const change = (before, after, sha = 'aaaaaaa') => (f) => { f.git.integrity.changes = [{ sha, file: 't.cs', before, after }] }
+  assert.deepEqual(only(runV7(() => {}, change('a\n', 'b\n'))), { severity: 'fail', code: 'TEST_TAMPERED', detail: 'aaaaaaa removed or changed a line of t.cs', gate: 'test.integrity' })
+  assert.equal(only(runV7(() => {}, change('a\n', null))).code, 'TEST_TAMPERED')
+  const deviation = (f) => { change('a\n', 'b\n')(f); f.git.commits.set('aaaaaaa', { ...signed('test(s): stricter'), message: 'test(s): stricter\n\nPLAN_DEVIATION: a → b\nSigned-off-by: E <e@x>\n' }) }
+  assert.deepEqual(runV7(() => {}, deviation), { verdict: 'pass', findings: [{ severity: 'notice', code: 'PLAN_DEVIATION', detail: 'aaaaaaa rewrites t.cs under a PLAN_DEVIATION', gate: 'test.integrity' }] })
+  assert.equal(only(runV7(() => {}, (f) => { f.git.integrity = undefined })).code, 'RED_BASE_UNKNOWN')
+  assert.equal(only(runV7(() => {}, (f) => { f.git.integrity = { guarded: [], changes: [] } })).code, 'RED_TESTS_MISSING')
+  const noAcceptance = (l) => { l.gates[0] = { id: 'test.acceptance', label: 'a', status: 'not_applicable', rationale: 'docs only' } }
+  assert.equal(runV7(noAcceptance, (f) => { f.git.integrity = { guarded: [], changes: [] } }).verdict, 'pass')
+})
+
+test('integrityChanges guards the test files of every test commit, never the stubs', () => {
+  const red = [{ sha: 'r1', subject: 'test(s): acceptance tests S1–S2', files: ['tests/A.Tests.cs', 'src/Stub.cs', 'features/a.feature'] }]
+  const delivered = [
+    { sha: 'g1', subject: 'feat(s): S1', files: ['src/Stub.cs', 'tests/A.Tests.cs'] },
+    { sha: 't2', subject: 'test(s): stronger', files: ['tests/B.test.ts'] },
+    { sha: 'g2', subject: 'fix(s): S2', files: ['tests/B.test.ts', 'features/a.feature'] },
+  ]
+  assert.deepEqual(integrityChanges(red, delivered), {
+    guarded: ['tests/A.Tests.cs', 'features/a.feature'],
+    changes: [{ sha: 'g1', file: 'tests/A.Tests.cs' }, { sha: 'g2', file: 'tests/B.test.ts' }, { sha: 'g2', file: 'features/a.feature' }],
+  })
+  assert.deepEqual(['tests/x.cs', 'src/A.Tests.cs', 'web/a.spec.tsx', 'pkg/test_a.py', 'pkg/a_test.py', 'f.feature', 'e2e/x.ts'].filter(isTestPath).length, 7)
+  assert.deepEqual(['src/a.cs', 'src/latest.py', 'contest/a.ts'].filter(isTestPath), [])
 })
 
 test('v7 frontend story without screenshot fails', () => {

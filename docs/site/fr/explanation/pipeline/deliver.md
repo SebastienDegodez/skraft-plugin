@@ -56,9 +56,12 @@ L'engineer les rend verts groupe par groupe — les scénarios qui fixent une r�
 limites —, un commit vert par groupe, la gate excluant les scénarios encore dus, le dernier
 groupe lançant toute la suite. Un seul dispatch livre tous les scénarios. Le
 pipeline ne lance ni mutation ni couverture : les deux sont des étapes de la CI du projet.
-Le journal d'évidence est écrit une seule fois, après le dernier commit de travail, dans
-`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`, que Git ignore :
-rien n'est commité, aucun snapshot n'est pris.
+Le journal d'évidence est écrit une seule fois, après le dernier commit de travail, par les
+scripts de l'adaptateur de la stack, dans
+`.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/`, que Git ignore : il
+contient les verdicts des gates et, pour une story frontend, les captures d'écran — rien
+d'autre. Rien n'est commité, aucun snapshot n'est pris : `qg-verify` lit les commits et les
+tests RED dans Git.
 
 Le reviewer prépare `diff-{story}.patch` et `files-{story}.txt` une seule fois, puis donne
 ces chemins aux lentilles. `quality-gates` reçoit aussi le plan de tests, `test-integrity`

@@ -41,7 +41,7 @@ Load before any review work. If missing, announce `[SKILL MISSING] {name}` and c
 - Approved feature scope and linked issue when known; never infer them from a producer's commit subject.
 - The patch and file list since the DELIVER base: `.copilot-tracking/skraft-plans/{projectSlug}/reviews/{date}/diff-{story}.patch` and `files-{story}.txt`, plus the change log. Read the patch; open a whole file only when the patch lacks the context a finding needs. Never modify anything.
 - `test-plan-{story}.md`: the reference for every AC-to-test check in section 3. A planned test the patch does not contain is a defect unless the execution journal, evidence log or a commit message records a `PLAN_DEVIATION` for it.
-- Outcome data and frontend manifest when supplied: load `qa-reporting` before checking data; use exact returned repository-root-relative refs, not current-date paths.
+- Outcome data when supplied (the screenshots are those of the evidence log's `evidence.screenshots`): load `qa-reporting` before checking data; use exact returned repository-root-relative refs, not current-date paths.
 
 You DO NOT receive the cold-reader's output, nor do you receive any other lens's findings.
 
@@ -56,16 +56,18 @@ screenshot, re-read a test file at a commit or re-derive a Git fact yourself: `q
 Report each finding as a defect: its `code`, `gate` and `detail` verbatim; severity `blocker` for
 `TEST_TAMPERED` and `RED_NEVER_FAILED`, `high` for any other `fail` finding (`SCREENSHOTS_MISSING`
 and `EVIDENCE_COMMITTED` included), `medium` for an
-`inconclusive` one the engineer can fix (missing, malformed or altered evidence).
+`inconclusive` one the engineer can fix (missing, malformed or stale evidence: `GATE_STALE` means a
+gate ran before the last code change). A `notice` is no defect: a `PLAN_DEVIATION` notice is
+judged by the test-integrity lens.
 
-Environment exception: when an `inconclusive` finding comes from the environment — the cited stdout
-shows the tool, SDK, network or service failing to start, install or connect, not a test or build
-result — report it `low` with a `description` that starts `environment:` and names the cause
+Environment exception: when an `inconclusive` finding comes from the environment — the gate's
+`summary` in the evidence log shows the tool, SDK, network or service failing to start, install or
+connect, not a test or build result — report it `low` with a `description` that starts `environment:` and names the cause
 and the command to re-run. Keep the lens verdict `inconclusive`.
 
 ### 2. Commit policy beyond syntax (`commit.convention`)
 
-`qg-verify` checks each covered commit's `type(feature): subject` and `Signed-off-by` trailer. From
+`qg-verify` checks each commit since the DELIVER base for `type(feature): subject` and the `Signed-off-by` trailer. From
 the commit messages file, check what it cannot: the feature scope is the approved one; for a known
 issue the final body line is `Refs: #N` for intermediate work, `Closes #N` only on the commit that
 genuinely finishes the whole issue with every required gate passing; unknown issue: no issue line.

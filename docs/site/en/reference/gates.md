@@ -159,9 +159,10 @@ Gherkin scenarios, the test plan and the implementation plan. Status: active, id
 
 ## DELIVER — evidence gates (schema v7)
 
-Producer: `software-engineer`, which writes `qg-{story}.json` once, after the story's last
-work commit. Verifier: `qg-verify`, which re-resolves every claim against the files and the
-Git tree — nobody re-runs a gate. The producer runs it before handing over, the
+Producer: the stack adapter's scripts, run by `software-engineer` once, after the story's last
+work commit: each records a gate's verdict in `qg-{story}.json` from its command's exit code —
+no agent types a status. Verifier: `qg-verify`, which checks the log and derives
+`commit.convention` and `test.integrity` from Git — nobody re-runs a gate. The producer runs it before handing over, the
 `software-engineer-reviewer` runs it again, and `quality-gates-lens` reports its result.
 Schema: `quality-gates-evidence/v7`. Every gate below blocks.
 
@@ -171,9 +172,9 @@ Schema: `quality-gates-evidence/v7`. Every gate below blocks.
 | `test.unit` | G2 | All unit tests pass | The full unit suite is green; on .NET it includes the architecture tests. | active |
 | `build.compile` | G3 | Build passes | Compilation / static type-check succeeded. | active |
 | `build.lint` | G4 | Static analysis pass | Linter / analyzer reported no blocking issue; carries the boundary rules of the stack (ESLint `boundaries/*`, Python `import-linter`). | active |
-| `test.no-mocks-core` | G7 | No mocks in Domain/Application core | The adapter's scan of the Domain/Application projects and their unit tests printed nothing. | active |
-| `commit.convention` | G8 | Conventional commit policy | Each covered commit's full Git message satisfies feature scope, optional issue reference and sign-off. | active |
-| `test.integrity` | G9 | No test tampering (RED→GREEN integrity) | For every cycle, each test file changed only by ADDITION between its RED and GREEN commits, read with `git show`. | active |
+| `test.no-mocks-core` | G7 | No mocks in Domain/Application core | The adapter's scan of the Domain/Application projects and their unit tests found nothing. | active |
+| `commit.convention` | G8 | Conventional commit policy | Every commit since the DELIVER base, read from Git: full message with feature scope, optional issue reference and sign-off. | active, derived by `qg-verify` (never in the log) |
+| `test.integrity` | G9 | No test tampering (RED→GREEN integrity) | Every test file a `test` commit holds since the DISTILL base only grows afterwards (`git show`), unless the commit records `PLAN_DEVIATION:`. | active, derived by `qg-verify` (never in the log) |
 | `evidence.screenshots` | — | Frontend screenshots captured | The story's frontend outcome is shown by at least one hashed screenshot. | new in v7, required for a frontend story |
 
 ### Retired gates
@@ -186,8 +187,9 @@ Schema: `quality-gates-evidence/v7`. Every gate below blocks.
 | ~~G10~~ | — | Removed in evidence v6: the scenario's RED `test` commit is the proof, no RED run is captured. | — | — |
 
 A v7 log never carries `arch.boundaries`, `ci.coverage`, `ci.mutation` nor any `G<N>` id:
-`qg-verify` reports an unknown id as `inconclusive` (`GATE_UNKNOWN`). v1–v6 logs still verify
-with their `G<N>` ids, snapshots and evidence-only commit.
+`qg-verify` reports an unknown id as `inconclusive` (`GATE_UNKNOWN`), and a derived id recorded
+in the log too (`GATE_DERIVED`). v1–v6 logs still verify with their `G<N>` ids, captures,
+snapshots and evidence-only commit.
 
 The 100% line coverage on Domain and Application and the mutation bar remain the craft rule
 of `skraft-quality-bar`; they are executed by the project's CI, never by the pipeline.
@@ -197,14 +199,16 @@ of `skraft-quality-bar`; they are executed by the project's CI, never by the pip
 | Item | Value |
 | --- | --- |
 | Directory | `.copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/` — one per story |
-| Content | `qg-{story}.json`, every capture (`.stdout`, `.exit`, `.stdout.sha256`) and `screenshots/` |
+| Content | `qg-{story}.json` (verdicts only) and, for a frontend story, `screenshots/` — nothing else: no `.stdout`, `.exit` or hash file |
+| Kept for the QA | the screenshots and the test plan (`details/{date}/test-plan-{story}.md`) |
 | Consumer `.gitignore` | `.copilot-tracking/skraft-plans/*/evidence/` |
 | Committed | Nothing: no evidence commit, no snapshot. `repo_root_rev` is `HEAD`. |
+| `GATE_STALE` | `inconclusive`: a verdict was recorded on another tree than `repo_root_rev`'s — run the gate again |
 | `qg-verify` exit | `0` pass, `1` fail, `2` inconclusive |
 | `EVIDENCE_COMMITTED` | `fail`: a file of the evidence directory is tracked by Git |
 | `SCREENSHOTS_MISSING` | `fail`: a frontend story records no screenshot |
 
-A story is **frontend** when its covered commits touch a `.feature` file holding a `@visual`
+A story is **frontend** when a commit since the DELIVER base touches a `.feature` file holding a `@visual`
 scenario, a path under `tests/e2e/`, a `package.json` declaring `react`, or a
 `playwright.config.*` file.
 
@@ -219,8 +223,8 @@ or records it `not_applicable` with a rationale.
 - **Issue:** for a known issue, end the body with `Refs: #N` for intermediate work or
   `Closes #N` only when the whole issue is genuinely finished and all required gates pass.
   Omit the issue line when unknown.
-- **Verification:** `qg-verify` checks the syntax, the sign-off and that the declared subject
-  is the actual one; `quality-gates-lens` checks the feature scope and the issue line.
+- **Verification:** `qg-verify` reads every commit since the DELIVER base from Git and checks
+  the syntax and the sign-off; `quality-gates-lens` checks the feature scope and the issue line.
 
 ---
 
@@ -297,8 +301,8 @@ On DELIVER evidence (`qg-verify`), the rule is flat:
 | Finding | Verdict |
 | --- | --- |
 | ≥ 1 gate `fail`, a violated commit policy, a RED→GREEN line removed, `EVIDENCE_COMMITTED` or `SCREENSHOTS_MISSING` | `fail` |
-| Log missing or malformed, unknown gate id, referenced file unreachable, sha256 mismatch, `repo_root_rev` not `HEAD` | `inconclusive` |
-| Every applicable gate is `pass` and every reference resolves | `pass` |
+| Log missing or malformed, unknown or derived gate id, screenshot unreachable or sha256 mismatch, a verdict from another tree (`GATE_STALE`), `repo_root_rev` not `HEAD`, DELIVER or DISTILL base unknown | `inconclusive` |
+| Every applicable gate is `pass` on the tree of `HEAD` and Git confirms the commits and the RED tests | `pass` |
 
 On the DELIVER review, any `blocker`, `high` or `medium` finding, or any `inconclusive` lens,
 yields `NEEDS_REWORK`; `low` only or all pass yields `APPROVED`. `inconclusive` is never

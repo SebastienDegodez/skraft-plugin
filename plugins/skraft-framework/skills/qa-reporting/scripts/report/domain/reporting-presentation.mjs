@@ -1,7 +1,8 @@
 // Fixed identifiers from quality-gates-evidence-contract; no score policy.
 const legacyGateIds = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11']
-// v7 names its gates `type.description`; screenshots are recorded for frontend stories only.
-const v7GateIds = ['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core', 'commit.convention', 'test.integrity']
+// v7 names its gates `type.description` and records only those a script ran (screenshots for
+// frontend stories only); commit.convention and test.integrity are derived from Git by qg-verify.
+const v7GateIds = ['test.acceptance', 'test.unit', 'build.compile', 'build.lint', 'test.no-mocks-core']
 const SCREENSHOTS = 'evidence.screenshots'
 const MUTATION_SCOPES = ['core', 'boundary']
 // A missing or unreadable log is reported against the current contract (v7).
@@ -84,12 +85,15 @@ export function parseQualityEvidence(raw, data) {
     return { error: 'Quality evidence revision or story mismatch' }
   }
   if (!text(quality.produced_at) || !Number.isFinite(Date.parse(quality.produced_at))
-    || !text(quality.producer) || !text(quality.tech_adapter)
-    || !Array.isArray(quality.gates) || !Array.isArray(quality.commits_covered)
+    || !text(quality.producer) || !text(quality.tech_adapter) || !Array.isArray(quality.gates)) {
+    return { error: 'Malformed quality evidence fields' }
+  }
+  // v7 lists no commit and no cycle: qg-verify reads them from Git.
+  if (!named(quality) && (!Array.isArray(quality.commits_covered)
     || !quality.commits_covered.every((commit) => object(commit) && revision(commit.sha)
       && text(commit.subject) && Array.isArray(commit.files_changed) && commit.files_changed.every(text))
     || !object(quality.test_integrity) || !Array.isArray(quality.test_integrity.cycles)
-    || !quality.test_integrity.cycles.every(object)) {
+    || !quality.test_integrity.cycles.every(object))) {
     return { error: 'Malformed quality evidence fields' }
   }
   const ids = new Set()
@@ -103,7 +107,8 @@ export function parseQualityEvidence(raw, data) {
 }
 
 export function qualityProofs(quality, qualityEvidenceRef) {
-  if (!quality) return []
+  // v7 keeps no stdout or exit file: a script wrote each status, qg-verify checked the log.
+  if (!quality || named(quality)) return []
   const refs = quality.gates.flatMap((gate) => [gate.stdout_ref, gate.exit_code_ref])
   refs.push(...quality.test_integrity.cycles.flatMap((cycle) => [cycle.red_stdout_ref, cycle.red_exit_code_ref]))
   return [...new Set(refs.map((ref) => resolveQualityReference(ref, qualityEvidenceRef)).filter(Boolean))]
@@ -137,6 +142,11 @@ function gateStatus(gate, quality, proofs, qualityRef) {
   }
   if (['G8', 'G9', 'commit.convention', 'test.integrity'].includes(gate.id)) return unverified('Git tree verification belongs to the reviewer')
   if (gate.id === SCREENSHOTS) return unverified('Screenshot hashes are verified by qg-verify')
+  if (named(quality)) {
+    if (!text(gate.command_executed)) return unverified('Missing runner command')
+    if (gate.status === 'fail' || gate.metrics?.tests_failed > 0) return { status: 'fail', reason: text(gate.summary) ? gate.summary : 'Declared failure or failing test metrics' }
+    return { status: 'pass', reason: text(gate.summary) ? gate.summary : 'Recorded by the adapter script' }
+  }
   let result
   if (gate.id === 'G10') {
     const cycles = quality.test_integrity.cycles

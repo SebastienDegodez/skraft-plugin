@@ -458,7 +458,7 @@
         "Source code commits (conventional commits)",
         ".copilot-tracking/skraft-plans/{projectSlug}/changes/{date}/change-log.md",
         ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/qg-{story}.json (quality-gates evidence log, Git-ignored, never committed)",
-        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (captured stdout, exit codes and screenshots the evidence log references, Git-ignored, never committed)"
+        ".copilot-tracking/skraft-plans/{projectSlug}/evidence/{date}/{story}/* (the screenshots of a frontend story, Git-ignored, never committed)"
       ]
     },
     "Skraft - Solution Architect Reviewer": {
