@@ -16,6 +16,7 @@ import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-conf
 import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { unsettledConsents } from '../../domain/decisions/consents.mjs'
 import { draftInCi } from '../../application/architecture/ci-mode.mjs'
+import { createCommentAnswer } from '../../application/decisions/comment-answer-usecase.mjs'
 
 export const runStandalone = async ([operation, encoded], services, console) => {
   try {
@@ -72,6 +73,8 @@ const execute = (operation, args, deps, services, log) =>
 const dispatchSimple = (operation, args, deps, services) => {
   if (operation === 'setup') return setup(deps, services, args)
   if (operation === 'answer') return createDecide(deps).decide(args)
+  // A reply a CI workflow read in the draft; ci-reply.mjs alone asks it, no MCP tool offers it (#662).
+  if (operation === 'reply') return createCommentAnswer(deps).answer(args)
   if (operation === 'precheck') return createPrecheck(deps).precheck()
   if (operation === 'status') return createObserve(deps).view()
   if (operation === 'draft') return createDraftPublication(deps).publish()

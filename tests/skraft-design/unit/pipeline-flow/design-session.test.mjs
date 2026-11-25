@@ -10,6 +10,7 @@ import { createDraftPublication } from '../../../../plugins/skraft-design/engine
 import { createObserve } from '../../../../plugins/skraft-design/engine/application/pipeline/observe-usecase.mjs'
 import { openActiveRun } from '../../../../plugins/skraft-design/engine/application/pipeline/active-run.mjs'
 import { draftInCi } from '../../../../plugins/skraft-design/engine/application/architecture/ci-mode.mjs'
+import { createCommentAnswer } from '../../../../plugins/skraft-design/engine/application/decisions/comment-answer-usecase.mjs'
 
 const story = (number, state = 'open') => ({ number, title: 'Card checkout', body: 'AC-1: the receipt is visible.', state, labels: [], story: true, forge: 'github', repository: 'shop/checkout' })
 const session = (stories = [story(42)], slug = 'issue-42', options = {}) => {
@@ -415,4 +416,21 @@ test('an interactive run publishes no draft while it waits, and a mode the engin
   const refused = await session([story(42)], 'issue-42').run.start({ issue: 42, mode: 'nightly' })
   assert.equal(refused.status, 'refused')
   assert.equal(refused.code, 'invalid-mode')
+})
+
+test('a reply in the draft from someone with write access answers every open question in their words or options; anyone else, an unknown key or a comment that is no reply records nothing', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  const { question } = await draftInCi(deps, await createRunPipeline(deps).run())
+  host.codeHost.permissions = { maintainer: 'maintain', reader: 'read' }
+  const comment = (author, reply) => createCommentAnswer(deps).answer({ author, body: `/skraft-answer ${JSON.stringify(reply)}` })
+  const reader = await comment('reader', { key: question.key, answer: { Q1: 'A', Q2: 'KEEP' } })
+  assert.equal(reader.code, 'not-a-writer', reader.reason)
+  assert.equal((await comment('maintainer', { key: 'architecture-questions-9-nothing', answer: { Q1: 'A', Q2: 'KEEP' } })).ok, false)
+  assert.equal((await comment('maintainer', { key: question.key, answer: { Q1: 'Z', Q2: 'KEEP' } })).ok, true)
+  assert.equal((await createCommentAnswer(deps).answer({ author: 'maintainer', body: 'Looks good to me' })).code, 'not-an-answer')
+  const answered = host.events().filter(({ type, key }) => type === 'question.answered' && key === question.key)
+  assert.deepEqual(answered.map(({ by }) => by), ['pr-comment'])
+  assert.match(answered[0].answer, /Q1 \(#42 AC-1\): Z/)
 })

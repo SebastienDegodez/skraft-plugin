@@ -80,6 +80,7 @@ const whereTo = (commandRunner) => ({
   unavailable: () => unavailable(commandRunner),
   remotes: async () => lines((await run(commandRunner, ['git', 'remote'])).stdout),
   repository: () => repositoryOf(commandRunner),
+  permissionOf: (login) => permissionOf(commandRunner, login),
   currentBranch: () => currentBranch(commandRunner),
   defaultBranch: () => defaultBranch(commandRunner),
 })
@@ -212,6 +213,18 @@ const lines = (text) => text.split(/\r?\n/).map((line) => line.trim()).filter((l
 const currentBranch = async (commandRunner) => {
   const result = await run(commandRunner, ['git', 'symbolic-ref', '--quiet', '--short', 'HEAD'])
   return result.stdout.trim() || null
+}
+
+/**
+ * A person's access to the repository as GitHub answers it (`admin`, `maintain`, `write`,
+ * `triage`, `read`, `none`); null when gh cannot tell or the login is no login.
+ * @param {CommandRunner} commandRunner @param {string} login
+ */
+const permissionOf = async (commandRunner, login) => {
+  const repository = typeof login === 'string' && LOGIN.test(login) ? await repositoryOf(commandRunner) : null
+  if (repository === null) return null
+  const answer = await run(commandRunner, ['gh', 'api', `--hostname=${repository.host}`, `repos/${repository.repository}/collaborators/${login}/permission`, '--jq', '.permission'])
+  return succeeded(answer) ? answer.stdout.trim() || null : null
 }
 
 /** The repository's default branch as the forge says it; null when gh cannot tell. @param {CommandRunner} commandRunner */

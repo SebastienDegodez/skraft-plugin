@@ -240,9 +240,10 @@ const asked = (run, event) => {
 /**
  * Who may answer a question: a host's dialog or a button a person pressed in its pane (`host`), a
  * typed `skraft decide` (`decide`), a person confirming in Copilot's dialog (`host-confirmed`), a
- * person confirming at an interactive terminal prompt (`cli-tty`). Decide records no other provenance.
+ * person confirming at an interactive terminal prompt (`cli-tty`), a reply in the draft pull request
+ * from someone the forge says has write access (`pr-comment`). Decide records no other provenance.
  */
-export const HUMAN_PROVENANCES = Object.freeze(['host', 'decide', 'host-confirmed', 'cli-tty'])
+export const HUMAN_PROVENANCES = Object.freeze(['host', 'decide', 'host-confirmed', 'cli-tty', 'pr-comment'])
 
 /**
  * An environment question answered RETRY needs nothing more: the open step runs again. An

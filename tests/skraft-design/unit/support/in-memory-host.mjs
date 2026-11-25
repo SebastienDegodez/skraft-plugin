@@ -692,6 +692,8 @@ export class InMemoryCodeHost {
    *   its client sends a JSON request file (az), false unless given.
    */
   constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [], listBodyLimit = Number.POSITIVE_INFINITY, attachesFiles = true, fileUrl, screenshotsBlocked = null, unattached = [] } = {}) {
+    /** each login's access to the repository, as the forge answers it; none for anyone it does not list */
+    this.permissions = {}
     /** whether the forge's client uploads the body's images (gh --attach); the files it fails to upload, by path */
     this.attachesFiles = attachesFiles
     this.unattached = new Set(unattached)
@@ -763,6 +765,7 @@ export class InMemoryCodeHost {
   }
   async remotes() { return this.remoteNames }
   async repository() { return this.named }
+  async permissionOf(login) { return this.permissions[login] ?? 'none' }
   async currentBranch() { return this.branch }
   async defaultBranch() { return this.default }
   async push(branch) {

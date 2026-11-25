@@ -96,6 +96,8 @@ const comments = (commandRunner) => ({
  * file URL skraft does not write for Azure DevOps. @param {CommandRunner} commandRunner
  */
 const whereTo = (commandRunner) => ({
+  // Who may answer a draft's questions is read from GitHub only: Azure DevOps answers no one yet (#662).
+  permissionOf: async () => null,
   unavailable: () => unavailable(commandRunner),
   remotes: async () => lines((await run(commandRunner, ['git', 'remote'])).stdout),
   repository: async () => null,
