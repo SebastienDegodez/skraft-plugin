@@ -342,7 +342,7 @@ The tracking folder `.copilot-tracking/skraft-plans/checkout/` now holds:
 | `events.jsonl` | the journal: one signed, chained event per fact |
 | `WORKFLOW.md` | the workflow graph with each step done |
 | `run-report.md` | the table `skraft report` prints (time, cost and retries of each step), then each commit the engine checked with its verdict |
-| `qa-report.md` | the test plan, the quality evidence, the red commits, each review's verdict |
+| `qa-report.md` | the test plan, the quality evidence, each review's verdict |
 | `pull-request.md` | the pull request description, ready to publish |
 | `logs/` | the designer's run of the acceptance tests, the signed trace of the engineer's gate runs (`logs/runs/`), and what refused commits printed |
 | `reviews/` | what each review pass read, and its `verdict.yaml` |

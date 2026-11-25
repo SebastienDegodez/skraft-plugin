@@ -11,9 +11,7 @@ const QA = 'qa-report.md'
 const REPORT = 'StrykerOutput/reports/mutation-report.json'
 const TEST_PLAN = 'details/2026-10-11/test-plan-checkout.md'
 
-/** The sha of the red commit whose subject is given, short. @param {ReturnType<typeof scripted>} host @param {string} subject */
-const shaOf = (host, subject) => host.events().filter((event) => event.type === 'commits.checked').flatMap((event) => event.commits).find((commit) => commit.subject === subject).sha.slice(0, 7)
-test('before DISTILL the QA report has no test plan, no scenario, no red commit and no gate; a run blocked by an agent frames its reason', async () => {
+test('before DISTILL the QA report has no test plan, no scenario and no gate; a run blocked by an agent frames its reason', async () => {
   const host = scripted({ answers: [{ answer: 'STOP' }] }, (it) => [agent({ result: { status: 'blocked', summary: 'Fixes #12 | ask @team <b>now</b>' } })(it)])
 
   await host.start()
@@ -40,10 +38,6 @@ test('before DISTILL the QA report has no test plan, no scenario, no red commit 
     '',
     'No traced run has been checked yet.',
     '',
-    '## TDD red commits',
-    '',
-    'No red commit yet.',
-    '',
     '## Reviews',
     '',
     'No review has run yet.',
@@ -51,15 +45,15 @@ test('before DISTILL the QA report has no test plan, no scenario, no red commit 
   ].join('\n'))
 })
 
-test('a red commit of a check the machine could not finish is no TDD red commit of the QA report while the run waits for a human', async () => {
+test('the QA report holds no red commit: the TDD loop proves itself to the developer, in the pull request', async () => {
   const host = scripted({}, (it) => [agent()(it), agent()(it), agent({ work: ({ git }) => { git.commit('test(checkout): acceptance', ['tests/AcceptanceTests.cs']); git.changedFiles = async () => null } })(it)])
 
-  const outcome = await host.start()
+  await host.start()
 
-  assert.deepEqual([outcome.status, outcome.code], ['waiting', 'environment'])
   const qa = await host.tracking.read(SLUG, QA)
-  assert.ok(qa.includes('\n## TDD red commits\n\nNo red commit yet.\n'), qa)
+  assert.doesNotMatch(qa, /red commit/i)
 })
+
 test('a review a lens the host could not start left open is in progress, with what the other lenses said', async () => {
   const host = scripted({}, (it) => [agent()(it), agent()(it)])
   host.agentRunner.review = lenses({ fitness: [{ ok: false, text: '', unavailable: true, error: 'fitness-lens is not installed' }] })
