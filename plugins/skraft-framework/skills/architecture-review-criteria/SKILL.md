@@ -51,9 +51,9 @@ Evaluates: diagrams + contracts + stories + ADRs
 
 | Gate | Definition | Pass condition | Severity |
 |---|---|---|---|
-| G7 | Every story from DISCUSS maps to at least one trigger (Command or Query) in the event model. Pure-read stories use a Query; state-changing stories use a Command. | All story IDs from stories-{milestone}.md appear in at least one event model slice as a Command or Query. | HIGH |
-| G8 | Every **Command** has at least one corresponding domain event. Queries are exempt from this gate. No dangling commands. | Zero Commands without a corresponding domain event. Queries do not need events. | HIGH |
-| G9 | No aggregate, bounded context, Event Sourcing adoption, or Saga is introduced without a traceable story justification. | Zero unjustified architectural elements. Every element traces back to a story ID. | MEDIUM |
+| G7 | Every story from DISCUSS maps to at least one trigger (Command or Query) in the event model. Pure-read stories use a Query; state-changing stories use a Command. A trigger enters from outside the use case (a user, another context, the clock, the application start): a step inside one use case is no trigger and needs no Command or Query. | All story IDs from stories-{milestone}.md appear in at least one event model slice as a Command or Query. | HIGH |
+| G8 | Every **Command** has at least one domain event for its successful outcome. Queries are exempt from this gate. No dangling commands. A rejection that changes no state is an error result of the Command, not a domain event; a rejection the business records or reacts to is a domain event. Neither is required. | Zero Commands without a domain event for their successful outcome. Queries do not need events. | HIGH |
+| G9 | No aggregate, repository, domain event, bounded context, Event Sourcing adoption, or Saga is introduced without a traceable story justification. | Zero unjustified architectural elements. Every element traces back to a story ID. | MEDIUM |
 | G11 | Every ADR adopting a complexity-adding pattern from `{CQRS, Event Sourcing, Saga, eventual consistency, micro-service split, ACL}` cites at least one admissible force in its Context AND has a `"do without the pattern"` row in `Alternatives Rejected`. `"Consistency with existing code"` alone is not admissible. | Admissible force present + `"do without"` alternative evaluated for every complexity-adding ADR. | HIGH |
 | G15 | Every `Proposed` ADR of the pass under review passes `adr-eligibility-gate` (Q1–Q5): none restates the baseline, a choice an existing doc or `Accepted` ADR settles, a context relationship, a choice confined to one bounded context, a future need or the Command/Query classification. Each lists its ranked priorities before its options and judges every option against them. | Zero ADRs failing the gate; the finding cites the deciding question and its fix is deleting the ADR and writing the choice in place. | HIGH |
 | G17 | Triggered only when the stories involve authentication or authorization, personal data, or an externally exposed interface: the contracts name who may invoke each exposed Command and Query, mark personal-data fields, validate external input at the boundary, and carry no secret. | All four hold, or the trigger is absent (`not applicable`). | HIGH |
@@ -117,7 +117,9 @@ Apply during G9 evaluation:
 | Element | Question to ask |
 |---|---|
 | New bounded context | Which story requires this context to be separate? |
-| New aggregate | Which invariant does this aggregate enforce? Which story produces that invariant? |
+| New aggregate | Which invariant must hold across successive or concurrent changes of one identity, and which story produces them? An invariant checked once at construction belongs to a self-validating value object or a first-class collection. |
+| Repository | Which aggregate does it persist? A source read once, at start, sits behind an Application loading interface. |
+| Domain event | Which story observes it, or which business fact does it record? A rejection that changes no state is an error result. |
 | Event Sourcing | Which story requires audit trail or temporal queries? |
 | Saga | Which cross-aggregate workflow spans multiple stories? |
 | ACL | Which conflicting model in the upstream context makes translation necessary, OR is the downstream a Core subdomain protecting its Ubiquitous Language? |

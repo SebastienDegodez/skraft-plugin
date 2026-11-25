@@ -118,7 +118,7 @@ Phase 7 honours this plan. `docs/adr/` is append-only: never edit an ADR an earl
 
 ### Phase 4: EVENT MODELING
 
-For each story: the **trigger** is a **Command** (state-changing, e.g. `CheckEligibility`) or a **Query** (pure read, e.g. `GetEligibilityResult`); the **state change** a Command records is an **Event** (past tense, e.g. `EligibilityChecked`) — Queries raise none; the **visible outcome** is a **Read Model** (e.g. `EligibilityResult`). Group them into vertical **slices** (one slice = minimum deliverable value). Write `event-model-{story}.md` with a mermaid timeline:
+For each story: the **trigger** is a **Command** (state-changing, e.g. `CheckEligibility`) or a **Query** (pure read, e.g. `GetEligibilityResult`); the **state change** a Command records is an **Event** (past tense, e.g. `EligibilityChecked`) — Queries raise none; the **visible outcome** is a **Read Model** (e.g. `EligibilityResult`). A trigger enters from outside the use case (a user, another context, the clock, the application start): a step inside one use case is neither a Command nor a Query. Model an Event only for a fact a story observes or the business records: a rejection that changes no state is an error result of the Command, not an Event. Group them into vertical **slices** (one slice = minimum deliverable value). Write `event-model-{story}.md` with a mermaid timeline:
 
 ```
 timeline
@@ -145,7 +145,7 @@ graph LR
 
 ### Phase 6: DDD TACTICAL DESIGN
 
-For each bounded context define **Aggregates** (invariants, consistency boundary, root), **Value Objects** (immutable, equal by value, self-validating), **Domain Events** (past tense, raised by the root, minimal payload) and one **Repository interface** per aggregate. Choose the interface's layer per case — **Domain** when the repository returns the aggregate and guards its invariants, **Application** for a CRUD entity or a read-oriented contract, **NEVER Infrastructure** (it only implements). A loaded `clean-architecture-<language>` skill decides placement for its stack. Record the layer in the contracts, never in an ADR, and apply it consistently across diagrams and contracts.
+For each bounded context define **Aggregates** (invariants, consistency boundary, root), **Value Objects** (immutable, equal by value, self-validating), **Domain Events** (past tense, raised by the root, minimal payload) and one **Repository interface** per aggregate. An aggregate only for an invariant that must hold across successive or concurrent changes of one identity: an invariant checked once at construction goes into a self-validating value object or a first-class collection, a rule across values into a policy or a domain service; zero aggregates is a valid design. A repository only for an aggregate: a source read once (configuration, a catalog loaded at start) sits behind an Application loading interface. Choose the interface's layer per case — **Domain** when the repository returns the aggregate and guards its invariants, **Application** for a CRUD entity or a read-oriented contract, **NEVER Infrastructure** (it only implements). A loaded `clean-architecture-<language>` skill decides placement for its stack. Record the layer in the contracts, never in an ADR, and apply it consistently across diagrams and contracts.
 
 Write `diagrams-{story}.md`, one mermaid component diagram per bounded context. Every structural node carries exactly one label from `Command | Query | Aggregate | Aggregate Root | Entity | Value Object | Domain Service | Domain Event | Repository | Read Model`:
 
