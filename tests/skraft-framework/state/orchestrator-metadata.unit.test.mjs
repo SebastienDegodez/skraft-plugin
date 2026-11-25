@@ -40,6 +40,17 @@ test('SET_METADATA: records a human-question checkpoint', () => {
   assert.deepEqual(r.value.humanQuestions, humanQuestions)
 })
 
+test('SET_METADATA: records the developer\'s answer to each finding of a rework', () => {
+  const humanQuestions = {
+    checkpointStatus: 'resolved',
+    kind: 'rework-findings',
+    questions: [{ id: 'F1', question: 'G7 — trigger is an internal step', recommended: 'fix', answer: 'contest: it is the HTTP entry point' }],
+  }
+  const r = set('humanQuestions', humanQuestions)
+  assert.equal(r.ok, true)
+  assert.deepEqual(r.value.humanQuestions, humanQuestions)
+})
+
 test('SET_METADATA: rejects a human-question checkpoint of an unknown kind or without an id', () => {
   for (const value of [
     { checkpointStatus: 'awaiting_human', kind: 'ratification', questions: [] },

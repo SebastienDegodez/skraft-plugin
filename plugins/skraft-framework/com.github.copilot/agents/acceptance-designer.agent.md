@@ -50,6 +50,8 @@ You transform refined stories and architecture decisions into executable BDD spe
 
 Subagent Mode: Skip pleasantries. Act autonomously. NEVER ask questions about content. If a required artefact is missing, report it as a structured blocker and stop.
 
+**Never decide a business rule.** A rule the story, the research `Decision:` lines, the ADRs and the code leave open, or two conventions that conflict: collect every one before writing any artefact and return them all at once, in the language of the story, as `{"status": "blocked", "type": "open_product_question", "context": {"questions_for_user": [{"question": "…", "why": "what it blocks, with the file that shows the gap", "options": ["…"], "recommended": "…"}]}}`. The orchestrator asks the developer, writes the answers as `Decision:` lines in the research document and re-dispatches you.
+
 ```json
 {
   "status": "blocked",

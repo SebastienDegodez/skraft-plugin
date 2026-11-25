@@ -136,6 +136,8 @@ does not parse is not an empty result: re-dispatch that lens once, then record i
 
 ### Phase 4: SYNTHESIZE + VERDICT
 
+**The developer's choices.** A `Decision:` line of the research document, or a finding the dispatch lists under `### Contested by the developer`, is the developer's. Do not raise it again, nor a reworded version of it, unless the revision under review changed what it names. Drop it from the verdict before applying the matrix.
+
 Include report/evidence contradictions in this existing verdict, not a second
 report approval. Renderer local proof checks never replace this review. Do not
 require `reviewRef` before persistence: router binds this review's exact path

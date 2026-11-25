@@ -152,6 +152,8 @@ const SAMPLES = [
   { currentPhase: 'DESIGN', humanQuestions: { checkpointStatus: 'awaiting_human', kind: 'ratification', questions: [] } },
   { currentPhase: 'DESIGN', humanQuestions: { checkpointStatus: 'resolved', questions: [{ id: 'C1' }] } },
   { currentPhase: 'DESIGN', humanQuestions: { checkpointStatus: 'resolved' } },
+  { currentPhase: 'DELIVER', humanQuestions: { checkpointStatus: 'resolved', kind: 'rework-findings', questions: [{ id: 'F1', question: 'q', recommended: 'fix', answer: 'contest: reason' }] } },
+  { currentPhase: 'DELIVER', humanQuestions: { checkpointStatus: 'resolved', kind: 'rework-findings', questions: [{ id: 'F1', question: 'q', answer: 3 }] } },
 ]
 
 test('the runtime validator and ajv agree on every sample', () => {
