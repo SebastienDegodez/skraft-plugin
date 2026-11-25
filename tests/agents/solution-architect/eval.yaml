@@ -62,6 +62,7 @@ stimuli:
         - 'git config user.name "SKRAFT Evaluation"'
         - 'git add .'
         - 'git commit --quiet -m "test: refined loyalty story"'
+        - 'git tag eval-baseline'
     graders:
       - type: completed
       - type: skill-invocation
@@ -90,7 +91,9 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - 'files=$(git ls-files --others --exclude-standard -- "docs/adr/adr-*.md"); [ -z "$files" ] || ! grep -qiE "command ?/ ?query classification|classification of (every|each|the) trigger|\bCQS\b" $files'
+            # ADRs added or changed since eval-baseline, committed, staged or untracked. Only the title and the
+            # Decision section count. A CQRS-titled ADR may name the CQS baseline it departs from.
+            - 'for f in $( { git diff --name-only --diff-filter=AM eval-baseline -- "docs/adr/adr-*.md"; git ls-files --others --exclude-standard -- "docs/adr/adr-*.md"; } | sort -u ); do title=$(grep -m1 "^# " "$f"); decision=$(awk "/^## +Decision *\$/{d=1; next} /^## /{d=0} d" "$f"); printf "%s\n%s\n" "$title" "$decision" | grep -qiE "command ?/ ?query classification|classification of (every|each|the) trigger" && { echo "classification ADR: $f"; exit 1; }; printf "%s\n" "$title" | grep -qE "\bCQRS\b" && continue; printf "%s\n%s\n" "$title" "$decision" | grep -qiE "\bCQS\b|command ?/ ?query separation" && { echo "CQS ADR: $f"; exit 1; }; done; exit 0'
           expected_exit_code: 0
           timeout: 30s
       # The loyalty reduction is a calculation: nothing changes state, so no invariant has to
@@ -115,7 +118,7 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- src tests)" ]'
+            - 'git diff --quiet eval-baseline -- src tests && [ -z "$(git ls-files --others --exclude-standard -- src tests)" ]'
           expected_exit_code: 0
           timeout: 30s
       - type: run-command
@@ -125,6 +128,7 @@ stimuli:
           args:
             - 'diff'
             - '--quiet'
+            - 'eval-baseline'
             - '--'
             - 'docs/adr/adr-001-integer-cent-money.md'
           expected_exit_code: 0
@@ -219,6 +223,7 @@ stimuli:
         - 'git config user.name "SKRAFT Evaluation"'
         - 'git add .'
         - 'git commit --quiet -m "test: story contradicting a ratified decision"'
+        - 'git tag eval-baseline'
     graders:
       - type: completed
       - type: skill-invocation
@@ -235,6 +240,7 @@ stimuli:
           args:
             - 'diff'
             - '--quiet'
+            - 'eval-baseline'
             - '--'
             - 'docs/adr/adr-002-reductions-in-api-layer.md'
           expected_exit_code: 0
@@ -254,6 +260,6 @@ stimuli:
           command: bash
           args:
             - '-lc'
-            - '[ -z "$(git status --porcelain -- src tests)" ]'
+            - 'git diff --quiet eval-baseline -- src tests && [ -z "$(git ls-files --others --exclude-standard -- src tests)" ]'
           expected_exit_code: 0
           timeout: 30s

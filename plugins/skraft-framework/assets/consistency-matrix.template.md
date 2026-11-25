@@ -16,7 +16,18 @@ The matrix is the supervised-execution artefact for the cross-artefact consisten
 | `{story-id}` | story metadata | e.g. `story-41` |
 | `{concept-name}` | persona Phase 9 | one row per structural concept the stories rely on |
 | `{adr-truth}` | ADR-{NNN}, otherwise `contracts` | the classification of the source of truth |
-| `{cell-value}` | grep result (Phase 9 EXEC step) | classification as found in that artefact |
+| `{cell-value}` | grep result (Phase 9 EXEC step) | classification as found in that artefact; `n/a` when an optional artefact does not name the concept |
+
+## Required artefacts by concept kind
+
+A `required` artefact must name the concept: an empty required cell is `STRUCTURAL_DRIFT`. An `optional` artefact that does not name it reads `n/a`, never drift; one that names it is compared like any other cell.
+
+| Concept kind | event-model | diagrams | contracts |
+|---|---|---|---|
+| Command, Query, Domain Event, Read Model | required | optional | required |
+| Aggregate, Aggregate Root, Repository, Domain Service | optional | required | required |
+| Entity, Value Object | optional | optional | required |
+| Concept an ADR decides | required where the ADR names it | required where the ADR names it | required where the ADR names it |
 
 ---
 
@@ -84,7 +95,7 @@ Reviewer use: G10 reads the registry to know which artefacts are in scope for th
 
 | Concept | Source of truth | event-model-{story-id}.md | diagrams-{story-id}.md | contracts-{story-id}.md | Cause | Verdict |
 |---|---|---|---|---|---|---|
-| `{concept-name}` | `{adr-truth}` | `{cell-value}` | `{cell-value}` | `{cell-value}` | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
+| `{concept-name}` | `{adr-truth}` | `{cell-value}` \| n/a | `{cell-value}` \| n/a | `{cell-value}` \| n/a | n/a \| LABEL_DRIFT \| CLASSIFICATION_DRIFT \| STRUCTURAL_DRIFT | PASS \| FAIL |
 
 ## ADR eligibility gate
 
@@ -115,7 +126,7 @@ Ranked priorities of each ELIGIBLE candidate: `1. … 2. …`
 |---|---|---|---|
 | `LABEL_DRIFT` | Same concept, different vocabulary (e.g. `VO` vs `Value Object` vs `ValueObject`). | Back-propagate: rewrite the upstream artefact to use the ADR's spelling. | 1 per artefact |
 | `CLASSIFICATION_DRIFT` | Same concept, incompatible category (`Command` vs `Query`, `Entity` vs `Value Object`, `Aggregate` vs `Domain Service`). | Back-propagate: rewrite the upstream artefact to align on the ADR. | 1 per artefact, then HALT `decision_drift` |
-| `STRUCTURAL_DRIFT` | The concept exists in one artefact and not the other (e.g. ADR mentions an aggregate the diagram never drew, or contracts define a `Repository` the diagram never drew). | **HALT immediately. No back-propagation.** This signals a real decision gap that the architect must resolve by revisiting the ADR set or the upstream artefact, not by silent rewrite. | 0 |
+| `STRUCTURAL_DRIFT` | A required cell is empty (Required artefacts by concept kind), or the source of truth names a concept no required artefact carries (e.g. contracts define a `Repository` the diagram never drew). An `n/a` cell is never structural drift. | **HALT immediately. No back-propagation.** This signals a real decision gap that the architect must resolve by revisiting the ADR set or the upstream artefact, not by silent rewrite. | 0 |
 
 ---
 
@@ -151,7 +162,7 @@ The append-only constraint of tracked decision directories (`docs/adr/`, `detail
   "story": "{story-id}",
   "concept": "{concept-name}",
   "adr_says": "{adr-truth}",
-  "adr_path": "docs/adr/adr-{NNN}-{slug}.md",
+  "adr_path": "docs/adr/adr-{NNN}-{slug}.md | .copilot-tracking/skraft-plans/{project-slug}/details/{date}/contracts-{story-id}.md (the row's source of truth: its ADR, otherwise the contracts)",
   "artefact_says": "{cell-value}",
   "artefact_path": ".copilot-tracking/skraft-plans/{project-slug}/details/{date}/{artefact}-{story-id}.md",
   "cause": "STRUCTURAL_DRIFT | CLASSIFICATION_DRIFT (post-retry)",
