@@ -39,7 +39,7 @@ CQRS with a dispatch bus; Event Sourcing; a saga or process manager; an aggregat
 
 - the project baseline: CQS method-level separation, layer boundaries, convention-based DI, the repository pattern and where an interface lives (Domain or Application: `clean-architecture-<stack>` decides it), anything a skill or an architecture test enforces;
 - anything `AGENTS.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `docs/architecture/` or an `Accepted` ADR already decides, tested or not — a supersession the stories force excepted;
-- the bounded contexts and their relationships (ACL, Conformist, Published Language, Open Host Service, Shared Kernel): they go in the context map;
+- identifying the bounded contexts the baseline already has and labelling their relationships (ACL, Conformist, Published Language, Open Host Service, Shared Kernel): they go in the context map. A split or merge of contexts, or a physical isolation or coupling change that departs from the baseline, is not on this list: it goes on to Q2;
 - a choice confined to one bounded context — an aggregate, value object, domain event or gateway, a translation inside its gateway, a mapping, a local type: it goes in the diagrams and contracts;
 - a choice argued from a future need ("identical today", "may diverge", "in case"): no story raised it;
 - the event model's Command/Query classification.
@@ -114,6 +114,9 @@ This gate decides IF an ADR is warranted; `architecture-decisions` gives HOW to 
 
 4. **Candidate:** "Command/Query classification of the new triggers"  
    **Expected:** `NOT ELIGIBLE — Q1 (event model classification)`
+
+5. **Candidate:** "split the Pricing context in two", forced by a story's acceptance criterion  
+   **Expected:** not decided by Q1; Q3–Q5 decide
 
 ### Trigger evals
 

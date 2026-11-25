@@ -69,7 +69,7 @@ Rehydrate once: read the snapshot ONE time here; after that, the output of your 
 
 1. Determine the project slug from the user request or the active issue. Let `state.mjs` resolve the tracking root (`SKRAFT_TRACKING_ROOT` override, otherwise `.copilot-tracking/skraft-plans/{projectSlug}/`); never hand-build source references.
 2. If the state does not exist, create it with `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" init --slug {projectSlug}` and start at RESEARCH.
-3. If it exists, rehydrate in one call — `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`. `humanQuestions.checkpointStatus == "awaiting_human"` → re-emit that Human questions checkpoint and wait; never re-dispatch the agent that raised it.
+3. If it exists, rehydrate in one call — `node "$SKRAFT_PLUGIN_ROOT/src/cli/state.mjs" get --slug {projectSlug}` — validate, and resume at `currentPhase`. `humanQuestions.checkpointStatus == "awaiting_human"` → re-emit that Human questions checkpoint and wait; never re-dispatch the agent that raised it. `checkpointStatus == "resolved"` with `kind` `adr-options` or `rework-findings` → its answers are not yet consumed: replay them from `questions[].answer` (`adr-options` rebuilds the `ADR options` lines of the architect's dispatch, `rework-findings` the `### Contested by the developer` list) and never ask those questions again.
 4. Print the resume summary:
    ```
    Pipeline state loaded.
@@ -294,13 +294,14 @@ Ask with the host's question tool (`AskUserQuestion` on Claude Code, `ask_user` 
 
 1. **Open.** `state.mjs set --field humanQuestions --data '{"checkpointStatus":"awaiting_human","kind":"{kind}","questions":[{"id":"Q3","question":"…","recommended":"…"}]}'`, ask the questions for its kind, wait for the answers. The phase does not advance.
 2. **`product-unknowns`** (after RESEARCH): list each open `Unknown:` with its recommended answer, then each `Assumption:` without a `Decision:` for confirmation, and offer "ask the product owner". On the answers, write under each question in the research document `Decision: {YYYY-MM-DD} — {who answered} — {answer}` (an assumption left unanswered stays an assumption), set `checkpointStatus` to `resolved`, close RESEARCH and continue to DESIGN; never re-dispatch the researcher. "Ask the product owner" → stop with the numbered list ready to forward; the checkpoint stays open.
-3. **`adr-options`** (DESIGN, the architect returned `adr_options_needed`): for each candidate show its ranked priorities and ask "Which options have you considered?". On the answer, set `resolved` and re-dispatch the architect with its handoff block plus one line per candidate: `ADR options — {id} {candidate}: {the developer's options, or none}`. Its ADRs then go through review and the ratification checkpoint as usual.
+3. **`adr-options`** (DESIGN, the architect returned `adr_options_needed`): for each candidate show its ranked priorities and ask "Which options have you considered?". On the answer, in one `set`, write each candidate's options in its question's `answer` (`none` when the developer has none) and set `resolved`; then re-dispatch the architect with its handoff block plus one line per candidate, built from those answers: `ADR options — {id} {candidate}: {answer}`. Its ADRs then go through review and the ratification checkpoint as usual.
 4. The architect, the acceptance designer or the engineer returning `open_product_question` (the engineer: `clarification_needed`) reopens `product-unknowns` on the questions it names; write their decisions, then re-dispatch that agent. This is not a retry: no `incr-retry`, no limit on rounds.
 5. **`rework-findings`** (a `NEEDS_REWORK` verdict, not `escalation: environment`): one question per finding with its id, severity and location, the reviewer's justification and the change it asks. Options: fix it (recommended) or contest it, the reason in the free text. On the answers, set `resolved`, `incr-retry`, then:
    - at least one finding to fix: re-dispatch the specialist with the Retry prompt template;
    - every finding contested: re-dispatch the reviewer only, with its handoff block and the `### Contested by the developer` list.
 
    The next review receives the same list.
+6. **Consume.** Reset a resolved `adr-options` or `rework-findings` checkpoint with `state.mjs set --field humanQuestions --data '{"checkpointStatus":"none","questions":[]}'` once its answers are consumed, always before the phase advances: `adr-options` when the architect returns without `adr_options_needed`, `rework-findings` when the next review returns its verdict.
 
 ### DESIGN-only: ADR ratification checkpoint (B10 HUMAN CHECKPOINT)
 
