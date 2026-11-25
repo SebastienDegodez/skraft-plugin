@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash, createHmac } from 'node:crypto'
 import { agent, pipelineHost, SETTLED_PUBLISH } from '../support/pipeline-host.mjs'
+import { InMemoryCodeHost } from '../support/in-memory-host.mjs'
 import { createDesignRun } from '../../../../plugins/skraft-design/engine/application/architecture/design-run.mjs'
 import { createAgentLoop } from '../../../../plugins/skraft-design/engine/drivers/cli/agent-loop.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-design/engine/application/pipeline/run-pipeline-usecase.mjs'
@@ -457,4 +458,17 @@ test('what a blocked architect pass wrote is committed with the pass that resume
   const committed = host.git.engineCommits.flatMap(({ paths }) => paths)
   assert.ok(committed.includes('docs/architecture/stories/43-card-checkout.md'), committed.join(', '))
   assert.ok(committed.includes('docs/architecture/stories/42-card-checkout.md'), committed.join(', '))
+})
+
+test('a pull request a previous run of the branch left closed does not stop a new run publishing; one this run opened and a person closed does', async () => {
+  const codeHost = new InMemoryCodeHost({ open: [{ number: 6, head: 'checkout', state: 'closed' }] })
+  const { host, deps, run } = session([story(42), story(43, 'closed')], 'epic-42', { codeHost, config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  const settled = await draftInCi(deps, await run.start({ epic: 42, mode: 'ci' }))
+  assert.equal(settled.draft?.ok, true, settled.draft?.reason)
+  const opened = host.codeHost.pullRequests.filter(({ state }) => state === 'open')
+  assert.deepEqual(opened.map(({ number }) => number === 6), [false])
+  opened[0].state = 'closed'
+  const again = await createDraftPublication(deps).publish()
+  assert.equal(again.ok, false)
+  assert.match(again.reason, new RegExp(`#${opened[0].number} of checkout is closed, and skraft opens no other one`))
 })

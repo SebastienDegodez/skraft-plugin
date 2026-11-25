@@ -322,13 +322,26 @@ const pushAndOpen = async (deps, request, pull) => {
 const settled = async (deps, request, { pull, open }) => {
   const located = { ...pull, bodyFile: deps.files.location(request.slug, PULL_REQUEST_BODY_FILE), bodyHash: await hashOf(deps, pull.body) }
   const unsettled = unsettledOpening(request.journal.events, pull.target.head)
-  if (open.found === null) return unsettled === null ? opened(deps, request, located) : notOpened(unsettledReason(pull.target.head))
-  if (open.found.state !== 'open') return notOpened(`pull request #${open.found.number} of ${pull.target.head} is ${open.found.state}, and skraft opens no other one`)
-  const whole = await deps.codeHost.readPullRequest(open.found.number)
+  const found = thisRunsPullRequest(request.journal.events, open.found)
+  if (found === null) return unsettled === null ? opened(deps, request, located) : notOpened(unsettledReason(pull.target.head))
+  if (found.state !== 'open') return notOpened(`pull request #${found.number} of ${pull.target.head} is ${found.state}, and skraft opens no other one`)
+  const whole = await deps.codeHost.readPullRequest(found.number)
   if (!whole.ok || whole.found === null) return notOpened(whole.ok ? unreadReason(open.found.number) : whole.reason)
   const live = { ...located, found: whole.found, liveHash: await hashOf(deps, whole.found.body) }
   return unsettled === null ? updated(deps, request, live) : reconciled(deps, request, { ...live, sent: unsettled.bodyHash })
 }
+
+/**
+ * A pull request of the branch that is no longer open and that this run never opened: a previous
+ * run's, closed or merged before this one started on the same branch name. It does not stop this
+ * run from opening its own; one this run opened and a person closed still does (#621).
+ * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {FoundPullRequest | null} found
+ */
+const leftByAnotherRun = (events, found) => found !== null && found.state !== 'open'
+  && !events.some((event) => event.type === 'pull-request.opened' && event.number === found.number)
+
+/** The branch's pull request as this run takes it: none when it was left by another run. @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {FoundPullRequest | null} found */
+const thisRunsPullRequest = (events, found) => (leftByAnotherRun(events, found) ? null : found)
 
 /** @param {number} number */
 const unreadReason = (number) => `pull request #${number} is listed by its branch, but the forge does not give it by its number`
