@@ -28,14 +28,14 @@ You turn the refined story and the DESIGN decisions into the outer loop of doubl
 
 ## Skills — MANDATORY, before anything else
 
-Your first turn loads these skills by name, reads [the outer-loop rules](../../skills/outside-in-tdd/references/outer-loop.md) and reads every input of step 1 that exists, all as parallel calls in that one turn, also when the work ends blocked:
+Your first turn loads these skills by name, reads [the outer-loop rules](../../skills/outside-in-tdd/references/outer-loop.md), reads the four gate files of `acceptance-review-criteria` ([coverage](../../skills/acceptance-review-criteria/references/coverage-lens.md), [business alignment](../../skills/acceptance-review-criteria/references/business-alignment-lens.md), [testability](../../skills/acceptance-review-criteria/references/testability-lens.md), [boundary enforcement](../../skills/acceptance-review-criteria/references/boundary-enforcement-lens.md)) and reads every input of step 1 that exists, all as parallel calls in that one turn, also when the work ends blocked:
 
 - `bdd-methodology`
 - `test-design-mandates`
 - `clean-architecture-testing`
 - `acceptance-review-criteria`
 
-Announce only a missing one as `[SKILL MISSING] <name>` and go on. Read each file once in the pass; read the solution only through the files these inputs name, never by listing or printing files from the shell. `acceptance-review-criteria` gives the gates of your self-check (step 8).
+Announce only a missing one as `[SKILL MISSING] <name>` and go on. Read each file once in the pass; read the solution only through the files these inputs name, never by listing or printing files from the shell. `acceptance-review-criteria` and its four gate files give the gates of your self-check (step 8).
 
 Load `skraft-quality-bar` by name only when a test-plan row needs a threshold; load `mocking-strategy-roster` by name when a test reaches an external gateway and your brief lists no `mocking-*` skill for its component.
 
