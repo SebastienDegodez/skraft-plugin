@@ -18,11 +18,12 @@
 // Exits:  0 every probe passed, 1 a probe failed, 2 the toolchain could not run.
 
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
+import { IGNORE_LINE } from '../plugins/skraft-framework/skills/quality-gates-dotnet/scripts/gate-log.mjs'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FIXTURE = join(repoRoot, 'tests', 'skraft-framework', 'quality-gates', 'fixtures', 'dotnet-checkout')
@@ -63,6 +64,8 @@ const prepare = () => {
   const root = mkdtempSync(join(tmpdir(), 'skraft-dotnet-gates-'))
   const repo = join(root, 'repo')
   cpSync(FIXTURE, repo, { recursive: true, filter: (source) => !BUILD_OUTPUT.has(basename(source)) })
+  // The evidence log sits in the copy, under the directory gate-log.mjs requires Git to ignore.
+  appendFileSync(join(repo, '.gitignore'), `${IGNORE_LINE}\n`)
   git(repo, 'init', '-q')
   git(repo, 'add', '.')
   git(repo, 'commit', '-q', '-m', 'chore(checkout): fixture')
@@ -71,13 +74,15 @@ const prepare = () => {
 
 // --- running one script -------------------------------------------------------------
 
-// Evidence lands beside the copy, never inside it: the differential run must see a clean tree.
-const runGate = (ctx, script, prefix, evidence, ...args) => {
-  const dir = join(ctx.root, evidence)
-  const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--evidence', dir, ...args], { cwd: ctx.repo, encoding: 'utf8' })
-  const stdout = join(dir, `${prefix}.stdout`)
-  const lines = existsSync(stdout) ? readFileSync(stdout, 'utf8').trimEnd().split('\n') : []
-  return { status: result.status, line: lines.at(-1) ?? '', stderr: result.stderr ?? '', output: lines.slice(-25).join('\n') }
+// Each gate records itself in the story's evidence log (quality-gates-evidence/v7); the probe
+// reads back the entry of the gate it ran: its status and its one-line summary.
+const LOG = join('.copilot-tracking', 'skraft-plans', 'smoke', 'evidence', 'qg-smoke.json')
+const runGate = (ctx, script, gate, ...args) => {
+  const log = join(ctx.repo, LOG)
+  const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--log', log, ...args], { cwd: ctx.repo, encoding: 'utf8' })
+  const entry = existsSync(log) ? JSON.parse(readFileSync(log, 'utf8')).gates?.find((recorded) => recorded.id === gate) : undefined
+  const recorded = entry ? (entry.status === (result.status === 0 ? 'pass' : 'fail') ? '' : `logged ${entry.status} for exit ${result.status}`) : `no ${gate} entry in ${LOG}`
+  return { status: recorded ? null : result.status, line: entry?.summary ?? '', stderr: [recorded, result.stderr ?? '', result.stdout ?? ''].filter(Boolean).join('\n') }
 }
 
 // --- the probes ---------------------------------------------------------------------
@@ -85,9 +90,9 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
 const probes = [
   {
     name: 'test.no-mocks-core',
-    run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence'),
+    run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'test.no-mocks-core'),
     status: 0,
-    line: /^$/,
+    line: /^no mocking symbol in the core$/,
   },
   {
     name: 'clean-architecture-dotnet init-project builds',

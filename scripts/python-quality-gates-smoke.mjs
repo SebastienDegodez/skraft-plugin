@@ -23,11 +23,12 @@
 // Exits:  0 every probe passed, 1 a probe failed, 2 the toolchain could not run.
 
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
+import { IGNORE_LINE } from '../plugins/skraft-framework/skills/quality-gates-python/scripts/gate-log.mjs'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FIXTURE = join(repoRoot, 'tests', 'skraft-framework', 'quality-gates', 'fixtures', 'python-payment')
@@ -57,7 +58,6 @@ const annotate = (title, detail) => {
   const data = String(detail).replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')
   log(`::error title=${`Python smoke on ${process.platform}: ${title}`.replaceAll(':', '%3A').replaceAll(',', '%2C')}::${data}`)
 }
-const lastLine = (text) => (text ?? '').trimEnd().split(/\r?\n/).at(-1) ?? ''
 
 const git = (cwd, ...args) => {
   const result = spawnSync('git', ['-c', 'user.email=smoke@skraft.invalid', '-c', 'user.name=smoke', '-c', 'core.autocrlf=false', ...args], { cwd, encoding: 'utf8' })
@@ -69,6 +69,8 @@ const prepare = () => {
   const root = mkdtempSync(join(tmpdir(), 'skraft-python-gates-'))
   const repo = join(root, 'repo')
   cpSync(FIXTURE, repo, { recursive: true, filter: (source) => !LOCAL_STATE.has(basename(source)) && !source.endsWith('.egg-info') })
+  // The evidence log sits in the copy, under the directory gate-log.mjs requires Git to ignore.
+  appendFileSync(join(repo, '.gitignore'), `${IGNORE_LINE}\n`)
   git(repo, 'init', '-q')
   git(repo, 'add', '.')
   git(repo, 'commit', '-q', '-m', 'chore(payment): fixture')
@@ -99,13 +101,15 @@ const installVenv = (ctx) => {
 
 const pythonArgs = () => (opts.python ? ['--python', resolve(opts.python)] : [])
 
-// Evidence lands beside the copy, never inside it: the differential run must see a clean tree.
-const runGate = (ctx, script, prefix, evidence, ...args) => {
-  const dir = join(ctx.root, evidence)
-  const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--evidence', dir, ...args], { cwd: ctx.repo, encoding: 'utf8' })
-  const stdout = join(dir, `${prefix}.stdout`)
-  const recorded = existsSync(stdout) ? readFileSync(stdout, 'utf8') : ''
-  return { status: result.status, line: lastLine(recorded), stderr: `${result.stderr ?? ''}${result.stdout ?? ''}` }
+// Each gate records itself in the story's evidence log (quality-gates-evidence/v7); the probe
+// reads back the entry of the gate it ran: its status and its one-line summary.
+const LOG = join('.copilot-tracking', 'skraft-plans', 'smoke', 'evidence', 'qg-smoke.json')
+const runGate = (ctx, script, gate, ...args) => {
+  const log = join(ctx.repo, LOG)
+  const result = spawnSync(process.execPath, [join(SCRIPTS, script), '--root', ctx.repo, '--log', log, ...args], { cwd: ctx.repo, encoding: 'utf8' })
+  const entry = existsSync(log) ? JSON.parse(readFileSync(log, 'utf8')).gates?.find((recorded) => recorded.id === gate) : undefined
+  const recorded = entry ? (entry.status === (result.status === 0 ? 'pass' : 'fail') ? '' : `logged ${entry.status} for exit ${result.status}`) : `no ${gate} entry in ${LOG}`
+  return { status: recorded ? null : result.status, line: entry?.summary ?? '', stderr: [recorded, result.stderr ?? '', result.stdout ?? ''].filter(Boolean).join('\n') }
 }
 
 // --- the probes ---------------------------------------------------------------------
@@ -113,21 +117,21 @@ const runGate = (ctx, script, prefix, evidence, ...args) => {
 const probes = [
   {
     name: 'test.unit tests captured',
-    run: (ctx) => runGate(ctx, 'capture.mjs', 'qg-tests', 'evidence', ...pythonArgs(), '--name', 'qg-tests', '--', '{python}', '-m', 'pytest', '-q', '-p', 'no:cacheprovider'),
+    run: (ctx) => runGate(ctx, 'capture.mjs', 'test.unit', ...pythonArgs(), '--gate', 'test.unit', '--', '{python}', '-m', 'pytest', '-q', '-p', 'no:cacheprovider'),
     status: 0,
     line: /^\d+ passed in [\d.]+s$/,
   },
   {
     name: 'build.compile captured',
-    run: (ctx) => runGate(ctx, 'capture.mjs', 'qg-build', 'evidence', ...pythonArgs(), '--name', 'qg-build', '--', '{python}', '-m', 'compileall', '-q', 'src'),
+    run: (ctx) => runGate(ctx, 'capture.mjs', 'build.compile', ...pythonArgs(), '--gate', 'build.compile', '--', '{python}', '-m', 'compileall', '-q', 'src'),
     status: 0,
     line: /^$/,
   },
   {
     name: 'test.no-mocks-core no mocks in core',
-    run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'qg-mocks', 'evidence', ...pythonArgs()),
+    run: (ctx) => runGate(ctx, 'no-mocks-in-core.mjs', 'test.no-mocks-core', ...pythonArgs()),
     status: 0,
-    line: /^$/,
+    line: /^no mocking symbol in the core$/,
   },
 ]
 
