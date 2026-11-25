@@ -12,3 +12,14 @@ export const ignoreLocalConfig = async (workspace) => {
   const text = ignoring(await workspace.read(GIT_IGNORE), LOCAL_CONFIG_FILE)
   if (text !== null) await workspace.write(GIT_IGNORE, text)
 }
+
+/**
+ * Lists the packages the developer installs for the project's REPL library, `.repl/node_modules/`,
+ * in the working copy's `.gitignore`, once: `.repl/package.json` and its lockfile are committed,
+ * the installed packages never.
+ * @param {Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'write'>} workspace
+ */
+export const ignoreReplPackages = async (workspace) => {
+  const text = ignoring(await workspace.read(GIT_IGNORE), '.repl/node_modules/', '/.repl/node_modules/')
+  if (text !== null) await workspace.write(GIT_IGNORE, text)
+}

@@ -19,7 +19,7 @@
     "./com.anthropic.claude-code/agents/deliver-finding-refuter.md",
     "./com.anthropic.claude-code/agents/deliver-mock-fidelity-lens.md",
     "./com.anthropic.claude-code/agents/deliver-pr-writer.md",
-    "./com.anthropic.claude-code/agents/deliver-replay-judge.md",
+    "./com.anthropic.claude-code/agents/deliver-quality-gates-lens.md",
     "./com.anthropic.claude-code/agents/deliver-software-engineer.md",
     "./com.anthropic.claude-code/agents/deliver-test-integrity-lens.md",
     "./com.anthropic.claude-code/agents/deliver-testability-lens.md"

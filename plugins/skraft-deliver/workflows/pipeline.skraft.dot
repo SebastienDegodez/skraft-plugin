@@ -2,7 +2,7 @@ digraph deliver {
   graph [version="2", goal="Deliver the story", input_architecture="optional", input_story="required"]
 
   start    [shape=Mdiamond]
-  distill  [shape=box, agent="deliver-acceptance-designer", phase="DISTILL", each="scenario"]
+  distill  [shape=box, agent="deliver-acceptance-designer", phase="DISTILL"]
   subgraph cluster_distill_review {
     label="DISTILL review"
     distill_review_lenses [shape=component]
@@ -14,8 +14,7 @@ digraph deliver {
     distill_review [shape=tripleoctagon, mandatory=true]
   }
   scenario_review [shape=hexagon, question="scenario-review"]
-  deliver  [shape=box, agent="deliver-software-engineer", phase="DELIVER", each="scenario"]
-  gates    [shape=parallelogram, gate="build,format,lint,test,architecture,coverage", goal_gate=true, locked=true, phase="DELIVER"]
+  deliver  [shape=box, agent="deliver-software-engineer", phase="DELIVER"]
   deliver_review [shape=house, workflow="review", mandatory=true]
   visuals  [shape=parallelogram, publish="playwright-visuals", when="frontend"]
   pr_writer [shape=box, agent="deliver-pr-writer", phase="PUBLISH"]
@@ -33,9 +32,7 @@ digraph deliver {
   distill_review -> scenario_review [label="APPROVED"]
   scenario_review -> deliver [label="APPROVED"]
   scenario_review -> distill [label="REVISE", max_visits=2]
-  deliver -> gates
-  gates -> deliver [label="FAIL", max_visits=3]
-  gates -> deliver_review [label="PASS"]
+  deliver -> deliver_review
   deliver_review -> deliver [label="NEEDS_REWORK", max_visits=2]
   deliver_review -> visuals [label="APPROVED"]
   visuals -> pr_writer -> publish -> exit

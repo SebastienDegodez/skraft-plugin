@@ -44,11 +44,12 @@ A gate that cannot run is not a passed gate. Report it as a failure and stop.
 
 ## Running the gate
 
-The engine runs each gate from the component's `commands` in `skraft-design-config.json` and keeps
-the evidence. Every gate takes its exit code as its verdict.
+The agent runs each gate of a component through `skraft_design_repl`, from the component's `commands` in
+`skraft-design-config.json`, and the engine checks the traced run of each on the attempt's last commit.
+Every gate takes its exit code as its verdict.
 
 Mutation testing is the developer's: the story's pipeline runs no mutation, and skraft ships no
-mutation script or config. The developer's mutation run (`workflows/mutation.skraft.dot`) runs
+mutation script or config. The `skraft-mutation` skill, in the developer's session, runs
 each component's `mutation` command and judges each scope against the bar above:
 
 - **Core** -- a file under a folder whose name ends with the word `domain` or `application`

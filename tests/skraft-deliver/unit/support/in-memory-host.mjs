@@ -12,6 +12,8 @@ export class InMemoryTracking {
     this.folder = folder
     /** @type {Map<string, string>} slug-relative path → text */
     this.files = new Map()
+    /** @type {Map<string, number>} how many times each file that already existed was written again whole */
+    this.rewrites = new Map()
     this.activeSlug = null
     /** The journal keys of the machine this working copy is on. */
     this.journalKeys = new InMemoryJournalKeys()
@@ -36,7 +38,15 @@ export class InMemoryTracking {
 
   // TrackingFiles
   async read(slug, rel) { return this.files.get(this.key(slug, rel)) ?? null }
-  async write(slug, rel, text) { this.files.set(this.key(slug, rel), text) }
+  async write(slug, rel, text) {
+    const key = this.key(slug, rel)
+    if (this.files.has(key)) this.rewrites.set(key, (this.rewrites.get(key) ?? 0) + 1)
+    this.files.set(key, text)
+  }
+  async appendText(slug, rel, text) {
+    const key = this.key(slug, rel)
+    this.files.set(key, `${this.files.get(key) ?? ''}${text}`)
+  }
   async clear(slug, folder) {
     const prefix = this.key(slug, `${folder}/`)
     for (const path of this.files.keys()) if (path.startsWith(prefix)) this.files.delete(path)
@@ -200,9 +210,6 @@ export const passing = (dispatch) => answerYaml({ lens: dispatch.agent.replace(/
  * dispatched together, are answered by `review`: every lens passes and every finding is
  * confirmed unless a test replaces it.
  */
-/** The label of a pass on the first of the story's scenarios. */
-const FIRST_SCENARIO = / · scenario 1 of \d+ · /
-
 export class ScriptedAgentRunner {
   /** @param {Array<(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>|object|void>} behaviours */
   constructor(behaviours = []) {
@@ -219,22 +226,10 @@ export class ScriptedAgentRunner {
     this.batchCostUsd = undefined
     /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers a deliver-pr-writer, apart from the queue */
     this.writer = null
-    /** @type {((dispatch: {agent: string, label: string, prompt: string}) => Promise<object|void>) | null} what answers the acceptance designer's pass on the first scenario, apart from the queue; null: the queue */
-    this.firstRed = null
-    /** @type {(dispatch: {agent: string, label: string, prompt: string}) => Promise<object|string>|object|string} what answers the replay judge, apart from the queue: it accepts */
-    this.judge = () => judgeAnswer('accept')
-    /** @type {Array<{agent: string, label: string, prompt: string}>} the replay judge's dispatches, kept apart from the queue's */
-    this.judged = []
-  }
-  async judging(dispatch) {
-    this.judged.push(dispatch)
-    return answerOf(await this.judge(dispatch))
   }
   async run(dispatch) {
-    if (dispatch.agent === 'deliver-replay-judge') return this.judging(dispatch)
     this.dispatches.push(dispatch)
     if (dispatch.agent === 'deliver-pr-writer' && this.writer !== null) return (await this.writer(dispatch)) ?? { ok: true, text: 'done' }
-    if (dispatch.agent === 'deliver-acceptance-designer' && FIRST_SCENARIO.test(dispatch.label) && this.firstRed !== null) return (await this.firstRed(dispatch)) ?? { ok: true, text: 'done' }
     const behaviour = this.behaviours.shift()
     if (!behaviour) throw new Error(`unexpected dispatch ${dispatch.label}`)
     return (await behaviour(dispatch)) ?? { ok: true, text: 'done' }
@@ -251,12 +246,6 @@ export class ScriptedAgentRunner {
   /** Every lens and refuter dispatch, batch after batch. */
   reviewed() { return this.batches.flat() }
 }
-
-/** The replay judge's answer: its decision and a note, as the brief asks. @param {string} decision @param {string} [note] */
-export const judgeAnswer = (decision, note = 'the logs show it') => ['```yaml', answerYaml({ decision, note }), '```'].join('\n')
-
-/** @param {object | string} answer */
-const answerOf = (answer) => (typeof answer === 'string' ? { ok: true, text: answer } : answer)
 
 /**
  * The human at the host: each question gets the next scripted answer, `{ answer, reason }`,
@@ -322,6 +311,8 @@ export class InMemoryWorkspace {
     this.unreadable = new Map()
     /** @type {Array<[string, string]>} each file replaced in one rename, with its new text, in order */
     this.replaced = []
+    /** @type {Set<string>} the folders that are symbolic links, which a listing gives as files, as Node's readdir does */
+    this.links = new Set()
   }
   async read(path) {
     if (this.unreadable.has(tidy(path))) throw new Error(this.unreadable.get(tidy(path)))
@@ -341,7 +332,7 @@ export class InMemoryWorkspace {
       if (!key.startsWith(prefix) || key === dir) continue
       const [name, ...rest] = key.slice(prefix.length).split('/')
       if (name === '..') continue
-      entries.set(name, rest.length > 0 ? 'dir' : entries.get(name) ?? 'file')
+      entries.set(name, rest.length > 0 && !this.links.has(`${prefix}${name}`) ? 'dir' : entries.get(name) ?? 'file')
     }
     if (entries.size === 0 && dir !== '') return null
     return [...entries].map(([name, kind]) => ({ name, kind }))
@@ -400,6 +391,7 @@ export class InMemorySourceControl {
     this.diffs = []
   }
   async unavailable() { return this.missing }
+  storyLink(issue, closes) { return this.link(issue, closes) }
   async remoteUrl() { return this.remote }
   async repository(dir) { return this.folders[tidy(dir) || '.']?.top ?? null }
   /** The files the repository holds under dir, committed or left uncommitted, relative to dir. */
@@ -429,6 +421,7 @@ export class InMemorySourceControl {
   async existsAt() { return false }
   async commitFiles() { return { ok: true } }
   async commitCopies() { return { ok: true } }
+  async refusedImages() { return [] }
 }
 
 /** Whether `path` is `folder` or under it; both relative to the same place, `.`-free. */
@@ -518,6 +511,7 @@ export class InMemoryGit {
     return null
   }
   async unavailable() { return this.missing }
+  storyLink(issue, closes) { return this.link(issue, closes) }
   async remoteUrl() { return this.remote }
   async repository(dir) {
     const at = this.locate(dir)
@@ -579,6 +573,7 @@ export class InMemoryGit {
     return { ok: true }
   }
   /** Each file copied where `to` says, relative to dir, then the copies committed alone; `copies` keeps them in order. */
+  async refusedImages(dir, files) { return files.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from) }
   async commitCopies(dir, copies, message) {
     const refused = copies.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from)
     if (refused.length > 0) return { ok: false, error: 'refused', refused }
@@ -615,58 +610,13 @@ export const hexSha = (n) => `c0ffee${n}`.padEnd(40, '0')
 
 const shaPrefix = (top) => (top === '' ? 'root' : top.replaceAll('../', 'up-').replaceAll('/', '-'))
 
-/**
- * Commits replayed in a throwaway checkout: the test command exits 1 (the red test fails)
- * unless `exits` names another code for that commit; null stands for a program that could not
- * start. The clock advances by takesMs per replay.
- */
-export class ScriptedReplay {
-  /**
-   * @param {{ exits?: Record<string, number | null | 'timeout'>, outputs?: Record<string, string>, clock?: FixedClock | null, takesMs?: number }} [options]
-   *   exits: by `'<sha>'`, or by `'<sha> <argv>'` for one command at that commit, `'timeout'` for a command the runner stopped
-   *   when its time ran out; outputs: what a `'<sha> <argv>'` prints
-   */
-  constructor({ exits = {}, outputs = {}, clock = null, takesMs = 0 } = {}) {
-    this.exits = exits
-    this.outputs = outputs
-    this.clock = clock
-    this.takesMs = takesMs
-    /** @type {Array<{ repository: string, sha: string, cwd: string, argv: string[], importRoots: string[] }>} each program tried, in order */
-    this.replays = []
-  }
-  /** One checkout: the first choice whose exit is not scripted null starts, as CommitReplay does. */
-  async run({ choices, ...request }) {
-    await this.clock?.pass(this.takesMs)
-    for (const argv of choices) {
-      this.replays.push({ ...request, argv })
-      const exitCode = this.exitOf({ ...request, argv })
-      if (exitCode === 'timeout') return { started: true, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} did not finish within 600 s` }
-      if (exitCode !== null) return { started: true, exitCode, stdout: this.outputs[`${request.sha} ${argv.join(' ')}`] ?? `${argv.join(' ')} at ${request.sha}\n`, stderr: '' }
-    }
-    return { started: false, exitCode: null, stdout: '', stderr: '', error: `could not start ${choices.map(([program]) => program).join(' nor ')}` }
-  }
-  /**
-   * The exit of `'<sha> <argv>'` when scripted, else of the sha, else 0 at a feat or fix commit
-   * of the git double it reads (its tests pass), else 1 (a failing test).
-   */
-  exitOf({ sha, argv }) {
-    const line = `${sha} ${argv.join(' ')}`
-    if (line in this.exits) return this.exits[line]
-    if (sha in this.exits) return this.exits[sha]
-    return /^(feat|fix)\b/.test(this.git?.subjectOf(sha) ?? '') ? 0 : 1
-  }
-  /** The replays, as `'<sha> <repository>/<cwd> $ <argv>'`, then ` [import <roots>]` for a Python program's import roots. */
-  lines() { return this.replays.map(({ sha, repository, cwd, argv, importRoots }) => `${sha} ${repository}/${cwd} $ ${argv.join(' ')}${importRoots.length > 0 ? ` [import ${importRoots.join(', ')}]` : ''}`) }
-}
-
-
 /** The agents the default workflow starts: its agents, its lenses and the refuter. */
 export const PLUGIN_AGENTS = Object.freeze([
   'deliver-solution-researcher', 'deliver-solution-architect', 'deliver-acceptance-designer', 'deliver-software-engineer',
   'deliver-consistency-lens', 'deliver-architecture-compliance-lens', 'deliver-fitness-lens',
   'deliver-coverage-lens', 'deliver-business-alignment-lens', 'deliver-testability-lens', 'deliver-boundary-enforcement-lens',
-  'deliver-test-integrity-lens', 'deliver-architecture-boundaries-lens', 'deliver-cold-reader-lens', 'deliver-mock-fidelity-lens', 'deliver-contract-fidelity-lens',
-  'deliver-finding-refuter', 'deliver-pr-writer', 'deliver-replay-judge',
+  'deliver-test-integrity-lens', 'deliver-architecture-boundaries-lens', 'deliver-cold-reader-lens', 'deliver-quality-gates-lens', 'deliver-mock-fidelity-lens', 'deliver-contract-fidelity-lens',
+  'deliver-finding-refuter', 'deliver-pr-writer',
 ])
 
 /** The mocking and contract testing skills the plugin ships, the skills a component asks for. */
@@ -741,7 +691,17 @@ export class InMemoryCodeHost {
    *   bodyLimit: the longest body the forge takes, GitHub's unless given; takesRequestFile: whether
    *   its client sends a JSON request file (az), false unless given.
    */
-  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [], listBodyLimit = Number.POSITIVE_INFINITY } = {}) {
+  constructor({ unavailable = null, branch = 'checkout', defaultBranch = 'main', remotes = ['origin'], open = [], fails = {}, repository = { host: 'github.com', repository: 'acme/shop' }, issues, link = (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`, bodyLimit = 60_000, commentLimit = 60_000, takesRequestFile = false, pages = 'https://github.example.com/acme/shop', cut = {}, unseen = [], listBodyLimit = Number.POSITIVE_INFINITY, attachesFiles = true, fileUrl, screenshotsBlocked = null, unattached = [] } = {}) {
+    /** whether the forge's client uploads the body's images (gh --attach); the files it fails to upload, by path */
+    this.attachesFiles = attachesFiles
+    this.unattached = new Set(unattached)
+    /** @type {Array<{ path: string, alt: string }>[]} the attachments of each create and edit, in order */
+    this.attached = []
+    /** the address of a committed file: GitHub's raw route on the repository the remote names unless given */
+    this.fileUrlOf = fileUrl ?? ((commit, path) => (this.named === null ? null : `https://${this.named.host}/${this.named.repository}/raw/${commit}/${path.split('/').map(encodeURIComponent).join('/')}`))
+    this.blocked = screenshotsBlocked
+    /** the most screenshots gh is handed in one command */
+    this.attachLimit = 50
     /** the longest description a listing by branch gives (Azure's Get Pull Requests: 400); a read by number gives it whole */
     this.listBodyLimit = listBodyLimit
     this.cut = cut
@@ -782,6 +742,16 @@ export class InMemoryCodeHost {
   }
   async unavailable() { return this.missing }
   storyLink(issue, closes) { return this.link(issue, closes) }
+  async fileUrl(commit, path) { return this.fileUrlOf(commit, path) }
+  async screenshotsBlocked() { return this.blocked }
+  /** A client that cannot attach (screenshotsBlocked) refuses a call that names an attachment, as a gh without --attach refuses the flag. */
+  refusesAttach(attachments = []) { return this.blocked !== null && attachments.length > 0 }
+  /** The body as the forge keeps it: each reference to a file it uploaded rewritten to the uploaded asset, as gh does. */
+  uploaded(body, attachments = []) {
+    this.attached.push(attachments)
+    return attachments.filter(({ path }) => !this.unattached.has(path))
+      .reduce((text, { reference }, index) => text.replaceAll(`](${reference})`, `](https://github.com/user-attachments/assets/${this.attached.length}-${index + 1})`), body)
+  }
   async issue(number) {
     this.issuesRead.push(number)
     const unreadable = this.missing ?? this.fails.issue
@@ -823,18 +793,20 @@ export class InMemoryCodeHost {
     const found = this.unseen.has('view') ? undefined : this.pullRequests.find((pull) => pull.number === number && !pull.hidden)
     return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body, head: found.head, fromFork: found.fork === true } : null }
   }
-  async create({ base, head, title, bodyFile, draft, issue }) {
+  async create({ base, head, title, bodyFile, draft, issue, attachments }) {
     this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
     if (this.fails.create) return { ok: false, reason: this.fails.create }
+    if (this.refusesAttach(attachments)) return { ok: false, reason: 'gh could not open the pull request' }
     const number = 41 + this.pullRequests.length + 1
     const url = `${this.pages}/pull/${number}`
-    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.read(bodyFile), hidden: this.unseen.has('create') })
+    this.pullRequests.push({ number, url, head, base, title, bodyFile, draft, issue, state: 'open', body: this.uploaded(this.read(bodyFile), attachments), hidden: this.unseen.has('create') })
     return this.answered('create', { number, url, ...(this.fails.link ? { note: this.fails.link } : {}) })
   }
-  async edit({ number, bodyFile }) {
+  async edit({ number, bodyFile, attachments }) {
     this.calls.push(`edit #${number} ${bodyFile}`)
     if (this.fails.edit) return { ok: false, reason: this.fails.edit }
-    if (!this.unseen.has('edit')) this.pullRequests.find((pull) => pull.number === number).body = this.read(bodyFile)
+    if (this.refusesAttach(attachments)) return { ok: false, reason: 'gh could not update the pull request' }
+    if (!this.unseen.has('edit')) this.pullRequests.find((pull) => pull.number === number).body = this.uploaded(this.read(bodyFile), attachments)
     return this.answered('edit')
   }
   async keepIssueComment({ number, marker, url, bodyFile }) {
@@ -854,10 +826,19 @@ export class InMemoryCodeHost {
     this.comments.push(comment)
     return this.answered('comment', { url: comment.url })
   }
-  async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile }) {
-    this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}`)
+  /** A comment with attachments is always posted anew, as gh pr comment --attach does, each reference to a file it uploaded rewritten. */
+  async keepPullRequestComment({ number, marker, url, bodyFile, threadFile, commentFile, attachments = [] }) {
+    this.calls.push(`keep pr comment #${number}${url === null ? '' : ` ${url.slice(url.indexOf('#'))}`}${attachments.length === 0 ? '' : ` --attach ${attachments.length}`}`)
     if (this.fails.pullRequestComment) return { ok: false, reason: this.fails.pullRequestComment }
-    const body = this.read(bodyFile)
+    if (this.refusesAttach(attachments)) return { ok: false, reason: 'gh could not comment the pull request' }
+    const read = this.read(bodyFile)
+    const body = attachments.filter(({ path }) => !this.unattached.has(path))
+      .reduce((text, { reference }, index) => text.replaceAll(`](${reference})`, `](https://github.com/user-attachments/assets/comment-${this.pullRequestComments.length + 1}-${index + 1})`), read)
+    if (attachments.length > 0) {
+      const comment = { number, body, bodies: [body], edits: 0, url: `${this.pages}/pull/${number}#details-${this.pullRequestComments.length + 1}`, threadFile, commentFile, attached: attachments, hidden: this.unseen.has('pullRequestComment') }
+      this.pullRequestComments.push(comment)
+      return this.answered('pullRequestComment', { url: comment.url })
+    }
     const kept = this.pullRequestComments.find((comment) => comment.url === url) ?? this.pullRequestComments.findLast((comment) => comment.number === number && comment.body.startsWith(marker))
     if (kept) {
       Object.assign(kept, { body, bodies: [...kept.bodies, body], edits: kept.edits + 1, hidden: this.unseen.has('pullRequestComment') })
@@ -936,17 +917,7 @@ export class InMemoryPullRequests {
 /** The plugin's own `workflows/pipeline.skraft.dot`, read once: the default every test runs. */
 export const BUILT_IN_WORKFLOW = readFileSync(new URL('../../../../plugins/skraft-deliver/workflows/pipeline.skraft.dot', import.meta.url), 'utf8')
 
-/**
- * The plugin's pipeline as a repository ejected it to keep the mutation loop the plugin's pipeline
- * no longer runs: mutation after the DELIVER review, its survivors proposed by file, the
- * developer's choice applied, reviewed, and the gates and mutation run again.
- */
-export const MUTATION_WORKFLOW = BUILT_IN_WORKFLOW
-
 export const BUILT_IN_REVIEW = readFileSync(new URL('../../../../plugins/skraft-deliver/workflows/review.skraft.dot', import.meta.url), 'utf8')
-
-/** The plugin's mutation workflow, the one a mutation run follows. */
-export const BUILT_IN_MUTATION = readFileSync(new URL('../../../../plugins/skraft-deliver/workflows/mutation.skraft.dot', import.meta.url), 'utf8')
 
 export class InMemoryWorkflowSource {
   /**
@@ -966,17 +937,18 @@ export class InMemoryWorkflowSource {
  * The machine the commands run on: which programs are installed, and how a command line
  * exits (`'<cwd> $ <argv joined by spaces>'` → exit code). Everything else exits 0.
  * It is both the CommandRunner and the Executables port. A program written with a `/`
- * (`.venv/bin/python`) is installed as a path relative to the working copy
- * (`services/py/.venv/bin/python`) and found from the folder it starts in.
+ * is installed as a path relative to the working copy (`services/py/tools/run`) and found from
+ * the folder it starts in.
  */
 export class ScriptedMachine {
   /**
-   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[] }} [options]
-   *   exits: null for a program stopped before it exited; clock advances by takesMs per run;
+   * @param {{ installed?: string[], exits?: Record<string, number | null>, clock?: FixedClock, takesMs?: number, meanwhile?: Record<string, () => Promise<void> | void>, floods?: string[], refused?: string[] }} [options]
+   *   refused: programs the system refuses to start (EACCES); exits: null for a program stopped before it exited; clock advances by takesMs per run;
    *   meanwhile: what happens elsewhere on the machine while that command line runs; floods:
    *   the command lines whose output passes the runner's limit, kept cut
    */
-  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [] } = {}) {
+  constructor({ installed = ['git', 'docker', 'dotnet', 'npm', 'npx', 'mvn', 'python'], exits = {}, clock = null, takesMs = 0, meanwhile = {}, floods = [], refused = [] } = {}) {
+    this.refused = new Set(refused)
     this.installed = new Set(installed)
     this.exits = exits
     this.clock = clock
@@ -1001,6 +973,7 @@ export class ScriptedMachine {
     this.runs.push({ argv, cwd, ...(timeoutMs === undefined ? {} : { timeoutMs }) })
     this.envs.push(env)
     this.javaTmpDirs.push(javaTmpDir)
+    if (this.refused.has(argv[0])) return { started: false, exitCode: null, stdout: '', stderr: '', error: `${argv[0]} could not be started: the system refused it (EACCES)` }
     if (this.installedAt(argv[0], cwd) === null) return { started: false, exitCode: null, stdout: '', stderr: '', error: `command not found: ${argv[0]}` }
     await this.clock?.pass(this.takesMs)
     const line = `${cwd} $ ${argv.join(' ')}`

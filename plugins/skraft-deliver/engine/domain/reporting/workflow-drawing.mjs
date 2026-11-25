@@ -11,7 +11,7 @@ import { REFUTER } from '../review/lenses.mjs'
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode
  * @typedef {import('../journal/run-state.mjs').RunState} RunState
  * @typedef {{
- *   id: string, kind: string, phase: string | null, agent: string | null, gates: string[], question: string | null,
+ *   id: string, kind: string, phase: string | null, agent: string | null, question: string | null,
  *   publish: string | null, calls: string | null, lenses: Array<{ lens: string, when: string | null }>, refuter: DrawnRefuter | null,
  *   mandatory: boolean, locked: boolean, state: 'pending' | 'open' | 'done', visits: number,
  * }} DrawnStep
@@ -64,9 +64,9 @@ const successorsOf = (workflow, id) => {
 
 /** @param {WorkflowNode} node @param {RunState | null} run @returns {DrawnStep} */
 const drawnStep = (node, run) => ({
-  id: node.id, kind: node.kind, phase: node.phase, agent: node.agent, gates: node.gates, question: node.question,
+  id: node.id, kind: node.kind, phase: node.phase, agent: node.agent, question: node.question,
   publish: node.publish, calls: node.call?.workflow ?? null, lenses: lensesOf(node), refuter: refuterOf(node),
-  mandatory: node.mandatory === true, locked: node.locked, ...stateOf(run?.nodes[node.id]),
+  mandatory: node.mandatory === true, ...stateOf(run?.nodes[node.id]),
 })
 
 /** A review's lenses, each with when it runs; a call's, folded from the workflow it calls. @param {WorkflowNode} node */

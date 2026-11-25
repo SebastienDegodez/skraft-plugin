@@ -1,141 +1,82 @@
-# Example 04 — Evidence Manifest
+# Example 04 — The manifest the engine reads
 
-Domain: MonAssurance auto-insurance eligibility check.
+Domain: MonAssurance auto-insurance eligibility check, front end in `web/`.
 
-After the test run, write `.copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md` so agents know what
-was captured. The story key aligns with all other SDLC artefacts:
-`discuss/ac-draft-{story}.md`, `design/diagrams-{story}.md`, `distill/impl-plan-{story}.md`.
+The engine reads one manifest, `skraft-visuals/manifest.json` under the front end's root, once the
+e2e run you traced with `gate('e2e', …)` ends. A reporter of the component writes it.
 
-## Global reporter hook
-
-Add a custom reporter in `playwright.config.ts` to write the manifest automatically:
+## Configuration
 
 ```typescript
-// reporters/evidence-manifest-reporter.ts
-import type { Reporter, TestCase, TestResult, FullResult } from '@playwright/test/reporter';
-import { writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-
-interface EvidenceEntry {
-  type: 'screenshot' | 'video' | 'trace' | 'report' | 'junit';
-  path: string;
-  test: string;
-}
-
-export default class EvidenceManifestReporter implements Reporter {
-  private entries: EvidenceEntry[] = [];
-  private start = Date.now();
-  private passed = 0;
-  private failed = 0;
-  private storyId = process.env.SKRAFT_STORY_ID ?? 'unknown-story';
-
-  onTestEnd(test: TestCase, result: TestResult) {
-    if (result.status === 'passed') {
-      this.passed++;
-    } else {
-      this.failed++;
-    }
-
-    for (const attachment of result.attachments) {
-      if (!attachment.path) continue;
-      const type = attachment.contentType.startsWith('image/')
-        ? 'screenshot'
-        : attachment.name === 'video'
-        ? 'video'
-        : 'trace';
-      this.entries.push({ type, path: attachment.path, test: test.title });
-    }
-  }
-
-  onEnd(result: FullResult) {
-    const dir = `.copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/${this.storyId}/evidence`;
-    mkdirSync(dir, { recursive: true });
-
-    const rows = this.entries
-      .map(e => `| ${e.type} | ${e.path} | ${e.test} |`)
-      .join('\n');
-
-    const duration = ((Date.now() - this.start) / 1000).toFixed(0);
-    const status = this.failed > 0
-      ? `failed (${this.failed} failures, ${this.passed} passed)`
-      : `passed (${this.passed} passed)`;
-
-    const manifest = `# Evidence Manifest
-
-## Run
-- story: ${this.storyId}
-- timestamp: ${new Date().toISOString()}
-- status: ${status}
-- duration: ${duration}s
-
-## Files
-| Type | Path | Test |
-|---|---|---|
-${rows || '| — | — | no evidence captured |'}
-
-## Reports
-| Type | Path |
-|---|---|
-| html | ${dir}/reports/index.html |
-| junit | ${dir}/reports/results.xml |
-`;
-
-    writeFileSync(join(dir, 'manifest.md'), manifest);
-  }
-}
-```
-
-Register in `playwright.config.ts`:
-
-```typescript
+// web/playwright.config.ts
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  outputDir: `.copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence`,
-  reporter: [
-    ['./reporters/evidence-manifest-reporter.ts'],
-    ['html', { outputFolder: `.copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports`, open: 'never' }],
-    ['junit', { outputFile: `.copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/${process.env.SKRAFT_STORY_ID}/evidence/reports/results.xml` }],
+  projects: [
+    { name: 'light', use: { colorScheme: 'light' } },
+    { name: 'dark', use: { colorScheme: 'dark' } },
   ],
-  use: {
-    screenshot: 'only-on-failure',
-    video: { mode: 'retain-on-failure' },
-    trace: 'retain-on-failure',
-  },
+  reporter: [['list'], ['./skraft-visuals-reporter.ts']],
 });
 ```
 
-## CLI
+## Reporter
 
-With `SKRAFT_STORY_ID` set to `42-add-eligibility-check` in the environment:
+```typescript
+// web/skraft-visuals-reporter.ts
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { relative } from 'node:path';
+import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 
-```bash
-npx playwright test
-# manifest written to .copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/manifest.md
+export default class SkraftVisuals implements Reporter {
+  private screenshots: Array<{ title: string; theme: string; path: string; scenario?: string }> = [];
+
+  onTestEnd(test: TestCase, result: TestResult) {
+    const theme = test.parent.project()?.name ?? '';
+    const scenario = /^S\d+\b/.exec(test.title)?.[0];
+    for (const { name, path, contentType } of result.attachments) {
+      const shown = path ? relative(process.cwd(), path).split('\\').join('/') : '';
+      if (contentType === 'image/png' && shown.startsWith('skraft-visuals/')) this.screenshots.push({ title: name, theme, path: shown, ...(scenario ? { scenario } : {}) });
+    }
+  }
+
+  onEnd() {
+    mkdirSync('skraft-visuals', { recursive: true });
+    writeFileSync('skraft-visuals/manifest.json', JSON.stringify({ screenshots: this.screenshots }, null, 2));
+  }
+}
 ```
 
-## Resulting manifest
+## A test that leaves its screenshot
 
-```markdown
-# Evidence Manifest
+```typescript
+test('S2 an underage driver is told they are not eligible', async ({ page }, testInfo) => {
+  await page.goto('/quote');
+  await page.getByLabel('Birth date').fill('2010-04-01');
+  await page.getByRole('button', { name: 'Check eligibility' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Drivers under 18 are not eligible');
 
-## Run
-- story: 42-add-eligibility-check
-- timestamp: 2026-05-15T10:30:00Z
-- status: failed (1 failures, 9 passed)
-- duration: 38s
-
-## Files
-| Type | Path | Test |
-|---|---|---|
-| screenshot | .copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.png | underage driver should be rejected |
-| trace | .copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/eligibility-check-underage-1715770200000.zip | underage driver should be rejected |
-
-## Reports
-| Type | Path |
-|---|---|
-| html | .copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/index.html |
-| junit | .copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/42-add-eligibility-check/evidence/reports/results.xml |
+  const path = `skraft-visuals/underage-rejected-${testInfo.project.name}.png`;
+  await page.screenshot({ path, fullPage: true });
+  await testInfo.attach('Underage driver rejected', { path, contentType: 'image/png' });
+});
 ```
 
-Return the manifest path, `.copilot-tracking/skraft-deliver-runs/{projectSlug}/changes/{date}/evidence/{story}/evidence/manifest.md`, in your result.
+## What the run leaves
+
+```json
+{
+  "screenshots": [
+    { "title": "Underage driver rejected", "theme": "light", "path": "skraft-visuals/underage-rejected-light.png", "scenario": "S2" },
+    { "title": "Underage driver rejected", "theme": "dark", "path": "skraft-visuals/underage-rejected-dark.png", "scenario": "S2" }
+  ]
+}
+```
+
+Run it through `skraft_deliver_repl`, from the component's root, on your last commit:
+
+```javascript
+await gate('e2e', 'npx playwright test', { cwd: 'web' })
+```
+
+Report the run in your result; never copy, commit or upload the screenshots: the engine shows them.

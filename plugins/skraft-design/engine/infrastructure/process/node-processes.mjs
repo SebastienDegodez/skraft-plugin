@@ -87,7 +87,7 @@ const runCommand = async ([program, ...args], dir, host, limits) => {
  * @param {string} located @param {string[]} args @param {Required<ProcessHost>} host
  * @returns {Start}
  */
-const startArgs = (located, args, { platform, env }) => {
+export const startArgs = (located, args, { platform, env }) => {
   // Stryker disable next-line ConditionalExpression,LogicalOperator: equivalent under Linux, where mutation runs: only the tests under Windows rules locate a .cmd, and they set platform win32
   const throughCmd = platform === 'win32' && CMD_SCRIPTS.includes(extname(located).toLowerCase())
   if (!throughCmd) return { file: located, fileArgs: args, throughCmd }
@@ -259,7 +259,7 @@ const startFailed = (program, error) => {
  * @param {Required<ProcessHost>} host
  * @returns {Promise<string | null>}
  */
-const locate = async (program, dir, host) => {
+export const locate = async (program, dir, host) => {
   const windows = host.platform === 'win32'
   const extensions = extensionsFor(program, host)
   for (const folder of foldersFor(program, dir, host)) {

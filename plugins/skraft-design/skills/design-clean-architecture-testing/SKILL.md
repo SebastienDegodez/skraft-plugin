@@ -76,9 +76,10 @@ not "which ticket created it?"
   bindings call the use case with real Domain objects, for every scenario, S1 tagged
   `@walking-skeleton` included. `IntegrationTest` uses ordinary tests, including the walking
   skeleton through the real entry point; it never executes Gherkin.
-- The Gherkin runner selects `not @pending`: a scenario whose acceptance test is not written yet
-  carries `@pending`, which its own red removes. Never exclude `@walking-skeleton`, a whole
-  feature or a tag of a delivered scenario.
+- Every scenario of the story has its binding from DISTILL on; the scenarios not delivered yet
+  fail until the story's one green. Never exclude `@walking-skeleton`, a whole feature or a tag of
+  a scenario from the runner: the engineer filters a group's scenarios by their numbers while it
+  works (`design-outside-in-tdd`).
 - Declare the folders actually read by each runner in the component's `bdd` list, relative to
   its root. One pair per independent runner/binding scope, not one global pair per language.
   Existing confirmed paths are not moved by configuration detection.

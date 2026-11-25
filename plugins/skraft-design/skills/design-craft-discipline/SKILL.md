@@ -8,7 +8,8 @@ description: Use when a change looks finished and is about to be committed, or a
 ## Overview
 
 12 self-discipline checkpoints for the `design-software-engineer`.
-Run at every COMMIT & VERIFY phase, before committing.
+Run at every COMMIT & VERIFY phase, once, before committing: each command below runs once for the
+commit, never again to confirm a result already read.
 
 **What this skill is NOT:** a review contract. A review lens that declares
 it judges only with C10, C12 and the references; it never runs a command below.
@@ -31,21 +32,24 @@ The acceptance test targeted by this iteration MUST pass. No `[Skip]`.
 dotnet test
 ```
 
-Zero red tests. Zero ignored tests.
+Zero red tests, the acceptance tests of every scenario included. Zero ignored tests. The commit line's
+test run is this run: run no other.
 
 ### C3 — Build passes
 
-Run the component's `build` command: your brief's, else `commands.build` of the component in
+Run the component's `build` command through `skraft_design_repl` (`gate('build', …)`): your brief's, else `commands.build` of the component in
 `skraft-design-config.json`, else the stack's standard one (`dotnet build`).
 
-All projects compile without warnings. Treat warnings as errors.
+All projects compile without warnings. Treat warnings as errors. A test run that compiles the
+project is the build: run no `build` apart when the test command has just compiled it.
 
 ### C4 — Format and static analysis pass
 
-Run the component's `format` and `lint` commands the same way (brief, else `commands.format` and
+Run the component's `format` and `lint` commands the same way, through `skraft_design_repl` (brief, else `commands.format` and
 `commands.lint` in `skraft-design-config.json`); a missing command is skipped. When the formatter has a
 fix mode, run it first, then the check. Both report no finding, including one on a line the change
-did not write; commit those fixes as `style`.
+did not write. On a story's pass those fixes go in its one commit; commit them as `style` only on a
+pass after the story is delivered.
 
 ### C5 — No skipped tests or placeholder assertions
 
@@ -68,16 +72,10 @@ Check UnitTest files:
 Test names, variables, and assertions use business vocabulary
 (see the project's FR→EN lexicon). No `test1`, `data`, `ProcessData`.
 
-### C8 — mutation score meets the bar
+### C8 — mutation is the developer's
 
-Mutation testing is the developer's: never launch a mutation run inside a skraft pipeline step.
-When the developer, or a workflow of their own, hands you survivors:
-
-1. Real survivor → write ONE test at the exact edge.
-2. Equivalent mutant → suppress that one construct with a reason, the way the component's
-   `design-quality-gates-<stack>` skill states.
-
-Each scope at the bar of `design-skraft-quality-bar` (equivalent mutants suppressed with a reason).
+Mutation belongs to the developer, outside the pipeline: never launch a mutation run inside a
+skraft pipeline step.
 
 ### C9 — Conventional commit format
 
@@ -94,7 +92,7 @@ Applicable to Domain code only.
 ### C11 — Parametrize Variations
 
 Multiple input variants for the same behavior MUST be a single parameterized test
-(`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python),
+(`[Theory]/[InlineData]` in .NET, `@ParameterizedTest` in Java, `pytest.mark.parametrize` in Python, `it.each` / `test.each` in Vitest and Jest),
 not duplicated test methods. One test method per behavior, one row per case.
 
 ### C12 — Every test is planned

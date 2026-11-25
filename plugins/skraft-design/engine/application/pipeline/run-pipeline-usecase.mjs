@@ -1,30 +1,26 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
-import { deriveRun, redByGates } from '../../domain/journal/run-state.mjs'
+import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { DEFAULT_ATTEMPTS, causeFields, nextStep } from '../../domain/pipeline/next-step.mjs'
 import { composeBrief, dispatchLabel } from '../../domain/pipeline/dispatch-brief.mjs'
 import { dayOf, isFilled, outputPath, templateName } from '../../domain/pipeline/outputs.mjs'
 import { isDocument, writtenDocuments } from '../../domain/pipeline/documents.mjs'
 import { callsOf, callsPath } from '../../domain/pipeline/precheck-calls.mjs'
 import { SCAN_FILE } from '../../domain/pipeline/structural-scan.mjs'
-import { proposalPath, proposalTemplate } from '../../domain/pipeline/proposals.mjs'
-import { allowedPaths, checklistsOf, makesCommits, roleFolders, roleOf } from '../../domain/pipeline/roles.mjs'
+import { allowedPaths, checklistsOf, delivers, makesCommits, roleFolders, roleOf, writesScenarios } from '../../domain/pipeline/roles.mjs'
 import { writesComponentTests } from '../../domain/pipeline/component-skills.mjs'
-import { engineMessage, issueOf, REPLAY_SHARE } from '../../domain/pipeline/commits.mjs'
+import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { RUN_REPORT_FILE, renderRunReport, runReport } from '../../domain/reporting/run-report.mjs'
 import { assignmentsText, modelText, onHost } from '../../domain/reporting/agent-models.mjs'
 import { QA_REPORT_FILE, renderQaReport } from '../../domain/reporting/qa-report.mjs'
+import { scenarioOutcomesOf } from '../publish/scenario-outcomes.mjs'
 import { statusLine } from '../../domain/reporting/run-status.mjs'
 import { renderWorkflowView, WORKFLOW_FILE } from '../../domain/reporting/workflow-view.mjs'
-import { aliveCount, groupSurvivors, isStalled, ROUNDS_WITHOUT_PROGRESS, survivorLine } from '../../domain/gates/mutation-report.mjs'
-import { gatesOf } from '../../domain/gates/gate-plan.mjs'
-import { REPLAY_JUDGE } from '../../domain/pipeline/replay-verdict.mjs'
 import { openActiveRun } from './active-run.mjs'
 import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
+import { deliveredGatesOf } from '../../domain/evidence/gate-names.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
 import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
-import { runGates } from '../gates/gate-runs.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
-import { scenarioNodes } from '../../domain/workflow/workflow.mjs'
 import { policyLines } from '../../domain/config/infrastructure-policy.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 import { runReview } from '../review/review-runs.mjs'
@@ -37,15 +33,14 @@ import { publishStep } from './publish-step.mjs'
 import { reportProgress } from '../publish/issue-progress.mjs'
 import { storyLanguage } from '../publish/story-language.mjs'
 import { checkStep, engineHashes, headsOf } from './step-checks.mjs'
+import { runsFolder } from '../../domain/evidence/run-trace.mjs'
 import { acceptanceFiles, scenarioPassOf } from './scenario-checks.mjs'
 import { commitForAgent } from './agent-commits.mjs'
 import { writeStructuralScan } from './structural-scan.mjs'
 import { findComponentSkills } from './component-skills.mjs'
 import { proposedAdrs } from '../decisions/adr-ratification.mjs'
-import { gateCause, gateIncident } from './gate-incidents.mjs'
 import { failureSignatureInput, REPEATED_FAILURES, signatureOccurrences } from '../../domain/pipeline/failure-signature.mjs'
 import { ownerOfCause } from '../../domain/pipeline/incidents.mjs'
-import { parseCommand } from '../../domain/gates/command-line.mjs'
 import { architectureCheckpoint } from '../architecture/checkpoint.mjs'
 import { publishResearch } from '../architecture/publish-research.mjs'
 
@@ -54,7 +49,6 @@ import { publishResearch } from '../architecture/publish-research.mjs'
  * @typedef {import('../journal/run-journal.mjs').OpenJournal} OpenJournal
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
  * @typedef {import('../../domain/pipeline/next-step.mjs').WorkStep} WorkStep
- * @typedef {import('../../domain/pipeline/next-step.mjs').SkipStep} SkipStep
  * @typedef {import('../../domain/pipeline/next-step.mjs').BlockedStep} BlockedStep
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{
@@ -71,7 +65,6 @@ import { publishResearch } from '../architecture/publish-research.mjs'
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
- *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
  *   agentCatalog: import('../ports/agent-catalog.mjs').AgentCatalog,
  *   forges: import('../config/forge.mjs').ForgeDeps['forges'],
@@ -197,7 +190,19 @@ const blockedBeforeStart = (slug, code, reason) => ({ status: 'blocked', slug, p
  */
 const confirmedThenRun = async (context) => (await confirmConfiguration(context, deriveRun(context.journal.events), context.confirm))
   ?? (await cannotStart(context))
+  ?? perGroupJournal(context)
   ?? runFrom(context)
+
+/**
+ * A journal an engine that delivered one group per pass wrote, stopped between two groups, is not
+ * resumed: this engine delivers every group in one pass, and such a story starts again.
+ * @param {Context} context @returns {RunOutcome | null}
+ */
+const perGroupJournal = ({ slug, journal }) => {
+  const { scenarios } = deriveRun(journal.events)
+  const partial = scenarios !== null && scenarios.delivered > 0 && scenarios.delivered < scenarios.groups.length
+  return partial ? blockedBeforeStart(slug, 'delivery-shape', 'this run was started by an engine that delivered one group per pass; start the story again') : null
+}
 
 /** @param {Context} context @returns {Promise<RunOutcome>} */
 const runFrom = async (context) => {
@@ -218,11 +223,12 @@ const runFrom = async (context) => {
  * run-report.md, qa-report.md and WORKFLOW.md, written again from the journal after each step.
  * @param {Context} context
  */
-const writeReports = async ({ deps, slug, journal, loaded }) => {
+const writeReports = async ({ deps, slug, journal, loaded, config }) => {
   const run = deriveRun(journal.events)
   const status = statusLine(run)
   await deps.files.write(slug, RUN_REPORT_FILE, renderRunReport({ slug, status, report: runReport(journal.events) }))
-  await deps.files.write(slug, QA_REPORT_FILE, renderQaReport({ slug, status, events: journal.events }))
+  const outcomes = await scenarioOutcomesOf(deps, { slug, events: journal.events, components: config.components })
+  await deps.files.write(slug, QA_REPORT_FILE, renderQaReport({ slug, status, events: journal.events, outcomes }))
   await deps.files.write(slug, WORKFLOW_FILE, renderWorkflowView({ slug, workflow: loaded.workflow, run }))
 }
 
@@ -307,8 +313,6 @@ const showPhase = ({ deps }, shown, phase) => {
  * @returns {Promise<RunOutcome | null>}
  */
 const work = (context, run, next) => {
-  if (next.kind === 'skip') return skip(context, run, next)
-  if (next.kind === 'gate') return gate(context, run, next)
   if (next.kind === 'review' || next.kind === 'call') return review(context, run, next)
   if (next.kind === 'ask') return askStep(context, run, next)
   if (next.kind === 'publish') return publishStep(context, run, next)
@@ -316,12 +320,12 @@ const work = (context, run, next) => {
 }
 
 /**
- * A node that runs once per scenario of the story stops the run when the configuration lists no
- * component to write the scenarios in; null when it lists one, or for any other node.
+ * The node that writes the story's scenarios and the one that delivers them stop the run when
+ * the configuration lists no component to write them in; null when it lists one, or for any other node.
  * @param {Context} context @param {WorkStep} next
  * @returns {Promise<RunOutcome> | null}
  */
-const noScenarioComponent = (context, { node, phase }) => (node.each === 'scenario' && context.config.components.length === 0
+const noScenarioComponent = (context, { node, phase }) => ((writesScenarios(node) || delivers(node)) && context.config.components.length === 0
   ? stop(context, phase, 'no-components', `${CONFIG_FILE} lists no component, so ${node.id} has no component to write the story's scenarios in; run skraft init to detect them`)
   : null)
 
@@ -331,6 +335,7 @@ const noScenarioComponent = (context, { node, phase }) => (node.each === 'scenar
  * @returns {{ code: string, reason: string }}
  */
 const blockedBy = (context, next) => {
+  if (next.cause === 'node-retired') return { code: 'node-retired', reason: `the node ${next.missingNode} was retired: skraft runs no gate and no mutation any more. The software engineer runs the gates through skraft_design_repl, and the DELIVER review reads the traced runs of its attempt; start the story again with the plugin's workflow` }
   if (next.cause === 'workflow-changed') return { code: 'workflow-changed', reason: `the workflow has no node ${next.missingNode} any more; restore the workflow the run started with` }
   const event = /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (next.last)
   if (next.cause === 'route') return { code: event.code, reason: event.reason }
@@ -380,7 +385,7 @@ const dispatch = async (context, run, next) => {
   context.deps.progress.log(`${context.slug}: ${job.agent}${passOf(next.visit)}, attempt ${next.attempt} — ${modelText(onHost(job.assignment, context.deps.agentRunner.host))}`)
   const started = context.deps.clock.now()
   const asked = await runAgent(context, run, next, job)
-  if (asked.outcome !== null) return asked.outcome
+  if (asked.outcome !== null || asked.asked) return asked.outcome
   return judgeAttempt(context, run, next, { job, heads, engine, started, cost: asked.cost, model: asked.model })
 }
 
@@ -394,26 +399,24 @@ const passOf = (visit) => (visit > 1 ? `, pass ${visit}` : '')
  */
 const prepareJob = async (context, run, next) => {
   const { deps, slug, config } = context
-  const { node, visit, attempt, group } = next
+  const { node, visit, attempt } = next
   const agent = /** @type {string} */ (node.agent)
   const role = roleOf(node)
   const date = dayOf(deps.clock.now())
   const language = await storyLanguage(deps, slug, run)
   const { outputs, precreated } = await outputsOf(context, run, next, { role, language })
-  const result = `results/${node.id}-${visit}${group === null ? '' : `-g${group}`}-${attempt}.json`
+  const result = `results/${node.id}-${visit}-${attempt}.json`
   const scan = role.scan ? await writeStructuralScan(deps, { slug, path: outputPath(SCAN_FILE, { date, slug }), components: config.components }) : null
   return { agent, role, outputs, result, precreated, scan, skills: await skillsOf(deps, role, config.components), drafts: await draftsOf(deps, role), assignment: phaseAssignment(context, next), language, checklists: await checklistsFound(deps, agent) }
 }
 
 /**
- * The outputs of an attempt and what the engine writes in each before it: a proposal's, created
- * for its visit and its file of survivors; any other's, kept from the node's first attempt, with
- * their templates in the story's language.
+ * The outputs of an attempt and what the engine writes in each before it: kept from the node's
+ * first attempt, with their templates in the story's language.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Pick<Job, 'role' | 'language'>} job
  * @returns {Promise<Pick<Job, 'outputs' | 'precreated'>>}
  */
 const outputsOf = async ({ deps, slug }, run, next, { role, language }) => {
-  if (role.proposal) return { outputs: [proposalPath({ node: next.node.id, visit: next.visit, group: next.group })], precreated: [proposalTemplate(next)] }
   const date = dayOf(deps.clock.now())
   return {
     outputs: run.nodes[next.node.id]?.outputs ?? role.outputs.map((output) => outputPath(output.path, { date, slug })),
@@ -472,7 +475,7 @@ const openAttempt = async (context, run, next, job) => {
   const engine = await engineAsFound(context, run, next)
   const { phase, node, visit, attempt, missing, feedback } = next
   const { agent, outputs, result, assignment } = job
-  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...causeFields(next), ...groupFields(run, next), heads, engine, assignment, host: context.deps.agentRunner.host })
+  await context.journal.append('step.started', { step: node.id, phase, agent, visit, attempt, outputs, result, missing, feedback, ...causeFields(next), heads, engine, assignment, host: context.deps.agentRunner.host })
   return { heads, engine }
 }
 
@@ -513,16 +516,6 @@ const lastStarted = (journal, step) => journal.events.findLast((/** @type {impor
 
 /** The refusals of an engine file. */
 const ENGINE_REFUSALS = new Set([`out of write scope: ${CONFIG_FILE}`])
-
-/**
- * The group an attempt works on; the attempt that opens a visit also lists them all: a visit starts
- * on the first group of surviving mutants, on each scenario, or on the group a human reopens.
- * @param {RunState} run @param {WorkStep} next
- */
-const groupFields = (run, { group, groups, node, visit }) => {
-  if (group === null) return {}
-  return run.nodes[node.id]?.visit === visit ? { group } : { group, groups }
-}
 
 /** Where an attempt keeps the documents of the tracking folder as it found them. @param {string} result the attempt's result file */
 const snapshotOf = (result) => result.replace(/\.json$/, '.documents.json')
@@ -625,25 +618,57 @@ const runAgent = async (context, run, next, job) => {
 }
 
 /**
- * The agent's answer: the run stops when the agent could not start, or stopped with its work
- * not done.
+ * The agent's answer: the run stops when the host could not start the agent (a host loads a
+ * plugin's agents when its session starts, so no retry in this session finds it), or when a person
+ * stopped it with its work not done; an agent that stopped by itself with its work not done is an
+ * unforeseen incident, whose recovery the run asks for.
  * @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job
- * @returns {Promise<{ outcome: RunOutcome | null, cost?: number, model?: string | null }>}
+ * @returns {Promise<{ outcome: RunOutcome | null, asked?: boolean, cost?: number, model?: string | null }>}
  */
 const askAgent = async (context, run, next, job) => {
   const { agent } = job
   const answer = await context.deps.agentRunner.run(agentCall(context, run, next, job))
   if (answer.unavailable) return { outcome: await stop(context, next.phase, 'agent-unavailable', answer.error ?? `${agent} could not be started`) }
   const unfinished = !answer.ok && (await pending(context, job))
-  if (unfinished) return { outcome: await stop(context, next.phase, 'agent-failed', `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`) }
+  if (unfinished) return unfinishedAgent(context, next, `${agent} stopped without finishing: ${answer.error ?? 'no answer'}`, answer)
   return { outcome: null, cost: answer.costUsd, model: answer.model ?? null }
+}
+
+/**
+ * A person who stopped the agent stops the run; an agent that stopped by itself is an incident
+ * of unknown cause, asked about with its signature.
+ * @param {Context} context @param {WorkStep} next @param {string} reason
+ * @param {{ interrupted?: boolean }} answer
+ */
+const unfinishedAgent = async (context, next, reason, { interrupted }) => {
+  if (interrupted) return { outcome: await stop(context, next.phase, 'agent-failed', reason) }
+  return { outcome: await askRecovery(context, next, { category: 'agent-failed', reason }), asked: true }
+}
+
+/**
+ * Asks how to recover from a failure of unknown cause: its reason goes to a log the question
+ * names, with the failure's signature and how often the run met it.
+ * @param {Context} context @param {WorkStep} next @param {{ category: string, reason: string }} failure
+ */
+const askRecovery = async (context, next, { category, reason }) => {
+  const { deps, slug, journal } = context
+  const signature = await deps.hasher.sha256(failureSignatureInput({ step: next.node.id, cause: category, proof: reason, root: repositoryRoot(deps.files, slug), slug }))
+  const log = await incidentLog(context, `logs/incident-${next.node.id}-${signature.slice(0, 7)}.log`, reason)
+  const incident = { category, owner: /** @type {const} */ ('unknown'), argv: [], exitCode: null, attempts: signatureOccurrences(journal.events, signature) + 1, signature, log }
+  return escalate(context, next, reason, { owner: 'unknown', log }, [incident])
+}
+
+/** Writes the reason of an incident where its question points. @param {Context} context @param {string} path @param {string} reason */
+const incidentLog = async ({ deps, slug }, path, reason) => {
+  await deps.files.write(slug, path, `${reason}\n`)
+  return deps.files.location(slug, path)
 }
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
 const agentCall = (context, run, next, job) => ({
   agent: job.agent,
   source: context.loaded.sources[job.agent],
-  label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt, group: next.group === null ? null : { index: next.group, of: next.groups.length, each: next.node.each } }),
+  label: dispatchLabel({ slug: context.slug, step: next.node.id, visit: next.visit, attempt: next.attempt }),
   prompt: composeBrief(briefOf(context, run, next, job)),
   ...modelOf(job.assignment),
 })
@@ -656,7 +681,6 @@ const briefOf = (context, run, next, job) => ({
   ...briefStack(context, run, job.role),
   missing: next.missing.map((path) => context.deps.files.location(context.slug, path)),
   ...briefFeedback(next),
-  acceptance: scenarioNodes(context.loaded.workflow).length > 0 ? [] : acceptanceCommits(context),
   ...briefRole(next, job),
   ...briefScenarioOf(context, run, next),
 })
@@ -668,31 +692,29 @@ const briefOf = (context, run, next, job) => ({
  */
 const briefScenarioOf = (context, run, next) => {
   const scenario = briefScenario(context, run, next)
-  return { scenario, policy: scenario === null || scenario.kind === 'delivery' ? [] : context.config.components.flatMap(policyLines) }
+  return { scenario, policy: scenario?.kind === 'plan' ? context.config.components.flatMap(policyLines) : [] }
 }
 
 /**
- * The scenario a pass works on as the brief tells it, with the reds of the acceptance tests its
- * green may not change and the test command it chains its commit to; null for a pass on none.
+ * The scenarios a pass works on as the brief tells them: on the plan's pass where it sends the
+ * output of its run of the acceptance tests, on a delivery pass every group with the test command
+ * the story's commit chains to, and the reds whose files no later pass changes; null for a pass on none.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefScenario | null}
  */
-const briefScenario = ({ loaded, config }, run, next) => {
-  const pass = scenarioPassOf(loaded.workflow, run, next)
+const briefScenario = ({ config, deps, slug }, run, { node, visit }) => {
+  const pass = scenarioPassOf(run, node)
   if (pass === null) return null
-  const told = pass.kind === 'plan' ? NOT_LISTED : /** @type {import('../../domain/pipeline/scenarios.mjs').StoryScenario} */ (pass.scenario)
-  const { title, component, tags } = told
-  return { kind: pass.kind, index: pass.index, of: pass.of, title, component, tags, oracles: pass.oracles.map((oracle) => oracleTold(oracle, config.components)), skeleton: skeletonTold(pass, component, config.components), test: scenarioTest(config, run, component) }
+  const groups = pass.groups.map((group) => briefGroup(group, { of: pass.groups.length, test: scenarioTest(config, run, group.scenarios[0]?.component ?? null) }))
+  const oracles = pass.kind === 'plan' ? [] : pass.reds.map((red) => oracleTold(red, config.components))
+  return { kind: pass.kind, groups, oracles, skeleton: pass.skeleton !== null, redRun: pass.kind === 'plan' }
 }
 
-/**
- * The walking skeleton a delivery pass keeps passing: the one of its scenario's component.
- * @param {import('./scenario-checks.mjs').ScenarioPass} pass @param {string | null} component @param {import('../../domain/config/skraft-config.mjs').Component[]} components
- */
-const skeletonTold = ({ kind, skeleton }, component, components) => (kind === 'delivery' && skeleton?.component === component ? oracleTold(skeleton, components) : null)
-
-/** A scenario the pass that writes the plan has not listed yet. */
-const NOT_LISTED = Object.freeze({ title: null, component: null, tags: Object.freeze([]) })
+/** @param {import('./scenario-checks.mjs').PassGroup} group @param {{ of: number, test: string | null }} told */
+const briefGroup = ({ index, scenarios }, { of, test }) => ({
+  index, of, test,
+  scenarios: scenarios.map(({ index: number, title, component, tags }) => ({ index: number, title, component, tags })),
+})
 
 /**
  * A red of an acceptance test as the engineer is told it: the files it never changes.
@@ -714,35 +736,15 @@ const scenarioTest = (config, run, name) => {
 const briefFeedback = ({ feedback, instruction, sentBy }) => ({ feedback, instruction, sentBy })
 
 /**
- * The group of surviving mutants the agent works on, whether it only proposes how to treat them,
- * the Proposed ADRs it rewrites, the language an agent writing the pull request's prose writes in, and
+ * The Proposed ADRs it rewrites, the language an agent writing the pull request's prose writes in, and
  * the gates it checks its outputs against.
  * @param {WorkStep} next @param {Job} job
  */
-const briefRole = ({ group, groups, node }, { role, drafts, language, checklists }) => ({
-  mutants: group === null || node.each !== 'survivor-file' ? null : { .../** @type {import('../../domain/gates/mutation-report.mjs').SurvivorGroup} */ (groups[group - 1]), group, of: groups.length },
-  proposal: role.proposal,
+const briefRole = (_next, { role, drafts, language, checklists }) => ({
   drafts,
   language: role.prose ? language : null,
   checklists,
 })
-
-/**
- * The red commits the last attempt of each pass of an acceptance step confirmed: what an agent
- * committing failing tests only left for the TDD cycles after it.
- * @param {Context} context
- * @returns {string[]} `<sha> "<subject>"`, each once
- */
-const acceptanceCommits = ({ journal, loaded }) => {
-  const checked = journal.events.filter((event) => event.type === 'commits.checked' && isAcceptanceStep(loaded.workflow.nodes[event.step]))
-  const last = [...new Map(checked.map((event) => [`${event.step} ${event.visit}`, event])).values()]
-  // A pass that went on refused none of its commits, so every red it lists was replayed red.
-  const reds = last.flatMap((event) => event.commits.filter((/** @type {{ kind: string }} */ commit) => commit.kind === 'red'))
-  return [...new Set(reds.map((/** @type {{ sha: string, subject: string }} */ commit) => `${commit.sha.slice(0, 7)} "${commit.subject}"`))]
-}
-
-/** An agent node that commits failing tests only. @param {import('../../domain/workflow/workflow.mjs').WorkflowNode | undefined} node */
-const isAcceptanceStep = (node) => node?.kind === 'agent' && roleOf(node).tdd === 'red'
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Job} job */
 const briefPaths = ({ deps, slug, config }, run, next, { role, outputs, result, scan, skills }) => {
@@ -772,14 +774,13 @@ const briefStack = ({ config }, run, role) => ({
 })
 
 /**
- * A component as the brief tells it: its test command, and its gate commands but mutation, in
- * the order the gates step runs them, each with the run's base in place of `{baseSha}`.
+ * A component as the brief tells it: its test command and its gates, in the order a developer runs them, each with its command and the run's base in place of `{baseSha}`, or none for a gate it names no command for.
  * @param {import('../../domain/config/skraft-config.mjs').Component} component @param {string | undefined} sha
  * @returns {import('../../domain/pipeline/dispatch-brief.mjs').BriefComponent}
  */
 const briefComponent = (component, sha) => {
   const { name, root, stack, mocking, contractTesting, bddPaths, commands } = component
-  const gates = gatesOf(component).filter((gate) => gate !== 'mutation').map((gate) => ({ gate, line: withBase(commands[gate], sha) }))
+  const gates = deliveredGatesOf(component).map((gate) => ({ gate, line: gate in commands ? withBase(commands[gate], sha) : null }))
   return { name, root, stack, mocking: mocking.strategy, contractTesting, bdd: bddPaths, test: testLine(commands.test, sha), gates }
 }
 
@@ -791,13 +792,22 @@ const briefComponent = (component, sha) => {
  */
 const judgeAttempt = async (context, run, next, attempt) => {
   const checked = await checkAttempt(context, run, next, attempt)
-  if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits, ...unsettled(checked) })
-  if (checked.environment !== null) return checked.incident?.owner === 'interrupted' ? interrupted(context, next.phase, checked.environment) : escalate(context, next, checked.environment, checked.incident)
+  if (checked.commits.length > 0) await context.journal.append('commits.checked', { step: next.node.id, visit: next.visit, attempt: next.attempt, commits: checked.commits })
+  if (checked.environment !== null) return escalate(context, next, checked.environment)
+  await keepEvidence(context, next, checked)
   const committed = await commitDone(context, run, next, checked)
   if (committed !== null && 'environment' in committed) return escalate(context, next, committed.environment, committed.incident, committed.incidents)
   await recordAttempt(context, run, next, { ...attempt, checked, committed })
-  await warnSlowReplay(context, next.phase)
   return null
+}
+
+/**
+ * The runs a delivering attempt traced, journaled by id and hash for the DELIVER review and the run view.
+ * @param {Context} context @param {WorkStep} next @param {Extract<Awaited<ReturnType<typeof checkStep>>, { environment: null }>} checked
+ */
+const keepEvidence = async ({ journal }, { node, visit, attempt }, checked) => {
+  if (checked.evidence === undefined || checked.evidence === null || failedCheck(checked)) return
+  await journal.append('evidence.checked', { step: node.id, visit, attempt, ...(checked.red === true ? { red: true } : {}), runs: checked.evidence, ...(checked.invalid === undefined ? {} : { invalid: checked.invalid }) })
 }
 
 /**
@@ -816,32 +826,27 @@ const failedCheck = ({ missing, failures }) => missing.length > 0 || failures.le
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @param {{ job: Job, heads: any, engine: Array<{ path: string, hash: string | null }> }} attempt
  */
-const checkAttempt = ({ deps, slug, config, journal, loaded }, run, { node, visit, attempt, feedback, sentBy, group }, { job, heads, engine }) => {
+const checkAttempt = ({ deps, slug, config, journal }, run, { node, visit, attempt }, { job, heads, engine }) => {
   const inState = attempt > 1
+  const scenario = scenarioPassOf(run, node)
   const { role, outputs, precreated, result } = job
-  const judge = { source: loaded.sources[REPLAY_JUDGE], assignment: judgeAssignment(config), slug, step: node.id, visit, attempt }
-  return checkStep({ deps, slug, config, base: run.base, story: run.story, judge }, {
-    role, outputs, precreated, result, known: knownCommits(journal), scenario: scenarioPassOf(loaded.workflow, run, { node, group }),
+  return checkStep({ deps, slug, config, base: run.base, story: run.story }, {
+    role, outputs, precreated, result, scenario,
     visitHeads: inState ? run.nodes[node.id].heads : heads,
-    engineBefore: engine,
-    redByGateFailure: inState ? run.nodes[node.id].redByGateFailure : redByGates(feedback, sentBy),
+    ...whatTheAttemptLeft(journal, { run, scenario, engine }, { node, visit, attempt }),
   })
 }
 
-/** What the replay judge runs on: the configuration's rule for it, else the plugin's. @param {import('../../domain/config/skraft-config.mjs').SkraftConfig} config */
-const judgeAssignment = (config) => assignmentOf(config, { agent: REPLAY_JUDGE, type: 'refuter', named: null })
-
 /**
- * A check the machine stopped settled none of its commits: its verdicts are those before the
- * replays it could not run, and the attempt it resumes on replays them again.
- * @param {{ environment: string | null }} checked
+ * What the checks read besides the working copy: the commits earlier visits carried, the engine files as the attempt
+ * found them, and where its runs are traced.
+ * @param {{ events: any[] }} journal @param {{ run: RunState, scenario: any, engine: Array<{ path: string, hash: string | null }> }} state @param {Pick<WorkStep, 'node' | 'visit' | 'attempt'>} at
  */
-const unsettled = ({ environment }) => (environment === null ? {} : { settled: false })
-
-/** The commits the journal already judged, by sha, from the checks that settled them. @param {OpenJournal} journal */
-const knownCommits = (journal) => new Map(journal.events
-  .filter((event) => event.type === 'commits.checked' && event.settled !== false)
-  .flatMap((event) => event.commits.map((/** @type {{ sha: string, verdict: string, replay: any }} */ commit) => [commit.sha, commit])))
+const whatTheAttemptLeft = ({ events }, { run, scenario, engine }, { node, visit, attempt }) => ({
+  carried: carriedOf(scenario, run.nodes[node.id], { events, step: node.id, visit }),
+  engineBefore: engine,
+  evidence: { folder: runsFolder(node.id, visit, attempt), events },
+})
 
 /**
  * Records the attempt: refused, or done with the node it leads to.
@@ -854,16 +859,16 @@ const recordAttempt = async (context, run, next, attempt) => context.journal.app
 )
 
 /** @param {Context} context @param {RunState} run @param {WorkStep} next @param {Parameters<typeof recordAttempt>[3]} attempt */
-const attemptRecord = async (context, run, { node, visit, attempt, group, groups }, { job, started, cost, model, checked, committed }) => {
+const attemptRecord = async (context, run, { node, visit, attempt }, { job, started, cost, model, checked, committed }) => {
   const failed = failedCheck(checked)
   const incidents = failed ? await attemptIncidents(context, node.id, checked) : []
-  const routed = failed ? repeatedAttemptRoute(node.id, incidents) : routeDone(context, run, { node, group, groups })
+  const routed = failed ? repeatedAttemptRoute(node.id, incidents) : leave(context, run, node.id, null, [])
   return {
-    step: node.id, visit, attempt, ...(group === null ? {} : { group }), ...await attemptFiles(context, job, { step: node.id, visit, attempt }),
+    step: node.id, visit, attempt, ...await attemptFiles(context, job, { step: node.id, visit, attempt }),
     outcome: failed ? 'failed' : 'done', code: attemptCode(failed, checked, routed),
     missing: checked.missing, failures: checked.failures, incidents,
     next: routed.next, ceiling: routed.ceiling, reason: routed.reason, model,
-    ...spent(context, started, checked.replayMs, withJudge(cost, checked.judgeCost)), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
+    ...spent(context, started, cost), ...(committed ? { committed } : {}), ...(failed ? {} : checked.scenario),
   }
 }
 
@@ -889,35 +894,23 @@ const repeatedAttemptRoute = (step, incidents) => {
 }
 
 /**
- * Where a done attempt leads: a group of surviving mutants hands over to the next one of its
- * visit, a red of a scenario to its green, a green to the next scenario's red; the last one
- * leaves the node.
- * @param {Context} context @param {RunState} run @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
- * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
+ * What a delivery pass of a visit a human reopened after a block counts besides its own commits:
+ * the commits the attempts of the visits before made, since the node's first visit. A commit a
+ * person made while the run waited is none of them, and is never judged as the engineer's.
+ * @param {import('./scenario-checks.mjs').ScenarioPass | null} scenario
+ * @param {import('../../domain/journal/run-state.mjs').NodeState | undefined} state
+ * @param {{ events: import('../../domain/journal/run-state.mjs').RunEvent[], step: string, visit: number }} at
+ * @returns {import('./step-checks.mjs').Carried | null}
  */
-const routeDone = (context, run, { node, group, groups }) => (loopsOn(context, { node, group, groups }) ? { next: null } : leave(context, run, node.id, null, []))
-
-/**
- * Whether a done attempt hands over without an edge: to the next group of surviving mutants, or
- * within the story's scenarios, where only the red of the first scenario leaves the node that
- * writes the reds by its edge, to the review.
- * @param {Context} context @param {Pick<WorkStep, 'node' | 'group' | 'groups'>} next
- */
-const loopsOn = ({ loaded }, { node, group, groups }) => {
-  if (node.id === scenarioNodes(loaded.workflow)[0]) return group !== 1
-  return group !== null && group < groups.length
+const carriedOf = (scenario, state, { events, step, visit }) => {
+  if (scenario?.kind !== 'delivery' || state === undefined || visit === 1) return null
+  const earlier = events.filter((event) => event.type === 'commits.checked' && event.step === step && event.visit < visit)
+  return { heads: state.firstHeads, shas: earlier.flatMap((event) => event.commits.map((/** @type {{ sha: string }} */ commit) => commit.sha)) }
 }
 
-/** @param {Context} context @param {Date} started @param {number | undefined} replayMs @param {number | undefined} cost */
-/**
- * What an attempt cost with the replay judge's share; undefined when the host tells neither.
- * @param {number | undefined} cost @param {number | undefined} judgeCost
- */
-const withJudge = (cost, judgeCost) => (judgeCost === undefined ? cost : (cost ?? 0) + judgeCost)
-
-const spent = ({ deps }, started, replayMs, cost) => ({
+/** @param {Context} context @param {Date} started @param {number | undefined} cost */
+const spent = ({ deps }, started, cost) => ({
   durationMs: deps.clock.now().getTime() - started.getTime(),
-  replayMs,
   cost, // undefined when the host reports none: the journal line leaves it out
 })
 
@@ -929,161 +922,6 @@ const testLine = (line, sha) => (line === undefined ? null : withBase(line, sha)
 
 /** A command line with the base the run diffs against in place of `{baseSha}`. @param {string} line @param {string | undefined} sha */
 const withBase = (line, sha) => (sha ? line.replaceAll('{baseSha}', sha) : line)
-
-/**
- * Tells the developer once per phase that replaying red commits takes more than its share of
- * the phase, while every red commit is replayed.
- * @param {Context} context @param {string} phase
- */
-const warnSlowReplay = async ({ deps, slug, journal, config }, phase) => {
-  if (config.tdd.replay !== 'all') return
-  const run = deriveRun(journal.events)
-  const replayMs = run.replayMs[phase] ?? 0
-  const phaseMs = deps.clock.now().getTime() - Date.parse(run.phaseStarted[phase])
-  if (run.replayWarned.includes(phase) || replayMs <= REPLAY_SHARE * phaseMs) return
-  await journal.append('tdd.replay-slow', { phase, replayMs, phaseMs })
-  deps.progress.log(
-    `${slug}: replaying test commits took ${Math.round((100 * replayMs) / phaseMs)}% of ${phase}; ` +
-    `set "tdd": { "replay": "last-red" } in ${CONFIG_FILE} to replay only the last test commit of each story`,
-  )
-}
-
-/**
- * A gate node: the gates of the components the story touched, then for a goal gate those of
- * every other component.
- * @param {Context} context
- * @param {RunState} run
- * @param {WorkStep} next
- * @returns {Promise<RunOutcome | null>}
- */
-const gate = async (context, run, next) => {
-  const { phase, node } = next
-  await openGate(context, next)
-  if (context.config.components.length === 0) return stop(context, phase, 'no-components', `${CONFIG_FILE} lists no component, so ${node.id} has nothing to run; run skraft init to detect them`)
-  const started = context.deps.clock.now()
-  const { gates, failure } = await gateResults(context, run, node)
-  const failures = gates.filter((result) => result.status === 'fail').map((result) => `${result.component}/${result.gate}: ${result.reason} (evidence: ${result.evidence})`)
-  if (failure === 'interrupted' || failure === 'environment' || failure === 'unknown') return stoppedGates(context, run, next, { gates, failure, failures, started })
-  await recordGate(context, run, next, { gates, failure, failures, started, survivors: groupSurvivors(gates.flatMap((result) => result.survivors ?? [])) })
-  return null
-}
-
-/**
- * Gates a person interrupted stop the run; gates that wait on what a human must provide (a
- * program, a command, a readable mutation report) ask one. Any other failure goes back to the
- * agent.
- * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ gates: import('../gates/gate-runs.mjs').GateResult[], failure: 'interrupted' | 'environment' | 'unknown', failures: string[], started: Date }} stopped
- */
-const stoppedGates = async (context, run, next, { gates, failure, failures, started }) => {
-  if (failure === 'interrupted') return interrupted(context, next.phase, failures.join('; '))
-  const incidents = await failureIncidents(context, next.node.id, failure, gates)
-  if (failure !== 'unknown' && incidents.some((incident) => incident.attempts >= REPEATED_FAILURES)) {
-    await recordGate(context, run, next, { gates, failure, failures, started, survivors: [] })
-    return null
-  }
-  return escalate(context, next, failures.join('; '), gateIncident(gates, failure), incidents)
-}
-
-/** @param {Context} context @param {WorkStep} next */
-const openGate = async ({ deps, slug, journal }, { phase, node, visit, attempt, sentBy, resumed }) => {
-  if (!resumed) await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt, ...(sentBy === null ? {} : { sentBy }) })
-  deps.progress.log(`${slug}: ${node.id} (${node.gates.join(', ')})${passOf(visit)}`)
-}
-
-/**
- * The gates of the touched components, then for a goal gate that passed them, those of the others.
- * @param {Context} context @param {RunState} run @param {WorkStep['node']} node
- */
-const gateResults = async ({ deps, slug, journal, config }, run, node) => {
-  const request = { slug, journal, components: config.components, base: run.base, only: node.gates }
-  const touched = await runGates(deps, { ...request, scope: 'touched' })
-  if (touched.conflict !== null) throw new JournalConflict(touched.conflict)
-  if (touched.failure === null && node.goal) return withOtherComponents(deps, request, touched)
-  return touched
-}
-
-/**
- * @param {PipelineDeps} deps @param {Omit<Parameters<typeof runGates>[1], 'scope'>} request
- * @param {Awaited<ReturnType<typeof runGates>>} touched
- */
-const withOtherComponents = async (deps, request, touched) => {
-  const rest = await runGates(deps, { ...request, scope: 'all', skip: touched.components })
-  return { gates: [...touched.gates, ...rest.gates], failure: rest.failure }
-}
-
-/**
- * Records the gate node: passed or failed, with the node it leads to.
- * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {{ gates: import('../gates/gate-runs.mjs').GateResult[], failure: string | null, failures: string[], started: Date, survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
- *   survivors: the mutants the node's mutation runs left alive, by file
- */
-const recordGate = async (context, run, { node, visit, attempt }, { gates, failure, failures, started, survivors }) => {
-  const incidents = failure === null ? [] : await failureIncidents(context, node.id, failure, gates)
-  const routed = routeGate(context, run, node.id, failure, failures, survivors, incidents)
-  await context.journal.append('step.recorded', gateRecord(node.id, visit, attempt, failure, failures, survivors, incidents, routed, context.deps.clock.now().getTime() - started.getTime()))
-}
-
-/** @param {Context} context @param {RunState} run @param {string} step @param {string | null} failure @param {string[]} failures @param {import('../../domain/gates/mutation-report.mjs').SurvivorGroup[]} survivors @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents */
-const routeGate = (context, run, step, failure, failures, survivors, incidents) => {
-  const repeated = incidents.find(({ attempts }) => attempts >= REPEATED_FAILURES)
-  if (repeated) return repeatedFailureRoute(step, repeated)
-  const unknown = incidents.find(({ owner }) => owner === 'unknown')
-  if (unknown) return unknownFailureRoute(step, unknown)
-  return gateRoute(context, run, step, { failed: failure !== null, failures, survivors })
-}
-
-/** @param {string} step @param {number} visit @param {number} attempt @param {string | null} failure @param {string[]} failures @param {import('../../domain/gates/mutation-report.mjs').SurvivorGroup[]} survivors @param {import('../../domain/pipeline/incidents.mjs').FailureIncident[]} incidents @param {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }} routed @param {number} durationMs */
-const gateRecord = (step, visit, attempt, failure, failures, survivors, incidents, routed, durationMs) => ({
-    step, visit, attempt,
-    outcome: failure === null ? 'pass' : 'fail',
-    code: routed.code ?? null,
-    failures,
-    survivors,
-    incidents,
-    next: routed.next, ceiling: routed.ceiling, reason: routed.reason,
-    durationMs,
-  })
-
-/** @param {Context} context @param {string} step @param {string} failure @param {import('../gates/gate-runs.mjs').GateResult[]} gates */
-const failureIncidents = async (context, step, failure, gates) => Promise.all(
-  gates.filter(({ status }) => status === 'fail').map((gate) => failureIncident(context, step, failure, gate)),
-)
-
-/** @param {Context} context @param {string} step @param {string} failure @param {import('../gates/gate-runs.mjs').GateResult} gate @returns {Promise<import('../../domain/pipeline/incidents.mjs').FailureIncident>} */
-const failureIncident = async ({ deps, slug, journal }, step, failure, gate) => {
-  const { event, output } = gate.gate === 'none' ? { event: undefined, output: null } : await gateEvidence(deps.files, journal.events, slug, gate.evidence)
-  const category = gateCause(gate)
-  const signature = await gateSignature(deps.hasher, step, category, gate, output, repositoryRoot(deps.files, slug), slug)
-  return {
-    category, owner: ownerOfCause(category),
-    argv: gateArgv(event), exitCode: event?.exitCode ?? null,
-    attempts: signatureOccurrences(journal.events, signature) + 1, signature, log: gate.gate === 'none' ? null : gate.evidence,
-  }
-}
-
-/** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {import('../journal/run-journal.mjs').OpenJournal['events']} events @param {string} slug @param {string} evidence */
-const gateEvidence = async (files, events, slug, evidence) => {
-  const event = events.findLast((entry) => gateEvidenceMatches(files, slug, evidence, entry))
-  return { event, output: event === undefined ? null : await files.read(slug, event.evidence) }
-}
-
-/** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {string} slug @param {string} evidence @param {import('../../domain/journal/run-state.mjs').RunEvent} event */
-const gateEvidenceMatches = (files, slug, evidence, event) =>
-  event.type === 'gate.ran' && typeof event.evidence === 'string' && files.location(slug, event.evidence) === evidence
-
-/** @param {import('../ports/hasher.mjs').Hasher} hasher @param {string} step @param {string} cause @param {import('../gates/gate-runs.mjs').GateResult} gate @param {string | null} output @param {string} root @param {string} slug */
-const gateSignature = (hasher, step, cause, gate, output, root, slug) => hasher.sha256(failureSignatureInput({
-  step, cause,
-  proof: `${gate.component}/${gate.gate}: ${gate.reason} (evidence: ${gate.evidence})\n${gate.survivors?.map(survivorLine).join('\n') ?? ''}\n${output ?? 'evidence log unavailable'}`,
-  root, slug,
-}))
-
-/** @param {import('../journal/run-journal.mjs').RunEvent | undefined} event */
-const gateArgv = (event) => {
-  const command = parseCommand(event?.command ?? '')
-  return command.ok ? command.argv : []
-}
 
 /** @param {import('../ports/tracking-files.mjs').TrackingFiles} files @param {string} slug */
 const repositoryRoot = (files, slug) => {
@@ -1105,32 +943,6 @@ const unknownFailureRoute = (step, incident) => ({
 })
 
 /**
- * Where a gate node goes: a failed one that left as many mutants alive for its last rounds stops
- * the run; a blocked route names the mutants that remain.
- * @param {Context} context @param {RunState} run @param {string} id
- * @param {{ failed: boolean, failures: string[], survivors: import('../../domain/gates/mutation-report.mjs').SurvivorGroup[] }} outcome
- * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
- */
-const gateRoute = (context, run, id, { failed, failures, survivors }) => {
-  const named = survivors.flatMap(({ mutants }) => mutants)
-  if (failed && named.length > 0 && isStalled([...survivorCounts(context.journal, id), named.length])) {
-    return { next: null, code: 'mutation-stalled', reason: `${id} left as many mutants alive for ${ROUNDS_WITHOUT_PROGRESS} rounds; ${aliveCount(named.length)}: ${named.join('; ')}` }
-  }
-  return leave(context, run, id, failed ? 'FAIL' : 'PASS', [...failures, ...named])
-}
-
-/**
- * How many mutants each failed pass of a gate node left alive since the node last passed; a pass
- * that named none is no round of the loop.
- * @param {OpenJournal} journal @param {string} id
- */
-const survivorCounts = (journal, id) => {
-  const passes = journal.events.filter((event) => event.type === 'step.recorded' && event.step === id)
-  const since = passes.slice(passes.findLastIndex((event) => event.outcome !== 'fail') + 1)
-  return since.map((event) => event.survivors.reduce((/** @type {number} */ total, /** @type {{ mutants: string[] }} */ group) => total + group.mutants.length, 0)).filter((count) => count > 0)
-}
-
-/**
  * A review node: its lenses and the refuter answer, the verdict decides the edge it leaves by.
  * @param {Context} context @param {RunState} run @param {WorkStep} next
  * @returns {Promise<RunOutcome | null>}
@@ -1141,9 +953,19 @@ const review = async (context, run, next) => {
   const { deps, slug, journal, loaded, config } = context
   const inputs = boundInputs(next.node, { workflow: loaded.workflow, run, phase: next.phase, components: config.components, events: journal.events })
   const reviewed = await runReview({ deps, slug, journal, assignments, sources: loaded.sources, step: next, inputs })
-  if ('stop' in reviewed) return stop(context, next.phase, reviewed.stop.code, reviewed.stop.reason)
+  if ('stop' in reviewed) return stoppedReview(context, next, reviewed.stop)
   await recordReview(context, run, next, { reviewed, started })
   return null
+}
+
+/**
+ * A lens that never gave a readable verdict is an unforeseen incident, whose recovery the run
+ * asks for; any other stop of the review stops the run.
+ * @param {Context} context @param {WorkStep} next @param {{ code: string, reason: string }} stopped
+ */
+const stoppedReview = async (context, next, { code, reason }) => {
+  if (code !== 'lens-unreadable') return stop(context, next.phase, code, reason)
+  return askRecovery(context, next, { category: code, reason })
 }
 
 /**
@@ -1206,21 +1028,6 @@ const recordedFieldsOf = (context, run, from, { status, reasons, summary, findin
     // What a human decides on when the review reaches its ceiling, and what the report lists once accepted: a review that sends work back always has some.
     ...(findings.length > 0 ? { findings } : {}),
   }
-}
-
-/**
- * A locked gate the repository's workflow unlocked: journaled with its reason, then passed.
- * @param {Context} context @param {RunState} run @param {SkipStep} next
- * @returns {Promise<null>}
- */
-const skip = async (context, run, { phase, node, visit, resumed }) => {
-  const { deps, slug, journal } = context
-  const reason = /** @type {string} */ (node.unlock)
-  if (!resumed) await journal.append('step.started', { step: node.id, phase, gates: node.gates, visit, attempt: 1 })
-  const routed = leave(context, run, node.id, 'PASS', [])
-  await journal.append('step.recorded', { step: node.id, visit, attempt: 1, outcome: 'skipped', code: routed.code ?? null, failures: [], next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? `unlocked: ${reason}`, durationMs: 0 })
-  deps.progress.log(`${slug}: ${node.id} skipped, unlocked: ${reason}`)
-  return null
 }
 
 /**

@@ -11,7 +11,8 @@
  * }} Workspace
  *   read: null when absent. replace: the file's new text in one rename over it, so a reader or
  *   a crash finds the old text or the new, never part of it. list: the folder's entries, null when it is not a folder; rejects
- *   when it is one the machine cannot list.
+ *   when it is one the machine cannot list; an entry is `dir` only for a folder itself, never for
+ *   a symbolic link to one, which is a `file`.
  * @typedef {Pick<Workspace, 'read'>} ConfigSource
  *   What reads `skraft-deliver-config.json` and nothing else needs.
  */

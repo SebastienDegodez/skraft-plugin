@@ -114,11 +114,11 @@ const knownType = (line) => {
   return EVENT_TYPES.has(type) ? type : 'other'
 }
 
-/** Every event type this engine writes to a journal. */
+/** Every event type this engine writes to a journal, and `tdd.replay-slow`, which an earlier alpha wrote and this one ignores. */
 const EVENT_TYPES = new Set([
-  'run.started', 'run.finished', 'run.stopped', 'step.started', 'step.recorded', 'phase.closed', 'gate.ran', 'commits.checked',
+  'run.started', 'run.finished', 'run.stopped', 'step.started', 'step.recorded', 'phase.closed', 'gate.ran', 'commits.checked', 'evidence.checked',
   'question.asked', 'question.answered', 'review.lens', 'review.refuted', 'review.noted', 'review.cost', 'tdd.replay-slow', 'visuals.recorded',
-  'publish.requested', 'pull-request.opened', 'pull-request.updated', 'pull-request.details-kept', 'pull-request.details-skipped', 'issue.commented', 'issue.comment-skipped', 'forge.write', 'pull-request.create-started', 'lease.reclaimed', ADOPTED,
+  'publish.requested', 'pull-request.opened', 'pull-request.updated', 'pull-request.details-kept', 'pull-request.details-skipped', 'pull-request.screenshots-skipped', 'issue.commented', 'issue.comment-skipped', 'forge.write', 'pull-request.create-started', 'lease.reclaimed', ADOPTED,
 ])
 
 /** @param {string} slug */

@@ -7,7 +7,7 @@ import { maskedFamilies } from './masked-families.mjs'
 /**
  * @typedef {Omit<import('./load-workflow.mjs').WorkflowDeps, 'workspace'> & { workspace: import('../ports/workspace.mjs').Workspace }} WorkflowCommandDeps
  * @typedef {{ ok: boolean, path: string, reason: string }} EjectOutcome
- * @typedef {{ ok: boolean, name: string, errors: string[], unlocked: Array<{ node: string, reason: string }>, warnings: string[], reason: string }} CheckOutcome
+ * @typedef {{ ok: boolean, name: string, errors: string[], warnings: string[], reason: string }} CheckOutcome
  *   warnings: the families the workflow names that an agent rule of skraft-deliver-config.json or
  *   skraft-deliver-config.local.json masks.
  * @typedef {{ ok: boolean, name: string, changes: string[], reason: string }} DiffOutcome
@@ -58,13 +58,12 @@ const ejectCopy = async (deps, path, { text, pluginVersion, follows }) => {
 /** @param {WorkflowCommandDeps} deps @returns {Promise<CheckOutcome>} */
 const checkWorkflow = async (deps) => {
   const reading = readConfig(await deps.workspace.read(CONFIG_FILE), await deps.workspace.read(LOCAL_CONFIG_FILE))
-  if (!reading.ok) return { ok: false, name: CONFIG_FILE, errors: reading.errors, unlocked: [], warnings: [], reason: invalidConfig(reading.errors) }
+  if (!reading.ok) return { ok: false, name: CONFIG_FILE, errors: reading.errors, warnings: [], reason: invalidConfig(reading.errors) }
   const loaded = await loadWorkflow(deps, {})
-  if (!loaded.ok) return { ok: false, name: loaded.name, errors: loaded.errors, unlocked: [], warnings: [], reason: loaded.reason }
-  const skipped = loaded.unlocked.map(({ node, reason }) => `; ${node} is unlocked and skipped: ${reason}`).join('')
+  if (!loaded.ok) return { ok: false, name: loaded.name, errors: loaded.errors, warnings: [], reason: loaded.reason }
   const warnings = maskedFamilies(reading.config, loaded.workflow)
   const names = [loaded.name, ...ownCalled(loaded.workflow).map(([, { path }]) => path)]
-  return { ok: true, name: loaded.name, errors: [], unlocked: loaded.unlocked, warnings, reason: `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} valid: phases ${loaded.workflow.phases.join(', ')}${skipped}` }
+  return { ok: true, name: loaded.name, errors: [], warnings, reason: `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} valid: phases ${loaded.workflow.phases.join(', ')}` }
 }
 
 /**

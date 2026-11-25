@@ -12,7 +12,7 @@
  */
 
 /** The version of each consent question's text; an answer kept before versions existed answered version 1. */
-export const CONSENT_VERSIONS = Object.freeze(/** @type {Record<ConsentKey, number>} */ ({ visuals: 1, pullRequest: 2, reviewComment: 1 }))
+export const CONSENT_VERSIONS = Object.freeze(/** @type {Record<ConsentKey, number>} */ ({ visuals: 2, pullRequest: 2, reviewComment: 1 }))
 
 /** The keys a consent is kept under, in the order messages list them. */
 export const CONSENT_KEYS = Object.freeze(/** @type {ConsentKey[]} */ (['visuals', 'pullRequest', 'reviewComment']))

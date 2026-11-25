@@ -220,7 +220,7 @@ const plannedEvents = ({ workflow }, { currentPhase, phasesCompleted }) => {
 
 /** @param {string} slug @param {Target} target @param {string[]} artifacts @param {string} start */
 const startedEvent = (slug, { workflow, bases }, artifacts, start) => ({
-  type: 'run.started', slug, story: null, workflow: workflow.name, base: bases, artifacts, start, unlocked: workflow.unlocked, migratedFrom: MIGRATED_FROM,
+  type: 'run.started', slug, story: null, workflow: workflow.name, base: bases, artifacts, start, migratedFrom: MIGRATED_FROM,
 })
 
 /** @param {string} slug @param {V1State} state @param {string} start @param {Record<string, number>} dropped */

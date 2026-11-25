@@ -12,7 +12,7 @@ import { isRecord, parsedJson } from './json-text.mjs'
 const V1_KEYS = Object.freeze(['trackingLayout', 'depthTier', 'depthTierRationale', 'observability'])
 
 /** The keys V2 reads at the top of `skraft-deliver-config.json`. */
-const V2_KEYS = Object.freeze(['components', 'baseBranch', 'tdd', 'publish', 'models', 'assign'])
+const V2_KEYS = Object.freeze(['components', 'baseBranch', 'publish', 'models', 'assign'])
 
 /**
  * @param {string} text the content of skraft-deliver-config.json

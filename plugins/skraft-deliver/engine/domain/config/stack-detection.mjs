@@ -1,10 +1,11 @@
 /**
- * What `skraft init` proposes for one project folder: its stack, its source and test paths,
- * and the default commands of that stack. The developer edits the result by hand.
+ * What `skraft init` detects for one project folder: its stack and its source and test paths.
+ * It holds no command line: a command is the developer's, proposed by `/skraft-init` from the
+ * stack's skill.
  *
  * @typedef {import('./skraft-config.mjs').Stack} Stack
  * @typedef {{ name: string, kind: 'file' | 'dir' }} Entry
- * @typedef {{ stack: Stack, paths: { src: string[], tests: string[] }, commands: Record<string, string> }} Detected
+ * @typedef {{ stack: Stack, paths: { src: string[], tests: string[] } }} Detected
  */
 
 const SOLUTION = /\.(sln|slnx)$/i
@@ -49,25 +50,13 @@ const projectOf = (entries, read) => {
 const dotnetProject = ({ folder }) => ({
   stack: 'dotnet',
   paths: { src: orRoot(folder(['src'])), tests: folder(['tests', 'test']) },
-  commands: {
-    build: 'dotnet build --nologo',
-    test: 'dotnet test --nologo',
-    format: 'dotnet format --verify-no-changes',
-    mutation: 'dotnet stryker --since:{baseSha} --reporter json --output StrykerOutput',
-  },
 })
 
-/** Maven when the folder has a `pom.xml`, Gradle otherwise. @param {Project} project @returns {Detected} */
-const javaProject = ({ has, read }) => {
-  const maven = has('pom.xml')
-  return {
-    stack: 'java',
-    paths: javaPaths(maven ? mavenModules(/** @type {string} */ (read('pom.xml'))) : []),
-    commands: maven
-      ? javaCommands(has('mvnw') ? './mvnw' : 'mvn', ['-B', '-q', '-DskipTests', 'package'], ['-B', '-q', 'verify'], PIT_MAVEN)
-      : javaCommands(has('gradlew') ? './gradlew' : 'gradle', ['build', '-x', 'test'], ['test'], ['pitest']),
-  }
-}
+/** Maven modules read from a `pom.xml`; the Maven layout otherwise. @param {Project} project @returns {Detected} */
+const javaProject = ({ has, read }) => ({
+  stack: 'java',
+  paths: javaPaths(has('pom.xml') ? mavenModules(/** @type {string} */ (read('pom.xml'))) : []),
+})
 
 /** A Maven module named like `tests`, `it` or `app-it` holds tests. */
 const TEST_MODULE = /(^|-)(tests?|it)(-|$)/
@@ -85,14 +74,10 @@ const javaPaths = (modules) => {
 }
 
 /** @param {Project} project @returns {Detected} */
-const pythonProject = ({ folder }) => {
-  const src = folder(['src'])
-  return {
-    stack: 'python',
-    paths: { src: orRoot(src), tests: folder(['tests', 'test']) },
-    commands: { build: `python -m compileall -q ${src.length > 0 ? 'src' : '.'}`, test: 'python -m pytest -q -p no:cacheprovider', mutation: 'python -m mutmut run' },
-  }
-}
+const pythonProject = ({ folder }) => ({
+  stack: 'python',
+  paths: { src: orRoot(folder(['src'])), tests: folder(['tests', 'test']) },
+})
 
 /**
  * @param {Record<string, any>} manifest
@@ -102,10 +87,9 @@ const pythonProject = ({ folder }) => {
 const javascriptProject = (manifest, { has, folder }) => {
   const dependencies = { ...manifest.dependencies, ...manifest.devDependencies }
   const stack = javascriptStack(dependencies, has)
-  const commands = javascriptCommands({ scripts: manifest.scripts ?? {}, dependencies, stack })
   const src = orRoot(folder(['src']))
   const tests = folder(['tests', 'test', '__tests__'])
-  return { stack, paths: { src, tests: tests.length > 0 ? tests : src }, commands }
+  return { stack, paths: { src, tests: tests.length > 0 ? tests : src } }
 }
 
 /**
@@ -120,44 +104,8 @@ const javascriptStack = (dependencies, has) => {
 }
 
 /**
- * @typedef {{ scripts: Record<string, unknown>, dependencies: Record<string, unknown>, stack: Stack }} Package
- */
-
-/**
- * The line init proposes for each command of a package, first match wins: the package's own
- * script, then the tool its stack or dependencies imply. No match, no command.
- * @type {Readonly<Record<string, ReadonlyArray<{ when: (pkg: Package) => boolean, line: string }>>>}
- */
-const JAVASCRIPT_COMMANDS = Object.freeze({
-  build: [
-    { when: ({ scripts }) => typeof scripts.build === 'string', line: 'npm run build' },
-    { when: ({ stack }) => stack !== 'javascript', line: 'npx tsc --noEmit' },
-  ],
-  lint: [{ when: ({ scripts }) => typeof scripts.lint === 'string', line: 'npm run lint' }],
-  test: [
-    { when: ({ scripts }) => typeof scripts.test === 'string', line: 'npm test' },
-    { when: ({ dependencies }) => 'vitest' in dependencies, line: 'npx vitest run' },
-    { when: ({ dependencies }) => 'jest' in dependencies, line: 'npx jest' },
-  ],
-})
-
-/** StrykerJS, writing `reports/mutation/mutation.json` where the engine reads it. */
-const STRYKER_JS = 'npx stryker run --incremental --reporters json,clear-text'
-
-/** @param {Package} pkg @returns {Record<string, string>} */
-const javascriptCommands = (pkg) => {
-  /** @type {Record<string, string>} */
-  const commands = {}
-  for (const [name, choices] of Object.entries(JAVASCRIPT_COMMANDS)) {
-    const choice = choices.find(({ when }) => when(pkg))
-    if (choice !== undefined) commands[name] = choice.line
-  }
-  return { ...commands, mutation: STRYKER_JS }
-}
-
-/**
  * The stacks a folder is checked for, first found wins: the marker that names each one, and
- * what init proposes for it.
+ * what init detects for it.
  * @type {ReadonlyArray<{ marks: (project: Project) => boolean, propose: (project: Project) => Detected }>}
  */
 const STACK_DETECTORS = Object.freeze([
@@ -166,18 +114,6 @@ const STACK_DETECTORS = Object.freeze([
   { marks: ({ has }) => PYTHON_MARKERS.some(has), propose: pythonProject },
   { marks: ({ has }) => has('package.json'), propose: (project) => javascriptProject(manifestOf(project.read('package.json')), project) },
 ])
-
-/**
- * The project's own wrapper when it ships one (`./mvnw`, `./gradlew`); PIT mutates.
- * @param {string} tool @param {readonly string[]} build @param {readonly string[]} test @param {readonly string[]} mutation
- */
-const javaCommands = (tool, build, test, mutation) => ({ build: [tool, ...build].join(' '), test: [tool, ...test].join(' '), mutation: [tool, ...mutation].join(' ') })
-
-/**
- * PIT's Maven goal, writing `target/pit-reports/mutations.xml` where the engine reads it; with
- * its history, a round of the mutation loop reanalyses only the classes and tests that changed.
- */
-const PIT_MAVEN = Object.freeze(['-B', '-q', 'org.pitest:pitest-maven:mutationCoverage', '-DoutputFormats=XML', '-DtimestampedReports=false', '-DwithHistory'])
 
 /** @param {string[]} paths */
 const orRoot = (paths) => (paths.length > 0 ? paths : ['./'])

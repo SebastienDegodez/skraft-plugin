@@ -10,21 +10,19 @@ import { joinRelative } from '../config/relative-path.mjs'
  *   path relative to the pipeline's tracking folder; `{date}` and `{slug}` filled at dispatch.
  *   template: a file of the plugin's templates, `{language}` filled with the story's at dispatch.
  * @typedef {'src' | 'tests'} ComponentPaths
- * @typedef {'cycle' | 'red' | 'kill' | null} TddMode
+ * @typedef {'cycle' | 'red' | null} TddMode
  *   cycle: each failing test commit, then the code that passes it; red: failing acceptance tests
- *   only, with the skeleton they call; kill: tests that kill surviving mutants, which pass on the
- *   code they test; null: no test commit.
- * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, proposal: boolean, files?: readonly string[], shell?: boolean, citations?: boolean, scenarios?: boolean }} Role
+ *   only, with the skeleton they call; null: no test commit.
+ * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, files?: readonly string[], shell?: boolean, citations?: boolean, scenarios?: boolean }} Role
  *   writes: folders relative to the working copy; files: files at the working copy's root the role
  *   may change, never created as folders; components: which paths of every component of
  *   skraft-design-config.json the agent may write; records: the engine checks the DESIGN records
  *   (consistency matrix, ADR names and supersessions) its attempts leave;
  *   scan: the engine scans the code for its structural commitments before each attempt;
  *   citations: the engine checks the citations of the research document its attempts leave;
- *   scenarios: the engine checks the Gherkin the test plan of its attempts names;
+ *   scenarios: the agent writes the story's scenarios, in the folders the components' bdd names;
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
- *   output holds (a summary line of at most 72 characters, no section left empty); proposal: it
- *   writes a proposal for surviving mutants in the file the engine creates, and changes no code;
+ *   output holds (a summary line of at most 72 characters, no section left empty);
  *   shell: false when its descriptor grants no shell: the engine commits its changes once its step
  *   is done; any other agent, a repository agent included, commits its own.
  * @typedef {import('../workflow/workflow.mjs').WorkflowNode} WorkflowNode
@@ -40,7 +38,6 @@ const DELIVERING = Object.freeze({
   scan: false,
   tdd: 'cycle',
   prose: false,
-  proposal: false,
   shell: true,
 })
 
@@ -55,7 +52,6 @@ const ROLES = Object.freeze({
     scan: false,
     tdd: null,
     prose: false,
-    proposal: false,
     shell: false,
   }),
   // The architect keeps the repository's durable design documents under docs/ and the project's
@@ -69,7 +65,6 @@ const ROLES = Object.freeze({
     scan: true,
     tdd: null,
     prose: false,
-    proposal: false,
     shell: false,
   }),
   // The acceptance designer commits failing tests only; the skeleton they call goes in the source
@@ -83,7 +78,6 @@ const ROLES = Object.freeze({
     scenarios: true,
     tdd: 'red',
     prose: false,
-    proposal: false,
     shell: true,
   }),
   'design-software-engineer': DELIVERING,
@@ -96,7 +90,6 @@ const ROLES = Object.freeze({
     scan: false,
     tdd: null,
     prose: true,
-    proposal: false,
     shell: false,
   }),
 })
@@ -125,17 +118,12 @@ export const makesCommits = (role) => role.shell !== false
  */
 export const trackingFolder = (slug, folder = '.copilot-tracking/skraft-design-runs') => `${folder}/${slug}`
 
-/** What an agent node marked proposal=true plays: its outputs are the proposals the engine creates per file. @type {Role} */
-const PROPOSAL = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: true })
-
 /**
- * The role an agent node plays: a proposal, committing as its agent does, else its agent's own,
- * with the outputs and writes its node declares taking over; a node that takes surviving mutants
- * writes tests that kill them.
+ * The role an agent node plays: its agent's own, with the outputs and writes its node declares taking over.
  * @param {WorkflowNode} node an agent node
  * @returns {Role}
  */
-export const roleOf = (node) => (node.proposal ? { ...PROPOSAL, shell: ownRole(node).shell } : ownRole(node))
+export const roleOf = (node) => ownRole(node)
 
 /** @param {WorkflowNode} node an agent node @returns {Role} */
 const ownRole = (node) => {
@@ -144,9 +132,28 @@ const ownRole = (node) => {
     ...own,
     outputs: node.outputs.length > 0 ? node.outputs.map((path) => ({ path, template: null })) : own.outputs,
     writes: [...own.writes, ...node.writes],
-    tdd: node.each === 'survivor-file' ? 'kill' : own.tdd,
   }
 }
+
+/**
+ * Whether the node's agent writes the story's scenarios, their groups and the failing acceptance
+ * tests of every scenario: the acceptance designer, dispatched once.
+ * @param {WorkflowNode} node
+ */
+export const writesScenarios = (node) => node.kind === 'agent' && ownRole(node).scenarios === true
+
+/**
+ * Whether the node's agent delivers the story's code, every group of scenarios in one pass: the
+ * software engineer.
+ * @param {WorkflowNode} node
+ */
+export const delivers = (node) => node.kind === 'agent' && ROLES[/** @type {string} */ (node.agent)] === DELIVERING
+
+/**
+ * The node of a workflow that writes the story's scenarios, null when it has none.
+ * @param {{ nodes: Record<string, WorkflowNode>, order: string[] }} workflow
+ */
+export const scenarioWriter = ({ nodes, order }) => order.find((id) => writesScenarios(nodes[id])) ?? null
 
 /**
  * The folders the engine creates before an attempt of an agent node, so that an agent whose
@@ -157,13 +164,12 @@ const ownRole = (node) => {
  * @returns {readonly string[]}
  */
 export const roleFolders = (node, components) => {
-  if (node.proposal) return []
   const role = ROLES[/** @type {string} */ (node.agent)] ?? NO_ROLE
   return [...role.writes, ...(role.scenarios ? featuresFolders(components) : [])]
 }
 
 /** What an agent with no role of its own (a repository agent) starts from. @type {Role} */
-const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false, proposal: false })
+const NO_ROLE = Object.freeze({ outputs: Object.freeze([]), writes: Object.freeze([]), components: Object.freeze([]), records: false, scan: false, tdd: null, prose: false })
 
 /**
  * Every path an agent may change, relative to the working copy: its run's tracking folder,

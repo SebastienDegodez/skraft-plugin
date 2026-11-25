@@ -7,12 +7,11 @@ import { causeLines } from '../pipeline/incidents.mjs'
  * workflow (`shape=hexagon, question="<kind>"`) asks one of the node questions; the engine asks
  * the environment question itself when the machine cannot run a step, and the blocked question
  * when a block a human can lift stops the run: an instruction runs the blocked node again with
- * it, STOP ends the run. The mutation-plan question takes APPLY, an instruction of the
- * developer's own, which goes on as APPLY does, or STOP. The scenario-review question shows the
+ * it, STOP ends the run. The scenario-review question shows the
  * story's scenarios, its walking skeleton and the acceptance test of S1 before DELIVER builds them: APPROVED goes on, REVISE
  * sends DISTILL back with the human's corrections.
  *
- * @typedef {'adr-ratification' | 'mutation-plan' | 'scenario-review'} NodeQuestion
+ * @typedef {'adr-ratification' | 'scenario-review'} NodeQuestion
  * @typedef {NodeQuestion | 'environment' | 'unforeseen' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
@@ -39,14 +38,11 @@ export const STOP = 'STOP'
  */
 export const REVIEW_CEILING = 'review-ceiling'
 export const ACCEPT = 'ACCEPT'
-/** The answer to the mutation plan that applies the proposal as it stands. */
-export const APPLY = 'APPLY'
 
 /** @type {Readonly<Record<QuestionKind, QuestionSpec>>} */
 const QUESTIONS = Object.freeze({
   'architecture-refresh': Object.freeze({ options: Object.freeze(['KEEP', 'REDESIGN']), refusals: Object.freeze([]), header: 'Architecture', instruction: false }),
   'adr-ratification': Object.freeze({ options: Object.freeze(['RATIFIED', 'REJECTED']), refusals: Object.freeze(['REJECTED']), header: 'ADR', instruction: false }),
-  'mutation-plan': Object.freeze({ options: Object.freeze([APPLY, STOP]), refusals: Object.freeze([]), header: 'Mutation', instruction: true }),
   'scenario-review': Object.freeze({ options: Object.freeze(['APPROVED', 'REVISE']), refusals: Object.freeze(['REVISE']), header: 'Scenarios', instruction: false }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
   unforeseen: Object.freeze({ options: Object.freeze(['RETRY', 'RETRY_WITH_NOTE', 'STOP']), refusals: Object.freeze([]), header: 'Incident', instruction: false }),
@@ -57,7 +53,7 @@ const QUESTIONS = Object.freeze({
 })
 
 /** The questions a workflow node may ask. */
-export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'mutation-plan', 'scenario-review']))
+export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'scenario-review']))
 
 /** A reason is kept on one line, at most this long. */
 const REASON_LENGTH = 500
@@ -113,7 +109,7 @@ export const CONFIGURATION_TEXT =
 // (tests/skraft-framework/unit/decisions/consent-versions.test.mjs pins them). The engine asks
 // none of them itself; it owns their wording so that a change to it carries a version with it.
 export const CONSENT_TEXT =
-  'May skraft publish the screenshots and videos of its runs in the pull request of the branch? They can show private data. ' +
+  'May skraft show the screenshots of its front end\'s e2e runs in the pull request of the branch (on GitHub gh attaches them to it; on Azure DevOps they are committed on the branch)? They can show private data. ' +
   'ACCEPTED or DECLINED; the answer is kept in skraft-deliver-config.json for every later run.'
 
 export const PUBLISH_CONSENT_TEXT =
@@ -125,16 +121,19 @@ export const REVIEW_CONSENT_TEXT =
   'ACCEPTED or DECLINED; the answer is kept in ~/.skraft-deliver/config.json for this repository, for every later review.'
 
 /**
- * The text of the scenario review question: the scenarios in the order DELIVER builds them, the
- * `.feature` files the test plan names, the red of the walking skeleton (or the exemption the
- * story declares instead) and the red of S1's acceptance test.
+ * The text of the scenario review question: the scenarios, the `.feature` files the test plan
+ * names, the groups DELIVER makes them pass in, in one pass with one commit, the
+ * exemption a story with no walking skeleton declares, the one red of the acceptance tests and
+ * where the designer's traced run of them is, which the engine does not repeat.
  * @typedef {{ sha: string, subject: string, files: string[] }} ReviewedRed
- * @param {{ scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, features: string[], skeleton: ReviewedRed | null, exemption: string, oracle: ReviewedRed }} story
+ * @param {{ scenarios: Array<{ index: number, title: string, component: string, tags: string[] }>, features: string[], skeleton: ReviewedRed | null, exemption: string, oracle: ReviewedRed, groups: Array<{ index: number, scenarios: number[] }>, log: string | null }} story
  */
-export const scenarioReviewText = ({ scenarios, features, skeleton, exemption, oracle }) =>
-  `Read the ${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} of the story before DELIVER builds them, one at a time${features.length === 0 ? '' : `, as ${features.join(', ')} write${features.length === 1 ? 's' : ''} them`}: ${scenarios.map(scenarioLabel).join('; ')}. ` +
-  `${skeleton === null ? `The story has no walking skeleton (exemption: ${exemption}).` : `The walking skeleton and the skeleton of its chain are ${redText(skeleton)}.`} ` +
-  `The acceptance test of S1 is ${redText(oracle)}. ` +
+export const scenarioReviewText = ({ scenarios, features, skeleton, exemption, oracle, groups, log }) =>
+  `Read the ${scenarios.length} scenario${scenarios.length === 1 ? '' : 's'} of the story before DELIVER builds them${features.length === 0 ? '' : `, as ${features.join(', ')} write${features.length === 1 ? 's' : ''} them`}: ${scenarios.map(scenarioLabel).join('; ')}. ` +
+  `DELIVER makes them pass in one pass and one commit, working the groups in this order: ${groups.map(({ index, scenarios: numbers }) => `${index}. ${numbers.map((number) => `S${number}`).join(', ')}`).join('; ')}. ` +
+  `${skeleton === null ? `The story has no walking skeleton (exemption: ${exemption}). ` : ''}` +
+  `The acceptance tests of every scenario${skeleton === null ? '' : ', the walking skeleton and the skeleton of its chain'} are ${redText(oracle)}. ` +
+  `skraft does not run them: check that each fails on its own assertion; ${log === null ? 'the designer traced no run of them through skraft_deliver_repl: ask for it' : `the designer's traced run is in ${log}`}. ` +
   'APPROVED delivers them; REVISE sends DISTILL back with your corrections (edit the .feature or the test yourself first if you like, and say so).'
 
 /** @param {ReviewedRed} red */
@@ -142,13 +141,6 @@ const redText = ({ sha, subject, files }) => `commit ${sha.slice(0, 7)} "${subje
 
 /** @param {{ index: number, title: string, component: string, tags: string[] }} scenario */
 const scenarioLabel = ({ index, title, component, tags }) => `S${index} "${title}" (${[component, tags.join(' ')].filter((part) => part !== '').join('; ')})`
-
-/**
- * The text of the mutation plan question.
- * @param {string[]} proposals the proposals for the surviving mutants, relative to the working copy
- */
-export const mutationPlanText = (proposals) =>
-  `The mutation gate failed; a proposal for its surviving mutants is in ${proposals.join(', ')}. ${APPLY} applies it; or write how to treat them instead; ${STOP} ends the run.`
 
 /**
  * The text of an environment question: why the step cannot run, its cause, the file that holds

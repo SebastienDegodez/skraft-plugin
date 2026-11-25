@@ -45,7 +45,7 @@ step. Never build a class no active scenario requires.
 
 1. **PREPARE** — name the input boundary (use case / handler the test enters through) and the
    output boundaries (repositories, presenters, external services it observes). Target exactly
-   ONE scenario. Write the ordered test list (below) before any production code.
+   ONE scenario.
 2. **RED** — write the test, run it.
    - A compile or missing-symbol error is **not** RED: stub just enough to compile (empty return,
      minimal implementation), rerun, and get a failure on the business assertion.
@@ -72,16 +72,53 @@ step. Never build a class no active scenario requires.
 
 - **Interactive session:** the developer reviews and explicitly validates the failing test
   before you continue.
-- **skraft DELIVER:** the recorded red commit is the inspection: on a scenario pass, DISTILL's red
-  of the scenario's acceptance test, which the engine replays; on a pass with no scenario, your own
-  failing test, committed before any production code exists. Continue to GREEN in the same run;
-  never stop after RED to wait.
+- **skraft DELIVER:** the recorded red commit is the inspection: on the story pass, DISTILL's
+  `test` commit of the acceptance tests; on a pass after the story is delivered, your own test's
+  failing run, read before any production code, the test then committed with that code. Continue to GREEN in the same run; never stop
+  after RED to wait for an inspection.
 - **Delegating a slice to a worker or subagent:** never put RED and SYNTHESIZE GREEN in the same
   instruction. Send RED only (write the test, stub to compile, run, report the failing output);
   inspect that output yourself — show it to the developer and wait for "proceed" when one is
   present; then send GREEN. The inspection stays with whoever delegates; a worker told to act
   unattended reports the failing test and stops. A `PAUSE` note in a plan or inside the worker's
   own instruction does not create the stop: only a separate dispatch does.
+
+### Inner loop, at a model's pace
+
+- **The acceptance test is the first inner test.** When it states the rule with its examples, go
+  from its red to the code: write no unit test of your own. Write one only for what the acceptance
+  test does not pin down: a combinatorial rule `deliver-test-design-mandates` Mandate 4 opens a gate for,
+  or a case no example of the scenario reaches.
+- **One RED per rule, not per example.** A unit test is one test, or one parametrized test whose
+  rows triangulate the same rule (`deliver-craft-discipline` C11). Rows of two rules never share a RED.
+- **Write a stated rule whole.** When the acceptance criterion states the rule (a rate table, a
+  threshold, a cap, a formula), GREEN writes it; take a smaller step (a constant, then a branch)
+  only when the general rule is not clear from the test.
+- **Run scope.** During RED and GREEN run only the test at hand, filtered to it (*Run one test*);
+  no project or suite run until the story's commit. The component's gates (`build`, `format`,
+  `lint`) and the whole suite run once each, before that one commit, the suite in the command
+  that commits; never a confirmation re-run, never a separate build when the test run compiles.
+- **Where commands run.** Every test, build, format and lint command runs through `skraft_deliver_repl`
+  (`run(command, { cwd })`, `gate(name, command, { cwd })`); only the runs of `skraft_deliver_repl` count as proof. Chain the `git add` and the `git commit` of a commit in one `run` string, so the commit
+  is one cell.
+- **Short output.** Run tests at their quietest verbosity, failures only; read a full output only
+  to understand a failure.
+- **Checks once per group.** After each inner GREEN, only `git diff --name-only` (step 1 of
+  *Post-GREEN wiring verification*); its other steps and the Object Calisthenics rules
+  (`deliver-craft-discipline` C10) run once on the group's whole diff, when its acceptance tests pass.
+
+### Run one test
+
+| Stack | One test | Quiet, failures only |
+|---|---|---|
+| .NET | `dotnet test <test project> --filter "FullyQualifiedName~<Class>.<Method>"` | `--verbosity quiet` |
+| Java, Maven | `mvn -q test -Dtest=<Class>#<method>` (`-pl <module>` in a multi-module build) | `-q` |
+| Java, Gradle | `gradle test --tests "<Class>.<method>"` (`:<module>:test`) | `-q` |
+| TypeScript, Vitest | `npx vitest run <file> -t "<name>"` | `--reporter=dot` |
+| Python, pytest | `pytest <file>::<test>` | `-q` |
+
+The component's test command from your brief is the command of record: add only the filter and the
+verbosity to it, never replace it with another runner.
 
 ## Commit policy
 
@@ -90,38 +127,13 @@ error only when read: a red is never chained to a commit; a green is.
 
 | Pass | Commits |
 |---|---|
-| Acceptance test of the scenario in progress (skraft DISTILL) | One `test` commit: its acceptance test and the skeleton it calls, after a run whose output shows a failing business assertion |
-| Scenario in progress (skraft DELIVER) | The inner cycles commit nothing. One `feat` or `fix` commit once the scenario passes, its unit tests and every format or lint fix included, chained in bash: `<test command> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"`, the message exactly as the brief gives it |
-| No scenario: gates or review sent the story back, mutant kills, a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
+| Acceptance tests of the story (skraft DISTILL) | One `test` commit: the walking skeleton and the acceptance test of every scenario, with the skeleton they call, after one run whose output shows each failing on a business assertion |
+| Story in DELIVER, one dispatch | The inner cycles commit nothing. One `feat` or `fix` commit for the whole story, once every group's scenarios and the walking skeleton pass: its unit tests and every format or lint fix included, chained: `<test command, unfiltered> && git add <each file> && git commit -s -m "<subject>" -m "Refs: #N"` in sh and PowerShell 7; in Windows PowerShell 5.1, `<test command, unfiltered>; if ($?) { git add <each file>; if ($?) { git commit -s -m "<subject>" -m "Refs: #N" } }`; the lines the brief gives; the gates (`build`, `format`, `lint`) ran just before it |
+| The review sent the story back (skraft DELIVER, after the story's commit) | Each cycle: one `feat` or `fix` commit holding its test and its code, once green, never a `test` commit of its own; `refactor` for a change under green, `style` for format or lint fixes |
+| No scenario: a session without skraft | Each cycle: `test` with the failing test, then `feat` or `fix` with the code; `refactor` for a change under green |
 
 The acceptance tests of a scenario are its oracle: the green never changes them. A wrong one is
 named and sent back to whoever wrote it.
-
-## Ordered test list (TPP + FLFI)
-
-Before the first line of production code, write the ordered list of tests for the slice, one row
-per test. Persist it next to the plan; consume it head-first.
-
-| # | Level (acceptance / unit / integration) | Behaviour name, business language | TPP transformation | Contradiction the current code cannot satisfy |
-|---|---|---|---|---|
-
-- **Transformation:** for each entry, name the single transformation that turns the previous
-  GREEN into this one, highest first: `{}→nil`, `nil→constant`, `constant→constant+`,
-  `constant→scalar`, `statement→statements`, `unconditional→if`, `scalar→array`,
-  `array→container`, `statement→recursion`, `if→while`, `expression→function`,
-  `variable→assignment`, `case`.
-- **F — Failing:** an entry with no contradiction would pass on the current code; drop it.
-- **L — Least:** take next the entry whose GREEN needs the highest transformation. Degenerate and
-  boundary cases before the general case; reach the general case by accumulated
-  transformations, never by a leap.
-- **F — Fast:** the acceptance entry opens the list and stays red; units drive the inside;
-  integration entries come after (*Concentric circles*).
-- **I — Incremental:** one entry, one slice. An entry needing two transformations is two entries.
-- GREEN applies exactly the declared transformation, even when a later entry will obviously need
-  more. Never two failing tests at once besides the outer acceptance test.
-- After a GREEN, re-plan only in writing (entry added, removed, reordered, transformation
-  revised). Never re-plan to justify code already written; never merge entries to save a cycle;
-  never write the list after the code.
 
 ## Where the code lives
 
@@ -181,17 +193,27 @@ Code no approved behaviour asks for and no test covers: delete it. Run no mutati
   clock as the infrastructure policy says (`deliver-test-design-mandates`). It asserts the status, the
   shape and one value S1 names. A pure library, a refactoring with no new public interface, or a
   configuration or documentation change has none.
-- **Double loop:** each scenario's acceptance test, S1's included, is an inner loop entering by the
-  use case. S1 is green when its acceptance test and the walking skeleton both pass: thinnest
-  slice, hardcoded values, minimal branching. Every later green keeps the walking skeleton green.
+- **Double loop:** each scenario's acceptance test, S1's included, enters by the use case; the inner
+  loop drives it green. The group holding S1 is done when its acceptance tests and the walking
+  skeleton both pass: thinnest slice, hardcoded values, minimal branching. Every later group keeps
+  the walking skeleton and the groups before it passing.
 - **First delivery** holds only the approved outcome; defer unapproved validations, states and
   abstractions.
-- **One acceptance test at a time:** the `.feature` file is the backlog. Only the scenario in
-  progress has an executable acceptance test: write it, see it fail on an assertion, drive it to
-  green, commit, then write the next. Never author them all up front with all but one skipped.
-- A scenario's test that passes on its first run adds no behaviour: it is an example of the
-  earlier scenario whose code makes it pass, an `Examples` row of that one. Under skraft its red
-  is refused: name both scenarios and stop.
+- **All acceptance tests first:** write the acceptance test of every scenario, each name starting
+  with its scenario's number, run them once and read that each fails on a business assertion,
+  never a build or setup error; commit them all in one `test` commit. Never skip one: a scenario
+  not delivered yet stays an active, failing test, left out by the name filter (Commit policy).
+- **One group at a time, one commit:** the implementation plan groups the scenarios by the rule
+  they pin down: consecutive scenarios that enter through the same use case and state one rule or
+  its edge cases form one group; a scenario on its own is a group of one. One dispatch works every
+  group in plan order and makes one green commit for the story. For each group, in one turn: run its
+  acceptance tests filtered by their numbers; scenarios that already pass are covered by an earlier
+  one: confirm it with the deletion test (*Post-GREEN wiring verification*), write no code for
+  them, name the covering scenario on the change-log line; write the code its red tests demand,
+  nothing more. After the last group run the chained commit, whose unfiltered test run is the one
+  run of the whole suite and the `test` gate; then run each other gate on that commit.
+- A scenario's acceptance test that already passes on the stubs needs no code: note it and keep
+  its scenario; never merge it into another scenario's `Examples`.
 
 ## Concentric circles
 

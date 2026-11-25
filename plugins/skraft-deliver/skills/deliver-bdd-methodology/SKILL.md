@@ -13,12 +13,15 @@ Behaviour-Driven Development translates acceptance criteria into executable spec
 
 **Keywords in English**, whatever language the domain speaks: `Feature:`, `Scenario:`,
 `Scenario Outline:`, `Examples:`, `Given`, `When`, `Then`, `And`. Never a `# language:` header —
-the engine reads one keyword set, and a file declaring another language is sent back naming it. The
+skraft reads one keyword set, and the review sends a file declaring another language back naming it. The
 sentences stay in the domain's own language; only the keywords are fixed.
 
 ## Mapping AC → Gherkin
 
-Each acceptance criterion produces one or more scenarios. The mapping is explicit and traceable.
+Each acceptance criterion produces exactly one scenario. The mapping is explicit and traceable.
+
+- Each criterion has exactly one scenario of its own, tagged `@AC-<n>` with the criterion's number as the story writes it. A scenario carries one `@AC` tag; two criteria never share a scenario, even when their outcomes look alike.
+- A `Scenario Outline` holds the examples of one criterion only. An example of another criterion is a scenario of its own.
 
 | AC type | Gherkin pattern |
 |---|---|
@@ -120,7 +123,6 @@ Scenario: ...
 | `@edge-case` | Boundary values, limit conditions |
 | `@error-case` | System errors, missing data, invalid state |
 | `@walking-skeleton` | S1 of the story, the scenario its walking skeleton walks, unless the test plan declares an exemption (`deliver-test-design-mandates`); S1 still runs in the Gherkin runner like any scenario |
-| `@pending` | A scenario whose acceptance test is not written yet: DISTILL tags every scenario with it, each scenario's red removes it from that scenario alone; the runner selects `not @pending` |
 | `@visual` | Marks a scenario whose AC is expressed in visual/positional/style terms — requires a companion Playwright E2E test with a real measurement, see Visual AC Rule below |
 | `@frontend` `@backend` `@api` `@http` `@ui` `@infrastructure` `@database` `@persistence` | ❌ FORBIDDEN — layer leak: embed implementation vocabulary in the Gherkin layer |
 
@@ -167,6 +169,13 @@ Each violation is a BLOCKER — do not proceed until the step is rewritten in do
 | HTTP verb in step text (`POST`, `GET`, `PUT`, `DELETE`, `PATCH`) | `When I call POST /api/eligibility` | `When the driver requests an eligibility check` |
 | Class or service name (`*Service`, `*Repository`, `*Controller`, `*Handler`, `*UseCase`) | `When I invoke the EligibilityService` | `When the driver requests an eligibility check` |
 | Infrastructure vocabulary (`database`, `table`, `record`, `queue`, `topic`, `container`, `DTO`, `schema`) | `Given the database contains a record` | `Given a driver with a completed profile` |
+
+### Form
+
+- Every scenario says `Given`, `When` and `Then`.
+- An outline's `Examples` have a column for every `<placeholder>` its title and steps open.
+- No two scenarios of one file share a title.
+- Every `.feature` the test plan's coverage matrix cites exists under the folder its component's `bdd` names.
 
 ### Forbidden tags
 

@@ -45,8 +45,10 @@ test('delivery retains human scenario approval, TDD, gates and final review befo
   const finished = await createRunPipeline(deps).run()
   assert.equal(finished.status, 'done', finished.reason)
   assert.ok(host.agentRunner.dispatches.some(({ agent }) => agent === 'deliver-software-engineer'))
-  assert.ok(host.agentRunner.reviewed().some(({ agent }) => agent === 'deliver-test-integrity-lens'))
-  assert.ok(host.events().some(({ type, step, outcome }) => type === 'step.recorded' && step === 'gates' && outcome === 'pass'))
+  const lenses = host.agentRunner.reviewed().map(({ agent }) => agent)
+  assert.ok(lenses.includes('deliver-test-integrity-lens'), lenses.join(', '))
+  // the gates run through skraft_deliver_repl; the DELIVER review's quality-gates lens judges them from the signed trace
+  assert.ok(lenses.includes('deliver-quality-gates-lens'), lenses.join(', '))
   assert.ok(host.events().some(({ type, step, outcome }) => type === 'step.recorded' && step === 'publish' && outcome === 'local'))
 })
 

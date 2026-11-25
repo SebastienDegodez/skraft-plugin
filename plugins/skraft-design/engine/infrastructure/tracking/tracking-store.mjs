@@ -19,8 +19,6 @@ import { isSlug } from '../../domain/pipeline/slug.mjs'
  */
 
 export const TRACKING_FOLDER = ['.copilot-tracking', 'skraft-design-runs']
-/** Where a mutation run keeps its journal and files, one folder per branch, apart from the pipelines. */
-export const MUTATION_FOLDER = ['.copilot-tracking', 'skraft-design-mutation']
 /** Where a pull request review keeps its journal and files, one folder per pull request, apart from the pipelines. */
 export const REVIEWS_FOLDER = ['.copilot-tracking', 'skraft-design-reviews']
 
@@ -34,7 +32,7 @@ export const REVIEWS_FOLDER = ['.copilot-tracking', 'skraft-design-reviews']
  * The tracking folder of a working copy, `<root>/.copilot-tracking/skraft-design-runs/`, as the
  * three ports the use cases read and write: RunJournalStore, ActivePipeline, TrackingFiles.
  * @param {{ files: FileFunctions, root: string, parts?: string[] }} options root is the working
- *   copy; parts: the folder from it, the pipelines' unless given (MUTATION_FOLDER: the mutation runs')
+ *   copy; parts: the folder from it, the pipelines' unless given
  */
 export const createTrackingStore = ({ files, root, parts = TRACKING_FOLDER }) => {
   const folder = trackingFolder(files, root, parts)
@@ -105,6 +103,7 @@ const createTrackingFiles = ({ files, at, base, relative }) =>
   Object.freeze({
     read: (slug, path) => files.read(at(slug, path)),
     write: (slug, path, text) => files.write(at(slug, path), text),
+    appendText: (slug, path, text) => files.append(at(slug, path), text),
     clearTemporary: (slug) => files.clearDirectory(at(slug, '.tmp')),
     forget: (slug) => files.clearDirectory(at(slug, '')),
     location: at,

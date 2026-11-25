@@ -1,14 +1,12 @@
-import { CONFIG_FILE, NO_COMPONENT, NO_GATE } from '../../domain/config/skraft-config.mjs'
-import { commandText, lookedFor, parseCommand, programChoices } from '../../domain/gates/command-line.mjs'
-import { gatesOf, STORY_GATES } from '../../domain/gates/gate-plan.mjs'
-import { baseOf, loadConfig, resolveBases } from '../config/bases.mjs'
+import { CONFIG_FILE, NO_COMPONENT } from '../../domain/config/skraft-config.mjs'
+import { gatesOf } from '../../domain/evidence/gate-names.mjs'
+import { loadConfig } from '../config/bases.mjs'
 import { readWorkflows } from '../workflow/load-workflow.mjs'
 import { findComponentSkills } from '../pipeline/component-skills.mjs'
-import { forgeCheck } from './forge-check.mjs'
+import { forgeCheck, screenshotsCheck } from './forge-check.mjs'
 import { modelChecks } from './model-checks.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
-import { needsContainers, policyLines } from '../../domain/config/infrastructure-policy.mjs'
-import { mutationCheck } from './mutation-check.mjs'
+import { policyLines } from '../../domain/config/infrastructure-policy.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
@@ -16,7 +14,7 @@ import { mutationCheck } from './mutation-check.mjs'
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
  * @typedef {{ subject: string, status: 'ok' | 'warn' | 'fail', detail: string }} DoctorCheck
  *   subject: `node`, `config`, `forge`, `models`, `models/<host>`, `<component>`,
- *   `<component>/<command>`, `mutation`, `infrastructure`, `container-runtime` or `vscode`; warn: worth
+ *   `<component>/<command>`, `infrastructure` or `vscode`; warn: worth
  *   knowing, never a failure.
  * @typedef {{ ok: boolean, checks: DoctorCheck[], assignments: import('./model-checks.mjs').AssignmentTable | null }} DoctorReport
  *   assignments: what each agent the workflow dispatches runs on, by host; null when the
@@ -25,45 +23,43 @@ import { mutationCheck } from './mutation-check.mjs'
  *   workspace: Pick<import('../ports/workspace.mjs').Workspace, 'read' | 'list' | 'write'>,
  *   userSettings: import('../ports/user-settings.mjs').UserSettings,
  *   workflowSource: import('../ports/workflow-source.mjs').WorkflowSource,
- *   executables: import('../ports/executables.mjs').Executables,
  *   commandRunner: import('../ports/command-runner.mjs').CommandRunner,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
  *   runtime: import('../ports/runtime.mjs').Runtime,
  *   copilotSdk: import('../ports/copilot-sdk.mjs').CopilotSdk,
- * } & import('./model-checks.mjs').ModelCheckDeps & import('../config/forge.mjs').ForgeDeps & import('./mutation-check.mjs').MutationCheckDeps} DoctorDeps
+ * } & import('./model-checks.mjs').ModelCheckDeps & import('../config/forge.mjs').ForgeDeps } DoctorDeps
  */
 
 const NODE_MAJOR = 22
 
 /**
- * Doctor — checks that every command of every component can run on this machine: Node, the
- * configuration, the forge, each component's root, each command's program, the skills the agents writing
+ * Doctor — checks the configuration and lists the commands of every component, which it starts
+ * never: Node, the configuration, the forge, each component's root, each command's line, the skills the agents writing
  * its tests are asked to read, the infrastructure policy of its tests,
  * Docker or Podman when a policy runs a container, then what each agent the workflow dispatches
  * runs on, per host, and last how VS Code runs the pipeline.
- * With `run`, starts each command once from its component's root.
  * @param {DoctorDeps} deps
  */
 export const createDoctor = (deps) => Object.freeze({
-  /** @param {{ run?: boolean, base?: string | null }} [request] @returns {Promise<DoctorReport>} */
-  check: (request) => check(deps, request),
+  /** @param {object} [_request] @returns {Promise<DoctorReport>} */
+  check: () => check(deps),
 })
 
 /**
  * Node, then the configuration; the rest only once the configuration names components.
- * @param {DoctorDeps} deps @param {{ run?: boolean, base?: string | null }} [request]
+ * @param {DoctorDeps} deps
  * @returns {Promise<DoctorReport>}
  */
-const check = async (deps, { run = false, base = null } = {}) => {
+const check = async (deps) => {
   const checks = [nodeCheck(deps.runtime.nodeVersion())]
   const configured = configCheck(await loadConfig(deps))
   checks.push(configured.check)
   const vscode = vscodeCheck(await deps.copilotSdk.locate())
   if (!configured.ok) return report([...checks, vscode], null)
-  const forge = await forgeCheck(deps, configured.config.forge)
-  const commands = await configuredChecks(deps, configured.config, { run, base })
+  const forge = [await forgeCheck(deps, configured.config.forge), ...(await screenshotsCheck(deps, configured.config))]
+  const commands = await configuredChecks(deps, configured.config)
   const models = await modelsOf(deps, configured.config)
-  return report([...checks, forge, ...commands, ...models.checks, vscode], models.assignments)
+  return report([...checks, ...forge, ...commands, ...models.checks, vscode], models.assignments)
 }
 
 /**
@@ -79,20 +75,15 @@ const vscodeCheck = (location) => ({
 })
 
 /**
- * The base with `run`, each component, the infrastructure of their tests, then the container runtime.
+ * Each component, then the infrastructure of their tests.
  * @param {DoctorDeps} deps @param {SkraftConfig} config
- * @param {{ run: boolean, base: string | null }} request
  * @returns {Promise<DoctorCheck[]>}
  */
-const configuredChecks = async (deps, config, { run, base }) => {
-  const resolved = run ? await resolveBases(deps, { config, flag: base }) : null
+const configuredChecks = async (deps, config) => {
   /** @type {DoctorCheck[]} */
-  const checks = resolved?.ok === false ? [{ subject: 'base', status: 'fail', detail: resolved.reason }] : []
-  for (const component of config.components) {
-    checks.push(...await componentChecks(deps, component, { run, baseSha: baseShaOf(resolved, component.name) }))
-  }
-  checks.push(await mutationCheck(deps, config.components))
-  return [...checks, ...config.components.flatMap(infrastructureChecks), ...await containerChecks(deps, config.components)]
+  const checks = []
+  for (const component of config.components) checks.push(...await componentChecks(deps, component))
+  return [...checks, ...config.components.flatMap(infrastructureChecks)]
 }
 
 /**
@@ -100,33 +91,6 @@ const configuredChecks = async (deps, config, { run, base }) => {
  * @param {Component} component @returns {DoctorCheck[]}
  */
 const infrastructureChecks = (component) => policyLines(component).map((detail) => ({ subject: 'infrastructure', status: /** @type {const} */ ('ok'), detail }))
-
-/** The container runtimes doctor asks, in order. */
-const RUNTIMES = Object.freeze(['docker', 'podman'])
-/** How long a runtime may take to answer `info`. */
-const RUNTIME_TIMEOUT_MS = 15_000
-const NO_CONTAINERS = 'the tests that need Microcks or Testcontainers cannot run until Docker or Podman runs'
-
-/**
- * The first container runtime on the PATH that answers, when a component's policy runs a
- * container; a warning, never a failure, when none does.
- * @param {DoctorDeps} deps @param {Component[]} components @returns {Promise<DoctorCheck[]>}
- */
-const containerChecks = async (deps, components) => {
-  if (!components.some(needsContainers)) return []
-  // Stryker disable next-line StringLiteral: the working copy resolves '' and '.' to the same folder
-  const found = (await Promise.all(RUNTIMES.map((runtime) => deps.executables.locate(runtime, '.')))).flatMap((located, index) => (located === null ? [] : [RUNTIMES[index]]))
-  for (const runtime of found) {
-    if (await answers(deps, runtime)) return [{ subject: 'container-runtime', status: 'ok', detail: `${runtime} answers ${runtime} info` }]
-  }
-  return [{ subject: 'container-runtime', status: 'warn', detail: `${silent(found)}; ${NO_CONTAINERS}` }]
-}
-
-/** Whether `<runtime> info` exits 0. @param {DoctorDeps} deps @param {string} runtime */
-const answers = async (deps, runtime) => (await deps.commandRunner.run({ argv: [runtime, 'info'], cwd: '.', timeoutMs: RUNTIME_TIMEOUT_MS })).exitCode === 0
-
-/** Why no runtime answers. @param {string[]} found the runtimes on the PATH */
-const silent = (found) => (found.length === 0 ? `neither ${RUNTIMES.join(' nor ')} is on the PATH` : found.map((runtime) => `${runtime} does not answer ${runtime} info`).join(', '))
 
 /**
  * The config check, and the configuration once it names at least one component.
@@ -143,27 +107,16 @@ const configCheck = (loaded) => {
 }
 
 /**
- * The base a component's commands get: HEAD without `run`, none when the bases did not resolve.
- * @param {Awaited<ReturnType<typeof resolveBases>> | null} resolved @param {string} component
- */
-const baseShaOf = (resolved, component) => {
-  if (resolved === null) return 'HEAD'
-  return resolved.ok ? baseOf(resolved.bases, component)?.sha ?? null : null
-}
-
-/**
- * The root, the gates, each command, then its skills; a root that is not a folder is the only check.
+ * The root, each command, then its skills; a root that is not a folder is the only check.
  * @param {DoctorDeps} deps @param {Component} component
- * @param {{ run: boolean, baseSha: string | null }} request
  * @returns {Promise<DoctorCheck[]>}
  */
-const componentChecks = async (deps, component, { run, baseSha }) => {
+const componentChecks = async (deps, component) => {
   if ((await deps.workspace.list(component.root)) === null) {
     return [{ subject: component.name, status: 'fail', detail: `root ${component.root} is not a folder` }]
   }
   /** @type {DoctorCheck[]} */
-  const checks = gatesOf(component).some((gate) => STORY_GATES.includes(gate)) ? [] : [{ subject: component.name, status: 'fail', detail: NO_GATE }]
-  for (const name of commandNames(component)) checks.push(await commandCheck(deps, { component, name, run, baseSha }))
+  const checks = commandNames(component).map((name) => commandCheck(component, name))
   return [...checks, ...await bddChecks(deps, component), ...await skillChecks(deps, component)]
 }
 
@@ -231,68 +184,10 @@ const commandNames = (component) => {
 }
 
 /**
- * @param {DoctorDeps} deps
- * @param {{ component: Component, name: string, run: boolean, baseSha: string | null }} request
- * @returns {Promise<DoctorCheck>}
+ * A command is listed as the developer wrote it: skraft starts none; the agents run it through skraft_deliver_repl.
+ * @param {Component} component @param {string} name @returns {DoctorCheck}
  */
-const commandCheck = async (deps, { component, name, run, baseSha }) => {
-  const subject = `${component.name}/${name}`
-  const line = component.commands[name]
-  const parsed = parseCommand(line, { baseSha })
-  if (!parsed.ok) return { subject, status: 'fail', detail: `${JSON.stringify(line)} ${parsed.reason}` }
-  const [program] = parsed.argv
-  const choices = programChoices(parsed.argv)
-  const found = await locateFirst(deps, choices, component.root)
-  if (found === null) return { subject, status: 'fail', detail: notFound({ component, name, program, choices }) }
-  if (!run || name === 'mutation') return { subject, status: 'ok', detail: `${program} → ${found.located}` }
-  return runCheck(deps, subject, { argv: found.argv, cwd: component.root })
-}
-
-/**
- * @param {{ component: Component, name: string, program: string, choices: string[][] }} missing
- */
-const notFound = ({ component, name, program, choices }) =>
-  `command not found: ${program} (from ${component.root}${lookedFor(choices)}); install it or change commands.${name} in ${CONFIG_FILE}`
-
-/** Where `doctor --run` keeps what each command it starts writes, relative to the working copy. */
-const DOCTOR_LOGS = '.copilot-tracking/skraft-doctor'
-
-/**
- * Starts the located command once and keeps what it wrote in its log; it passes only on exit 0,
- * and a failure names the log.
- * @param {DoctorDeps} deps @param {string} subject @param {{ argv: string[], cwd: string }} command
- * @returns {Promise<DoctorCheck>}
- */
-const runCheck = async (deps, subject, { argv, cwd }) => {
-  const result = await deps.commandRunner.run({ argv, cwd })
-  if (!result.started) return { subject, status: 'fail', detail: /** @type {string} */ (result.error) }
-  const ran = commandText(argv)
-  const log = `${DOCTOR_LOGS}/${subject}.log`
-  await deps.workspace.write(log, commandLog(ran, cwd, result))
-  return result.exitCode === 0
-    ? { subject, status: 'ok', detail: `${ran} passed` }
-    : { subject, status: 'fail', detail: `${ran} exited ${result.exitCode}; its output is in ${log}` }
-}
-
-/**
- * The log of a command the doctor ran: the command, where, how it ended, then what it wrote.
- * @param {string} ran @param {string} cwd @param {import('../ports/command-runner.mjs').CommandResult} result
- */
-const commandLog = (ran, cwd, { exitCode, stdout, stderr }) =>
-  [`$ ${ran}`, `cwd: ${cwd}`, `result: exited ${exitCode}`, '--- stdout', stdout, '--- stderr', stderr, ''].join('\n')
-
-/**
- * The first program choice found on this machine, and where.
- * @param {DoctorDeps} deps @param {string[][]} choices @param {string} cwd
- * @returns {Promise<{ argv: string[], located: string } | null>}
- */
-const locateFirst = async (deps, choices, cwd) => {
-  for (const argv of choices) {
-    const located = await deps.executables.locate(argv[0], cwd)
-    if (located !== null) return { argv, located }
-  }
-  return null
-}
+const commandCheck = (component, name) => ({ subject: `${component.name}/${name}`, status: 'ok', detail: `${component.commands[name]} (listed; skraft_deliver_repl starts it, never skraft)` })
 
 /**
  * What the agents of the workflow run on, and the checks of it; nothing when the workflow cannot

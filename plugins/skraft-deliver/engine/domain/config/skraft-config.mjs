@@ -1,4 +1,4 @@
-import { GATE_ORDER, STORY_GATES } from '../gates/gate-plan.mjs'
+import { GATE_NAMES } from '../evidence/gate-names.mjs'
 import { normalizeRelative } from './relative-path.mjs'
 import { mergePatch } from './merge-patch.mjs'
 import { PLUGIN_DEFAULTS } from './model-assignment.mjs'
@@ -11,7 +11,7 @@ export { HOSTS } from './model-assignment.mjs'
 
 /**
  * `skraft-deliver-config.json`: components, each with its root, stack, source and test paths and
- * commands; the forge; how TDD commits are replayed; which model family
+ * commands; the forge; which model family
  * each agent runs on and what each family runs on each host. A command the developer wrote is
  * used as written; nothing here fills in a default. `contractTesting` is off unless the
  * developer turns it on; the review's contract lens reads it.
@@ -47,18 +47,16 @@ export { HOSTS } from './model-assignment.mjs'
  *   bdd null: nobody has decided. The engine invents no folder — one nobody chose is one the
  *   runner may never read — so a run is refused until `skraft init` detects the pairs or
  *   `/skraft-init` asks for them.
- * @typedef {'all' | 'last-red'} ReplayMode
- *   all: every red commit is replayed; last-red: only the last red commit of each story.
  * @typedef {import('./model-assignment.mjs').Host} Host
  * @typedef {import('./model-assignment.mjs').Models} Models
  * @typedef {import('./model-assignment.mjs').Assign} Assign
  * @typedef {import('./forge.mjs').Forge} Forge
- * @typedef {{ baseBranch: string | null, forge: Forge | null, tdd: { replay: ReplayMode }, publish: Publish, models: Models, assign: Assign, configurationConfirmed: boolean }} Settings
+ * @typedef {{ baseBranch: string | null, forge: Forge | null, publish: Publish, models: Models, assign: Assign, configurationConfirmed: boolean }} Settings
  *   forge: the forge the developer named, null to take the one the Git remote's host names.
  *   configurationConfirmed: a person confirmed, once, that runs of this working copy start with
  *   its configuration; kept in the developer's own skraft-deliver-config.local.json only.
  * @typedef {{ visuals: boolean | null, pullRequest: boolean | null, reviewComment: boolean | null, draft: boolean, questionVersions: Record<import('../decisions/consents.mjs').ConsentKey, number> }} Publish
- *   visuals: whether the run may publish screenshots and videos in the pull request; pullRequest:
+ *   visuals: whether the run may show a front end's screenshots in the pull request; pullRequest:
  *   whether it may push the branch, open or update its pull request and keep its progress on its
  *   story's issue; reviewComment: whether `skraft review --pr --publish` may keep one comment on the
  *   pull request it reviews; each null until the developer answers its consent question once.
@@ -83,7 +81,6 @@ export const LOCAL_CONFIG_FILE = 'skraft-deliver-config.local.json'
 export const USER_CONFIG_FILE = '~/.skraft-deliver/config.json'
 const MERGED = 'the merged configuration'
 export const STACKS = Object.freeze(['dotnet', 'java', 'python', 'typescript', 'javascript', 'react'])
-const REPLAY_MODES = Object.freeze(['all', 'last-red'])
 export const MOCKING_STRATEGIES = Object.freeze(['microcks', 'inprocess'])
 
 
@@ -100,8 +97,8 @@ const GONE_KEYS = Object.freeze({
 
 /** @param {string} label @param {string} key */
 const keyError = (label, key) => (key in GONE_KEYS ? `${label}: ${key} is gone; ${GONE_KEYS[key]}` : `${label}: unknown key ${key} (allowed: ${COMPONENT_KEYS.join(', ')})`)
-/** The gates, and `e2e`, which doctor checks but no gate runs. */
-export const COMMAND_NAMES = Object.freeze([...GATE_ORDER, 'e2e'])
+/** The gates, `e2e` and `mutation`, which the commands of a component may name: the engine runs none of them. */
+export const COMMAND_NAMES = Object.freeze([...GATE_NAMES, 'mutation', 'e2e'])
 /** What only the team's file holds. */
 const TEAM_KEYS = Object.freeze(['components'])
 /** What only the developer's skraft-deliver-config.local.json holds. */
@@ -109,8 +106,6 @@ export const CONFIRMED_KEY = 'configurationConfirmed'
 
 /** Why a config with no component cannot be checked or gated. */
 export const NO_COMPONENT = `${CONFIG_FILE} lists no component; run skraft init to detect them`
-/** Why a component with no gate command cannot prove anything. */
-export const NO_GATE = `no gate command; give it at least one of ${STORY_GATES.join(', ')} in ${CONFIG_FILE}`
 
 /**
  * The team's file, and the developer's beside it when given, over the plugin's defaults.
@@ -221,7 +216,6 @@ const mergedReading = (raws) => {
 const settingsOf = (raw, errors) => ({
   baseBranch: optionalRef(raw.baseBranch, 'baseBranch', errors),
   forge: forgeNamed(raw.forge, errors),
-  tdd: { replay: replayOf(raw.tdd, errors) },
   publish: publishOf(raw.publish, errors),
   ...modelSettingsOf(raw, errors),
   configurationConfirmed: confirmedOf(raw[CONFIRMED_KEY], errors),
@@ -285,13 +279,6 @@ export const withPublishSetting = (raw, key, value) => {
   const publish = isRecord(raw.publish) ? raw.publish : {}
   const questionVersions = { ...(isRecord(publish.questionVersions) ? publish.questionVersions : {}), [key]: CONSENT_VERSIONS[key] }
   return `${JSON.stringify({ ...raw, publish: { ...publish, [key]: value, questionVersions } }, null, 2)}\n`
-}
-
-/** @param {unknown} tdd @param {string[]} errors @returns {any} the replay mode it names, all when absent */
-const replayOf = (tdd, errors) => {
-  const replay = isRecord(tdd) ? tdd.replay ?? 'all' : tdd === undefined ? 'all' : null
-  if (!REPLAY_MODES.includes(replay)) errors.push(`tdd must be { "replay": "${REPLAY_MODES.join('" or "')}" }`)
-  return replay
 }
 
 /**

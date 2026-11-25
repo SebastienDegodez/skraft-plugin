@@ -3,14 +3,14 @@ import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
 
 /**
  * The tools the MCP server offers: each one is a command line of this driver, built from
- * arguments a model wrote, except skraft_design_answer, and skraft_design_mutation given an answer, which record
+ * arguments a model wrote, except skraft_design_answer, which records
  * a native human reply directly.
  * The commands that take terminal consent (`publish`, `journal
  * adopt`, `review --publish`, `migrate` that writes) are not tools: a person runs them in a
  * terminal.
  *
- * @typedef {'string' | 'text' | 'boolean' | 'count' | 'strings' | 'number'} Kind
- *   string: a word that does not start with `-`; count: a positive whole number; strings: a list
+ * @typedef {'string' | 'text' | 'code' | 'boolean' | 'count' | 'strings' | 'number'} Kind
+ *   string: a word that does not start with `-`; code: any text, an empty one too; count: a positive whole number; strings: a list
  *   of such words.
  * @typedef {{ kind: Kind, description: string }} Parameter
  * @typedef {{
@@ -57,15 +57,14 @@ export const TOOLS = Object.freeze([
   }),
   tool({
     name: 'skraft_design_doctor', title: 'Check skraft is ready',
-    description: 'Checks the repository is ready for skraft: skraft-design-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails, set skraft up with skraft_design_init.',
-    parameters: { run: { kind: 'boolean', description: 'run each command once' }, base: { kind: 'string', description: 'the ref the changes are measured from' } },
-    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['doctor', ...flag('--run', args.run), ...value('--base', args.base), '--json'],
+    description: 'Checks the repository is ready for skraft: skraft-design-config.json, each component command, the workflow and the model of each agent. Call it before the first prompt in a repository; when its config check fails, set skraft up with skraft_design_init and the skraft-init skill.',
+    annotations: { ...LOCAL, idempotentHint: true }, argv: () => ['doctor', '--json'],
   }),
   tool({
     name: 'skraft_design_init', title: 'Detect the components',
     description: 'Detects the components of the repository into skraft-design-config.json; never overwrites a value the file holds. Then settle the rest of the configuration with the skraft-init skill.',
-    parameters: { add: { kind: 'strings', description: 'folders to detect beyond the ones found' }, mutation: { kind: 'boolean', description: 'write each component\'s mutation command too' } },
-    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['init', ...(args.add ?? []).flatMap((/** @type {string} */ folder) => ['--add', folder]), ...flag('--mutation', args.mutation)],
+    parameters: { add: { kind: 'strings', description: 'folders to detect beyond the ones found' } },
+    annotations: { ...LOCAL, idempotentHint: true }, argv: (args) => ['init', ...(args.add ?? []).flatMap((/** @type {string} */ folder) => ['--add', folder])],
   }),
   tool({
     name: 'skraft_design_start', title: 'Start or resume a pipeline',
@@ -107,15 +106,26 @@ export const TOOLS = Object.freeze([
     annotations: READ_ONLY, argv: (args) => ['journal', 'show', ...value('--last', args.last), '--json'],
   }),
   tool({
-    name: 'skraft_design_gate', title: 'Run the gates',
-    description: 'Runs the gates of the components changed since the base of the story.',
-    parameters: { all: { kind: 'boolean', description: 'run the gates of every component' } },
-    annotations: LOCAL, argv: (args) => ['gate', ...flag('--all', args.all), '--json'],
-  }),
-  tool({
     name: 'skraft_design_precheck', title: 'Pre-check what the open attempt has written',
     description: 'Runs, inside your own attempt, the mechanical checks the engine runs when you submit — your outputs, your write scope, the records your role keeps, the prose you write, the scenarios your plan names, the lifecycle of the decisions you touched: it answers every anomaly with the check that found it, the artefact and the rule it breaks, so you correct them now instead of being sent back. It reads no result file and no commit, since you write them last. It starts no agent, changes nothing you wrote, and approves nothing: the engine runs these checks again at the submission, and the review still happens.',
     annotations: LOCAL, argv: () => ['precheck', '--json'],
+  }),
+  tool({
+    name: 'skraft_design_repl', title: 'Run the project commands in the attempt REPL',
+    description: "A JavaScript REPL (node) bound to your open attempt. Every command whose result counts as proof (build, format, lint, test, architecture, coverage, e2e) runs here, never in Bash: the engine reads the runs this tool records under logs/runs/ and nothing else. Variables persist between calls and a cell may await at its top level. In a cell: run(command, { cwd = '.', timeout = 600, gate, label }) starts a program and returns a handle at once: command is an argv array (no shell) or a string (run by sh -c; Git Bash or PowerShell under Windows); cwd is relative to the working copy; timeout is in seconds, 7200 at most. The handle has id, command, running, tail(n = 50), output(), poll() (the result, or null while it runs), kill(signal = 'SIGTERM', grace = 5) (SIGTERM, SIGINT or SIGKILL; grace 0 to 30 whole seconds) and is awaited: await handle gives { exitCode, output, durationMs, head, log } (head: the HEAD of the repository holding cwd when the program ended). gate(name, command, options) is run with the gate named (build, format, lint, test, architecture, coverage, e2e); absent(gate, component, reason) declares that the component has no command for that gate, as your brief's no command line gives it. console.log, console.error, process.stdout.write and process.stderr.write print into the result. A cell that runs past 90 seconds answers with what it printed while its runs go on: call again with empty code to wait for it. One call at a time: a second call while a cell runs is refused. To end the kernel and its runs, even mid-cell, call skraft_design_repl_reset, then skraft_design_repl: the next call runs in a fresh kernel whose variables are gone. The tool works only inside an open attempt, and the runs outlive neither the attempt nor the session. Commits are not recorded: chain the add and the commit in one cell all the same.",
+    parameters: {
+      code: { kind: 'code', description: 'the JavaScript of the cell; empty to wait for the cell still running' },
+    },
+    required: ['code'], annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+    // Stryker disable next-line ArrayDeclaration: skraft_design_repl calls the REPL use case directly; no caller reads this argv
+    argv: () => [],
+  }),
+  tool({
+    name: 'skraft_design_repl_reset', title: 'End the kernel of the attempt REPL',
+    description: "Ends the kernel of skraft_design_repl in your open attempt and the runs it started, even while a cell runs: the cell in flight answers repl-reset, its variables are gone, and the next skraft_design_repl starts a fresh kernel whose runs take the next ids. It waits for no other call and is never refused as busy. With no kernel running, it ends nothing and says so. The tool works only inside an open attempt.",
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    // Stryker disable next-line ArrayDeclaration: skraft_design_repl_reset calls the REPL use case directly; no caller reads this argv
+    argv: () => [],
   }),
   tool({
     name: 'skraft_design_review', title: 'Review a pull request',
@@ -123,18 +133,6 @@ export const TOOLS = Object.freeze([
     parameters: { pr: { kind: 'count', description: 'the pull request number' }, record: { kind: 'boolean', description: 'hand the saved agent replies to the review' } },
     required: ['pr'], annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }, loop: true,
     argv: (args) => ['review', '--pr', String(args.pr), ...flag('--record', args.record), '--json'],
-  }),
-  tool({
-    name: 'skraft_design_mutation', title: 'Run mutation on the branch',
-    description: 'Runs the mutation run of the branch HEAD is on, apart from any pipeline, until it needs agents or a person. On dispatch, start each listed agent with exactly its prompt, one after the other, write its final reply unchanged to its reply file, then do what then says. On waiting, ask the exact question through the offered native ask_user or askQuestions tool and relay only the returned human reply here, with key and answer.',
-    parameters: {
-      record: { kind: 'boolean', description: 'hand the saved agent replies to the mutation run' },
-      key: { kind: 'string', description: 'the exact key of the question the mutation run waits on' },
-      answer: { kind: 'text', description: 'the native human reply to that question' },
-      reason: { kind: 'text', description: 'the human refusal reason' },
-    },
-    annotations: LOCAL,
-    argv: (args) => ['mutation', ...flag('record', args.record), '--json'],
   }),
   tool({
     name: 'skraft_design_workflow_check', title: 'Check the workflow',
@@ -169,6 +167,7 @@ export const offeredTools = () => STANDALONE_TOOLS
 const SCHEMAS = Object.freeze({
   string: { type: 'string', minLength: 1 },
   text: { type: 'string', minLength: 1 },
+  code: { type: 'string', maxLength: 200_000 },
   boolean: { type: 'boolean' },
   count: { type: 'integer', minimum: 1 },
   number: { type: 'number' },
@@ -188,6 +187,7 @@ export const toolListing = ({ name, title, description, parameters, required, an
 const KIND_TEXT = Object.freeze({
   string: 'a non-empty text that does not start with -', boolean: 'true or false',
   text: 'a non-empty text',
+  code: 'a text of at most 200000 characters',
   number: 'a finite number',
   count: 'a positive whole number', strings: 'a list of non-empty texts that do not start with -',
 })
@@ -199,6 +199,7 @@ const isWord = (given) => typeof given === 'string' && given.length > 0 && !give
 const CHECKS = Object.freeze({
   string: isWord,
   text: (given) => typeof given === 'string' && given.trim().length > 0,
+  code: (given) => typeof given === 'string' && given.length <= 200_000,
   boolean: (given) => typeof given === 'boolean',
   count: (given) => Number.isSafeInteger(given) && /** @type {number} */ (given) >= 1,
   number: (given) => typeof given === 'number' && Number.isFinite(given),

@@ -21,6 +21,7 @@
  *   filesAt: (dir: string, sha: string) => Promise<string[] | null>,
  *   commitFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string, output: string }>,
  *   commitCopies: (dir: string, copies: Array<{ from: string, to: string, within: string }>, message: string) => Promise<{ ok: true } | { ok: false, error: string, refused?: string[] }>,
+ *   refusedImages: (dir: string, files: Array<{ from: string, within: string }>) => Promise<string[]>,
  * }} SourceControl
  *   unavailable: null when Git runs on this host, else why it does not. remoteUrl: the URL of the
  *   working copy's remote, origin else the first one Git lists, as Git keeps it; null without one
@@ -45,7 +46,8 @@
  *   each file, byte for byte, from `from` to `to` (all relative to dir), ignored or not, then
  *   commits the copies alone with that message; refused lists the files it copies none of, each
  *   a symbolic link, resolving outside its folder `within`, or not a PNG. On a failure nothing
- *   it staged stays staged.
+ *   it staged stays staged. refusedImages: the files (relative to dir) commitCopies would refuse,
+ *   by Git alone; none when each is a PNG file of its folder `within`.
 
  */
 export {}

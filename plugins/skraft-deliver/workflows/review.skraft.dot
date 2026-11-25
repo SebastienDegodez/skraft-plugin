@@ -1,20 +1,22 @@
 // The review skraft runs on a story's changes in DELIVER (the call deliver_review of pipeline.skraft.dot) and on a pull
 // request. Copy it into .skraft-deliver/review.skraft.dot with `skraft workflow eject review`, then add lenses; every call to
 // review runs the copy. It reads only its inputs, never a run's journal: base and head
-// bound the changes, story and documents tell what they are for, components how each one is built and tested.
+// bound the changes, story and documents tell what they are for, components how each one is built and tested, trace
+// whether the delivery's traced runs could be verified (a pull request has none).
 // A called workflow runs one review: start -> fan-out -> one lens node per branch -> refuter -> fan-in -> exit; the
 // calling node carries NEEDS_REWORK and max_visits. The refuter (shape=octagon) is deliver-finding-refuter: it checks each
 // finding of the lenses, of any severity, before the fan-in counts it, one tier above the strongest lens it
 // checks unless the fan-in names its family with refuter=. A node marked mandatory=true can never be dropped, bypassed or weakened,
 // whatever the copy says.
 digraph review {
-  graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional"]
+  graph [version="2", goal="Review the changes", input_base="required", input_head="required", input_story="optional", input_documents="optional", input_components="optional", input_trace="optional"]
 
   start  [shape=Mdiamond]
   lenses [shape=component]
   test_integrity          [shape=note, lens="test-integrity", mandatory=true]
   architecture_boundaries [shape=note, lens="architecture-boundaries", mandatory=true]
   cold_reader             [shape=note, lens="cold-reader"]
+  quality_gates           [shape=note, lens="quality-gates", when="delivery"]
   mock_fidelity           [shape=note, lens="mock-fidelity", when="mock"]
   contract_fidelity       [shape=note, lens="contract-fidelity", when="contract"]
   refuter [shape=octagon, mandatory=true]
@@ -25,6 +27,7 @@ digraph review {
   lenses -> test_integrity -> refuter
   lenses -> architecture_boundaries -> refuter
   lenses -> cold_reader -> refuter
+  lenses -> quality_gates -> refuter
   lenses -> mock_fidelity -> refuter
   lenses -> contract_fidelity -> refuter
   refuter -> verdict

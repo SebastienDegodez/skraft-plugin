@@ -5,9 +5,10 @@ description: Use in a Python component (`pyproject.toml`) to pick or check the g
 
 # Quality Gates — Python
 
-In a skraft pipeline step, the engine runs each gate from the component's `commands` in
-`skraft-deliver-config.json`, from the component root, and keeps the evidence: never run a gate to
-produce evidence, never write an evidence file, never launch a mutation run. Outside a
+In a DELIVER attempt, run each gate of the component through `skraft_deliver_repl` with
+`gate(name, command, { cwd: <the component root> })`, the command from your brief, else from the
+component's `commands` in `skraft-deliver-config.json`: the engine reads the traced run as the evidence.
+Never write an evidence file by hand, never launch a mutation run. Outside a
 pipeline, when the developer asks for a gate, run its command line below from the component
 root and report its exit code and verdict line. Thresholds come from `deliver-skraft-quality-bar`
 and live in the scripts; no caller argument changes them.
@@ -40,7 +41,10 @@ scripts/ folder next to this SKILL.md, never in the consumer repository. Every s
 | architecture | `python -c "from importlinter.cli import lint_imports_command; lint_imports_command()"` (import-linter has no `-m` entry point; `deliver-clean-architecture-python` requires a contract) |
 | coverage | `node "<skill>/scripts/coverage-core.mjs" --root . --evidence .copilot-tracking/skraft-gates/coverage` |
 
-Use the `.venv` interpreter path in place of `python` when it is not on the path. `--evidence`
+The engine starts a command's program as written: write the `.venv` interpreter path
+(`.venv/bin/python`, or `.venv/Scripts/python.exe` on Windows; forward slashes, a backslash is an
+invalid escape in JSON) in place of `python` when `python` is not the project's interpreter on the
+path. A team on several systems chooses one form per component. `--evidence`
 is the folder where the script keeps its own report files, relative to `--root`.
 
 The core is every Python source under a folder whose name ends with `domain` or `application`

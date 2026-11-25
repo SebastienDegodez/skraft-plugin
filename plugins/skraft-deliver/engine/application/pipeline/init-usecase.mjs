@@ -194,7 +194,7 @@ const findEntry = (workflow, artifacts, { slug, fromArtifacts }) => {
  *   artifacts: the DISCUSS ones, after the issue kept
  */
 const journalStart = async (journal, { slug, story }, { workflow, bases, artifacts, entry, issue }) => {
-  await journal.append('run.started', { slug, story, workflow: workflow.name, base: bases, artifacts: [...issue.artifacts, ...artifacts], start: entry, unlocked: workflow.unlocked })
+  await journal.append('run.started', { slug, story, workflow: workflow.name, base: bases, artifacts: [...issue.artifacts, ...artifacts], start: entry })
   for (const phase of skippedPhases(workflow, entry)) await journal.append('phase.closed', { phase, skipped: 'from-artifacts' })
 }
 

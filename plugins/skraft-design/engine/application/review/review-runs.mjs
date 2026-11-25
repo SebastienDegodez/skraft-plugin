@@ -51,9 +51,13 @@ import { takeFromLastPass } from './review-repeats.mjs'
  * @typedef {{
  *   base: RunState['base'], story?: RunState['story'], documents?: ReviewDocuments,
  *   components?: Array<import('../../domain/config/skraft-config.mjs').Component & { gates: string[] }>,
+ *   trace?: TraceFact[],
  * }} ReviewInputs
- *   what the review reads, and only that: the changes since base, the story, the documents and
- *   the components, each with the gates that passed on it; a review not bound to one has none.
+ *   what the review reads, and only that: the changes since base, the story, the documents,
+ *   the components, each with the gates that passed on it, and whether each delivering step's
+ *   trace could be verified; a review not bound to one has none.
+ * @typedef {{ step: string, trace: string, status: 'verified' | 'invalid', code?: string }} TraceFact
+ *   trace: the step's runs.jsonl, relative to the tracking folder; code: what breaks an invalid one.
  * @typedef {{
  *   outputs: string[], context: string[], artifacts: string[],
  *   phases: Array<{ phase: string, steps: Array<{ step: string, agent: string, documents: string[] }> }>,
@@ -253,7 +257,7 @@ const prepareChanges = async (review) => {
  * @returns {Partial<Record<Scope, { paths: string[], patch: string }>>}
  */
 const scopesOf = (review, changes) => {
-  const used = new Set(['code', ...planLenses(review.step.node.branches, changes).map(({ scope }) => scope)])
+  const used = new Set(['code', ...planLenses(review.step.node.branches, { ...changes, delivery: delivers(review) }).map(({ scope }) => scope)])
   return Object.fromEntries(SCOPES.filter((scope) => used.has(scope)).map((scope) => [scope, scopedChanges(changes, scope)]))
 }
 
@@ -272,6 +276,7 @@ const filesOf = (review, { changes, scopes }, { rules, present }) => [
   ...Object.entries(scopes).flatMap(([scope, part]) => [[`${scope}.patch`, part.patch], [`${scope}-files.txt`, lines(part.paths)]]),
   ...(review.inputs.documents === undefined ? [] : [/** @type {[string, string]} */ (['context.md', contextOf(review, rules, present)])]),
   ...(review.inputs.components === undefined ? [] : [/** @type {[string, string]} */ (['components.json', componentsOf(review)])]),
+  ...(review.inputs.trace === undefined ? [] : [/** @type {[string, string]} */ (['trace.json', `${JSON.stringify(review.inputs.trace, null, 2)}\n`])]),
 ]
 
 /** @param {string[]} paths */
@@ -288,11 +293,12 @@ const writeAll = async ({ deps, slug }, folder, files) => {
  * @param {Review} review @param {string} folder @param {{ changed: boolean, present: Set<string> }} state
  * @returns {Record<InputKind, string[]>}
  */
-const inputsOf = ({ inputs: { documents, components } }, folder, { changed, present }) => ({
+const inputsOf = ({ inputs: { documents, components, trace } }, folder, { changed, present }) => ({
   ...documentInputs(documents, folder, present),
   patch: changed ? [`${folder}/changes.patch`] : [],
   files: changed ? [`${folder}/changed-files.txt`] : [],
   components: components === undefined ? [] : [`${folder}/components.json`],
+  trace: trace === undefined ? [] : [`${folder}/trace.json`],
 })
 
 /**
@@ -306,13 +312,19 @@ const documentInputs = (documents, folder, present) => {
 
 /**
  * What each component builds on, how its tests stand in for what it calls, whether it wants
- * contract tests, and the gates that passed on it.
+ * contract tests, whether it declares an e2e command, and the gates that passed on it.
  * @param {Review} review
  */
 const componentsOf = ({ inputs }) => {
-  const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(({ name, root, stack, mocking, contractTesting, bdd, gates }) => ({ name, root, stack, mocking, contractTesting, bdd, gates }))
+  const described = /** @type {NonNullable<ReviewInputs['components']>} */ (inputs.components).map(describedComponent)
   return `${JSON.stringify(described, null, 2)}\n`
 }
+
+/** @param {NonNullable<ReviewInputs['components']>[number]} component */
+const describedComponent = ({ name, root, stack, mocking, contractTesting, bdd, commands, gates }) => ({ name, root, stack, mocking, contractTesting, bdd, e2e: 'e2e' in commands, gates })
+
+/** Whether the review is a run's DELIVER review, the one bound to the delivery's trace. @param {Review} review */
+const delivers = ({ inputs }) => inputs.trace !== undefined
 
 /** The paths the tracking folder holds. @param {string[]} paths @param {Set<string>} present */
 const kept = (paths, present) => paths.filter((path) => present.has(path))
@@ -401,7 +413,7 @@ const copied = async (review, rules) => {
  * @param {Review} review @param {Prepared} prepared
  * @returns {Promise<PlannedLens[]>}
  */
-const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.branches, prepared).map(async (lens) => {
+const planLensInputs = async (review, prepared) => Promise.all(planLenses(review.step.node.branches, { ...prepared, delivery: delivers(review) }).map(async (lens) => {
   const kinds = lens.blind ? lens.inputs : [/** @type {InputKind} */ ('overview'), ...lens.inputs]
   const tracked = lens.scope === null ? prepared.inputs : { ...prepared.inputs, ...prepared.scoped[lens.scope].inputs }
   const inputs = kinds.flatMap((kind) => tracked[kind].map((path) => ({ kind, path })))

@@ -3,7 +3,7 @@ import { reasonOf, statusOf, waitingOn } from '../../domain/reporting/run-status
 import { runReport } from '../../domain/reporting/run-report.mjs'
 import { runGraph } from '../../domain/reporting/run-graph.mjs'
 import { reviewPasses } from '../../domain/reporting/review-passes.mjs'
-import { finalGates } from '../../domain/reporting/run-facts.mjs'
+import { qualityEvidence } from '../../domain/reporting/run-facts.mjs'
 import { agentModels } from '../../domain/reporting/agent-models.mjs'
 import { NO_ACTIVE_PIPELINE } from './active-run.mjs'
 import { loadConfig } from '../config/bases.mjs'
@@ -23,20 +23,20 @@ import { draftPublication } from '../../domain/reporting/draft-publication.mjs'
  *   status: 'idle' | 'not-initialised' | 'running' | 'waiting' | 'done' | 'blocked' | 'tampered',
  *   reason: string,
  *   phases: PhaseView[],
- *   current: { step: string, phase: string, agent: string | null, gates: string[] | null, question: string | null, visit: number, attempt: number } | null,
+ *   current: { step: string, phase: string, agent: string | null, question: string | null, visit: number, attempt: number } | null,
  *   question: import('../../domain/reporting/run-status.mjs').WaitingQuestion | null,
  *   draftPublication: { allowed: boolean, reason: string },
  *   attempts: number,
  *   costUsd: number | null,
  *   graph: import('../../domain/reporting/run-graph.mjs').RunGraph,
  *   reviews: import('../../domain/reporting/review-passes.mjs').ReviewPass[],
- *   gates: import('../../domain/reporting/run-facts.mjs').GateFact[],
+ *   evidence: import('../../domain/reporting/run-facts.mjs').EvidenceFact[],
  *   agents: import('../../domain/reporting/agent-models.mjs').AgentModel[],
  * }} RunView
  *   phases: those of the workflow the run follows; when it cannot be read, those the journal
  *   names. question: the one the run waits on, until a human answers it. graph: the workflow's
  *   steps and edges with where the run stands; reviews: the last pass of each review step;
- *   gates: the last result of each gate of each component, the tests among them; agents: what
+ *   evidence: the traced runs the delivery stands on; agents: what
  *   each agent the run started runs on under the host that started it.
  * @typedef {import('../../domain/journal/run-state.mjs').RunEvent} RunEvent
  * @typedef {import('../../domain/workflow/workflow.mjs').Workflow} Workflow
@@ -126,7 +126,7 @@ const withoutRun = (where, workflow) => ({
   costUsd: null,
   graph: runGraph(workflow, [], {}),
   reviews: [],
-  gates: [],
+  evidence: [],
   agents: [],
 })
 
@@ -150,7 +150,7 @@ const runView = (slug, events, workflow) => {
 /**
  * The run's status, phases, open step, waiting question and totals.
  * @param {RunState} run @param {Workflow | null} workflow
- * @returns {Omit<RunView, 'slug' | 'graph' | 'reviews' | 'gates' | 'agents'>}
+ * @returns {Omit<RunView, 'slug' | 'graph' | 'reviews' | 'evidence' | 'agents'>}
  */
 const whereRunStands = (run, workflow) => ({
   status: statusOf(run),
@@ -165,14 +165,14 @@ const whereRunStands = (run, workflow) => ({
 
 /**
  * What each step came to: the graph with where the run stands, the reviews' last passes, the
- * gates' last results, what each agent runs on.
+ * the quality evidence, what each agent runs on.
  * @param {RunEvent[]} events @param {RunState} run @param {Workflow | null} workflow
- * @returns {Pick<RunView, 'graph' | 'reviews' | 'gates' | 'agents'>}
+ * @returns {Pick<RunView, 'graph' | 'reviews' | 'evidence' | 'agents'>}
  */
 const stepResults = (events, run, workflow) => ({
   graph: runGraph(workflow, runReport(events).steps, run.traversals),
   reviews: reviewPasses(events),
-  gates: finalGates(events),
+  evidence: qualityEvidence(events),
   agents: agentModels(events),
 })
 
@@ -193,7 +193,7 @@ const currentNode = (run) => {
   const found = openNode(run)
   if (found === null) return null
   const { step, open: attempt } = found
-  return { step, phase: attempt.phase, agent: attempt.agent, gates: attempt.gates, question: attempt.question, visit: attempt.visit, attempt: attempt.attempt }
+  return { step, phase: attempt.phase, agent: attempt.agent, question: attempt.question, visit: attempt.visit, attempt: attempt.attempt }
 }
 
 /**

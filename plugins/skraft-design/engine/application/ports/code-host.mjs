@@ -7,11 +7,16 @@
  * @typedef {FoundPullRequest & { head: string, fromFork: boolean }} ReadPullRequest
  *   body: the whole description; head: its source branch, as the forge names it; fromFork: it comes from a fork of the
  *   remote's repository, not from the repository itself.
- * @typedef {{ base: string, head: string, title: string, bodyFile: string, body: string, draft: boolean, issue: number | null }} PullRequestRequest
+ * @typedef {{ path: string, alt: string, reference: string }} Attachment
+ *   path: a file of the working copy, relative to it; alt: its alt text, made safe to publish;
+ *   reference: how the body refers to it, relative to the folder of the body's file, where the
+ *   forge's client resolves it (gh is run from there).
+ * @typedef {{ base: string, head: string, title: string, bodyFile: string, body: string, draft: boolean, issue: number | null, attachments: Attachment[] }} PullRequestRequest
  *   base: the branch it merges into; head: the branch it brings; bodyFile: the absolute path of
  *   the file that holds its body; body: that body, for a forge reached without files; issue: the
  *   story's issue, or work item, that a forge linking one at creation links it to; null for a run
- *   from none.
+ *   from none; attachments: the files the forge's client uploads with the body, each reference
+ *   to one rewritten to the uploaded file (none for a forge that attaches no file).
  * @typedef {'refused' | 'unknown'} Unapplied
  *   refused: the write did not happen (the forge or git said no, or it was never sent); unknown:
  *   no answer came (a time limit, a cut), so it may have happened.
@@ -35,13 +40,16 @@
  *   Azure Boards; GitHub ignores it); body: that body. On Azure Boards the comment's url is the
  *   REST address skraft builds, `<organization>/<project>/_apis/wit/workItems/<id>/comments/<comment>`:
  *   a web anchor for a comment is not documented, so none is invented.
- * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string, threadFile: string, commentFile: string }} PullRequestCommentRequest
+ * @typedef {{ number: number, marker: string, url: string | null, bodyFile: string, body: string, threadFile: string, commentFile: string, attachments: Attachment[] }} PullRequestCommentRequest
  *   number: the pull request; marker: the first line of the comment's body, that finds it again;
  *   url: the comment as last kept, null when none was; bodyFile, body: the Markdown to keep;
  *   threadFile: the absolute path of a file holding the thread to post as JSON
  *   (`{"comments":[{"parentCommentId":0,"content":<body>,"commentType":1}],"status":4}`) and
  *   commentFile: that of a file holding `{"content":<body>}`, for a forge whose client sends JSON
- *   (az on Azure Repos); both empty for another forge.
+ *   (az on Azure Repos); both empty for another forge; attachments: the files the forge's client
+ *   uploads with the comment, each reference to one rewritten (gh pr comment --attach); a request
+ *   with any is always posted as a new comment, whatever url says, and the caller empties the one
+ *   it kept before.
  * @typedef {{
  *   unavailable: () => Promise<string | null>,
  *   remotes: () => Promise<string[]>,
@@ -54,7 +62,7 @@
  *   findPullRequest: (head: string) => Promise<{ ok: true, found: FoundPullRequest | null } | { ok: false, reason: string }>,
  *   readPullRequest: (number: number) => Promise<{ ok: true, found: ReadPullRequest | null } | { ok: false, reason: string }>,
  *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | Failed>,
- *   edit: (request: { number: number, bodyFile: string, body: string }) => Promise<Done>,
+ *   edit: (request: { number: number, bodyFile: string, body: string, attachments: Attachment[] }) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
  *   keepPullRequestComment: (request: PullRequestCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
  *   readComment: (url: string) => Promise<CommentReading>,
@@ -63,6 +71,10 @@
  *   bodyLimit: number,
  *   commentLimit: number,
  *   takesRequestFile: boolean,
+ *   attachesFiles: boolean,
+ *   fileUrl: (commit: string, path: string) => Promise<string | null>,
+ *   screenshotsBlocked: () => Promise<string | null>,
+ *   attachLimit?: number,
  * }} CodeHost
  *   unavailable: why no pull request can be opened from here (no remote, no forge client, not
  *   signed in), null when one can. remotes: the names of the repository's remotes. repository:
@@ -87,6 +99,13 @@
  *   longest body the forge takes, in characters; commentLimit: the longest comment. takesRequestFile: whether the
  *   forge's client sends a JSON request file (az on Azure Boards), which keepIssueComment is then
  *   handed; false: no such file is written.
+ *   attachesFiles: whether the forge's client uploads a pull request's images with its body (gh
+ *   --attach); false: a screenshot is committed on the working branch and linked at its commit.
+ *   fileUrl: the address of a file of the repository at a commit (path relative to the working
+ *   copy) that the forge's pull request shows as an image, null when the remote names no
+ *   repository. screenshotsBlocked: why this machine's forge client cannot show screenshots in a
+ *   pull request (gh without --attach, az without its azure-devops extension), null when it can.
+ *   attachLimit: the most screenshots the forge's client attaches in one command (gh: 50); none when it attaches none.
  *   storyLink: the line of a pull request's body that links it to the story's issue, as the
  *   forge reads it: one that closes the issue when the pull request merges, when closes is true;
  *   null when the forge links none.

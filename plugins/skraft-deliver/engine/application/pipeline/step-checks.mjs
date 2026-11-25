@@ -3,48 +3,39 @@ import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits } from '../../domain/pipeline/commits.mjs'
-import { TRACKING } from '../../domain/pipeline/component-files.mjs'
 import { isFilled } from '../../domain/pipeline/outputs.mjs'
 import { proseProblems, readProse } from '../../domain/reporting/pull-request-prose.mjs'
 import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { adrFailures } from '../decisions/adr-checks.mjs'
-import { emptyTally, replayReds, report } from './commit-replays.mjs'
 import { checkDesignRecords } from './design-records.mjs'
-import { checkGherkinRecords } from './gherkin-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
-import { planOf, replayScenarioGreen, scenarioFailures, scenarioJudging, scenarioRecord } from './scenario-checks.mjs'
+import { redRunOf, tracedRuns } from './evidence-checks.mjs'
+import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './scenario-checks.mjs'
 
 /**
  * @typedef {import('../../domain/journal/run-state.mjs').Head} Head
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'gherkin-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
- * @typedef {{
- *   repository: string, sha: string, subject: string, kind: string, verdict: string,
- *   replay: import('./commit-replays.mjs').Replay | null,
- * }} CheckedCommit
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {{ repository: string, sha: string, subject: string, kind: string, verdict: string }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
- *   environment: null, replayMs: number, judgeCost?: number, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
- * } | { commits: CheckedCommit[], environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident }} StepCheck
- *   environment: why the machine could not check the step (a missing test command, Git
- *   failing); the step then stays open. incident: whose it is to fix and where the command that
- *   stopped printed, when a replay stopped; else the machine's, with no log. judgeCost: what the
- *   replay judge cost, when the host tells. uncommitted: the files in its scope the agent changed
+ *   environment: null, uncommitted?: UncommittedFile[], scenario?: import('./scenario-checks.mjs').ScenarioRecord,
+ *    evidence?: Array<{ run: number, gate: string, cwd: string, log: string, sha256: string }> | null, red?: boolean, invalid?: string,
+ * } | { commits: CheckedCommit[], environment: string }} StepCheck
+ *   environment: why the machine could not check the step (Git failing); the step then stays
+ *   open. uncommitted: the files in its scope the agent changed
  *   and left uncommitted, which the engine commits once the step is done: only an agent with no
  *   shell gets there, one with a shell is refused for them; absent when the agent is blocked.
  * @typedef {{ repository: string, file: string, path: string }} UncommittedFile
  *   file: relative to its repository; path: relative to the working copy.
- * @typedef {import('./commit-replays.mjs').KnownCommits} KnownCommits
- *   what earlier attempts of the pass found for each commit they checked, by sha.
  * @typedef {{
  *   files: import('../ports/tracking-files.mjs').TrackingFiles,
  *   workspace: import('../ports/workspace.mjs').Workspace,
  *   hasher: import('../ports/hasher.mjs').Hasher,
  *   sourceControl: import('../ports/source-control.mjs').SourceControl,
- *   commitReplay: import('../ports/commit-replay.mjs').CommitReplay,
  *   clock: import('../ports/clock.mjs').Clock,
  *   agentRunner: import('../ports/agent-runner.mjs').AgentRunner,
  *   progress: import('../ports/pipeline-progress.mjs').PipelineProgress,
@@ -54,14 +45,16 @@ import { planOf, replayScenarioGreen, scenarioFailures, scenarioJudging, scenari
  * @typedef {{
  *   deps: CheckDeps, slug: string, config: import('../../domain/config/skraft-config.mjs').SkraftConfig,
  *   base: import('../config/bases.mjs').Base[], story: { issue?: number | null } | null,
- *   judge: import('./replay-judge.mjs').JudgeRun,
  * }} CheckContext
- *   judge: what the replay judge runs on, and the attempt whose commits it judges
  * @typedef {import('./scenario-checks.mjs').ScenarioPass} ScenarioPass
+ * @typedef {{ heads: Head[], shas: string[] }} Carried
+ *   what a delivery pass reopened after a block carries from the visits before it: the heads of
+ *   the node's first visit, and the commits those visits' attempts made (commits.checked), so
+ *   that a commit a person made while the run waited is no attempt's.
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'gherkin-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -115,48 +108,66 @@ const contentHash = async ({ workspace, hasher }, path) => {
 /**
  * What an agent's attempt left: its outputs, its result, the files it changed against its
  * write scope, the records its role keeps, and its commits against the commit
- * convention, the story's issue and the TDD cycle, each red commit replayed.
+ * convention, the story's issue and the TDD cycle.
  * @param {CheckContext} context
  * @param {{
  *   role: import('../../domain/pipeline/roles.mjs').Role, outputs: string[], precreated: Array<string | null>, result: string,
- *   visitHeads: Head[], engineBefore?: Array<{ path: string, hash: string | null }>, redByGateFailure: boolean, known: KnownCommits, scenario: ScenarioPass | null,
- * }} step visitHeads: the heads when the pass started; engineBefore: the engine files as the attempt found them; redByGateFailure: the gates sent the work back, their failure standing for a red test;
+ *   visitHeads: Head[], engineBefore?: Array<{ path: string, hash: string | null }>, scenario: ScenarioPass | null,
+ *   evidence?: { folder: string, events: any[] } | null,
+ * }} step evidence: where the attempt's runs are traced, for the role that delivers code; visitHeads: the heads when the pass started; engineBefore: the engine files as the attempt found them;
  *   scenario: the scenario the pass works on, null for none
  * @returns {Promise<StepCheck>}
  */
 export const checkStep = async (context, step) => {
   const read = await readAttempt(context, step)
-  if ('stop' in read) return read.stop
-  const commits = await judgedCommits(context, { ...step, plan: read.plan.plan })
-  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked, ...incidentOf(commits) }
+  if ('stop' in read) return withCommitsOfBlocked(context, step, read.stop)
+  const commits = await checkCommits(context.deps, context, { ...step, plan: read.plan.plan })
+  if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
   const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
+  const evidence = await evidenceOf(context, step)
   const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
-  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario }
+  return { ...refusal(read.missing, found, commits), uncommitted: read.scope.uncommitted, scenario: commits.scenario, evidence: evidence.checked, ...evidenceMarks(evidence) }
 }
 
 /**
- * The attempt's commits checked, the working copy as the replay judge found it: a judge has a
- * shell to read with, and one that changed HEAD or a file stops the step for a human.
- * @param {CheckContext} context @param {Parameters<typeof checkCommits>[2]} step
+ * The runs the REPL traced for an attempt that delivers code, kept for the DELIVER review that
+ * judges them, none with the code of what breaks a trace that cannot be verified; the designer's
+ * red run; null for any other role, and for a designer that traced no red. Never a refusal.
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step
+ * @returns {Promise<{ checked: import('./evidence-checks.mjs').TracedRun[] | null, red?: boolean, invalid?: string }>}
  */
-const judgedCommits = async (context, step) => {
-  const before = await workingCopyOf(context)
-  const commits = await checkCommits(context.deps, context, step)
-  if (await workingCopyOf(context) === before) return commits
-  return { environment: JUDGE_MOVED, checked: commits.checked, incident: /** @type {const} */ ({ owner: 'judge', log: null }) }
+const evidenceOf = async ({ deps, slug }, { role, evidence }) => {
+  if (evidence === null || evidence === undefined || (role.tdd !== 'red' && role.tdd !== 'cycle')) return { checked: null }
+  const attempt = { slug, folder: evidence.folder, events: evidence.events }
+  if (role.tdd === 'red') return redEvidence(deps, attempt)
+  const traced = await tracedRuns(deps, attempt)
+  return { checked: traced.runs, ...(traced.invalid === undefined ? {} : { invalid: traced.invalid }) }
+}
+
+/** What the journal keeps beside the runs: the designer's red, a trace that cannot be verified. @param {{ red?: boolean, invalid?: string }} evidence */
+const evidenceMarks = ({ red, invalid }) => ({ ...(red === true ? { red: true } : {}), ...(invalid === undefined ? {} : { invalid }) })
+
+/**
+ * The designer's traced run of the acceptance tests, labelled `red`: kept for the review, never required.
+ * @param {any} deps @param {{ slug: string, folder: string, events: any[] }} attempt
+ */
+const redEvidence = async (deps, attempt) => {
+  const red = await redRunOf(deps, attempt)
+  return { checked: red === null ? null : [red], red: true }
 }
 
 /**
- * Each repository's HEAD and changed files, the tracking folder left out: the engine writes there
- * while it checks (replay logs, the judge's answers, the journal).
- * @param {CheckContext} context
+ * An attempt that stops blocked still made commits: they are recorded as the attempt's, so that
+ * the pass a human reopens counts them and never a commit the person made meanwhile.
+ * @param {CheckContext} context @param {Parameters<typeof checkStep>[1]} step @param {StepCheck} stop
+ * @returns {Promise<StepCheck>}
  */
-const workingCopyOf = async ({ deps, base }) => JSON.stringify((await headsOf(deps, base))
-  .map(({ repository, sha, dirty }) => ({ repository, sha, dirty: dirty.filter(({ path }) => pathUnder(path, TRACKING) === null) })))
-
-/** Why a step stops when the working copy changed while its commits were checked. */
-const JUDGE_MOVED = 'the replay judge changed the working copy (a commit or a file) while it judged; undo that change, then retry'
+const withCommitsOfBlocked = async (context, step, stop) => {
+  if (!('code' in stop) || stop.code !== 'agent-blocked') return stop
+  const made = await checkCommits(context.deps, context, { ...step, plan: null })
+  return { ...stop, commits: made.checked }
+}
 
 /**
  * What the attempt left before its commits: its outputs, its result, the files out of its scope
@@ -231,9 +242,7 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 
 /**
  * The records a role keeps, each failure under its own code: the DESIGN records of a role that
- * keeps them, the citations of a role whose research document the engine checks, the scenarios of
- * a role whose test plan names them — and only where a component describes its behaviour in
- * Gherkin: a repository whose tests are written without it is asked for no `.feature`.
+ * keeps them, the citations of a role whose research document the engine checks.
  * @param {CheckDeps} deps @param {Parameters<typeof checkStep>[1]} step
  * @param {{ slug: string, base: import('../config/bases.mjs').Base[], config: SkraftConfig }} run
  * @returns {Promise<Failure[] | string>} a string: why the machine could not read them
@@ -241,7 +250,6 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 const keptRecords = async (deps, { role, precreated }, { slug, base, config }) => {
   if (role.records) return coded('design-records', await checkDesignRecords(deps, { slug, base }))
   if (role.citations) return researchRecords(deps, slug, precreated, config)
-  if (role.scenarios && writesGherkin(config)) return coded('gherkin-records', await checkGherkinRecords(deps, { slug, components: config.components }))
   return []
 }
 
@@ -252,9 +260,6 @@ const researchRecords = async (deps, slug, precreated, config) => {
   return coded('research-records', await checkResearchRecords(deps, { slug, template, roots: config.components.map(({ root }) => root) }))
 }
 
-/** Whether any component of the run describes its behaviour in Gherkin. @param {SkraftConfig} config */
-const writesGherkin = ({ components }) => components.some(({ bdd }) => bdd === true)
-
 /** @param {FailureCode} code @param {string[] | string} lines @returns {Failure[] | string} */
 const coded = (code, lines) => (typeof lines === 'string' ? lines : lines.map((line) => ({ code, line })))
 
@@ -263,9 +268,6 @@ const adrLines = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('
 
 /** @param {string} reason @returns {StepCheck} */
 const environmentOnly = (reason) => ({ commits: [], environment: reason })
-
-/** The incident a replay that stopped the check left; none when Git stopped it first. @param {{ incident?: import('../../domain/pipeline/incidents.mjs').Incident | null }} commits */
-const incidentOf = ({ incident }) => (incident ? { incident } : {})
 
 /**
  * The outputs the attempt left as they were before it.
@@ -278,7 +280,7 @@ const missingOutputs = async ({ files }, slug, { outputs, precreated }) => {
 }
 
 /** The agent said it cannot go on: its summary is the only refusal. @param {string} summary @returns {StepCheck} */
-const blockedBy = (summary) => ({ missing: [], failures: [summary], code: 'agent-blocked', commits: [], environment: null, replayMs: 0 })
+const blockedBy = (summary) => ({ missing: [], failures: [summary], code: 'agent-blocked', commits: [], environment: null })
 
 /** @param {import('../../domain/pipeline/agent-result.mjs').ResultReading} reading @returns {Failure[]} */
 const resultFailures = (reading) => (reading.ok ? [] : [{ code: 'invalid-result', line: `result ${reading.errors.join('; ')}` }])
@@ -328,11 +330,11 @@ const uncommittedPaths = async ({ sourceControl }, visitHeads) => {
 /**
  * The step's refusal: every failure found, the code of the first one by priority.
  * @param {string[]} missing @param {Failure[]} found
- * @param {{ checked: CheckedCommit[], replayMs: number, judgeCost?: number }} commits
+ * @param {{ checked: CheckedCommit[] }} commits
  * @returns {StepCheck}
  */
-const refusal = (missing, found, { checked, replayMs, judgeCost }) => ({
-  missing, failures: found.map((failure) => failure.line), code: refusalCode(missing, found), commits: checked, environment: null, replayMs, judgeCost,
+const refusal = (missing, found, { checked }) => ({
+  missing, failures: found.map((failure) => failure.line), code: refusalCode(missing, found), commits: checked, environment: null,
 })
 
 /** @param {string[]} missing @param {Failure[]} found @returns {FailureCode | null} */
@@ -407,82 +409,59 @@ const isRootFile = (path, root) => {
 
 /**
  * The commits of the pass judged against the convention, the story's issue, the TDD cycle and
- * the scenario the pass works on; each red of an acceptance test replayed, and the green of a
- * scenario; the environment reason when the machine cannot check them.
+ * the scenario the pass works on; the environment reason when the machine cannot list them.
  * @param {CheckDeps} deps
- * @param {Pick<CheckContext, 'config' | 'base' | 'story' | 'slug' | 'judge'>} run
- * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], redByGateFailure: boolean, known: KnownCommits, scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null }} step
- * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], replayMs: number, judgeCost: number | undefined, scenario: import('./scenario-checks.mjs').ScenarioRecord }>}
+ * @param {Pick<CheckContext, 'config' | 'base' | 'story'>} run
+ * @param {{ role: import('../../domain/pipeline/roles.mjs').Role, visitHeads: Head[], scenario: ScenarioPass | null, plan: import('../../domain/pipeline/scenarios.mjs').ScenarioPlan | null, carried?: Carried | null }} step
+ * @returns {Promise<{ environment: string, checked: CheckedCommit[] } | { environment: null, checked: CheckedCommit[], found: Failure[], scenario: import('./scenario-checks.mjs').ScenarioRecord }>}
  */
 const checkCommits = async (deps, run, step) => {
-  const history = await commitsOf(deps, step.visitHeads)
+  const history = await commitsOf(deps, step.visitHeads, step.carried)
   if (typeof history === 'string') return { environment: history, checked: [] }
   const issue = issueOf(run.story)
-  const judged = judgedPass(history, { issue, components: run.config.components }, step)
-  const tally = emptyTally()
-  const environment = await replayed(deps, { run, step, judged, tally })
-  const checked = report(judged, tally.replays)
-  return environment === null ? { environment, checked, ...passFound(judged, { issue, tally, components: run.config.components }, step) } : { environment, checked, incident: tally.incident }
+  const { components } = run.config
+  const judged = judgedPass(history, { issue, components }, step)
+  const checked = judged.map(({ repository, sha, subject, kind, verdict }) => ({ repository, sha, subject, kind, verdict }))
+  const found = [...commitFailures(judged, issue), ...scenarioFailures(judged, step.scenario)]
+  return { environment: null, checked, found, scenario: scenarioRecord(judged, step.scenario, { plan: step.plan, components }) }
 }
-
-/**
- * What the commits of a pass leave once judged and replayed: the failures, the replay time, what
- * the pass records for the scenarios after it.
- * @param {JudgedCommit[]} judged
- * @param {{ issue: number | null, tally: import('./commit-replays.mjs').ReplayTally, components: Component[] }} run
- * @param {Parameters<typeof checkCommits>[2]} step
- */
-const passFound = (judged, { issue, tally, components }, { scenario, plan }) => ({
-  found: [...commitFailures(judged, { details: tally.details, issue }), ...scenarioFailures(judged, scenario, { plan, components })],
-  replayMs: tally.replayMs,
-  judgeCost: tally.judgeCost,
-  scenario: scenarioRecord(judged, scenario, { plan, commands: tally.commands, components }),
-})
 
 /**
  * The pass's commits judged in their order, by the scenario it works on.
  * @param {import('../../domain/pipeline/commits.mjs').StepCommit[]} history
  * @param {{ issue: number | null, components: Component[] }} run @param {Parameters<typeof checkCommits>[2]} step
  */
-const judgedPass = (history, { issue, components }, { redByGateFailure, scenario, plan }) => judgeCommits(history, { redByGateFailure, issue, scenario: scenarioJudging(scenario, plan, components), components })
+const judgedPass = (history, { issue, components }, { scenario, plan }) => judgeCommits(history, { issue, scenario: scenarioJudging(scenario, plan, components), components })
 
-/**
- * Replays the reds of an acceptance test, never a red of an inner loop nor a test that kills a
- * surviving mutant, then the green of a scenario.
- * @param {CheckDeps} deps
- * @param {{ run: Pick<CheckContext, 'config' | 'base' | 'slug' | 'judge'>, step: Parameters<typeof checkCommits>[2], judged: JudgedCommit[], tally: import('./commit-replays.mjs').ReplayTally }} pass
- * @returns {Promise<string | null>}
- */
-const replayed = async (deps, { run, step, judged, tally }) => {
-  const replaying = { base: run.base, tally, slug: run.slug, judge: run.judge, scenario: judgedScenario(step), retried: false }
-  // Stryker disable next-line ArrayDeclaration: a list that holds no red commit replays none
-  const reds = await replayReds(deps, replaying, { config: run.config, judged: step.role.tdd === 'red' ? judged : [], known: step.known })
-  return reds ?? replayScenarioGreen(deps, replaying, { judged, scenario: step.scenario, components: run.config.components })
-}
-
-/**
- * The scenario the judge is told the pass works on: the plan's first on the pass that writes it.
- * @param {Parameters<typeof checkCommits>[2]} step @returns {{ index: number, title: string } | null}
- */
-const judgedScenario = ({ scenario, plan }) => {
-  const told = scenario?.scenario ?? plan?.scenarios[0] ?? null
-  return told === null ? null : { index: told.index, title: told.title, walkingSkeleton: scenario?.kind === 'plan' }
-}
-
-/** @param {JudgedCommit[]} judged @param {{ details: Map<string, string>, issue: number | null }} context @returns {Failure[]} */
-const commitFailures = (judged, { details, issue }) => judged
+/** @param {JudgedCommit[]} judged @param {number | null} issue @returns {Failure[]} */
+const commitFailures = (judged, issue) => judged
   .filter((candidate) => candidate.verdict !== 'ok')
-  .map((commit) => ({ code: breaksConvention(commit.verdict) ? 'commit-convention' : 'tdd', line: commitFailure(commit, { detail: details.get(commit.sha), issue }) }))
+  .map((commit) => ({ code: breaksConvention(commit.verdict) ? 'commit-convention' : 'tdd', line: commitFailure(commit, { issue }) }))
 
 /**
- * The commits of the pass in every repository, oldest first; a string when Git cannot tell.
+ * The commits of the pass in every repository, oldest first, and with `carried` the commits the
+ * earlier visits' attempts made, in their place; a string when Git cannot tell. Greens are
+ * ordered by repository, one repository after the other: a group's green is judged in its own.
  * @param {Pick<CheckDeps, 'sourceControl'>} deps
- * @param {Head[]} visitHeads
+ * @param {Head[]} visitHeads @param {Carried | null | undefined} carried
  * @returns {Promise<import('../../domain/pipeline/commits.mjs').StepCommit[] | string>}
  */
-const commitsOf = async ({ sourceControl }, visitHeads) => {
+const commitsOf = async (deps, visitHeads, carried) => {
+  const own = await listedSince(deps, visitHeads)
+  if (carried === null || carried === undefined || typeof own === 'string') return own
+  const since = await listedSince(deps, carried.heads)
+  if (typeof since === 'string') return since
+  return since.filter(({ sha }) => carried.shas.includes(sha) || own.some((commit) => commit.sha === sha))
+}
+
+/**
+ * The commits since the heads in every repository; a string when Git cannot tell.
+ * @param {Pick<CheckDeps, 'sourceControl'>} deps @param {Head[]} heads
+ * @returns {Promise<import('../../domain/pipeline/commits.mjs').StepCommit[] | string>}
+ */
+const listedSince = async ({ sourceControl }, heads) => {
   const commits = []
-  for (const { repository, sha } of visitHeads) {
+  for (const { repository, sha } of heads) {
     const listed = await sourceControl.commits(repository, sha)
     if (listed === null) return `Git cannot list the commits of ${repository} since ${sha}`
     commits.push(...listed.map((commit) => ({ repository, sha: commit.sha, parent: commit.parent, subject: commit.subject, body: commit.body, files: commit.files.map((file) => joinRelative(repository, file)) })))

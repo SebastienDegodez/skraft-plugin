@@ -83,6 +83,8 @@ const nowhereCodeHost = (reason) => Object.freeze({
   commentLimit: Number.POSITIVE_INFINITY,
   // Stryker disable next-line all: a forge skraft cannot reach keeps no comment
   takesRequestFile: false,
+  // Stryker disable next-line all: a forge skraft cannot reach opens no pull request to attach a file to
+  attachesFiles: false, fileUrl: async () => null, screenshotsBlocked: async () => reason,
 })
 
 /** @param {string} reason @returns {import('../ports/pull-requests.mjs').PullRequests} */

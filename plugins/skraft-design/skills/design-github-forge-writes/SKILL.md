@@ -64,6 +64,3 @@ accounts or print a token.
 
 Never repeat an uncertain write blind: read the comments or labels again, write only when
 yours is absent. HTTP 403 or 429 → wait 60 s, retry once.
-
-Publishing a prepared `design-qa-reporting` packet: also load
-[report publication](references/report-publication.md).
