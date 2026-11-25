@@ -6,6 +6,7 @@
 
 export const ADR_FOLDER = 'docs/adr'
 export const ADR_INDEX = `${ADR_FOLDER}/decisions-index.md`
+export const ADR_MERGE_ACCEPTANCE = 'architecture PR merge'
 const ADR_FILE = /^docs\/adr\/adr-(\d+)[^/]*\.md$/i
 const HEADER = /^(?:<!--[^\n]*-->\s*\n)?---\r?\n([\s\S]*?)\r?\n---/
 /** Header keys that tell the story of an ADR's drafts: never on an unpublished one. */
@@ -48,31 +49,31 @@ export const adrStatus = (text) => {
 }
 
 /**
- * The ADR marked Accepted by a human on that day: header status and ratified_by, the
+ * The ADR marked Accepted by an architecture PR merge: header status and ratified_by, the
  * `**Status:**` line, every other byte kept.
- * @param {string} text @param {string} day YYYY-MM-DD
+ * @param {string} text
  */
-export const ratified = (text, day) => {
+export const acceptedOnMerge = (text) => {
   const header = headerOf(text)
   const stamped = header === null ? text : text.replace(header, () => header
     .replace(/^status:.*$/m, 'status: Accepted')
-    .replace(/^ratified_by:.*$/m, () => `ratified_by: "human ${day}"`))
+    .replace(/^ratified_by:.*$/m, () => `ratified_by: "${ADR_MERGE_ACCEPTANCE}"`))
   return stamped.replace(/^\*\*Status:\*\*.*$/m, '**Status:** Accepted')
 }
 
 /**
- * The decisions index with the ADR's row marked Accepted and ratified by a human that day; the
+ * The decisions index with the ADR's row marked Accepted through an architecture PR merge; the
  * text as it was when it has no such row.
- * @param {string} index @param {number} number @param {string} day YYYY-MM-DD
+ * @param {string} index @param {number} number
  */
-export const ratifiedInIndex = (index, number, day) => {
+export const acceptedOnMergeInIndex = (index, number) => {
   const lines = index.split('\n')
   const header = lines.findIndex((line) => /^\|\s*ADR\s*\|/i.test(line))
   if (header < 0) return index
   const columns = cellsOf(lines[header]).map((cell) => cell.toLowerCase())
   const status = columns.indexOf('status')
   const by = columns.indexOf('ratified by')
-  return lines.map((line, at) => (at > header + 1 && rowNumber(line) === number ? withCells(line, { [status]: 'Accepted', [by]: `human ${day}` }) : line)).join('\n')
+  return lines.map((line, at) => (at > header + 1 && rowNumber(line) === number ? withCells(line, { [status]: 'Accepted', [by]: ADR_MERGE_ACCEPTANCE }) : line)).join('\n')
 }
 
 /** @param {string} line */

@@ -108,10 +108,14 @@ test('REDESIGN ends the delivery run without binding architecture or dispatching
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
-test('an actual delivery run refuses a rejected merged ADR before dispatch', async () => {
-  const { host, run } = architectureSession({ status: 'Rejected' })
-  assert.equal((await run.start({ issue: 42 })).code, 'architecture-stale')
-  assert.equal(host.agentRunner.dispatches.length, 0)
+test('a delivery run refuses, before any dispatch, a brief whose ADR the merged base does not hold ratified: Proposed, Rejected or Superseded', async () => {
+  for (const status of ['Proposed', 'Rejected', 'Superseded']) {
+    const { host, run } = architectureSession({ status })
+    const started = await run.start({ issue: 42 })
+    assert.equal(started.code, 'architecture-stale', status)
+    assert.match(started.reason, /docs\/adr\/adr-001-checkout\.md is not Accepted on the merged base/, status)
+    assert.equal(host.agentRunner.dispatches.length, 0, status)
+  }
 })
 
 test('a delivered story\'s pull request retires its brief from the working branch in one engine commit, the documents it cites kept', async () => {

@@ -12,6 +12,9 @@ export const PULL_REQUEST_FILE = 'pull-request.md'
 /** A noun that a count does not change. @param {string} word @returns {Noun} */
 const invariable = (word) => Object.freeze({ one: word, many: word })
 
+/** The reply that answers every open question at once, ready to copy: the command, then one line per question. @param {string} intro @param {string[]} ids @param {string} placeholder */
+const replyLines = (intro, ids, placeholder) => [intro, '```text', '/skraft-answer', ...ids.map((id) => `${id}: ${placeholder}`), '```']
+
 const EN = Object.freeze({
   /** Whether a count takes the plural. @param {number} count */
   many: (count) => count !== 1,
@@ -62,9 +65,18 @@ const EN = Object.freeze({
     /** @param {string} passes @param {string} lenses @param {string} refuter */
     heading: (passes, lenses, refuter) => `${passes} · lenses ${lenses} · refuter ${refuter}`,
   }),
-  ratified: 'ratified in this run',
+  acceptedOnMerge: 'accepted only if this architecture PR merges',
+  pendingDecision: (question, key) => `Human decision pending: ${question} (key ${key})`,
+  pendingOptions: (options) => `Options: ${options}`,
+  pendingReply: (key) => `Reply in a comment with: \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
+  leftOut: (issue, reason) => `Story #${issue} left out: ${reason ?? 'the issue is closed'}`,
+  oversized: (path, kb) => `${path} is ${kb} KB, past the 15 KB a shared document keeps: split it`,
+  replyRead: (author, answers) => `@${author}'s reply, as the engine read it: ${answers}. The design went on with it; correct it in the review of this pull request if it is not what was meant`,
+  replyUnread: (author, reason) => `@${author}'s reply could not be read: ${reason}. Reply again with one line per question, such as Q1: B`,
+  pendingQuestions: (count, key) => `Human answers pending: the solution architect left ${count} question(s) (key ${key})`,
+  pendingReplyAll: (ids) => replyLines('Reply in one comment, one line per question:', ids, '<option or your words>'),
   /** @param {string} node @param {string} reason */
-  noDecision: 'None recorded: no ADR was ratified in this run.',
+  noDecision: 'None recorded: no ADR was proposed for acceptance on merge in this run.',
   noRed: 'None recorded: no red commit was accepted in this run.',
   redHeader: '| Commit | Subject |',
   noGate: 'None recorded: no traced run was checked in this run.',
@@ -123,8 +135,17 @@ const FR = Object.freeze({
     passes: Object.freeze({ one: 'passe', many: 'passes' }),
     heading: (passes, lenses, refuter) => `${passes} · lentilles ${lenses} · réfuteur ${refuter}`,
   }),
-  ratified: 'ratifié dans ce run',
-  noDecision: 'Aucune consignée : aucun ADR n\'a été ratifié dans ce run.',
+  acceptedOnMerge: 'accepté seulement si cette pull request d’architecture est fusionnée',
+  pendingDecision: (question, key) => `Décision humaine attendue : ${question} (clé ${key})`,
+  pendingOptions: (options) => `Choix : ${options}`,
+  pendingReply: (key) => `Répondez dans un commentaire avec : \`/skraft-answer {"key":"${key}","answer":"<option>"}\``,
+  leftOut: (issue, reason) => `Story #${issue} écartée : ${reason ?? 'l’issue est fermée'}`,
+  oversized: (path, kb) => `${path} fait ${kb} Ko, au-delà des 15 Ko d’un document partagé : découpez-le`,
+  replyRead: (author, answers) => `Réponse de @${author}, telle que le moteur l’a lue : ${answers}. Le design a continué avec elle ; corrigez-la dans la revue de cette PR si ce n’est pas ce qui était voulu`,
+  replyUnread: (author, reason) => `La réponse de @${author} n’a pas pu être lue : ${reason}. Répondez de nouveau avec une ligne par question, par exemple Q1: B`,
+  pendingQuestions: (count, key) => `Réponses humaines attendues : l'architecte a laissé ${count} question(s) (clé ${key})`,
+  pendingReplyAll: (ids) => replyLines('Répondez en un seul commentaire, une ligne par question :', ids, '<option ou vos mots>'),
+  noDecision: 'Aucune consignée : aucun ADR proposé ne sera accepté à la fusion dans ce run.',
   noRed: 'Aucune consignée : aucun commit red n\'a été accepté dans ce run.',
   redHeader: '| Commit | Sujet |',
   noGate: 'Aucune consignée : aucun run tracé n\'a été vérifié dans ce run.',

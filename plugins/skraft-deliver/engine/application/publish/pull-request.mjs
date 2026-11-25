@@ -1,11 +1,12 @@
 import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
 import { adrNumber, adrTitle } from '../../domain/decisions/adr.mjs'
+import { ADR_ACCEPTED_ON_MERGE } from '../../domain/decisions/questions.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { PULL_REQUEST_BODY_FILE, PULL_REQUEST_FILE, renderPullRequest } from '../../domain/reporting/pull-request.mjs'
 import { readProse } from '../../domain/reporting/pull-request-prose.mjs'
 import { qualityEvidence, matrixPaths, modelsOf, redCommits, reviewFacts, testPlanPaths } from '../../domain/reporting/run-facts.mjs'
 import { runReport } from '../../domain/reporting/run-report.mjs'
-import { statusLine } from '../../domain/reporting/run-status.mjs'
+import { statusLine, waitingOn } from '../../domain/reporting/run-status.mjs'
 import { branchOf } from '../../domain/reporting/branches.mjs'
 import { trackingFolder } from '../../domain/pipeline/roles.mjs'
 import { attachedReference, referredIn, shownScreenshots } from '../../domain/reporting/visuals.mjs'
@@ -181,12 +182,45 @@ const factsIn = async (deps, { slug, journal, config }, { run, language }) => ({
   story: run.story,
   language,
   prose: await proseOf(deps, slug, journal.events),
-  adrs: await ratifiedAdrs(deps, journal.events),
-  visuals: await shownVisuals(deps.codeHost, journal.events, bodyFolder(deps, slug)),
+  ...await forgeFacts(deps, slug, journal.events),
   testPlans: await trackedDocuments(deps, slug, testPlanPaths(journal.events)),
   matrices: await trackedDocuments(deps, slug, matrixPaths(journal.events)),
   outcomes: await scenarioOutcomesOf(/** @type {any} */ (deps), { slug, events: journal.events, components: config.components }),
+  oversized: await oversizedDocuments(deps, run),
   ...journalFacts(journal.events, run, language),
+})
+
+/** The size past which a shared architecture document is split (#669). */
+const SPLIT_AT_KB = 15
+
+/**
+ * The shared architecture documents the run changed since its base that grew past SPLIT_AT_KB,
+ * each with its size in KB; the briefs, which delivery retires, are none of them.
+ * @param {OnForge} deps @param {import('../../domain/journal/run-state.mjs').RunState} run
+ * @returns {Promise<Array<{ path: string, kb: number }>>}
+ */
+const oversizedDocuments = async (deps, run) => {
+  const base = run.base?.find((entry) => entry.component === null)?.sha
+  const changed = base ? (await deps.sourceControl.changedFiles('.', base)) ?? [] : []
+  const sized = []
+  for (const path of changed.filter(isSharedDocument)) sized.push({ path, kb: kilobytes(await deps.workspace.read(path)) })
+  return sized.filter(({ kb }) => kb > SPLIT_AT_KB)
+}
+
+/** @param {string} path */
+const isSharedDocument = (path) => path.startsWith('docs/architecture/') && path.endsWith('.md') && !/^docs\/architecture\/(?:stories|runs)\//.test(path)
+/** @param {string | null} text */
+const kilobytes = (text) => Math.round(new TextEncoder().encode(text ?? '').length / 1024)
+
+/**
+ * What the forge holds for the description: the ADRs the merge accepts, the repository the PR opens
+ * on, the screenshots it shows.
+ * @param {OnForge} deps @param {string} slug @param {any[]} events
+ */
+const forgeFacts = async (deps, slug, events) => ({
+  adrs: await acceptedOnMergeAdrs(deps, events),
+  repository: await deps.codeHost.repository(),
+  visuals: await shownVisuals(deps.codeHost, events, bodyFolder(deps, slug)),
 })
 
 /**
@@ -204,11 +238,31 @@ const trackedDocuments = async ({ files }, slug, paths) => {
  * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {import('../../domain/journal/run-state.mjs').RunState} run
  * @param {import('../../domain/reporting/language.mjs').Language} language
  */
+/**
+ * The stories the run left out: the closed ones of its scope, then those a person excluded when the
+ * architect could not design them, with the architect's reason.
+ * @param {any[]} events @returns {Array<{ issue: number, reason: string | null }>}
+ */
+const excludedStories = (events) => [
+  ...(events.find((event) => event.type === 'architecture.scope')?.excluded ?? []).map(({ issue }) => ({ issue, reason: null })),
+  ...events.filter((event) => event.type === 'architecture.excluded').flatMap((event) => event.stories.map(({ issue, reason }) => ({ issue, reason }))),
+]
+
+/**
+ * What the engine made of each reply the interpreter read: its reading, or why it read none (#662).
+ * @param {any[]} events @returns {Array<{ author: string, answers: Record<string, string> | null, reason: string | null }>}
+ */
+const readReplies = (events) => events.filter((event) => ['reply.interpreted', 'reply.uninterpretable'].includes(event.type))
+  .map(({ author, answers = null, reason = null }) => ({ author, answers, reason }))
+
 const journalFacts = (events, run, language) => ({
   reds: redCommits(events),
   evidence: qualityEvidence(events),
   review: reviewFacts(events),
   status: statusLine(run, language),
+  pendingQuestion: waitingOn(run),
+  excluded: excludedStories(events),
+  replies: readReplies(events),
   report: runReport(events),
   models: modelsOf(events),
 })
@@ -273,12 +327,12 @@ const proseOf = async ({ files }, slug, events) => {
 export const PR_WRITER = 'deliver-pr-writer'
 
 /**
- * The ADRs a human ratified in this run, with their number and title: RATIFIED answers only an ADR ratification.
+ * The ADRs the architecture PR will accept on merge, with their number and title.
  * @param {OnForge} deps @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events
  */
-const ratifiedAdrs = async ({ workspace }, events) => {
-  const run = deriveRun(events)
-  const paths = Object.values(run.questions).filter(({ answer }) => answer === 'RATIFIED').flatMap(({ subjects }) => subjects)
+const acceptedOnMergeAdrs = async ({ workspace }, events) => {
+  const paths = events.filter(({ type, step, answer }) => type === 'step.recorded' && step === 'adr' && answer === ADR_ACCEPTED_ON_MERGE)
+    .flatMap(({ subjects = [] }) => subjects)
   const adrs = []
   for (const path of paths) adrs.push({ path, number: /** @type {number} */ (adrNumber(path)), title: adrTitle(/** @type {string} */ (await workspace.read(path))) })
   return adrs
@@ -310,13 +364,26 @@ const pushAndOpen = async (deps, request, pull) => {
 const settled = async (deps, request, { pull, open }) => {
   const located = { ...pull, bodyFile: deps.files.location(request.slug, PULL_REQUEST_BODY_FILE), bodyHash: await hashOf(deps, pull.body) }
   const unsettled = unsettledOpening(request.journal.events, pull.target.head)
-  if (open.found === null) return unsettled === null ? opened(deps, request, located) : notOpened(unsettledReason(pull.target.head))
-  if (open.found.state !== 'open') return notOpened(`pull request #${open.found.number} of ${pull.target.head} is ${open.found.state}, and skraft opens no other one`)
-  const whole = await deps.codeHost.readPullRequest(open.found.number)
+  const found = thisRunsPullRequest(request.journal.events, open.found)
+  if (found === null) return unsettled === null ? opened(deps, request, located) : notOpened(unsettledReason(pull.target.head))
+  if (found.state !== 'open') return notOpened(`pull request #${found.number} of ${pull.target.head} is ${found.state}, and skraft opens no other one`)
+  const whole = await deps.codeHost.readPullRequest(found.number)
   if (!whole.ok || whole.found === null) return notOpened(whole.ok ? unreadReason(open.found.number) : whole.reason)
   const live = { ...located, found: whole.found, liveHash: await hashOf(deps, whole.found.body) }
   return unsettled === null ? updated(deps, request, live) : reconciled(deps, request, { ...live, sent: unsettled.bodyHash })
 }
+
+/**
+ * A pull request of the branch that is no longer open and that this run never opened: a previous
+ * run's, closed or merged before this one started on the same branch name. It does not stop this
+ * run from opening its own; one this run opened and a person closed still does (#621).
+ * @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {FoundPullRequest | null} found
+ */
+const leftByAnotherRun = (events, found) => found !== null && found.state !== 'open'
+  && !events.some((event) => event.type === 'pull-request.opened' && event.number === found.number)
+
+/** The branch's pull request as this run takes it: none when it was left by another run. @param {import('../../domain/journal/run-state.mjs').RunEvent[]} events @param {FoundPullRequest | null} found */
+const thisRunsPullRequest = (events, found) => (leftByAnotherRun(events, found) ? null : found)
 
 /** @param {number} number */
 const unreadReason = (number) => `pull request #${number} is listed by its branch, but the forge does not give it by its number`

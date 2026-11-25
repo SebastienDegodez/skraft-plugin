@@ -23,6 +23,7 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   slug: string, story: { issue?: number | null, title?: string | null } | null, link: string | null, prose: Prose | null,
  *   adrs: Array<{ path: string, number: number, title: string | null }>,
  *   reds: RedCommit[], evidence: EvidenceFact[], review: ReviewFacts, status: string,
+ *   pendingQuestion: import('./run-status.mjs').WaitingQuestion | null,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null,
  *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
@@ -233,10 +234,45 @@ const reviewFold = (review, words) => ({ count: reviewCount(review, words), open
 const decisionLines = (facts) => {
   const words = wordsOf(facts)
   const lines = [
-    ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.ratified}`),
+    ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.acceptedOnMerge}`),
+    ...(facts.excluded ?? []).map(({ issue, reason }) => `- ${words.leftOut(issue, reason === null ? null : inert(oneLine(reason)))}`),
+    ...(facts.oversized ?? []).map(({ path, kb }) => `- ${words.oversized(code(path), kb)}`),
+    ...(facts.replies ?? []).map((reply) => `- ${replyLine(reply, words)}`),
+    ...pendingDecisionLines(facts.pendingQuestion, words),
   ]
   return lines.length > 0 ? lines : [words.noDecision]
 }
+
+/** A reply the interpreter read: what the engine took from it, or why it took nothing; the reply's words made inert. @param {{ author: string, answers: Record<string, string> | null, reason: string | null }} reply @param {Words} words */
+const replyLine = ({ author, answers, reason }, words) => (answers === null
+  ? words.replyUnread(inert(oneLine(author)), inert(oneLine(reason ?? '')))
+  : words.replyRead(inert(oneLine(author)), Object.entries(answers).map(([id, value]) => `${inert(oneLine(id))}: ${inert(oneLine(String(value)))}`).join(', ')))
+
+/** @param {import('./run-status.mjs').WaitingQuestion | null} question @param {Words} words */
+export const pendingDecisionLines = (question, words) => {
+  if (question === null) return []
+  if (question.questions) return openQuestionLines(question, words)
+  const key = code(question.key)
+  const options = question.options.map(code).join(', ')
+  return [
+    `- ${words.pendingDecision(inert(oneLine(question.text)), key)}`,
+    `  ${words.pendingOptions(options)}`,
+    `  ${words.pendingReply(question.key)}`,
+  ]
+}
+
+/**
+ * The architect's open questions, each with its options, and one reply that answers them all (#662).
+ * @param {any} question @param {Words} words
+ */
+const openQuestionLines = (question, words) => [
+  `- ${words.pendingQuestions(question.questions.length, code(question.key))}`,
+  ...question.questions.flatMap((asked) => [
+    `  - ${inert(oneLine(`${asked.id} (#${asked.issue} ${asked.criterion}): ${asked.question}`))}`,
+    ...asked.options.map((option) => `    - ${code(option.id)}: ${inert(oneLine(`${option.label} — ${option.consequence}`))}`),
+  ]),
+  ...words.pendingReplyAll(question.questions.map(({ id }) => id)).map((line) => `  ${line}`),
+]
 
 /** @param {RedCommit[]} reds @param {Words} words */
 const redLines = (reds, words) => (reds.length === 0

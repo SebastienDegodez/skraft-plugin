@@ -1,6 +1,7 @@
 import { CONFIG_FILE } from '../config/skraft-config.mjs'
 import { inert } from '../reporting/markdown-safety.mjs'
 import { causeLines } from '../pipeline/incidents.mjs'
+import { readQuestionAnswers } from '../architecture/open-questions.mjs'
 
 /**
  * The questions a run asks a human, and how an answer to one is read. A question node of the
@@ -11,7 +12,7 @@ import { causeLines } from '../pipeline/incidents.mjs'
  * story's scenarios, its walking skeleton and the acceptance test of S1 before DELIVER builds them: APPROVED goes on, REVISE
  * sends DISTILL back with the human's corrections.
  *
- * @typedef {'adr-ratification' | 'scenario-review'} NodeQuestion
+ * @typedef {'adr-merge-acceptance' | 'scenario-review'} NodeQuestion
  * @typedef {NodeQuestion | 'environment' | 'unforeseen' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
@@ -38,11 +39,18 @@ export const STOP = 'STOP'
  */
 export const REVIEW_CEILING = 'review-ceiling'
 export const ACCEPT = 'ACCEPT'
+export const ADR_ACCEPTED_ON_MERGE = 'ACCEPTED_ON_MERGE'
 
 /** @type {Readonly<Record<QuestionKind, QuestionSpec>>} */
 const QUESTIONS = Object.freeze({
+  'architecture-exclusions': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Scope', instruction: false }),
+  'architecture-blocked': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Blocked', instruction: false }),
+  'architecture-pass': Object.freeze({ options: Object.freeze(['NEXT', 'COMPLETE']), refusals: Object.freeze([]), header: 'Pass', instruction: false }),
+  'architecture-concurrent': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Concurrent', instruction: false }),
+  'architecture-questions': Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Questions', instruction: true }),
+  // Delivery: the issue body changed since its brief was designed (skraft-deliver).
   'architecture-refresh': Object.freeze({ options: Object.freeze(['KEEP', 'REDESIGN']), refusals: Object.freeze([]), header: 'Architecture', instruction: false }),
-  'adr-ratification': Object.freeze({ options: Object.freeze(['RATIFIED', 'REJECTED']), refusals: Object.freeze(['REJECTED']), header: 'ADR', instruction: false }),
+  'adr-merge-acceptance': Object.freeze({ options: Object.freeze([ADR_ACCEPTED_ON_MERGE]), refusals: Object.freeze([]), header: 'ADR', instruction: false }),
   'scenario-review': Object.freeze({ options: Object.freeze(['APPROVED', 'REVISE']), refusals: Object.freeze(['REVISE']), header: 'Scenarios', instruction: false }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
   unforeseen: Object.freeze({ options: Object.freeze(['RETRY', 'RETRY_WITH_NOTE', 'STOP']), refusals: Object.freeze([]), header: 'Incident', instruction: false }),
@@ -53,7 +61,7 @@ const QUESTIONS = Object.freeze({
 })
 
 /** The questions a workflow node may ask. */
-export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-ratification', 'scenario-review']))
+export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-merge-acceptance', 'scenario-review', 'architecture-pass']))
 
 /** A reason is kept on one line, at most this long. */
 const REASON_LENGTH = 500
@@ -92,13 +100,6 @@ export const questionOf = (kind, key, text) => ({ key, kind, text, options: [...
  * @param {string} step the node that asks @param {number} asked how many questions it asked before
  */
 export const questionKey = (step, asked) => `${step}-${asked + 1}`
-
-/**
- * The text of a ratification question.
- * @param {string[]} adrs the Proposed ADRs, relative to the working copy
- */
-export const ratificationText = (adrs) =>
-  `Ratify the Proposed ADRs ${adrs.join(', ')}? RATIFIED marks them Accepted; REJECTED sends DESIGN back with your reason.`
 
 export const CONFIGURATION_TEXT =
   'Start this run with the configuration of this working copy? The Configuration tab of the skraft canvas and skraft doctor show it. ' +
@@ -276,7 +277,7 @@ const cell = (text) => {
  * @returns {string | null}
  */
 export const instructionOf = (question) => {
-  if (question?.kind !== BLOCKED && question?.kind !== REVIEW_CEILING) return null
+  if (!REOPENING.includes(/** @type {string} */ (question?.kind))) return null
   return QUESTIONS[question.kind].options.includes(/** @type {string} */ (question.answer)) ? null : question.answer
 }
 
@@ -300,7 +301,18 @@ export const decideUsage = ({ kind, options }) => (takesInstruction(kind) ? [...
  * @param {{ answer: unknown, reason?: unknown }} given
  * @returns {AnswerReading}
  */
-export const readAnswer = (question, given) => (takesInstruction(question.kind) ? readInstruction(question, given) : readOption(question, given))
+/** The questions whose instruction runs a step again on a new pass: a block, a review at its ceiling, the architect's open questions. */
+const REOPENING = Object.freeze([BLOCKED, REVIEW_CEILING, 'architecture-questions'])
+
+/**
+ * The answer a question takes: the architect's open questions take one answer per question
+ * (#662), an instruction question words of a person's own, any other question one of its options.
+ * @param {any} question @param {{ answer: unknown, reason?: unknown }} given
+ */
+export const readAnswer = (question, given) => {
+  if (question.kind === 'architecture-questions') return readQuestionAnswers(question.questions ?? [], given.answer)
+  return takesInstruction(question.kind) ? readInstruction(question, given) : readOption(question, given)
+}
 
 /**
  * One of the question's options, in any case, and for a refusal a reason, kept on one line.

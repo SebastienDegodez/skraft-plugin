@@ -1,13 +1,12 @@
 import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
-import { BLOCKED, REVIEW_CEILING, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, questionKey, questionOf, ratificationText, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
+import { BLOCKED, REVIEW_CEILING, ADR_ACCEPTED_ON_MERGE, acceptable, reviewCeilingText, STOP, blockText, decideUsage, edgeAnswerOf, environmentText, questionKey, questionOf, readAnswer, scenarioReviewText } from '../../domain/decisions/questions.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { namedFeatures } from '../../domain/pipeline/named-features.mjs'
 import { scenarioWriter } from '../../domain/pipeline/roles.mjs'
 import { causeFields } from '../../domain/pipeline/next-step.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
-import { dayOf } from '../../domain/pipeline/outputs.mjs'
 import { isFrontend, NO_FRONT_END } from '../../domain/reporting/visuals.mjs'
-import { proposedAdrs, ratify } from '../decisions/adr-ratification.mjs'
+import { newAcceptedOnMergeAdrs, newProposedAdrs, acceptOnMerge } from '../decisions/adr-ratification.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { forgeMissing } from '../config/forge.mjs'
 import { leave } from './run-routes.mjs'
@@ -20,6 +19,7 @@ import { mayAnswerQuestion } from '../../domain/decisions/questions.mjs'
 import { mayJudgeIncident, unforeseenStop, unforeseenText } from '../../domain/decisions/unforeseen.mjs'
 import { recordJudgment } from '../decisions/decide-usecase.mjs'
 import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
+import { completeArchitecturePass } from '../architecture/checkpoint.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -28,7 +28,7 @@ import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
  *
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
  * @typedef {import('../../domain/journal/run-state.mjs').RunState} RunState
- * @typedef {import('../../domain/journal/run-state.mjs').AskedQuestion} AskedQuestion
+ * @typedef {import('../../domain/journal/run-state.mjs').AskedQuestion & { newAdrs?: string[] }} AskedQuestion
  * @typedef {import('../../domain/journal/run-state.mjs').OpenAttempt} OpenAttempt
  * @typedef {import('../../domain/pipeline/next-step.mjs').WorkStep} WorkStep
  * @typedef {import('../../domain/pipeline/next-step.mjs').BlockedStep} BlockedStep
@@ -41,8 +41,8 @@ import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
  *   loaded: { workflow: import('../../domain/workflow/workflow.mjs').Workflow },
  * }} Context
  * @typedef {{ answer: string, reason: string | null }} Answer
- * @typedef {{ answered: Answer } | { text: string, subjects: string[] } | { environment: string }} Plan
- *   answered: the question needs no human (nothing to ratify);
+ * @typedef {{ answered: Answer & { subjects?: string[], newAdrs?: string[] } } | { text: string, subjects: string[] } | { environment: string }} Plan
+ *   answered: an automatic decision on no Proposed ADRs or their acceptance on PR merge;
  *   environment: the machine cannot tell what to ask.
  * @typedef {{ failures: string[] } | { environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident, incidents?: import('../../domain/pipeline/incidents.mjs').FailureIncident[] } | { stop: string }} Act
  *   failures: what goes on to the node an answer leads to; stop: why the answer ends the run.
@@ -50,11 +50,11 @@ import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
  */
 
 /** @type {Questionnaire} */
-const RATIFICATION = {
-  plan: async ({ deps }) => adrPlan(await proposedAdrs(deps)),
-  act: async ({ deps, journal, slug }, asked, run) => (asked.answer === 'RATIFIED'
-    ? committed({ deps, journal, slug, step: asked.step }, await ratify(deps, { adrs: asked.subjects, day: dayOf(deps.clock.now()), issue: issueOf(run.story) }))
-    : { failures: [`${asked.subjects.join(', ')}: ${asked.reason}`] }),
+const ADR_ACCEPTANCE = {
+  plan: async ({ deps, journal }) => adrPlan(deps, deriveRun(journal.events).base),
+  act: async ({ deps, journal, slug }, asked, run) => (asked.newAdrs?.length
+    ? committed({ deps, journal, slug, step: asked.step }, await acceptOnMerge(deps, { adrs: asked.newAdrs, issue: issueOf(run.story) }))
+    : { failures: [] }),
 }
 
 /**
@@ -94,12 +94,22 @@ const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */
-const QUESTIONNAIRES = Object.freeze({ 'adr-ratification': RATIFICATION, 'scenario-review': SCENARIO_REVIEW })
+const QUESTIONNAIRES = Object.freeze({
+  'adr-merge-acceptance': ADR_ACCEPTANCE, 'scenario-review': SCENARIO_REVIEW,
+  'architecture-pass': { plan: completeArchitecturePass, act: async () => ({ failures: [] }) },
+})
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
-const adrPlan = (adrs) => {
-  if (typeof adrs === 'string') return { environment: adrs }
-  return adrs.length === 0 ? { answered: { answer: 'RATIFIED', reason: 'no Proposed ADR to ratify' } } : { text: ratificationText(adrs), subjects: adrs }
+const adrPlan = async (deps, bases) => {
+  const [proposed, accepted] = await Promise.all([newProposedAdrs(deps, bases), newAcceptedOnMergeAdrs(deps, bases)])
+  if (typeof proposed === 'string') return { environment: proposed }
+  if (typeof accepted === 'string') return { environment: accepted }
+  return { answered: {
+    answer: ADR_ACCEPTED_ON_MERGE,
+    reason: proposed.length === 0 ? 'no Proposed ADRs' : 'effective only when the architecture PR merges',
+    subjects: [...accepted, ...proposed],
+    newAdrs: proposed,
+  } }
 }
 
 /**
@@ -126,8 +136,25 @@ export const askStep = async (context, run, next) => {
   if (asked) return answerOrWait(context, asked, next.phase)
   const plan = await QUESTIONNAIRES[/** @type {NodeQuestion} */ (next.node.question)].plan(context)
   if ('environment' in plan) return escalate(context, next, plan.environment)
-  if ('answered' in plan) return recordAsk(context, run, next, { ...plan.answered, outcome: 'skipped', failures: [] })
+  if ('answered' in plan) return automaticAnswer(context, run, next, plan.answered)
   return answerOrWait(context, await askQuestion(context, nodeQuestion(next), plan), next.phase)
+}
+
+/**
+ * An ask node with a deterministic answer runs its action without presenting a human question.
+ * @param {Context} context @param {RunState} run @param {WorkStep} next
+ * @param {Answer & { subjects?: string[], newAdrs?: string[] }} answer
+ * @returns {Promise<RunOutcome | null>}
+ */
+const automaticAnswer = async (context, run, next, answer) => {
+  const { node, visit } = next
+  const kind = /** @type {NodeQuestion} */ (node.question)
+  const asked = { ...questionOf(kind, nextKey(context.journal, node.id), answer.reason ?? ''), step: node.id, visit,
+    subjects: answer.subjects ?? [], answer: answer.answer, reason: answer.reason, newAdrs: answer.newAdrs ?? [] }
+  const done = await QUESTIONNAIRES[kind].act(context, asked, run)
+  if ('environment' in done) return escalate(context, next, done.environment, done.incident, done.incidents)
+  if ('stop' in done) return recordAsk(context, run, next, { ...answer, outcome: 'skipped', failures: [], stop: done.stop })
+  return recordAsk(context, run, next, { ...answer, outcome: 'skipped', failures: done.failures })
 }
 
 /**
@@ -224,7 +251,7 @@ const STOPPED = 'stopped'
  * Where an answer leads: by the edge of its option, an instruction by the edge of the option
  * that lets the run go on; nowhere when it stops the run.
  * @param {Context} context @param {RunState} run @param {WorkStep['node']} node
- * @param {{ answer: string, failures: string[], stop?: string }} answered
+ * @param {{ answer: string, failures: string[], stop?: string, subjects?: string[] }} answered
  * @returns {{ next: string | null, code?: string, reason?: string, ceiling?: string | null }}
  */
 const routeAnswer = (context, run, node, { answer, failures, stop }) => {
@@ -234,14 +261,14 @@ const routeAnswer = (context, run, node, { answer, failures, stop }) => {
 
 /**
  * @param {Context} context @param {RunState} run @param {WorkStep} next
- * @param {Answer & { outcome: 'answered' | 'skipped', failures: string[], stop?: string }} answered
+ * @param {Answer & { outcome: 'answered' | 'skipped', failures: string[], stop?: string, subjects?: string[] }} answered
  * @returns {Promise<null>}
  */
-const recordAsk = async (context, run, { node, visit }, { answer, reason, outcome, failures, stop }) => {
+const recordAsk = async (context, run, { node, visit }, { answer, reason, outcome, failures, stop, subjects }) => {
   const routed = routeAnswer(context, run, node, { answer, failures, stop })
   await context.journal.append('step.recorded', {
     step: node.id, visit, attempt: 1, outcome, answer, code: routed.code ?? null,
-    missing: [], failures, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? reason, durationMs: 0,
+    missing: [], failures, next: routed.next, ceiling: routed.ceiling, reason: routed.reason ?? reason, durationMs: 0, subjects,
   })
   context.deps.progress.log(`${context.slug}: ${node.id} ${answer}${reason ? ` (${reason})` : ''}`)
   return null

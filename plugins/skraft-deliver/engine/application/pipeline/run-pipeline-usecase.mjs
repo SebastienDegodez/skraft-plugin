@@ -19,7 +19,7 @@ import { openActiveRun } from './active-run.mjs'
 import { holdRun, LockLost, writingWhileHeld } from './run-lock.mjs'
 import { deliveredGatesOf } from '../../domain/evidence/gate-names.mjs'
 import { baseOf, loadConfig } from '../config/bases.mjs'
-import { assignmentOf, modelOf, reviewAssignmentsOf } from '../config/agent-models.mjs'
+import { assignmentOf, modelOf, reviewAssignmentsOf, reworkAssignmentOf } from '../config/agent-models.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { policyLines } from '../../domain/config/infrastructure-policy.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
@@ -41,6 +41,8 @@ import { findComponentSkills } from './component-skills.mjs'
 import { proposedAdrs } from '../decisions/adr-ratification.mjs'
 import { failureSignatureInput, REPEATED_FAILURES, signatureOccurrences } from '../../domain/pipeline/failure-signature.mjs'
 import { ownerOfCause } from '../../domain/pipeline/incidents.mjs'
+import { architectureCheckpoint } from '../architecture/checkpoint.mjs'
+import { publishResearch } from '../architecture/publish-research.mjs'
 
 /**
  * @typedef {import('./active-run.mjs').RunOutcome} RunOutcome
@@ -207,14 +209,26 @@ const runFrom = async (context) => {
   /** @type {string | null} */
   let shown = null
   for (;;) {
-    const run = deriveRun(context.journal.events)
-    const next = nextStep(context.loaded.workflow, run)
-    const outcome = await take(context, shown, run, next)
+    const step = await stepOnce(context, shown)
+    if (step === null) continue
     await writeReports(context)
-    await tellIssue(context)
-    if (outcome) return outcome
-    shown = next.phase
+    await tellForge(context, step.outcome)
+    if (step.outcome) return step.outcome
+    shown = step.phase
   }
+}
+
+/**
+ * The next step, taken: the checkpoint's outcome, else the step's, with its phase; null when a
+ * checkpoint settled a question itself, so the step is computed again.
+ * @param {Context} context @param {string | null} shown
+ */
+const stepOnce = async (context, shown) => {
+  const run = deriveRun(context.journal.events)
+  const next = nextStep(context.loaded.workflow, run)
+  const checked = await architectureCheckpoint(context, next)
+  if (checked?.again) return null
+  return { outcome: checked ?? await take(context, shown, run, next), phase: next.phase }
 }
 
 /**
@@ -290,6 +304,15 @@ const closePhase = async ({ deps, slug, journal }, { phase }) => {
  * journaled them.
  * @param {Context} context
  */
+/**
+ * The issue told of the run, and, when the run waits on a human, the research kept on it first so the questions reach the people who answer.
+ * @param {Context} context @param {RunOutcome | null} outcome
+ */
+const tellForge = async (context, outcome) => {
+  await tellIssue(context)
+  if (outcome?.status === 'waiting') await publishResearch(context)
+}
+
 const tellIssue = ({ deps, slug, journal, config, loaded }) => reportProgress(deps, { slug, journal, config, workflow: loaded.workflow })
 
 /** @param {Context} context @param {string | null} shown @param {string} phase */
@@ -444,10 +467,14 @@ const skillsOf = ({ agentCatalog }, role, components) => findComponentSkills(age
  * so that a configuration changed since does not change it, else what the configuration says.
  * @param {Context} context @param {WorkStep} next
  */
-const phaseAssignment = ({ config, journal }, { node, resumed }) => {
-  if (resumed) return openStart(journal).assignment
-  return assignmentOf(config, { agent: /** @type {string} */ (node.agent), type: 'phase', named: node.model })
+const phaseAssignment = ({ config, journal }, next) => {
+  if (next.resumed) return openStart(journal).assignment
+  const wanted = { agent: /** @type {string} */ (next.node.agent), type: /** @type {const} */ ('phase'), named: next.node.model }
+  return isRework(next) ? reworkAssignmentOf(config, wanted) : assignmentOf(config, wanted)
 }
+
+/** A pass that fixes what was sent back, or applies a person's instruction; a new pass of fresh stories is none. @param {WorkStep} next */
+const isRework = ({ feedback, instruction }) => feedback.length > 0 || instruction !== null
 
 /** The step.started of the attempt a resumed run picks up: the last one journaled. @param {OpenJournal} journal */
 const openStart = (journal) => /** @type {import('../../domain/journal/run-state.mjs').RunEvent} */ (journal.events.findLast((event) => event.type === 'step.started'))

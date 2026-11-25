@@ -1,4 +1,4 @@
-import { ADR_FOLDER, ADR_INDEX, adrNumber, adrStatus, ratified, ratifiedInIndex } from '../../domain/decisions/adr.mjs'
+import { ADR_FOLDER, ADR_INDEX, ADR_MERGE_ACCEPTANCE, acceptedOnMerge, acceptedOnMergeInIndex, adrNumber, adrStatus, field } from '../../domain/decisions/adr.mjs'
 import { engineMessage } from '../../domain/pipeline/commits.mjs'
 
 /**
@@ -19,6 +19,47 @@ export const proposedAdrs = async ({ workspace }) => {
   if (typeof paths === 'string') return paths
   const texts = await Promise.all(paths.map((path) => workspace.read(path)))
   return paths.filter((_, index) => texts[index] !== null && adrStatus(/** @type {string} */ (texts[index])) === 'Proposed')
+}
+
+/**
+ * ADRs this run marked Accepted, for retrying the PR record after an interrupted journal write.
+ * @param {Pick<RatificationDeps, 'workspace'>} deps
+ * @returns {Promise<string[] | string>}
+ */
+export const acceptedOnMergeAdrs = async ({ workspace }) => {
+  const paths = await adrFiles({ workspace })
+  if (typeof paths === 'string') return paths
+  const texts = await Promise.all(paths.map((path) => workspace.read(path)))
+  return paths.filter((_, index) => texts[index] !== null
+    && adrStatus(/** @type {string} */ (texts[index])) === 'Accepted'
+    && field(/** @type {string} */ (texts[index]), 'ratified_by') === ADR_MERGE_ACCEPTANCE)
+}
+
+/**
+ * Proposed ADRs authored on this run's branch, excluding proposals already present on its base.
+ * @param {RatificationDeps} deps
+ * @param {import('../config/bases.mjs').Base[]} bases
+ * @returns {Promise<string[] | string>}
+ */
+export const newProposedAdrs = async (deps, bases) => unpublishedAdrs(deps, bases, await proposedAdrs(deps))
+
+/**
+ * ADRs accepted by this run, excluding prior architecture PRs already on the base.
+ * @param {RatificationDeps} deps
+ * @param {import('../config/bases.mjs').Base[]} bases
+ * @returns {Promise<string[] | string>}
+ */
+export const newAcceptedOnMergeAdrs = async (deps, bases) => unpublishedAdrs(deps, bases, await acceptedOnMergeAdrs(deps))
+
+/** @param {RatificationDeps} deps @param {import('../config/bases.mjs').Base[]} bases @param {string[] | string} paths */
+const unpublishedAdrs = async (deps, bases, paths) => {
+  if (typeof paths === 'string') return paths
+  if (paths.length === 0) return []
+  const own = bases.find(({ component }) => component === null)
+  if (own === undefined) return 'the working copy has no merge base; cannot distinguish new ADRs from published ADRs'
+  const unpublished = []
+  for (const path of paths) if (!await deps.sourceControl.existsAt('.', own.sha, path)) unpublished.push(path)
+  return unpublished
 }
 
 /**
@@ -43,33 +84,32 @@ const adrPaths = (entries) => (entries ?? [])
   .sort()
 
 /**
- * The human ratified the ADRs: each is marked Accepted, in its header and in the decisions
- * index, and the change is committed on its own, referencing the story's issue when it has one.
+ * The proposed ADRs are accepted by the architecture PR merge, and the branch records that condition.
  * @param {RatificationDeps} deps
- * @param {{ adrs: string[], day: string, issue: number | null }} ratification day: YYYY-MM-DD
+ * @param {{ adrs: string[], issue: number | null }}
  */
-export const ratify = async (deps, { adrs, day, issue }) => {
-  const changed = [...(await markAccepted(deps, adrs, day)), ...(await markIndex(deps, adrs, day))]
-  return deps.sourceControl.commitFiles('.', changed, engineMessage(`docs(adr): ratify ${adrs.map(adrLabel).join(', ')}`, issue))
+export const acceptOnMerge = async (deps, { adrs, issue }) => {
+  const changed = [...(await markAccepted(deps, adrs)), ...(await markIndex(deps, adrs))]
+  return deps.sourceControl.commitFiles('.', changed, engineMessage(`docs(adr): accept on PR merge ${adrs.map(adrLabel).join(', ')}`, issue))
 }
 
-/** @param {RatificationDeps} deps @param {string[]} adrs @param {string} day @returns {Promise<string[]>} */
-const markAccepted = async ({ workspace }, adrs, day) => {
+/** @param {RatificationDeps} deps @param {string[]} adrs @returns {Promise<string[]>} */
+const markAccepted = async ({ workspace }, adrs) => {
   const marked = []
   for (const path of adrs) {
     const text = await workspace.read(path)
     if (text === null) continue
-    await workspace.write(path, ratified(text, day))
+    await workspace.write(path, acceptedOnMerge(text))
     marked.push(path)
   }
   return marked
 }
 
-/** @param {RatificationDeps} deps @param {string[]} adrs @param {string} day @returns {Promise<string[]>} */
-const markIndex = async ({ workspace }, adrs, day) => {
+/** @param {RatificationDeps} deps @param {string[]} adrs @returns {Promise<string[]>} */
+const markIndex = async ({ workspace }, adrs) => {
   const index = await workspace.read(ADR_INDEX)
   if (index === null) return []
-  await workspace.write(ADR_INDEX, adrs.reduce((text, path) => ratifiedInIndex(text, /** @type {number} */ (adrNumber(path)), day), index))
+  await workspace.write(ADR_INDEX, adrs.reduce((text, path) => acceptedOnMergeInIndex(text, /** @type {number} */ (adrNumber(path))), index))
   return [ADR_INDEX]
 }
 
