@@ -4,6 +4,7 @@ import { readOrName, regularFile, textsOf } from '../shared/workspace-reading.mj
 import { storyBriefFailures } from '../architecture/story-briefs.mjs'
 import { sharedCitationProblems } from '../../domain/decisions/adr-citations.mjs'
 import { glossaryProblems } from '../../domain/architecture/glossary.mjs'
+import { laidOut, layoutProblem } from '../../domain/architecture/layout.mjs'
 
 /**
  * @typedef {{
@@ -24,11 +25,26 @@ export const checkDesignRecords = async (deps, { slug, base }) => {
   const tracked = await deps.files.list(slug, '')
   const changed = await changedSinceBase(deps, base)
   if (typeof changed === 'string') return changed
-  return [...recordFailures(await recordsOf(deps, slug, { tracked, changed })), ...await storyBriefFailures(deps, slug), ...await sharedFailures(deps, changed)]
+  return [...await layoutFailures(deps, base, changed), ...recordFailures(await recordsOf(deps, slug, { tracked, changed })), ...await storyBriefFailures(deps, slug), ...await sharedFailures(deps, changed)]
 }
 
+/**
+ * The architecture documents the run created outside the layout (#669); one already on the base
+ * keeps its path, so a repository designed before keeps working.
+ * @param {RecordDeps} deps @param {ReadonlyArray<{ repository: string, sha: string }>} base @param {string[]} paths
+ */
+const layoutFailures = async ({ sourceControl }, base, paths) => {
+  const own = base.find(({ repository }) => repository === '.')
+  const failures = []
+  for (const path of paths.filter((each) => !laidOut(each))) if (own === undefined || !await sourceControl.existsAt('.', own.sha, path)) failures.push(layoutProblem(path))
+  return failures
+}
+
+/** A story's own document, which names its story: a brief, in its run's folder or where an earlier run left it. @param {string} path */
+const isStoryDocument = (path) => path.startsWith('docs/architecture/stories/') || path.startsWith('docs/architecture/runs/')
+
 const sharedFailures = async ({ workspace }, paths) => {
-  const shared = paths.filter((path) => /^(?:docs\/architecture\/|docs\/domain\/event-model\/)/.test(path) && !path.startsWith('docs/architecture/stories/') && path.endsWith('.md'))
+  const shared = paths.filter((path) => /^(?:docs\/architecture\/|docs\/domain\/event-model\/)/.test(path) && !isStoryDocument(path) && path.endsWith('.md'))
   const texts = await textsOf(shared, (path) => workspace.read(path))
   return texts.flatMap(({ path, text }) => text === null ? [] : [...sharedCitationProblems(path, text), ...glossaryProblems(path, text)])
 }

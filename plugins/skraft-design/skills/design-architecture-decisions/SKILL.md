@@ -282,7 +282,7 @@ Both must hold. Costly to undo: reversing it means migrating data, rewriting sev
 
 Domain design is never an ADR: the bounded contexts, their Core/Supporting/Generic type and their relationships (Anti-Corruption Layer, Conformist, Published Language, Open Host Service, Shared Kernel) go to `docs/architecture/context-map.md`.
 
-A choice confined to one bounded context → `NOT ELIGIBLE — local design`. Destination: `docs/architecture/{bounded-context}.md`. An aggregate inside the context, an Anti-Corruption Layer or translation inside its gateway, a mapping, a local type, a Specification.
+A choice confined to one bounded context → `NOT ELIGIBLE — local design`. Destination: `docs/architecture/contexts/{bounded-context}/tactical-design.md`. An aggregate inside the context, an Anti-Corruption Layer or translation inside its gateway, a mapping, a local type, a Specification.
 
 NO → `NOT ELIGIBLE — no complexity addition beyond baseline`. Implementation details (naming, formatting), configuration choices (connection string format, environment variable names) and library versions without architectural impact land here; switching EF Core to Dapper does not, it changes the data access strategy. So do: a front-end stack; an end-to-end test tool; how static resources are served; a build plugin; where a UI component is placed or mounted; a route tree; a member added to an existing enum or vocabulary; page state or URL parameters wiring; a library inside an adopted framework, unless it imposes a layer boundary or a data-loading model — then the ADR records that constraint, not the library's use.
 

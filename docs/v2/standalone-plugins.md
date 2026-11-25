@@ -6,7 +6,13 @@ documents merged into the project's base branch. `skraft-framework` remains unch
 
 ## Architecture brief v1
 
-A story brief lives at `docs/architecture/stories/<number>-<slug>.md`. Its first block is
+The architecture lasts by bounded context: `docs/architecture/context-map.md` and its
+`## Glossary`, then `docs/architecture/contexts/<context>/tactical-design.md` and
+`docs/architecture/contexts/<context>/event-model/<slice>.md`. A design run refuses a document it
+creates elsewhere; one an earlier run left at an older path keeps it.
+
+A story brief lives at `docs/architecture/runs/<run>/<number>-<slug>.md` (an earlier run's at
+`docs/architecture/stories/<number>-<slug>.md` still reads). Its first block is
 an HTML comment containing JSON:
 
 ```markdown

@@ -68,7 +68,7 @@ const finishArchitecturePass = async ({ deps, slug, journal, visit }) => {
   if (recorded) return answered(recorded.next)
   const stories = await includedStories(deps, slug, journal.events)
   const baseSha = deriveRun(journal.events).base.find(({ component }) => component === null)?.sha ?? null
-  const failures = await acceptedBriefFailures(deps, nextPass(journal.events) === 'NEXT' ? stories : allIncluded(journal.events), baseSha)
+  const failures = await acceptedBriefFailures(deps, { slug, stories: nextPass(journal.events) === 'NEXT' ? stories : allIncluded(journal.events), baseSha })
   if (failures.length > 0) return { environment: failures.join('; ') }
   return recordArchitecturePass({ deps, slug, journal, visit, stories })
 }

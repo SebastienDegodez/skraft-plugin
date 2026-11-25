@@ -63,7 +63,7 @@ test('research and reviewed story architecture publish a single research comment
     const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository,
       bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: ['docs/adr/adr-001-example.md'] }],
       adrs: ['docs/adr/adr-001-example.md'], documents: ['docs/architecture/context-map.md'] }
-    const path = 'docs/architecture/stories/42-card-checkout.md'
+    const path = 'docs/architecture/runs/issue-42/42-card-checkout.md'
     await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
     git.change(path)
   } })(host))
@@ -90,7 +90,7 @@ test('an epic runs separate reviewed passes of twenty stories and one remaining 
     for (const item of current) {
       const brief = { version: 1, issue: item.number, forge: item.forge, repository: item.repository, bodySha256: item.bodySha256,
         components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: ['docs/architecture/context-map.md'] }
-      const path = `docs/architecture/stories/${item.number}-card-checkout.md`
+      const path = `docs/architecture/runs/epic-42/${item.number}-card-checkout.md`
       await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
       git.change(path)
     }
@@ -126,7 +126,7 @@ test('a human-blocked architecture decision opens an engine-approved draft PR wi
     const [current] = JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories
     const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository, bodySha256: current.bodySha256,
       components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: ['docs/architecture/context-map.md'] }
-    const path = 'docs/architecture/stories/42-card-checkout.md'
+    const path = 'docs/architecture/runs/epic-42/42-card-checkout.md'
     await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
     git.change(path)
     await tracking.write('epic-42', 'details/blocked-stories.json', JSON.stringify([{ issue: 43, reason: 'Missing business decision.' }]))
@@ -191,7 +191,7 @@ test('a brief whose repository differs from the engine identity is refused namin
   const wrong = agent({ work: async ({ workspace, git, tracking }) => {
     const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
     const brief = { version: 1, issue: 42, forge: 'github', repository: 'checkout', bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: [] }
-    const path = 'docs/architecture/stories/42-card-checkout.md'
+    const path = 'docs/architecture/runs/issue-42/42-card-checkout.md'
     await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
     git.change(path)
   } })(host)
@@ -208,7 +208,7 @@ test('an unreadable brief is refused naming the rule it breaks', async () => {
     const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
     const brief = { version: 1, issue: 42, forge: current.forge, repository: current.repository, bodySha256: current.bodySha256,
       components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: ['docs/adr/adr-001-x.md'] }], adrs: [], documents: [] }
-    const path = 'docs/architecture/stories/42-card-checkout.md'
+    const path = 'docs/architecture/runs/issue-42/42-card-checkout.md'
     await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
     git.change(path)
   } })(host)
@@ -235,7 +235,7 @@ test('a Proposed ADR is accepted only after every architecture pass and only thr
       const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository,
         bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: citesAdr ? [adr] : [] }],
         adrs: citesAdr ? [adr] : [], documents: [] }
-      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      const path = `docs/architecture/runs/epic-42/${current.number}-card-checkout.md`
       if (citesAdr) await workspace.write(adr, decision)
       await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
       git.change(...(citesAdr ? [adr, path] : [path]))
@@ -269,7 +269,7 @@ test('a Proposed ADR already on the merge base cannot be auto-accepted by the ar
     const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository,
       bodySha256: current.bodySha256, components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [adr] }],
       adrs: [adr], documents: [] }
-    const path = 'docs/architecture/stories/42-card-checkout.md'
+    const path = 'docs/architecture/runs/issue-42/42-card-checkout.md'
     await workspace.write(path, `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
     git.change(path)
   } })(host)
@@ -296,7 +296,7 @@ test('an architect pass that leaves content questions is done, and the run waits
   await run.start({ epic: 42 })
   host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
     for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories) {
-      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      const path = `docs/architecture/runs/epic-42/${current.number}-card-checkout.md`
       await workspace.write(path, briefOf(current))
       git.change(path)
     }
@@ -321,7 +321,7 @@ test('open questions that offer one option, or assume none of theirs, are refuse
   const malformed = [{ ...first, options: first.options.slice(0, 1) }, { ...second, assumption: 'MAYBE' }]
   const wrong = agent({ work: async ({ workspace, git, tracking }) => {
     for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories) {
-      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      const path = `docs/architecture/runs/epic-42/${current.number}-card-checkout.md`
       await workspace.write(path, briefOf(current))
       git.change(path)
     }
@@ -339,7 +339,7 @@ test('answering every open question runs the architect once more with each answe
   await run.start({ epic: 42 })
   const architect = (questions) => agent({ work: async ({ workspace, git, tracking }) => {
     for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories) {
-      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      const path = `docs/architecture/runs/epic-42/${current.number}-card-checkout.md`
       await workspace.write(path, briefOf(current))
       git.change(path)
     }
@@ -368,7 +368,7 @@ test('answering every open question runs the architect once more with each answe
 
 const questioningArchitect = (host, slug) => agent({ work: async ({ workspace, git, tracking }) => {
   for (const current of JSON.parse(await tracking.read(slug, 'plans/architecture-pass.json')).stories) {
-    const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+    const path = `docs/architecture/runs/epic-42/${current.number}-card-checkout.md`
     await workspace.write(path, briefOf(current))
     git.change(path)
   }
@@ -442,7 +442,7 @@ test('what a blocked architect pass wrote is committed with the pass that resume
   await run.start({ epic: 42 })
   const briefs = (numbers) => async ({ workspace, git, tracking }) => {
     for (const current of JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories.filter(({ number }) => numbers.includes(number))) {
-      const path = `docs/architecture/stories/${current.number}-card-checkout.md`
+      const path = `docs/architecture/runs/epic-42/${current.number}-card-checkout.md`
       await workspace.write(path, `${briefOf(current)}\nPass ${numbers.length}.\n`)
       git.change(path)
     }
@@ -457,8 +457,8 @@ test('what a blocked architect pass wrote is committed with the pass that resume
   const finished = await createRunPipeline(deps).run()
   assert.equal(finished.status, 'done', finished.reason)
   const committed = host.git.engineCommits.flatMap(({ paths }) => paths)
-  assert.ok(committed.includes('docs/architecture/stories/43-card-checkout.md'), committed.join(', '))
-  assert.ok(committed.includes('docs/architecture/stories/42-card-checkout.md'), committed.join(', '))
+  assert.ok(committed.includes('docs/architecture/runs/epic-42/43-card-checkout.md'), committed.join(', '))
+  assert.ok(committed.includes('docs/architecture/runs/epic-42/42-card-checkout.md'), committed.join(', '))
 })
 
 test('a pull request a previous run of the branch left closed does not stop a new run publishing; one this run opened and a person closed does', async () => {
@@ -546,7 +546,7 @@ test('the architecture pull request lists the stories the run left out and why',
   await run.start({ epic: 42 })
   host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
     const [current] = JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories
-    const path = 'docs/architecture/stories/42-card-checkout.md'
+    const path = 'docs/architecture/runs/epic-42/42-card-checkout.md'
     await workspace.write(path, briefOf(current))
     git.change(path)
   } })(host))
@@ -568,7 +568,7 @@ test('a pass the review sends back is told the files its findings cite, once eac
   })
   const design = agent({ work: async ({ workspace, git, tracking }) => {
     const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
-    const path = 'docs/architecture/stories/42-card-checkout.md'
+    const path = 'docs/architecture/runs/issue-42/42-card-checkout.md'
     await workspace.write(path, briefOf(current))
     git.change(path)
   } })(host)
@@ -584,9 +584,9 @@ test('a context map the pass changes without its glossary is refused, so every d
   await run.start({ issue: 42 })
   const mapping = (map) => agent({ work: async ({ workspace, git, tracking }) => {
     const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
-    await workspace.write('docs/architecture/stories/42-card-checkout.md', briefOf(current))
+    await workspace.write('docs/architecture/runs/issue-42/42-card-checkout.md', briefOf(current))
     await workspace.write('docs/architecture/context-map.md', map)
-    git.change('docs/architecture/stories/42-card-checkout.md', 'docs/architecture/context-map.md')
+    git.change('docs/architecture/runs/issue-42/42-card-checkout.md', 'docs/architecture/context-map.md')
   } })(host)
   host.agentRunner.behaviours.push(agent()(host), mapping('# Context map\n\n## Contexts\n- Checkout\n'),
     mapping('# Context map\n\n## Glossary\n\n| Term | Context | Meaning |\n| --- | --- | --- |\n| Receipt | Checkout | What the customer keeps |\n'))
@@ -594,4 +594,27 @@ test('a context map the pass changes without its glossary is refused, so every d
   assert.equal(outcome.status, 'done', outcome.reason)
   const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
   assert.deepEqual(failures, ['docs/architecture/context-map.md: name every term the documents share once, in a ## Glossary table (term, context, meaning), and use it verbatim everywhere.'])
+})
+
+test('a document the run creates outside its context folder is refused naming where it belongs; one already on the base keeps its path', async () => {
+  const old = 'docs/domain/event-model/payment.md'
+  const { host, deps, run } = session([story(42)], 'issue-42', { files: { [old]: '# Payment\n' } })
+  host.git.published.add(old)
+  await run.start({ issue: 42 })
+  const misplaced = ['docs/architecture/contract.md', 'docs/domain/event-model/contract.md']
+  const writing = (paths) => agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    for (const path of misplaced.filter((each) => !paths.includes(each))) { workspace.files.delete(path); git.revert(path) }
+    await workspace.write('docs/architecture/runs/issue-42/42-card-checkout.md', briefOf(current))
+    for (const path of paths) await workspace.write(path, '# Contract governance\n')
+    git.change('docs/architecture/runs/issue-42/42-card-checkout.md', ...paths)
+  } })(host)
+  host.agentRunner.behaviours.push(agent()(host),
+    writing([...misplaced, old]),
+    writing(['docs/architecture/contexts/contract-governance/tactical-design.md', 'docs/architecture/contexts/contract-governance/event-model/register-api.md', old]))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const failures = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design').flatMap(({ failures }) => failures)
+  const where = 'write it under docs/architecture/contexts/<context>/, as tactical-design.md or event-model/<slice>.md'
+  assert.deepEqual(failures, [`docs/architecture/contract.md: ${where}.`, `docs/domain/event-model/contract.md: ${where}.`])
 })

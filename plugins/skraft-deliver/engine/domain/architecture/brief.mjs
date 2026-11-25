@@ -4,8 +4,12 @@ const HASH = /^[a-f0-9]{64}$/
 const ROOTS = ['docs/architecture/', 'docs/adr/', 'docs/domain/event-model/']
 
 export const normalBody = (body) => body.replaceAll('\r\n', '\n')
-export const briefPath = (issue, slug) => `docs/architecture/stories/${issue}-${slug}.md`
-export const isBriefPath = (path, issue) => new RegExp(`^docs/architecture/stories/${issue}-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$`).test(path)
+/** Where a design run keeps its briefs: one folder per run, removed whole once its stories are delivered (#669). @param {string} run */
+export const briefFolder = (run) => `docs/architecture/runs/${run}`
+/** @param {string} run @param {number} issue @param {string} slug */
+export const briefPath = (run, issue, slug) => `${briefFolder(run)}/${issue}-${slug}.md`
+/** A story's brief: in its run's folder, or under docs/architecture/stories/ where an earlier run left it. @param {string} path @param {number} issue */
+export const isBriefPath = (path, issue) => new RegExp(`^docs/architecture/(?:stories|runs/[a-z0-9]+(?:-[a-z0-9]+)*)/${issue}-[a-z0-9]+(?:-[a-z0-9]+)*\\.md$`).test(path)
 export const documentPath = (path) => typeof path === 'string' && ROOTS.some((root) => path.startsWith(root))
   && path.endsWith('.md') && !/[\\:#\u0000-\u001f]/.test(path) && !path.split('/').some((part) => part === '..' || part === '.' || part === '')
 const words = (value) => Array.isArray(value) && value.every((word) => typeof word === 'string' && word.trim() !== '')

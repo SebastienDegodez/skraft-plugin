@@ -48,13 +48,13 @@ shared_artifact_registry:
     integration_risk: high
     validation: G2
   event-model:
-    source_of_truth: docs/domain/event-model/{bounded-context}.md
+    source_of_truth: docs/architecture/contexts/{bounded-context}/event-model/{slice}.md
     consumers: [DISTILL, DELIVER]
     owner: design-solution-architect
     integration_risk: high
     validation: G10
   diagrams:
-    source_of_truth: docs/architecture/{bounded-context}.md
+    source_of_truth: docs/architecture/contexts/{bounded-context}/tactical-design.md
     consumers: [DISTILL, DELIVER]
     owner: design-solution-architect
     integration_risk: high

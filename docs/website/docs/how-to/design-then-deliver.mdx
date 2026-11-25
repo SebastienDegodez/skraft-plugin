@@ -81,7 +81,12 @@ the engine verdict precede the architecture PR. New ADRs are marked Accepted on 
 ratification is asked. The plugin publishes
 the architecture PR only with consent, and keeps research in one marked issue comment.
 
-Read each `docs/architecture/stories/<number>-<slug>.md`: its header records the issue identity,
+The architecture lasts by bounded context: `docs/architecture/context-map.md` with its glossary,
+and `docs/architecture/contexts/<context>/` with `tactical-design.md` and one
+`event-model/<slice>.md` per slice, rewritten in place. A run's briefs sit apart in
+`docs/architecture/runs/<run>/`, so they go together once delivered.
+
+Read each `docs/architecture/runs/<run>/<number>-<slug>.md`: its header records the issue identity,
 body fingerprint, components, criteria, ADRs and shared documents.
 
 ### Answer the architect's questions {/* #questions */}

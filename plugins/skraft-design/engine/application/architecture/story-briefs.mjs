@@ -1,4 +1,4 @@
-import { adrStatus, briefProblem, citedPaths, freshnessOf, isBriefPath, readBrief } from '../../domain/architecture/brief.mjs'
+import { adrStatus, briefFolder, briefProblem, citedPaths, freshnessOf, isBriefPath, readBrief } from '../../domain/architecture/brief.mjs'
 import { OPEN_QUESTIONS_FILE, questionsProblems } from '../../domain/architecture/open-questions.mjs'
 
 export const architectureEvents = async (deps, slug) => (await deps.journal.lines(slug)).map((line) => JSON.parse(line))
@@ -31,15 +31,16 @@ export const storyBriefFailures = async (deps, slug) => {
   const blocked = await blockedStories(deps, slug, stories)
   if (!blocked.ok) return ['details/blocked-stories.json must list only this pass\'s blocked stories and their reasons.']
   const failures = []
-  for (const story of stories.filter(({ number }) => !blocked.stories.some((item) => item.issue === number))) failures.push(...await storyFailures(deps, story))
+  for (const story of stories.filter(({ number }) => !blocked.stories.some((item) => item.issue === number))) failures.push(...await storyFailures(deps, slug, story))
   return [...failures, ...questionsProblems(await deps.files.read(slug, OPEN_QUESTIONS_FILE), stories.map(({ number }) => number))]
 }
 
-const storyFailures = async (deps, story) => {
-  const files = await deps.workspace.list('docs/architecture/stories')
-  const matches = (files ?? []).filter(({ kind, name }) => kind === 'file' && isBriefPath(`docs/architecture/stories/${name}`, story.number))
-  if (matches.length !== 1) return [`Story #${story.number} needs exactly one architecture brief or an explicit blocked reason.`]
-  const path = `docs/architecture/stories/${matches[0].name}`
+const storyFailures = async (deps, slug, story) => {
+  const folder = briefFolder(slug)
+  const files = await deps.workspace.list(folder)
+  const matches = (files ?? []).filter(({ kind, name }) => kind === 'file' && isBriefPath(`${folder}/${name}`, story.number))
+  if (matches.length !== 1) return [`Story #${story.number} needs exactly one architecture brief in ${folder}/ or an explicit blocked reason.`]
+  const path = `${folder}/${matches[0].name}`
   const text = await deps.workspace.read(path)
   const brief = readBrief(text)
   if (brief === null) return [`${path}: the brief is unreadable: ${briefProblem(text)}.`]
@@ -61,15 +62,16 @@ const dependenciesExist = async (deps, brief) => {
   return failures
 }
 
-export const acceptedBriefFailures = async (deps, stories, baseSha) => {
+export const acceptedBriefFailures = async (deps, { slug, stories, baseSha }) => {
   const failures = []
-  for (const story of stories) failures.push(...await acceptedStory(deps, story, baseSha))
+  for (const story of stories) failures.push(...await acceptedStory(deps, slug, story, baseSha))
   return failures
 }
 
-const acceptedStory = async (deps, story, baseSha) => {
-  const files = await deps.workspace.list('docs/architecture/stories')
-  const path = (files ?? []).map(({ name }) => `docs/architecture/stories/${name}`).find((name) => isBriefPath(name, story.number))
+const acceptedStory = async (deps, slug, story, baseSha) => {
+  const folder = briefFolder(slug)
+  const files = await deps.workspace.list(folder)
+  const path = (files ?? []).map(({ name }) => `${folder}/${name}`).find((name) => isBriefPath(name, story.number))
   const brief = path ? readBrief(await deps.workspace.read(path)) : null
   if (brief === null) return [`Story #${story.number} has no valid brief to publish.`]
   const failures = []
