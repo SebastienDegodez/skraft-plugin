@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [1.18.1](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.18.0...v1.18.1) (2026-11-25)
+
+### ⚡ Performance
+
+* **skraft-framework:** the v1 architect and its reviewer follow the v2 design rules ([#658](https://github.com/SebastienDegodez/skraft-plugin/issues/658)) ([35291e5](https://github.com/SebastienDegodez/skraft-plugin/commit/35291e52da4b8fdaa88f4eb1f257f8acdbb58902)), closes [#654](https://github.com/SebastienDegodez/skraft-plugin/issues/654)
+
 ## [1.18.0](https://github.com/SebastienDegodez/skraft-plugin/compare/v1.17.2...v1.18.0) (2026-11-25)
 
 ### ✨ Features
