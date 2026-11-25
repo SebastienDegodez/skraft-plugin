@@ -39,10 +39,21 @@ const dependencies = (brief) => components(brief.components) && paths(brief.adrs
   && brief.adrs.every((path) => /^docs\/adr\/adr-\d+[-\w]*\.md$/.test(path))
 const criteria = (brief) => Array.isArray(brief.criteria) && brief.criteria.length > 0
   && unique(brief.criteria.map((item) => item?.id)) && brief.criteria.every((item) => criterion(item, brief))
-const validBrief = (brief) => brief && brief.version === 1 && identity(brief) && dependencies(brief) && criteria(brief)
+/**
+ * Version 1 cites its documents by path; version 2 also pins each one by the SHA-256 of its text
+ * when the design ended, so delivery refuses a document changed since (#669).
+ * @param {any} brief
+ */
+const versioned = (brief) => (brief.version === 1 && brief.pins === undefined) || (brief.version === 2 && pinsAll(brief))
+/** Every document pinned once, nothing else. @param {any} brief */
+const pinsAll = (brief) => brief.pins !== null && typeof brief.pins === 'object' && !Array.isArray(brief.pins)
+  && Array.isArray(brief.documents) && brief.documents.length > 0
+  && Object.keys(brief.pins).length === brief.documents.length
+  && brief.documents.every((path) => typeof brief.pins[path] === 'string' && HASH.test(brief.pins[path]))
+const validBrief = (brief) => brief && versioned(brief) && identity(brief) && dependencies(brief) && criteria(brief)
 
 const RULES = [
-  ['version, which must be 1', (brief) => brief.version === 1],
+  ['version, which must be 1, or 2 with a SHA-256 pin of every document', versioned],
   ['issue, forge, repository or bodySha256', identity],
   ['components, adrs (only docs/adr/adr-<number>-*.md files) or documents (docs/architecture, docs/adr or docs/domain/event-model files)', dependencies],
   ['criteria (at least one, unique ids, each with components listed in components and adrs listed in the brief adrs)', criteria],

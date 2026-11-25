@@ -81,6 +81,11 @@ when the forge says its author has `admin`, `maintain` or `write` access, with t
 workflow artifact and the journal is signed with the `SKRAFT_DESIGN_JOURNAL_KEY` repository
 secret. `ci/skraft-design.yml` is the workflow a project copies.
 
+Once every pass of a run is accepted, the engine rewrites each of its briefs at `"version": 2`
+with `"pins"`: the SHA-256 of each cited document's text, newlines normalised. Delivery refuses a
+brief whose pinned document reads otherwise on the merged base (`architecture-stale`, naming the
+file). A brief at version 1, without pins, still reads.
+
 ## Merged-base reads
 
 Delivery resolves the configured base branch on the configured remote, obtains its commit,

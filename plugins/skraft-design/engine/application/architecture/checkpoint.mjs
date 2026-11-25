@@ -1,5 +1,6 @@
 import { contextQuestion, stopped, stopRun, waitingFor } from './context.mjs'
-import { acceptedBriefFailures, allIncluded, blockedStories, currentStories, passIndex } from './story-briefs.mjs'
+import { acceptedBriefFailures, allIncluded, blockedStories, currentStories, passIndex, pinBriefs } from './story-briefs.mjs'
+import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { publishResearch } from './publish-research.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { OPEN_QUESTIONS_FILE, openQuestions, questionsText } from '../../domain/architecture/open-questions.mjs'
@@ -77,6 +78,7 @@ const recordArchitecturePass = async ({ deps, slug, journal, visit, stories }) =
   await journal.append('architecture.pass-completed', { architectureVisit: visit, stories, next: nextPass(journal.events) })
   const following = currentStories(journal.events)
   await deps.files.write(slug, 'plans/architecture-pass.json', `${JSON.stringify({ stories: following }, null, 2)}\n`)
+  if (following.length === 0) await pinRun({ deps, slug, journal })
   return answered(following.length > 0 ? 'NEXT' : 'COMPLETE')
 }
 
@@ -85,6 +87,12 @@ const includedStories = async (deps, slug, events) => {
   const blocked = await blockedStories(deps, slug, stories)
   if (!blocked.ok) return []
   return stories.filter(({ number }) => !blocked.stories.some((item) => item.issue === number))
+}
+
+/** Every pass accepted: the briefs pin what they cite, in one engine commit (#669). @param {{ deps: any, slug: string, journal: any }} run */
+const pinRun = async ({ deps, slug, journal }) => {
+  const pinned = await pinBriefs(deps, slug, allIncluded(journal.events))
+  if (pinned.length > 0) await deps.sourceControl.commitFiles('.', pinned, engineMessage(`docs(${slug}): pin the documents its briefs cite`, issueOf(deriveRun(journal.events).story)))
 }
 
 const nextPass = (events) => (events.find((event) => event.type === 'architecture.scope')?.stories.length > (passIndex(events) + 1) * 20 ? 'NEXT' : 'COMPLETE')

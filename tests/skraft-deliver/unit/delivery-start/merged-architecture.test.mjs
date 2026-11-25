@@ -64,3 +64,20 @@ test('another repository or a missing merged dependency cannot be used as archit
     assert.deepEqual(starts, [])
   }
 })
+
+test('a brief that pins its documents delivers while they are as designed, and refuses one changed since, naming it', async () => {
+  const pinned = (pin) => ({ ...BRIEF, version: 2, pins: { [DOCUMENT]: pin } })
+  const kept = setup({ header: pinned(FINGERPRINT) })
+  assert.equal((await kept.delivery.start({ issue: ISSUE })).status, 'started')
+  const changed = setup({ header: pinned('b'.repeat(64)) })
+  const outcome = await changed.delivery.start({ issue: ISSUE })
+  assert.equal(outcome.code, 'architecture-stale')
+  assert.match(outcome.reason, new RegExp(`${DOCUMENT} changed on the merged base since the design`))
+  assert.deepEqual(changed.starts, [])
+})
+
+test('a brief v2 that pins none of its documents is invalid', async () => {
+  const { delivery, starts } = setup({ header: { ...BRIEF, version: 2, pins: {} } })
+  assert.equal((await delivery.start({ issue: ISSUE })).code, 'architecture-invalid')
+  assert.deepEqual(starts, [])
+})

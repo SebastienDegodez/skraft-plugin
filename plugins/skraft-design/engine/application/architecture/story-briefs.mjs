@@ -1,4 +1,4 @@
-import { adrStatus, briefFolder, briefProblem, citedPaths, freshnessOf, isBriefPath, readBrief } from '../../domain/architecture/brief.mjs'
+import { adrStatus, briefFolder, briefProblem, citedPaths, freshnessOf, isBriefPath, normalBody, readBrief, writeBrief } from '../../domain/architecture/brief.mjs'
 import { OPEN_QUESTIONS_FILE, questionsProblems } from '../../domain/architecture/open-questions.mjs'
 
 export const architectureEvents = async (deps, slug) => (await deps.journal.lines(slug)).map((line) => JSON.parse(line))
@@ -84,4 +84,31 @@ const acceptedOrNewProposal = async (deps, path, baseSha) => {
   if (status === 'Accepted') return true
   if (status !== 'Proposed' || baseSha === null) return false
   return !await deps.sourceControl.existsAt('.', baseSha, path)
+}
+
+/**
+ * Pins in each brief of the run the documents it cites, by the SHA-256 of their text now that
+ * every pass is accepted, so delivery refuses one changed since (#669); the briefs it rewrote.
+ * @param {any} deps @param {string} slug @param {Array<{ number: number }>} stories @returns {Promise<string[]>}
+ */
+export const pinBriefs = async (deps, slug, stories) => {
+  const folder = briefFolder(slug)
+  const files = (await deps.workspace.list(folder)) ?? []
+  const pinned = []
+  for (const story of stories) {
+    const path = files.map(({ name }) => `${folder}/${name}`).find((name) => isBriefPath(name, story.number))
+    if (path !== undefined && await pinBrief(deps, path)) pinned.push(path)
+  }
+  return pinned
+}
+
+/** @param {any} deps @param {string} path @returns {Promise<boolean>} whether it rewrote the brief */
+const pinBrief = async (deps, path) => {
+  const text = normalBody(await deps.workspace.read(path) ?? '')
+  const brief = readBrief(text)
+  if (brief === null) return false
+  const pins = {}
+  for (const document of brief.documents) pins[document] = await deps.hasher.sha256(normalBody(await deps.workspace.read(document) ?? ''))
+  await deps.workspace.write(path, writeBrief({ ...brief, version: 2, pins }, text.slice(text.indexOf('\n-->') + 4).replace(/^\n+/, '')))
+  return true
 }

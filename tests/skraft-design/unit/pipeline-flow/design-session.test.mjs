@@ -618,3 +618,26 @@ test('a document the run creates outside its context folder is refused naming wh
   const where = 'write it under docs/architecture/contexts/<context>/, as tactical-design.md or event-model/<slice>.md'
   assert.deepEqual(failures, [`docs/architecture/contract.md: ${where}.`, `docs/domain/event-model/contract.md: ${where}.`])
 })
+
+test('once every pass is accepted the engine pins in each brief the documents it cites, and commits them', async () => {
+  const map = '# Context map\n\n## Glossary\n\n| Term | Context | Meaning |\n| --- | --- | --- |\n| Receipt | Checkout | What the customer keeps |\n'
+  const { host, deps, run } = session([story(42)], 'issue-42')
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('issue-42', 'plans/architecture-pass.json')).stories
+    const brief = { version: 1, issue: current.number, forge: current.forge, repository: current.repository, bodySha256: current.bodySha256,
+      components: ['api'], criteria: [{ id: 'AC-1', components: ['api'], adrs: [] }], adrs: [], documents: ['docs/architecture/context-map.md'] }
+    await workspace.write('docs/architecture/context-map.md', map)
+    await workspace.write('docs/architecture/runs/issue-42/42-card-checkout.md', `<!-- skraft-architecture-brief:v1\n${JSON.stringify(brief)}\n-->\n\n# Checkout\n`)
+    git.change('docs/architecture/context-map.md', 'docs/architecture/runs/issue-42/42-card-checkout.md')
+  } })(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+  const text = await host.workspace.read('docs/architecture/runs/issue-42/42-card-checkout.md')
+  const header = JSON.parse(text.slice(text.indexOf('\n') + 1, text.indexOf('\n-->')))
+  assert.equal(header.version, 2)
+  assert.deepEqual(header.pins, { 'docs/architecture/context-map.md': createHash('sha256').update(map).digest('hex') })
+  assert.ok(text.endsWith('\n-->\n\n# Checkout\n'), text)
+  const pinning = host.git.engineCommits.find(({ message }) => /pin the documents/.test(message))
+  assert.deepEqual(pinning?.paths, ['docs/architecture/runs/issue-42/42-card-checkout.md'])
+})

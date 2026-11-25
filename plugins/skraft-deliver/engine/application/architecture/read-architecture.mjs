@@ -26,19 +26,24 @@ const readMatched = async (deps, snapshot, path, issue) => {
   const fingerprint = await deps.hasher.sha256(normalBody(issue.body))
   const status = freshnessOf(brief, { ...issue, bodySha256: fingerprint })
   if (status === 'foreign') return invalid('The architecture brief belongs to another issue, repository or forge.')
-  return withDocuments(snapshot, { status, path, brief, text, fingerprint })
+  return withDocuments(deps, snapshot, { status, path, brief, text, fingerprint })
 }
 
-const withDocuments = async (snapshot, found) => {
+const withDocuments = async (deps, snapshot, found) => {
   const documents = [{ path: found.path, text: found.text }]
   for (const path of citedPaths(found.brief)) {
     const text = await snapshot.read(path)
     if (text === null) return invalid('An architecture document cited by the brief is missing from the merged base.')
     if (found.brief.adrs.includes(path) && adrStatus(text) !== 'Accepted') return stale(path)
+    if (await changedSincePinned(deps, found.brief, path, text)) return changed(path)
     documents.push({ path, text })
   }
   return { ...found, sha: snapshot.sha, documents }
 }
 
+/** Whether a document the brief pins reads otherwise on the merged base than when the design ended (#669). @param {any} deps @param {any} brief @param {string} path @param {string} text */
+const changedSincePinned = async (deps, brief, path, text) => brief.pins?.[path] !== undefined && brief.pins[path] !== await deps.hasher.sha256(normalBody(text))
+
 const invalid = (reason) => ({ status: 'invalid', code: 'architecture-invalid', reason })
+const changed = (path) => ({ status: 'stale', code: 'architecture-stale', path, reason: `${path} changed on the merged base since the design; design the story again before delivery.` })
 const stale = (path) => ({ status: 'stale', code: 'architecture-stale', path, reason: `ADR ${path} is not Accepted on the merged base; refresh and merge the architecture before delivery.` })
