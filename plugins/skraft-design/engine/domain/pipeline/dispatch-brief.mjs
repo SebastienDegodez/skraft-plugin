@@ -1,5 +1,6 @@
 import { RESULT_SHAPE } from './agent-result.mjs'
 import { issueOf } from './commits.mjs'
+import { architectureContextLines } from '../architecture/context.mjs'
 
 /**
  * @typedef {{ name: string, root: string, stack: string, mocking: string, contractTesting: boolean, bdd: BddPair[], test: string | null, gates: BriefGate[] }} BriefComponent
@@ -73,13 +74,14 @@ const DRAFTS = '- Proposed ADRs, drafts no human has ratified: rewrite each in p
 const NOWHERE ='- Skills your components ask for that exist nowhere, in the plugin or the working copy; design-mocking-strategy-roster and design-contract-testing say which recipe to use instead, or to stop:'
 
 /** Who is dispatched, for which story, on which pass and attempt. @param {Brief} brief */
-const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy, language }) => [
+const headerLines = ({ agent, phase, slug, story, visit, attempt, maxAttempts, sentBy, language, inputs }) => [
   `## Skraft dispatch: ${agent} (${phase})`,
   `- Story: ${storyLine(story)}`,
   ...(language === null ? [] : [`- Write in ${LANGUAGE_NAMES[language]}, the story's language.`]),
   `- Feature scope: ${slug}`,
   ...(visit > 1 ? [`- Pass: ${visit}${sentBy === null ? '' : `, after ${PASS_CAUSE[sentBy]}`}`] : []),
   `- Attempt: ${attempt} of ${maxAttempts}`,
+  ...architectureContextLines(inputs),
 ]
 
 /** What the agent reads, fills and may change, and the commits it makes. @param {Brief} brief */

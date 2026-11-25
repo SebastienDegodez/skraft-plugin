@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agent, pipelineHost } from '../support/pipeline-host.mjs'
+import { agent, API, pipelineHost } from '../support/pipeline-host.mjs'
 import { createDeliveryRun } from '../../../../plugins/skraft-deliver/engine/application/architecture/delivery-run.mjs'
 import { createAgentLoop } from '../../../../plugins/skraft-deliver/engine/drivers/cli/agent-loop.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-deliver/engine/application/pipeline/run-pipeline-usecase.mjs'
@@ -49,6 +49,9 @@ test('delivery retains human scenario approval, TDD, gates and final review befo
   assert.ok(lenses.includes('deliver-test-integrity-lens'), lenses.join(', '))
   // the gates run through skraft_deliver_repl; the DELIVER review's quality-gates lens judges them from the signed trace
   assert.ok(lenses.includes('deliver-quality-gates-lens'), lenses.join(', '))
+  // Each lens reads the architecture context the delivery bound, here the absence of any design.
+  const lensBriefs = host.agentRunner.reviewed().filter(({ agent: id }) => id.endsWith('-lens'))
+  assert.ok(lensBriefs.every(({ prompt }) => /architecture\/context\.json/.test(prompt) && /mode=absent/.test(prompt)), lensBriefs.map(({ agent: id }) => id).join(', '))
   assert.ok(host.events().some(({ type, step, outcome }) => type === 'step.recorded' && step === 'publish' && outcome === 'local'))
 })
 
@@ -129,4 +132,14 @@ test('a delivered story\'s pull request retires its brief from the working branc
   assert.deepEqual(retired.map(({ paths }) => paths), [[brief]])
   assert.equal(host.workspace.files.has(brief), false)
   assert.ok(host.workspace.files.has('docs/adr/adr-001-checkout.md'))
+})
+
+test('a delivery whose component has not decided on Gherkin is refused before any agent, naming the component', async () => {
+  const { bdd, ...undecided } = API
+  const { host, deps, run } = session({ components: [undecided] })
+  await run.start({ issue: 42 })
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.code, 'configuration-incomplete', outcome.reason)
+  assert.match(outcome.reason, /api: bdd is unanswered/)
+  assert.equal(host.agentRunner.dispatches.length, 0)
 })

@@ -2,6 +2,7 @@ import { consentsAsked, unsettledConsents } from '../../domain/decisions/consent
 import { isFrontend } from '../../domain/reporting/visuals.mjs'
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { forgeMissing } from '../config/forge.mjs'
+import { writesScenarios } from '../../domain/pipeline/roles.mjs'
 
 /**
  * What stops a run before its first agent: a configuration nobody settled, or a forge out of this
@@ -16,21 +17,24 @@ import { forgeMissing } from '../config/forge.mjs'
  */
 
 /** What the developer runs to settle the configuration. */
-const SETTLE = 'run /skraft-init'
+const SETTLE = 'call skraft_deliver_setup'
 
 /** @param {Context} context @returns {Promise<RunOutcome | null>} null: the run may start */
 export const cannotStart = async (context) => configurationIncomplete(context)
-  ?? await stepsUnbound(context)
+  ?? (runsScenarios(context) ? await stepsUnbound(context) : null)
   ?? await forgeOutOfReach(context)
+
+/** Whether the run's workflow writes Gherkin scenarios: a design run writes none, so it asks nothing of them. @param {Context} context */
+const runsScenarios = ({ loaded }) => Object.values(loaded.workflow.nodes).some(writesScenarios)
 
 /** @param {Context} context @returns {RunOutcome | null} null: the configuration is settled */
 const configurationIncomplete = (context) => {
   const unsettled = [
     ...unsettledConsents(context.config.publish, consentsAsked(publicationsOf(context))).map(stateLine),
-    ...undecidedGherkin(context.config.components),
+    ...(runsScenarios(context) ? undecidedGherkin(context.config.components) : []),
   ]
   if (unsettled.length === 0) return null
-  return { status: 'refused', slug: context.slug, phase: null, code: 'configuration-incomplete', reason: `skraft is not initialised: ${SETTLE} (${unsettled.join(', ')})` }
+  return { status: 'refused', slug: context.slug, phase: null, code: 'configuration-incomplete', reason: `skraft-deliver is not set up for this repository: ${SETTLE} (${unsettled.join(', ')})` }
 }
 
 /**

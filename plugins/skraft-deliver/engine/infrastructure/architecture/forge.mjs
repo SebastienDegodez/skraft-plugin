@@ -5,6 +5,7 @@ import { readOwnComments } from '../code-host/az-boards.mjs'
 import { azureRepositoryKeyOf } from '../../domain/config/azure-remote.mjs'
 
 const failed = (reason) => ({ ok: false, code: 'forge-unreadable', reason })
+const CLOSED_AZURE_STATES = new Set(['closed', 'done', 'completed', 'removed'])
 const parse = (answer) => succeeded(answer) ? readJson(answer.stdout) : null
 const gh = (deps, args) => deps.commandRunner.run({ argv: ['gh', ...args], cwd: '.', timeoutMs: 120_000 })
 
@@ -31,10 +32,15 @@ const githubIdentity = ({ host, repository }) => host.toLowerCase() === 'github.
 
 const githubIssue = async (deps, repository, number) => {
   const item = parse(await gh(deps, ['api', `--hostname=${repository.host}`, `repos/${repository.repository}/issues/${number}`]))
-  if (!item || item.pull_request || item.number !== number || typeof item.body !== 'string' || typeof item.title !== 'string') return failed('GitHub did not return a readable issue.')
+  const state = githubState(item?.state)
+  if (!readableGithubIssue(item, number, state)) return failed('GitHub did not return a readable issue.')
   const labels = (item.labels ?? []).map((label) => typeof label === 'string' ? label : label.name)
-  return { ok: true, issue: { number, title: item.title, body: item.body, url: item.html_url, labels, story: true, forge: 'github', repository: githubIdentity(repository) } }
+  return { ok: true, issue: { number, title: item.title, body: item.body, state, url: item.html_url, labels, story: true, forge: 'github', repository: githubIdentity(repository) } }
 }
+const readableGithubIssue = (item, number, state) => item && !item.pull_request
+  && item.number === number && typeof item.body === 'string'
+  && typeof item.title === 'string' && state !== null
+const githubState = (state) => state === 'open' || state === 'closed' ? state : null
 
 const azureItem = async (deps, number) => {
   const remote = await remoteOf(deps.commandRunner)
@@ -46,12 +52,22 @@ const azureItem = async (deps, number) => {
 const azureIssue = async (deps, repository, number) => {
   const fetched = await azureItem(deps, number)
   if (!fetched?.item) return failed('Azure DevOps did not return a readable work item.')
-  const { item, remote } = fetched
+  return mapAzureIssue(repository, number, fetched)
+}
+
+const mapAzureIssue = (repository, number, { item, remote }) => {
   const type = item.fields?.['System.WorkItemType']
-  if (![...STORY_TYPES, 'Epic', 'Feature'].includes(type)) return failed('The work item is neither a supported story, an Epic nor a Feature.')
+  const state = azureState(item.fields?.['System.State'])
+  if (!supportedAzureType(type)) return failed('The work item is neither a supported story, an Epic nor a Feature.')
+  if (state === null) return failed('Azure DevOps did not return a readable work item state.')
   const reading = workItemReading({ number, ...remote }, { ...item, fields: { ...item.fields, 'System.WorkItemType': 'Issue' } })
   if (reading?.read !== 'issue') return failed('The work item is unreadable or belongs to another project.')
-  return { ok: true, issue: { ...reading.issue, labels: String(item.fields['System.Tags'] ?? '').split(';').map((tag) => tag.trim()), story: STORY_TYPES.includes(type), forge: 'azure-devops', repository: repository.repository } }
+  return { ok: true, issue: { ...reading.issue, state, labels: String(item.fields['System.Tags'] ?? '').split(';').map((tag) => tag.trim()), story: STORY_TYPES.includes(type), forge: 'azure-devops', repository: repository.repository } }
+}
+const supportedAzureType = (type) => [...STORY_TYPES, 'Epic', 'Feature'].includes(type)
+const azureState = (state) => {
+  if (typeof state !== 'string' || state.trim() === '') return null
+  return CLOSED_AZURE_STATES.has(state.trim().toLowerCase()) ? 'closed' : 'open'
 }
 
 const children = async (deps, number) => {
@@ -98,8 +114,8 @@ const descendant = async (deps, number, root) => {
   if (ids === null || !ids.every((id) => Number.isSafeInteger(id) && id > 0)) return failed('The epic hierarchy could not be read.')
   return { ok: true, children: ids, stories: !root && ids.length === 0 && found.issue.story ? [found.issue] : [] }
 }
-
 const nativeStory = (deps, issue, root) => !root && deps.forge === 'azure-devops' && issue.story
+
 const research = async (deps, number) => deps.forge === 'azure-devops' ? azureResearch(deps, number) : githubResearch(deps, number)
 
 const githubResearch = async (deps, number) => {

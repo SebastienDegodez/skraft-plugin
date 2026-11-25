@@ -65,7 +65,7 @@ export const REFUTATION_SHAPE = [
 ].join('\n')
 
 /**
- * The document a refuter brief asks for on several findings at one line: one check each.
+ * The document a refuter brief asks for on several findings: one check each.
  * @param {string[]} cited each finding as `<lens> <id>`
  */
 export const checksShape = (cited) => ['checks:', ...cited.flatMap((finding) => [

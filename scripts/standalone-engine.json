@@ -16,32 +16,21 @@
     "domain/architecture/layout.mjs",
     "domain/architecture/question-comment.mjs",
     "domain/decisions/answer-comment.mjs",
-    "domain/reporting/draft-publication.mjs",
     "drivers/cli/ci-check.mjs",
     "drivers/cli/ci-consent.mjs",
     "drivers/cli/ci-reply.mjs"
   ],
   "ownedByCopy": [
     "application/architecture/delivery-run.mjs",
-    "application/delivery-start.mjs",
-    "domain/architecture/context.mjs"
+    "application/delivery-start.mjs"
   ],
   "ownedByBoth": [
     "application/architecture/checkpoint.mjs",
     "application/architecture/publish-research.mjs",
+    "application/pipeline/design-records.mjs",
     "drivers/cli/mcp-server.mjs",
     "drivers/cli/standalone-run.mjs",
     "drivers/cli/standalone-tools.mjs"
   ],
-  "pending": [
-    "application/architecture/context.mjs",
-    "application/pipeline/design-records.mjs",
-    "application/pipeline/initialised.mjs",
-    "application/pipeline/observe-usecase.mjs",
-    "application/pipeline/step-checks.mjs",
-    "domain/pipeline/dispatch-brief.mjs",
-    "domain/review/answers.mjs",
-    "domain/review/lens-brief.mjs",
-    "infrastructure/architecture/forge.mjs"
-  ]
+  "pending": []
 }

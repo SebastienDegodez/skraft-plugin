@@ -147,6 +147,13 @@ kept. Change a shared file in the source only, then `npm run standalone:sync`;
 `scripts/standalone-engine.json` lists what is not copied:
 
 - `ownedBySource`, `ownedByCopy`: the files only one plugin has (the design run, the delivery run).
-- `ownedByBoth`: the files each plugin writes its own version of (its MCP tools and server).
-- `pending`: shared files whose two versions still differ, such as ADR ratification during a
-  delivery run; merge each into the source, then remove it from the list.
+- `ownedByBoth`: the files each plugin writes its own version of: its MCP tools, server and run
+  driver, the DESIGN records check, and the two modules the shared pipeline asks what a plugin
+  adds (`application/architecture/checkpoint.mjs`, `publish-research.mjs`), which skraft-deliver
+  writes as doing nothing.
+- `pending`: shared files whose two versions still differ, each to merge into the source; none
+  since #621 was reconciled.
+
+Behaviour one plugin needs and the other never reaches stays in the shared file when it acts only
+on what that plugin records: a delivery's brief retirement acts on a brief the delivery accepted,
+the Gherkin checks run only for a workflow that writes scenarios.

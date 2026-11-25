@@ -809,3 +809,11 @@ test('a reply the interpreter cannot read answers nothing: the run keeps waiting
   assert.equal(host.events().some(({ type, key }) => type === 'question.answered' && key === question.key), false)
   assert.match(host.codeHost.pullRequests[0].body, /@maintainer's reply could not be read: the reply names no option/)
 })
+
+test('a design asks nothing of Gherkin: a component that has not decided on it does not stop the run', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { components: [{ name: 'api', root: '.', stack: 'dotnet', paths: { src: ['src'], tests: ['tests'] }, commands: {} }] })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42')(host))
+  const outcome = await createRunPipeline(deps).run()
+  assert.equal(outcome.status, 'done', outcome.reason)
+})
