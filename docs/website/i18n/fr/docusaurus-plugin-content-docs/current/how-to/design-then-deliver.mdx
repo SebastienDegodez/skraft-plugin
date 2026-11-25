@@ -77,12 +77,34 @@ Azure DevOps conserve ses types natifs de stories.
 Le moteur exclut les stories fermees et demande de continuer sans elles ou d'arreter.
 Chaque passe traite au plus 20 stories ouvertes. La recherche precede la conception ;
 trois lentilles, un refutateur et le verdict du moteur precedent la PR d'architecture. Les nouveaux
-ADR restent Proposed sur sa branche et deviennent Accepted seulement si vous fusionnez cette PR ;
-aucune ratification distincte n'est demandee. Le plugin publie la PR seulement avec consentement
+ADR sont marques Accepted sur sa branche, par "architecture PR merge", et ne prennent effet que si
+vous fusionnez cette PR ; aucune ratification distincte n'est demandee. Le plugin publie la PR seulement avec consentement
 et conserve la recherche dans un commentaire d'issue unique, marque.
 
 Lisez chaque `docs/architecture/stories/<number>-<slug>.md` : son en-tete garde l'identite de
 l'issue, l'empreinte du corps, les composants, criteres, ADR et documents communs.
+
+### Repondre aux questions de l'architecte {/* #questions */}
+
+Quand un choix revient au product owner, l'architecte ne s'arrete pas : il concoit le reste de la
+passe sur une hypothese qu'il ecrit et laisse ses questions, chacune avec ses options et leur
+consequence. Avant la revue, le run attend une seule decision qui les regroupe toutes.
+
+- **Depuis votre editeur**, l'hote pose chaque question dans son dialogue : choisissez une option
+  ou repondez avec vos mots. Toutes les reponses partent ensemble au moteur, et la conception
+  repart une seule fois avec elles.
+- **En CI**, copiez `plugins/skraft-design/ci/skraft-design.yml` dans `.github/workflows/`, ajoutez
+  les secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) et `ANTHROPIC_API_KEY`, puis
+  lancez-le avec une issue ou une epique. Quand le run attend, le moteur publie une PR en brouillon
+  qui liste chaque question et la reponse a recopier. Repondez en un seul commentaire :
+
+```text
+/skraft-answer {"key":"<cle du brouillon>","answer":{"Q1":"A","Q2":"vos propres mots"}}
+```
+
+Toute personne qui a le droit d'ecriture sur le depot peut repondre ; tout autre commentaire, ou
+une reponse qui oublie une question, n'enregistre rien. Une question de perimetre, comme une story
+fermee, arrete tout de suite un run CI avec le meme brouillon.
 
 ## 3. Fusionner, puis livrer {/* #deliver */}
 

@@ -76,12 +76,34 @@ Azure DevOps keeps its native story types.
 
 The engine excludes closed stories and asks whether to continue without them. Each design pass
 handles at most 20 open stories. Research precedes design; three review lenses, a refuter and
-the engine verdict precede the architecture PR. New ADRs stay Proposed on its branch and become
-Accepted only when you merge that PR; no separate ADR ratification is asked. The plugin publishes
+the engine verdict precede the architecture PR. New ADRs are marked Accepted on its branch, by
+"architecture PR merge", and take effect only when you merge that PR; no separate ADR
+ratification is asked. The plugin publishes
 the architecture PR only with consent, and keeps research in one marked issue comment.
 
 Read each `docs/architecture/stories/<number>-<slug>.md`: its header records the issue identity,
 body fingerprint, components, criteria, ADRs and shared documents.
+
+### Answer the architect's questions {/* #questions */}
+
+When a choice belongs to the product owner, the architect does not stop: it designs the rest of
+the pass on a stated assumption and leaves its questions, each with its options and their
+consequence. Before the review, the run waits on one decision that holds them all.
+
+- **From your editor**, the host asks each question in its chat: pick an option or answer in your
+  own words. Every answer reaches the engine at once, and design runs again once with them.
+- **In CI**, copy `plugins/skraft-design/ci/skraft-design.yml` into `.github/workflows/`, add the
+  secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) and `ANTHROPIC_API_KEY`, then run it
+  with an issue or an epic. When the run waits, the engine publishes a draft pull request that
+  lists every question and the reply to copy. Answer in one comment:
+
+```text
+/skraft-answer {"key":"<key from the draft>","answer":{"Q1":"A","Q2":"your own words"}}
+```
+
+Anyone with write access to the repository may answer; any other comment, or a reply that leaves
+a question out, records nothing. A question of scope, such as a closed story, stops a CI run at
+once with the same draft.
 
 ## 3. Merge, then deliver {/* #deliver */}
 

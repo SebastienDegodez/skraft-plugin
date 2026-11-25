@@ -46,13 +46,31 @@ ADRs retain their existing files and lifecycle; there is no consolidated `archit
 
 The design engine supplies the body fingerprint and forge identity from the issue it read,
 not from a model's assertion. Before publication it verifies every selected story has either
-a valid brief or an explicit blocked reason. New ADRs remain Proposed on the branch and become
-Accepted with `ratified_by: "architecture PR merge"` only if that PR is merged; no separate
+a valid brief or an explicit blocked reason. New ADRs are marked Accepted on the branch with
+`ratified_by: "architecture PR merge"` and take effect only if that PR is merged; no separate
 ADR ratification is asked. A Proposed ADR already on the merge base is not accepted by this run.
 
 For GitHub epic discovery, terminal sub-issues are stories; do not nest technical tasks
 under those stories. Azure DevOps uses its native story types. An entirely excluded scope
 stops without publishing an empty architecture PR.
+
+## Questions and modes
+
+When a choice belongs to the product owner, the architect writes it to
+`details/open-questions.json` (id, story, criterion, question, two or more options with their
+consequence, the option it assumed) and designs the rest of the pass on that assumption; a story it
+cannot design at all goes to `details/blocked-stories.json`. Before the review, the run waits on one
+`architecture-questions` decision holding every question; a full set of answers runs DESIGN again
+once, and STOP ends the run.
+
+`skraft_design_start` takes `mode`, `interactive` by default or `ci`. An interactive run asks its
+questions through the host's native chat. A CI run that waits on a person publishes its draft pull
+request itself, every question in its body; a scope question stops it at once. A
+`/skraft-answer` comment is recorded by `engine/drivers/cli/ci-reply.mjs`, without a model, only
+when the forge says its author has `admin`, `maintain` or `write` access, with the provenance
+`pr-comment`. Between the pausing and the resuming job, the run's tracking folder travels as a
+workflow artifact and the journal is signed with the `SKRAFT_DESIGN_JOURNAL_KEY` repository
+secret. `ci/skraft-design.yml` is the workflow a project copies.
 
 ## Merged-base reads
 

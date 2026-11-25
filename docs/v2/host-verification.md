@@ -5,6 +5,19 @@ Ce que le pilote Copilot suppose de l'hôte, mesuré par `eng/host-probe/copilot
 
 ## Mesures
 
+### 2026-11-25 — skraft-design sur un dépôt réel : outils MCP d'un plugin à tiret, questions en `claude -p` (branche feat/standalone-design-deliver)
+
+Mesuré sur `freecompub/microcks-foundry`, épique #1, plugin chargé par `claude -p --plugin-dir plugins/skraft-design`
+(journal `.copilot-tracking/skraft-design-runs/epic-1/`, run terminé par la PR d'architecture #6 du dépôt).
+
+| Contrôle | Hôte | Verdict | Observé |
+| --- | --- | --- | --- |
+| nom des outils MCP d'un plugin dont le nom porte un tiret (événement `init` de `--output-format stream-json`) | Claude Code **2.1.325** | pass | `mcp__plugin_skraft-design_skraft-design__skraft_design_*` : les tirets du plugin et du serveur sont gardés ; la forme `mcp__plugin_skraft_design_skraft_design__…` que déclaraient les descripteurs n'existe pas |
+| un sous-agent dont `tools:` nomme `mcp__plugin_skraft-design_skraft-design__skraft_design_precheck` l'appelle pendant sa tentative | Claude Code **2.1.325** | pass | `logs/precheck-research.jsonl` : un appel `failed` (2 anomalies `research-records`) puis un appel `passed`, soumission acceptée du premier coup ; `logs/precheck-design.jsonl` : 7 appels `passed` |
+| les agents du plugin sont nommés `<plugin>:<agent>` et le moteur les lance par leur nom | Claude Code **2.1.325** | pass | `subagent_type: "skraft-design:design-solution-researcher"` pour l'agent `design-solution-researcher` du dispatch |
+| `claude -p` n'offre aucun outil de question natif : la session hôte rapporte la question exacte et s'arrête, sans rien enregistrer | Claude Code **2.1.325** | pass | 4 questions (`pullRequest`, `architecture-exclusions`, `design-1`, `design-2`) rapportées par la session puis relayées hors session ; aucune réponse enregistrée par la session elle-même |
+| en session interactive, l'hôte pose chaque question de `architecture-questions` avec ses options par l'outil natif et relaie toutes les réponses d'un coup | Claude Code | not measured | — |
+
 ### À mesurer — captures d'écran jointes par gh, commitées sur Azure Repos (branche feat/engine-repl-enforcement)
 
 Le moteur ne commite plus les captures d'un front end sur GitHub : `gh pr create` et `gh pr edit`
