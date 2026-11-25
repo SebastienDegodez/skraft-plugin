@@ -52,6 +52,34 @@ const pinsAll = (brief) => brief.pins !== null && typeof brief.pins === 'object'
   && brief.documents.every((path) => typeof brief.pins[path] === 'string' && HASH.test(brief.pins[path]))
 const validBrief = (brief) => brief && versioned(brief) && identity(brief) && dependencies(brief) && criteria(brief)
 
+const RULES = [
+  ['version, which must be 1, or 2 with a SHA-256 pin of every document', versioned],
+  ['issue, forge, repository or bodySha256', identity],
+  ['components, adrs (only docs/adr/adr-<number>-*.md files) or documents (docs/architecture, docs/adr or docs/domain/event-model files)', dependencies],
+  ['criteria (at least one, unique ids, each with components listed in components and adrs listed in the brief adrs)', criteria],
+]
+
+const parsed = (text) => {
+  try {
+    return JSON.parse(text.slice(OPEN.length, text.indexOf('\n-->', OPEN.length)))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * What makes a brief unreadable, for the agent that wrote it; null when it reads.
+ * @param {unknown} source @returns {string | null}
+ */
+export const briefProblem = (source) => {
+  const text = typeof source === 'string' ? normalBody(source) : ''
+  if (!text.startsWith(OPEN) || text.indexOf('\n-->', OPEN.length) < 0) return `the file must begin with the line ${OPEN.trim()}, then the JSON header, then a line --> `
+  const brief = parsed(text)
+  if (brief === null || typeof brief !== 'object') return 'the header is not a JSON object'
+  const broken = RULES.find(([, valid]) => !valid(brief))
+  return broken === undefined ? null : `invalid ${broken[0]}`
+}
+
 export const writeBrief = (brief, body) => `${OPEN}${JSON.stringify(brief, null, 2)}\n-->\n\n${body}`
 export const validSlug = (slug) => typeof slug === 'string' && SLUG.test(slug)
 export const adrStatus = (text) => /^status:\s*["']?([A-Za-z]+)["']?\s*$/m.exec(/^(?:<!--[^\n]*-->\s*\n)?---\r?\n([\s\S]*?)\r?\n---/.exec(text ?? '')?.[1] ?? '')?.[1] ?? null

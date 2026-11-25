@@ -88,8 +88,11 @@ const reopen = (workflow, run, id, instruction) => {
   const node = workflow.nodes[id]
   if (!node) return changed(run, id)
   const last = /** @type {RunEvent} */ (run.last)
-  return enter(node, { ...FRESH, visit: run.nodes[id].visit + 1, missing: last.missing ?? [], feedback: last.failures, instruction, sentBy: 'ask' }, run)
+  return enter(node, { ...FRESH, visit: run.nodes[id].visit + 1, missing: last.missing ?? [], feedback: last.failures, instruction, sentBy: reopenedBy(run.question) }, run)
 }
+
+/** Answers to the architect's open questions reopen its pass as answers, any other instruction as a refusal. @param {any} question */
+const reopenedBy = (question) => (question?.kind === 'architecture-questions' ? 'answer' : 'ask')
 
 /**
  * What a human's answer to a block decides: an instruction reopens the node, an acceptance goes

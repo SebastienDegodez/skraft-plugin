@@ -8,17 +8,31 @@
  *   home: the home folder, null when the host cannot name one; writeSecret: writes a key file
  *   only its owner reads, where the host can (Node on POSIX), `files.write` by default; makeKey:
  *   how a new key is made and kept, here with writeSecret by default (the mod has a child
- *   process make it, so that the key is on no command line)
+ *   process make it, so that the key is on no command line); fixedKey: the repository's key a CI run
+ *   signs with in place of a new one, from the secret its workflow provides, null without one
  * @returns {import('../../application/ports/journal-keys.mjs').JournalKeys}
  */
-export const createJournalKeys = ({ files, home, writeSecret = files.write, makeKey = (folder) => keptKey(files, folder, writeSecret) }) => Object.freeze({
-  create: () => createKey(home, makeKey),
+export const createJournalKeys = ({ files, home, writeSecret = files.write, makeKey = (folder) => keptKey(files, folder, writeSecret), fixedKey = null }) => Object.freeze({
+  create: () => (fixedKey === null ? createKey(home, makeKey) : repositoryKey(fixedKey)),
   read: async (id) => {
+    if (fixedKey !== null && id === REPOSITORY_KEY_ID) return fixedKey.trim().toLowerCase()
     const folder = await home()
     return folder === null ? null : trimmed(await files.read(keyPath(files, folder, id)))
   },
-  available: async () => (await home()) !== null,
+  available: async () => fixedKey !== null || (await home()) !== null,
 })
+
+/**
+ * The id a journal signed with the repository's key names: every runner of a CI run that holds the
+ * secret reads the same key under it, though no runner keeps its HOME (#662).
+ */
+export const REPOSITORY_KEY_ID = 'repository-secret'
+
+/** @param {string} secret */
+const repositoryKey = async (secret) => {
+  if (!/^[0-9a-f]{64}$/i.test(secret.trim())) throw new Error('SKRAFT_DELIVER_JOURNAL_KEY must be 64 hexadecimal characters')
+  return { id: REPOSITORY_KEY_ID, key: secret.trim().toLowerCase() }
+}
 
 /** @param {() => Promise<string | null>} home @param {KeyMaker} makeKey */
 const createKey = async (home, makeKey) => {

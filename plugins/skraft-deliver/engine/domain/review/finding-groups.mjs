@@ -36,5 +36,21 @@ const keyOf = ({ location, severity }) => {
   return line === null ? null : `${normalizeRelative(line[1])}:${line[2]} ${severity}`
 }
 
+/**
+ * What one refuter checks: the groups whose lenses are the same, merged, so each lens's findings go
+ * in one call and its documents are read once, not once per finding (#669). A group of several
+ * lenses at one line stays with those lenses.
+ * @template {Member} M @param {M[][]} groups in the order of groupFindings @returns {M[][]} in the order of their first group
+ */
+export const refuterBatches = (groups) => {
+  /** @type {Map<string, M[]>} */
+  const batches = new Map()
+  for (const members of groups) {
+    const key = [...new Set(members.map(({ lens }) => lens))].sort().join(' ')
+    batches.set(key, [...(batches.get(key) ?? []), ...members])
+  }
+  return [...batches.values()]
+}
+
 /** How a brief cites the members of a group: `consistency F1, architecture-compliance F2`. @param {Member[]} members */
 export const citationOf = (members) => members.map(({ lens, finding }) => `${lens} ${finding.id}`).join(', ')

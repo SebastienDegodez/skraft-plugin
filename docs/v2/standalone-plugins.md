@@ -135,3 +135,18 @@ it never selects a run by guessing its folder. Questions use native `ask_user` o
 questions leave the run paused. Workers never dispatch workers. No user CLI is installed.
 The MCP process and internal bounded `git`, `gh`, `az` and configured gate commands are not
 user-facing entry points.
+
+## One engine source
+
+Each plugin installs alone, so each ships its engine. `plugins/skraft-design/engine` is the
+source; `plugins/skraft-deliver/engine` is its copy, every `design` name written as the delivery
+plugin's (`skraft-deliver`, `skraft_deliver_`, `SKRAFT_DELIVER_`, `deliver-`), `design-records`
+kept. Change a shared file in the source only, then `npm run standalone:sync`;
+`npm run standalone:check`, which CI runs, fails on a copy that differs from its source.
+
+`scripts/standalone-engine.json` lists what is not copied:
+
+- `ownedBySource`, `ownedByCopy`: the files only one plugin has (the design run, the delivery run).
+- `ownedByBoth`: the files each plugin writes its own version of (its MCP tools and server).
+- `pending`: shared files whose two versions still differ, such as ADR ratification during a
+  delivery run; merge each into the source, then remove it from the list.

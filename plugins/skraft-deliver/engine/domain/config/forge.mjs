@@ -28,6 +28,21 @@ export const forgeOfRemote = (url) => (AZURE_DEVOPS_HOST.test(hostOf(url ?? ''))
 /** @param {string} url */
 const hostOf = (url) => (URL_HOST.exec(url) ?? SCP_HOST.exec(url))?.[1] ?? ''
 
+/** The path after the host of `scheme://[user@]host[:port]/path`, or of `[user@]host:path`. */
+const URL_PATH = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]*@)?[^/]+\/(.+)$/i
+const SCP_PATH = /^(?:[^@/]*@)?[^/:]+:(.+)$/
+
+/**
+ * The repository a remote URL names, `<host>/<path>` without `.git`: the key a developer's own
+ * answers for it are kept under (#669). null without a remote.
+ * @param {string | null} url @returns {string | null}
+ */
+export const repositoryOfRemote = (url) => {
+  const host = hostOf(url ?? '').toLowerCase()
+  const path = (URL_PATH.exec(url ?? '') ?? SCP_PATH.exec(url ?? ''))?.[1].replace(/\/+$/, '').replace(/\.git$/, '')
+  return host === '' || !path ? null : `${host}/${path}`
+}
+
 /**
  * Why skraft cannot reach a forge, or a part of one, yet: the same fixed reason wherever it is asked.
  * @param {Forge} forge

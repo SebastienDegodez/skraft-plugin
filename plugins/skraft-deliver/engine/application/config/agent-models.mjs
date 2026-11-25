@@ -1,4 +1,4 @@
-import { assignFamily, assignRefuter, resolveAssignment } from '../../domain/config/model-assignment.mjs'
+import { assignFamily, assignRefuter, assignRework, resolveAssignment } from '../../domain/config/model-assignment.mjs'
 import { lensAgent, readLensSpec, REFUTER } from '../../domain/review/lenses.mjs'
 
 export { dispatchOf as modelOf } from '../../domain/config/model-assignment.mjs'
@@ -24,6 +24,12 @@ export { dispatchOf as modelOf } from '../../domain/config/model-assignment.mjs'
 export const assignmentOf = (settings, { agent, type, named }) => {
   const ref = { agent, type, workflowFamily: named }
   return resolveAssignment(ref, assignFamily(ref, settings), settings)
+}
+
+/** What a phase agent's rework runs on: never above what its first pass runs on (#669). @param {Settings} settings @param {Wanted} wanted @returns {ResolvedAssignment} */
+export const reworkAssignmentOf = (settings, { agent, named }) => {
+  const ref = { agent, type: /** @type {AgentType} */ ('phase'), workflowFamily: named }
+  return resolveAssignment(ref, assignRework(assignFamily(ref, settings), settings), settings)
 }
 
 /**

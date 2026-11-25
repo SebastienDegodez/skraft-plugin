@@ -15,6 +15,8 @@ const URL_OR_CODE_FILE = new RegExp([URL, String.raw`#file:\S*\w`, PATH, NAME_AT
 const IS_URL = new RegExp(`^${URL}`)
 const CRITERION = /\bAC[- ]?\d+\b/gi
 const TICKET = /\bAB#\d+\b|(?<![\w&])#\d+\b|(?:https?:\/\/[^\s)]*)?\/(?:issues|pulls?|_workitems\/edit)\/\d+/g
+export const sharedCitationProblems = (path, text) => [...new Set([...(text.match(CRITERION) ?? []), ...(text.match(TICKET) ?? [])])]
+  .map((token) => `${path}: keep story and criterion references (${token}) in the story brief, not shared architecture.`)
 const UNREAD_LINES = /^(?:# |\*\*(?:Supersedes|Amends):\*\*).*/gm
 const ADR_LINK = /\[(ADR-\d+)\]\([^)]*\)/g
 const ADR_ID = /ADR-(\d+)/g

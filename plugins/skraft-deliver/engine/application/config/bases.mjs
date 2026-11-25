@@ -1,4 +1,5 @@
 import { CONFIG_FILE, isRef, LOCAL_CONFIG_FILE, readConfigLayers, refusalOf } from '../../domain/config/skraft-config.mjs'
+import { repositoryOfRemote } from '../../domain/config/forge.mjs'
 
 /**
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
@@ -13,22 +14,30 @@ import { CONFIG_FILE, isRef, LOCAL_CONFIG_FILE, readConfigLayers, refusalOf } fr
 const DEFAULT_BASE_BRANCH = 'main'
 
 /**
- * @typedef {{ workspace: import('../ports/workspace.mjs').ConfigSource, userSettings: import('../ports/user-settings.mjs').UserSettings }} ConfigDeps
+ * @typedef {{ workspace: import('../ports/workspace.mjs').ConfigSource, userSettings: import('../ports/user-settings.mjs').UserSettings, sourceControl?: import('../ports/source-control.mjs').SourceControl }} ConfigDeps
+ *   sourceControl: names the repository whose answers the developer's own file keeps; without it, none counts.
  */
 
 /**
- * The developer configuration: the plugin's defaults, `~/.skraft-deliver/config.json`,
+ * The developer configuration: the plugin's defaults, `~/.skraft-deliver/config.json` then the answers it
+ * keeps for this working copy's repository,
  * `skraft-deliver-config.json` and `skraft-deliver-config.local.json`, each read and checked, then merged.
  * present: whether skraft-deliver-config.json exists; raw: the object it holds, {} when absent; local:
  * the object skraft-deliver-config.local.json holds, {} when absent.
  * @param {ConfigDeps} deps
  * @returns {Promise<{ ok: true, config: SkraftConfig, present: boolean, raw: Record<string, unknown>, local: Record<string, unknown> } | { ok: false, reason: string }>}
  */
-export const loadConfig = async ({ workspace, userSettings }) => {
-  const [user, team, local] = await Promise.all([userSettings.read(), workspace.read(CONFIG_FILE), workspace.read(LOCAL_CONFIG_FILE)])
-  const reading = readConfigLayers({ user, team, local })
+export const loadConfig = async ({ workspace, userSettings, sourceControl }) => {
+  const [user, team, local, repository] = await Promise.all([userSettings.read(), workspace.read(CONFIG_FILE), workspace.read(LOCAL_CONFIG_FILE), workingRepository(sourceControl)])
+  const reading = readConfigLayers({ user, team, local, repository })
   return reading.ok ? reading : { ok: false, reason: refusalOf(reading.invalid) }
 }
+
+/**
+ * The working copy's repository, as its remote names it; null without a remote or a source control.
+ * @param {import('../ports/source-control.mjs').SourceControl | undefined} sourceControl
+ */
+export const workingRepository = async (sourceControl) => (sourceControl === undefined ? null : repositoryOfRemote(await sourceControl.remoteUrl()))
 
 /** Why a `--base` is refused: never the value, which a model may have written. */
 const INVALID_BASE = '--base must be a git ref: text with no blank that does not start with -'

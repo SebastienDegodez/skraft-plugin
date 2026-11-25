@@ -1,0 +1,58 @@
+{
+  "source": "plugins/skraft-design/engine",
+  "copy": "plugins/skraft-deliver/engine",
+  "ownedBySource": [
+    "application/architecture/ask-on-issue.mjs",
+    "application/architecture/checkpoint.mjs",
+    "application/architecture/ci-mode.mjs",
+    "application/architecture/concurrent-designs.mjs",
+    "application/architecture/design-components.mjs",
+    "application/architecture/design-run.mjs",
+    "application/architecture/publish-research.mjs",
+    "application/architecture/readiness.mjs",
+    "application/architecture/reply-interpreter.mjs",
+    "application/architecture/story-briefs.mjs",
+    "application/decisions/comment-answer-usecase.mjs",
+    "application/publish/draft-publication-usecase.mjs",
+    "domain/architecture/glossary.mjs",
+    "domain/architecture/layout.mjs",
+    "domain/architecture/open-questions.mjs",
+    "domain/architecture/question-comment.mjs",
+    "domain/decisions/answer-comment.mjs",
+    "domain/reporting/draft-publication.mjs",
+    "drivers/cli/ci-check.mjs",
+    "drivers/cli/ci-consent.mjs",
+    "drivers/cli/ci-reply.mjs"
+  ],
+  "ownedByCopy": [
+    "application/architecture/delivery-run.mjs",
+    "application/architecture/retire-brief.mjs",
+    "application/delivery-start.mjs",
+    "domain/architecture/context.mjs"
+  ],
+  "ownedByBoth": [
+    "drivers/cli/standalone-run.mjs",
+    "drivers/cli/standalone-tools.mjs",
+    "drivers/cli/mcp-server.mjs"
+  ],
+  "pending": [
+    "application/architecture/context.mjs",
+    "application/decisions/adr-ratification.mjs",
+    "application/pipeline/design-records.mjs",
+    "application/pipeline/initialised.mjs",
+    "application/pipeline/observe-usecase.mjs",
+    "application/pipeline/publish-step.mjs",
+    "application/pipeline/run-pipeline-usecase.mjs",
+    "application/pipeline/run-questions.mjs",
+    "application/pipeline/step-checks.mjs",
+    "application/publish/pull-request.mjs",
+    "domain/decisions/adr.mjs",
+    "domain/decisions/questions.mjs",
+    "domain/pipeline/dispatch-brief.mjs",
+    "domain/reporting/pull-request-words.mjs",
+    "domain/reporting/pull-request.mjs",
+    "domain/review/answers.mjs",
+    "domain/review/lens-brief.mjs",
+    "infrastructure/architecture/forge.mjs"
+  ]
+}

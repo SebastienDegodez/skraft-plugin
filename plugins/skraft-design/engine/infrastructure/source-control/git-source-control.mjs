@@ -18,6 +18,7 @@ export const createGitSourceControl = ({ commandRunner }) => Object.freeze({
   branch: (/** @type {string} */ dir) => branch(gitThrough(commandRunner), dir),
   isAncestor: (/** @type {string} */ dir, /** @type {string} */ ancestor, /** @type {string} */ descendant) => isAncestor(gitThrough(commandRunner), dir, { ancestor, descendant }),
   commitFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => commitFiles(commandRunner, dir, { paths, message }),
+  retireFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => retireFiles(commandRunner, dir, { paths, message }),
   commitCopies: (/** @type {string} */ dir, /** @type {Copy[]} */ copies, /** @type {string} */ message) => commitCopies(commandRunner, dir, { copies, message }),
   refusedImages: (/** @type {string} */ dir, /** @type {Array<{ from: string, within: string }>} */ files) => refusedOf(commandRunner, dir, files),
 })
@@ -161,6 +162,18 @@ const commitFiles = async (commandRunner, dir, { paths, message }) => {
   const git = (/** @type {string[]} */ args) => commandRunner.run({ argv: ['git', ...args], cwd: dir })
   const added = await git(['add', '--', ...paths])
   if (!succeeded(added)) return failed('git add', added)
+  return commitStaged(git, paths, message)
+}
+
+/**
+ * The tracked files removed from the working copy, then their removal committed alone.
+ * @param {CommandRunner} commandRunner @param {string} dir @param {{ paths: string[], message: string }} request
+ */
+const retireFiles = async (commandRunner, dir, { paths, message }) => {
+  if (paths.length === 0) return { ok: true }
+  const git = (/** @type {string[]} */ args) => commandRunner.run({ argv: ['git', ...args], cwd: dir })
+  const removed = await git(['rm', '--quiet', '--', ...paths])
+  if (!succeeded(removed)) return failed('git rm', removed)
   return commitStaged(git, paths, message)
 }
 

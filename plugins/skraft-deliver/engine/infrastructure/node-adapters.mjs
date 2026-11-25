@@ -53,7 +53,7 @@ export const createNodeAdapters = ({ cwd, pluginRoot, env = process.env, agentHo
 const configuration = (files, { cwd, home, env }) => ({
   workspace: createWorkspaceFiles({ files, root: cwd, list: listFolder }),
   userSettings: createUserSettings({ files, home }),
-  journalKeys: createJournalKeys({ files, home: async () => home, writeSecret }),
+  journalKeys: createJournalKeys({ files, home: async () => home, writeSecret, fixedKey: env.SKRAFT_DELIVER_JOURNAL_KEY ?? null }),
   hostSettings: createHostSettings({ files, home, env }),
   copilotSdk: createCopilotSdkLocator({ home }),
 })
