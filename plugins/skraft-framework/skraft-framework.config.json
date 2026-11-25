@@ -295,6 +295,10 @@
       {
         "name": "adversarial-review-lenses",
         "policy": "verify"
+      },
+      {
+        "name": "adr-eligibility-gate",
+        "policy": "verify"
       }
     ],
     "Skraft - Solution Architect": [
@@ -304,6 +308,10 @@
       },
       {
         "name": "architecture-decisions",
+        "policy": "verify"
+      },
+      {
+        "name": "adr-eligibility-gate",
         "policy": "verify"
       },
       {
@@ -556,6 +564,7 @@
     "Skraft - Solution Architect Reviewer": [
       ".copilot-tracking/skraft-plans/{projectSlug}/plans/{date}/stories-{milestone}.md",
       ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/event-model-{story}.md",
+      ".copilot-tracking/skraft-plans/{projectSlug}/research/{date}/{slug}-research.md",
       ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/context-map.md",
       ".copilot-tracking/skraft-plans/{projectSlug}/details/{date}/supersession-plan-{story}.md",
       "docs/adr/supersessions.md",

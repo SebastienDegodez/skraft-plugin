@@ -31,7 +31,8 @@ State persists as JSON at
   "verdicts": { "DESIGN": "APPROVED | CHANGES_REQUESTED | null" },
   "retryCount": { "DESIGN": 0 },
   "userPreferences": { "maxRetriesPerPhase": 2 },
-  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] }
+  "adrRatification": { "checkpointStatus": "none | awaiting_human | resolved", "pending": [], "ratified": [] },
+  "humanQuestions": { "checkpointStatus": "none | awaiting_human | resolved", "kind": "product-unknowns | adr-options", "questions": [] }
 }
 ```
 
@@ -40,6 +41,7 @@ State persists as JSON at
   how it was judged.
 - `maxRetriesPerPhase` (default 2) bounds retries before human escalation.
 - `adrRatification` holds DESIGN until a human ratifies every proposed ADR.
+- `humanQuestions` holds RESEARCH on an open product `Unknown:`, or DESIGN on the options of an eligible ADR candidate, until a human answers.
 
 The state CLI enforces that schema on every read and write. A field the schema does not
 declare, or a value outside its shape, makes the state invalid: no older format is

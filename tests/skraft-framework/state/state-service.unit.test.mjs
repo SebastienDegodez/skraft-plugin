@@ -57,6 +57,7 @@ test('state-service init: fresh default carries the full documented field set', 
   // scalars orchestrator populates later — present (null/empty) so no reader guesses
   assert.equal('entryPoint' in w, false, 'upstream entry routing is retired')
   assert.deepEqual(w.adrRatification, { checkpointStatus: 'none', pending: [], ratified: [] })
+  assert.deepEqual(w.humanQuestions, { checkpointStatus: 'none', questions: [] })
   assert.deepEqual(w.phaseHistory, {})
 })
 

@@ -45,7 +45,7 @@ test('maxTier returns the first argument when both ranks are equal', () => {
 test('tierForClass maps the B12 classes', () => {
   assert.equal(tierForClass('reviewer').value, 'economy')
   assert.equal(tierForClass('implementer').value, 'standard')
-  assert.equal(tierForClass('researcher').value, 'standard')
+  assert.equal(tierForClass('researcher').value, 'economy')
   assert.equal(tierForClass('planner').value, 'frontier')
 })
 
@@ -134,10 +134,10 @@ test('resolveModel maps an implementer to standard', () => {
   assert.equal(resolved.model, 'claude-sonnet-5.5')
 })
 
-test('resolveModel maps a researcher to standard', () => {
+test('resolveModel maps a researcher to economy', () => {
   const resolved = resolveModel({ costRoleClass: 'researcher' })
-  assert.equal(resolved.tier, 'standard')
-  assert.equal(resolved.model, 'claude-sonnet-5.5')
+  assert.equal(resolved.tier, 'economy')
+  assert.equal(resolved.model, 'gpt-6-luna')
 })
 
 test('resolveModel maps a planner to frontier', () => {

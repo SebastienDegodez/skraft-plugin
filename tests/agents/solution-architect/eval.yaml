@@ -2,7 +2,8 @@ name: solution-architect
 version: 0.1.0
 description: >-
   Verifies that the real SKRAFT Solution Architect loads its mandatory architecture skills,
-  turns a refined story into decisions of record without writing code or tests, halts when the
+  turns a refined story into design documents without writing code or tests, writes no
+  decision of record the eligibility gate does not admit, halts when the
   acceptance criteria it depends on are absent, and surfaces a contradicted decision instead of
   silently rewriting it.
 type: capability
@@ -69,17 +70,27 @@ stimuli:
           required:
             - architecture-patterns
             - architecture-decisions
+            - adr-eligibility-gate
       - type: output-not-matches
         name: No mandatory skill is reported as unavailable
         config:
           pattern: '(?i)(?:\[SKILL MISSING\]|skills? could not be loaded|skill directory not present)'
       - type: run-command
-        name: A new decision of record is added to the decision set
+        name: The settled choices are recorded in the design documents
         config:
           command: bash
           args:
             - '-lc'
-            - '[ "$(ls docs/adr/adr-*.md | wc -l)" -ge 2 ]'
+            - 'grep -rqi "ELIGIBLE" .copilot-tracking/skraft-plans/pricing/details'
+          expected_exit_code: 0
+          timeout: 30s
+      - type: run-command
+        name: No decision of record ratifies the command and query split
+        config:
+          command: bash
+          args:
+            - '-lc'
+            - 'files=$(git ls-files --others --exclude-standard -- "docs/adr/adr-*.md"); [ -z "$files" ] || ! grep -qiE "command ?/ ?query classification|classification of (every|each|the) trigger|\bCQS\b" $files'
           expected_exit_code: 0
           timeout: 30s
       - type: diff-contains
@@ -151,6 +162,7 @@ stimuli:
           required:
             - architecture-patterns
             - architecture-decisions
+            - adr-eligibility-gate
 
   - name: A contradicted decision is surfaced instead of quietly rewritten
     prompt: |
@@ -203,6 +215,7 @@ stimuli:
           required:
             - architecture-patterns
             - architecture-decisions
+            - adr-eligibility-gate
       - type: run-command
         name: The contradicted decision is not edited in place
         config:
