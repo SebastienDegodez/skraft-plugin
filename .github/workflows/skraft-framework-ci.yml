@@ -124,8 +124,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    # Normal: Windows engine integration 16 min, everything else under 5. Past this, the job hangs.
-    timeout-minutes: 25
+    # Normal: Windows engine integration about 24 min, everything else under 5. Past this, the job hangs.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

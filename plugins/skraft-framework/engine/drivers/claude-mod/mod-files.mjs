@@ -1,6 +1,7 @@
 /**
  * The FileFunctions the tracking store and the templates take, on the Claude Code mod's
- * `$.fs`: no Node API, `/` between path parts (Windows takes it too).
+ * `$.fs`: no Node API; parts joined with the separator of the root, so a Windows root gives one
+ * `\` path, as Node's join does, never a path of both separators.
  *
  * @typedef {{
  *   read: (path: string) => Promise<string>,
@@ -49,7 +50,7 @@ const clearDirectory = async (fs, run, path) => {
 /** @param {ModRun | undefined} run @param {string} path */
 const cleanDirectory = async (run, path) => {
   if (run === undefined) throw new Error('Git cannot clear the run temporary folder')
-  const parent = path.slice(0, path.lastIndexOf('/'))
+  const parent = path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')))
   const result = await run(['git', 'clean', '-fdx', '--', '.tmp'], { cwd: parent })
   if (result.exitCode !== 0) throw new Error('Git could not clear the run temporary folder')
 }
@@ -83,12 +84,21 @@ const filesPresent = async (fs, path, names) => {
   return names.filter((_, index) => present[index])
 }
 
-/** @param {...string} parts */
-export const joinPath = (...parts) =>
-  parts
-    .filter((part) => part !== '')
+/**
+ * The parts joined with the root's separator: `\` when the root is a Windows path (a drive or
+ * UNC root, or `\` and no `/`), `/` otherwise; a `/` or `\` inside a later part follows it too.
+ * @param {...string} parts
+ */
+export const joinPath = (...parts) => {
+  const kept = parts.filter((part) => part !== '')
+  const separator = WINDOWS_ROOT.test(kept[0] ?? '') ? '\\' : '/'
+  return kept
     .map((part, index) => (index === 0 ? part.replace(/[\\/]+$/, '') : part.replace(/^[\\/]+|[\\/]+$/g, '')))
-    .join('/')
+    .map((part, index) => (index === 0 ? part : part.replace(/[\\/]+/g, separator)))
+    .join(separator)
+}
+
+const WINDOWS_ROOT = /^(?:[A-Za-z]:\\|\\\\)|^[^/]*\\/
 
 /**
  * The Workspace port's one-level listing, from the files Git lists under the folder: each
