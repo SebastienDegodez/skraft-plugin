@@ -1,6 +1,6 @@
 import { createDraftPublication } from '../publish/draft-publication-usecase.mjs'
 import { architectureEvents } from './story-briefs.mjs'
-import { askOnIssue } from './ask-on-issue.mjs'
+import { askOnIssue, askOnPullRequest, markAnswered } from './ask-on-issue.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { waitingOn } from '../../domain/reporting/run-status.mjs'
@@ -12,20 +12,33 @@ export const MODES = Object.freeze(['interactive', 'ci'])
 export const modeOf = (events) => events.find((event) => event.type === 'architecture.scope')?.mode ?? 'interactive'
 
 /**
- * In CI nobody answers in a chat: a run that waits on a person publishes its draft pull request
- * itself, the pending decision in its body, or, while nothing is designed yet, asks on its issue;
- * it hands back what that answered (`draft.on`: the issue when it asked there). An interactive
- * run, or one that does not wait, is handed back as it is.
+ * In CI nobody answers in a chat. Each question a person answered since gets its comment marked
+ * answered, whatever the run does next. A run that waits on a person publishes its draft pull
+ * request itself, the pending decision in its body, and asks it in a comment of its own there;
+ * while nothing is designed yet, it asks in a comment on its issue. It hands back what that
+ * answered (`draft.on`: where the question's comment is). An interactive run is handed back as it is.
  * @param {any} deps @param {any} outcome
  */
 export const draftInCi = async (deps, outcome) => {
-  if (outcome.status !== 'waiting' || outcome.slug === null) return outcome
+  if (outcome.slug === null) return outcome
   const events = await architectureEvents(deps, outcome.slug)
   if (modeOf(events) !== 'ci') return outcome
+  await markAnswered(deps, outcome.slug)
+  if (outcome.status !== 'waiting') return outcome
   // The question as the run holds it: an agent's block hands back no question in its outcome.
   const asked = { slug: outcome.slug, question: waitingOn(deriveRun(events)) }
-  const draft = (await designed(deps, events)) ? await createDraftPublication(deps).publish() : await askOnIssue(deps, asked)
-  return { ...outcome, draft }
+  return { ...outcome, draft: (await designed(deps, events)) ? await draftAndAsk(deps, asked) : await askOnIssue(deps, asked) }
+}
+
+/**
+ * The draft published, then the question asked in a comment of its own on it.
+ * @param {any} deps @param {{ slug: string, question: any }} asked
+ */
+const draftAndAsk = async (deps, asked) => {
+  const published = await createDraftPublication(deps).publish()
+  if (!published.ok) return published
+  const comment = await askOnPullRequest(deps, asked)
+  return { ...published, on: 'pull-request', url: comment.ok ? comment.url : null, comment }
 }
 
 /**

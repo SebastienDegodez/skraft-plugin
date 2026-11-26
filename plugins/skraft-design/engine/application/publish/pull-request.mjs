@@ -252,6 +252,18 @@ const excludedStories = (events) => [
  * What the engine made of each reply the interpreter read: its reading, or why it read none (#662).
  * @param {any[]} events @returns {Array<{ author: string, answers: Record<string, string> | null, reason: string | null }>}
  */
+/** Who answers in a person's place, and the questions a person never answers: none is a decision of the run. */
+const NOT_A_PERSON = Object.freeze(['host-llm', 'known-signature'])
+const MACHINE_QUESTIONS = Object.freeze(['environment', 'unforeseen'])
+
+/**
+ * Each question a person answered in the run, in the order they answered.
+ * @param {any[]} events @param {import('../../domain/journal/run-state.mjs').RunState} run
+ */
+const answeredByPeople = (events, run) => events
+  .filter(({ type, key, by }) => type === 'question.answered' && !NOT_A_PERSON.includes(by) && !MACHINE_QUESTIONS.includes(run.questions[key]?.kind))
+  .map(({ key, answer }) => ({ key, answer: String(answer) }))
+
 const readReplies = (events) => events.filter((event) => ['reply.interpreted', 'reply.uninterpretable'].includes(event.type))
   .map(({ author, answers = null, reason = null }) => ({ author, answers, reason }))
 
@@ -263,6 +275,7 @@ const journalFacts = (events, run, language) => ({
   pendingQuestion: waitingOn(run),
   excluded: excludedStories(events),
   replies: readReplies(events),
+  answered: answeredByPeople(events, run),
   report: runReport(events),
   models: modelsOf(events),
 })

@@ -1,8 +1,9 @@
 # skraft-design in CI (#662). Copy this file into the project as .github/workflows/skraft-design.yml.
 #
 # - Run it by hand (workflow_dispatch) with one issue or one epic: the design runs in mode "ci".
-#   When it waits on a person, the engine publishes the draft pull request with every pending
-#   question, and this job keeps the run's tracking folder as an artifact.
+#   When it waits on a person, the engine publishes the draft pull request and asks each question in
+#   a comment of its own there, and this job keeps the run's tracking folder as an artifact. A new
+#   question never rewrites an earlier one; once answered, its comment says what was recorded.
 #   While nothing is designed yet (a question of scope, before any commit), the engine asks on the
 #   issue or epic instead, since GitHub opens no pull request without a commit.
 # - Answer in that draft, or on that issue, with one comment: /skraft-answer, then one "Q1: B" line

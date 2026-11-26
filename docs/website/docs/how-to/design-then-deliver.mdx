@@ -105,9 +105,11 @@ consequence. Before the review, the run waits on one decision that holds them al
   own words. Every answer reaches the engine at once, and design runs again once with them.
 - **In CI**, copy `plugins/skraft-design/ci/skraft-design.yml` into `.github/workflows/`, add the
   secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) and `ANTHROPIC_API_KEY`, then run it
-  with an issue or an epic. When the run waits, the engine publishes a draft pull request that
-  lists every question and the reply to copy; while nothing is designed yet, such as a researcher
-  that cannot go on, it asks on the issue or epic instead. Answer in one comment:
+  with an issue or an epic. When the run waits, the engine publishes a draft pull request and asks
+  each question in a comment of its own there, with the reply to copy; while nothing is designed
+  yet, such as a researcher that cannot go on, it asks in a comment on the issue or epic instead.
+  A new question never rewrites an earlier one: once answered, its comment says what was
+  recorded, and the pull request lists every answer. Answer in one comment:
 
 ```text
 /skraft-answer

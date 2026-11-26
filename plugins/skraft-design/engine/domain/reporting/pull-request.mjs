@@ -23,7 +23,7 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   slug: string, story: { issue?: number | null, title?: string | null } | null, link: string | null, prose: Prose | null,
  *   adrs: Array<{ path: string, number: number, title: string | null }>,
  *   reds: RedCommit[], evidence: EvidenceFact[], review: ReviewFacts, status: string,
- *   pendingQuestion: import('./run-status.mjs').WaitingQuestion | null,
+ *   pendingQuestion: import('./run-status.mjs').WaitingQuestion | null, answered?: Array<{ key: string, answer: string }>,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null,
  *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
@@ -36,7 +36,8 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   longest body its forge takes, commentLimit: the longest comment; language: the story's, which the
  *   description and the comments of the run details are written in; testPlans: the test plans DISTILL wrote, matrices: the
  *   consistency matrices DESIGN wrote, those of the latest attempt that wrote any, none when the journal
- *   names none or the tracking folder lost them; outcomes: what each scenario is proven to do.
+ *   names none or the tracking folder lost them; outcomes: what each scenario is proven to do;
+ *   answered: each question a person answered in the run, in order, with what they answered.
  * @typedef {{ path: string, text: string }} TrackedDocument
  *   path: relative to the tracking folder; text: as the agent wrote it.
  * @typedef {{ title: string, body: string, description: string, details: string[] }} PullRequest
@@ -237,10 +238,20 @@ const decisionLines = (facts) => {
     ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.acceptedOnMerge}`),
     ...(facts.excluded ?? []).map(({ issue, reason }) => `- ${words.leftOut(issue, reason === null ? null : inert(oneLine(reason)))}`),
     ...(facts.oversized ?? []).map(({ path, kb }) => `- ${words.oversized(code(path), kb)}`),
+    ...(facts.answered ?? []).map(({ key, answer }) => `- ${words.answeredDecision(code(key), inert(shortLine(answer)))}`),
     ...(facts.replies ?? []).map((reply) => `- ${replyLine(reply, words)}`),
     ...pendingDecisionLines(facts.pendingQuestion, words),
   ]
   return lines.length > 0 ? lines : [words.noDecision]
+}
+
+/** The longest answer a decision line quotes. */
+const ANSWER_LINE = 300
+
+/** An answer on one line, cut at ANSWER_LINE characters. @param {string} text */
+const shortLine = (text) => {
+  const line = oneLine(text)
+  return line.length > ANSWER_LINE ? `${line.slice(0, ANSWER_LINE)}…` : line
 }
 
 /** A reply the interpreter read: what the engine took from it, or why it took nothing; the reply's words made inert. @param {{ author: string, answers: Record<string, string> | null, reason: string | null }} reply @param {Words} words */

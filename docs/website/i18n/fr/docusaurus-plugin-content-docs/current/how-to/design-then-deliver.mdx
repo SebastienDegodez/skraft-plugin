@@ -111,8 +111,10 @@ consequence. Avant la revue, le run attend une seule decision qui les regroupe t
 - **En CI**, copiez `plugins/skraft-design/ci/skraft-design.yml` dans `.github/workflows/`, ajoutez
   les secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) et `ANTHROPIC_API_KEY`, puis
   lancez-le avec une issue ou une epique. Quand le run attend, le moteur publie une PR en brouillon
-  qui liste chaque question et la reponse a recopier ; tant que rien n'est concu, comme pour une
-  recherche qui ne peut pas avancer, il pose la question sur l'issue ou l'epique. Repondez en un seul
+  et y pose chaque question dans son propre commentaire, avec la reponse a recopier ; tant que rien
+  n'est concu, comme pour une recherche qui ne peut pas avancer, il la pose dans un commentaire de
+  l'issue ou de l'epique. Une nouvelle question ne reecrit jamais la precedente : une fois repondue,
+  son commentaire dit ce qui a ete enregistre, et la PR liste chaque reponse. Repondez en un seul
   commentaire :
 
 ```text
