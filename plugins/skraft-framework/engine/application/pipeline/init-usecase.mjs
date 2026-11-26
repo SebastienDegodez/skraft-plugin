@@ -1,6 +1,7 @@
 import { isSlug } from '../../domain/pipeline/slug.mjs'
 import { discussArtifacts, ENTRY_AFTER_DISCUSS, issueDocument, issuePath } from '../../domain/pipeline/artifacts.mjs'
 import { dayOf } from '../../domain/pipeline/outputs.mjs'
+import { commentsPart, withComments } from '../../domain/pipeline/issue-comments.mjs'
 import { loadConfig, resolveBases } from '../config/bases.mjs'
 import { forgeAdapters } from '../config/forge.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
@@ -29,7 +30,8 @@ import { openJournal } from '../journal/run-journal.mjs'
  * run checks its workflow, journals the base of every repository it diffs against and the
  * DISCUSS stories already in its tracking folder; from those artefacts, it starts in DESIGN.
  * Otherwise, a new run from an issue reads it once from the forge and keeps it beside them, for
- * every agent to read, or journals why its body was not read; a resumed run reads it no more.
+ * every agent to read with its comments, or journals why its body was not read; a resumed run reads
+ * its comments again, never its body.
  * @param {InitDeps} deps
  */
 export const createInit = (deps) => Object.freeze({
@@ -50,7 +52,7 @@ const init = async (deps, request) => {
   if (!isSlug(slug)) return refuseInvalidSlug(slug)
   const opened = await openJournal(deps, slug)
   if (!opened.ok) return refusal(slug, opened.code, opened.reason)
-  if (opened.journal.events.length > 0) return resumeStartedRun(deps, slug, request.fromArtifacts)
+  if (opened.journal.events.length > 0) return resumeStartedRun(deps, slug, opened.journal.events[0], request.fromArtifacts)
   const refused = await start(deps, opened.journal, /** @type {StartRequest} */ (request))
   if (refused) return refused
   return activate(deps, slug, true)
@@ -67,13 +69,40 @@ const refuseInvalidSlug = (slug) =>
   refusal(null, 'invalid-slug', 'slug must be kebab-case: lowercase letters and digits, joined by single hyphens')
 
 /**
- * A run that already has a journal resumes; --from-artifacts only starts a new one.
- * @param {InitDeps} deps @param {string} slug @param {boolean} fromArtifacts
+ * A run that already has a journal resumes, the comments of its issue read again; --from-artifacts only starts a new one.
+ * @param {InitDeps} deps @param {string} slug @param {any} started its run.started event @param {boolean} fromArtifacts
  * @returns {Promise<InitOutcome>}
  */
-const resumeStartedRun = async (deps, slug, fromArtifacts) => {
+const resumeStartedRun = async (deps, slug, started, fromArtifacts) => {
   if (fromArtifacts) return refusal(slug, 'already-started', `${slug} already has a journal; resume it without --from-artifacts`)
+  const kept = await keptIssue(deps, slug, started)
+  if (kept !== null) await refreshComments(deps, slug, kept)
   return activate(deps, slug, false)
+}
+
+/**
+ * The issue the run keeps in its tracking folder, with the document read back; null without one.
+ * @param {InitDeps} deps @param {string} slug @param {any} started
+ * @returns {Promise<{ number: number, path: string, document: string } | null>}
+ */
+const keptIssue = async (deps, slug, started) => {
+  const number = started.story?.issue
+  const path = started.artifacts.find((/** @type {string} */ artifact) => artifact.endsWith(`/issue-${number}.md`))
+  const document = number && path !== undefined ? await deps.files.read(slug, path) : null
+  return document === null ? null : { number, path, document }
+}
+
+/**
+ * The issue's document of a resumed run with the comments the forge lists now, which a human may
+ * have answered meanwhile; its body stays as first read. A thread the forge cannot list, or a
+ * configuration that cannot be read, keeps the document as it is.
+ * @param {InitDeps} deps @param {string} slug @param {{ number: number, path: string, document: string }} kept
+ */
+const refreshComments = async (deps, slug, { number, path, document }) => {
+  const loaded = await loadConfig(deps)
+  if (!loaded.ok) return
+  const read = await (await forgeAdapters(deps, loaded.config.forge)).codeHost.issueComments(number)
+  if (read.ok) await deps.files.write(slug, path, withComments(document, read.comments))
 }
 
 /** @param {InitDeps} deps @param {string} slug @param {boolean} created @returns {Promise<InitOutcome>} */
@@ -131,11 +160,13 @@ const NO_ISSUE = Object.freeze({ refusal: null, artifacts: [] })
 const keepIssue = async (deps, { slug, story, fromArtifacts }, forge) => {
   const number = story?.issue
   if (!number || fromArtifacts) return NO_ISSUE
-  const reading = await (await forgeAdapters(deps, forge)).codeHost.issue(number)
+  const { codeHost } = await forgeAdapters(deps, forge)
+  const reading = await codeHost.issue(number)
   if (reading.read === 'failed') return { refusal: refusal(slug, 'issue-unreadable', `issue #${number} could not be read (${reading.reason}); make the forge readable, or start the run without an issue`) }
   if (reading.read !== 'issue') return { refusal: notAnIssue(slug, number, reading) }
   const path = issuePath({ date: dayOf(deps.clock.now()), number })
-  await deps.files.write(slug, path, issueDocument(reading.issue))
+  const comments = await codeHost.issueComments(number)
+  await deps.files.write(slug, path, `${issueDocument(reading.issue)}${commentsPart(comments.ok ? comments.comments : null)}`)
   return { ...NO_ISSUE, artifacts: [path] }
 }
 

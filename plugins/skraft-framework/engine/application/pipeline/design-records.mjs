@@ -1,5 +1,6 @@
 import { joinRelative } from '../../domain/config/relative-path.mjs'
 import { inAdrFolder, indexOf, isAdr, isMatrix, recordFailures, registryOf, reliedOn } from '../../domain/pipeline/design-records.mjs'
+import { isResearch } from '../../domain/pipeline/research-records.mjs'
 import { readOrName, regularFile, textsOf } from '../shared/workspace-reading.mjs'
 
 /**
@@ -51,5 +52,15 @@ const recordsOf = async ({ files, workspace }, slug, { tracked, changed }) => {
   const relied = await textsOf([...new Set(matrices.flatMap(({ text }) => reliedOn(text)))], (path) => regularFile(workspace, path))
   const registries = await textsOf([...new Set(adrs.map(({ path }) => registryOf(path)))], fromWorkspace)
   const indexes = await textsOf([...new Set(adrs.map(({ path }) => indexOf(path)))], fromWorkspace)
-  return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries, indexes }
+  return { matrices, relied, written: adrFolder.map(({ path }) => path), adrs, registries, indexes, research: await latestResearch(files, slug, tracked) }
+}
+
+/**
+ * The research document DESIGN starts from: the latest of the tracking folder, by its date folder; null without one.
+ * @param {RecordDeps['files']} files @param {string} slug @param {string[]} tracked
+ * @returns {Promise<Text | null>}
+ */
+const latestResearch = async (files, slug, tracked) => {
+  const path = tracked.filter(isResearch).sort().at(-1)
+  return path === undefined ? null : { path, text: await files.read(slug, path) }
 }

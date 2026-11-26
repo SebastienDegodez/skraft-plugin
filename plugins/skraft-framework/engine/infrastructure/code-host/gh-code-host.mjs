@@ -25,6 +25,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
   ...screenshotsOf(commandRunner),
   ...comments(commandRunner),
   issue: (number) => findIssue(commandRunner, number),
+  issueComments: (number) => issueComments(commandRunner, number),
   storyLink: (issue, closes) => `${closes ? 'Closes' : 'Refs'} #${issue}`,
   ...LIMITS,
 })
@@ -318,6 +319,24 @@ const findIssue = async (commandRunner, number) => {
   return issue === null ? unread(`gh could not read issue #${number} of ${remote.repository}`) : readingOf(issue)
 }
 
+/**
+ * Every comment of the issue, on the repository its issue is read from, page by page, oldest
+ * first as GitHub lists them; a fixed reason when gh cannot list them.
+ * @param {CommandRunner} commandRunner @param {number} number
+ * @returns {Promise<import('../../application/ports/code-host.mjs').IssueComments>}
+ */
+const issueComments = async (commandRunner, number) => {
+  const remote = await reviewedRemote(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const listed = await api({ commandRunner, remote }, `issues/${number}/comments`, ['--paginate', '--jq=.[]'])
+  const comments = succeeded(listed) ? readComments(listed.stdout) : null
+  if (comments === null) return refused(`gh could not list the comments of issue #${number} of ${remote.repository}`)
+  return { ok: /** @type {const} */ (true), comments: comments.map(issueComment) }
+}
+
+/** @param {{ user?: { login?: string } | null, created_at?: string, body?: string }} comment @returns {import('../../application/ports/code-host.mjs').IssueComment} */
+const issueComment = ({ user, created_at: date, body }) => ({ author: String(user?.login ?? ''), date: String(date ?? ''), body: String(body ?? '') })
+
 /** @param {string} reason @returns {{ read: 'failed', reason: string }} */
 const unread = (reason) => ({ read: 'failed', reason })
 
@@ -581,7 +600,7 @@ const findComment = async (forge, number, request) => {
  * The comments gh printed one JSON object per line; null when a line is not one. The filter runs
  * here, not in a --jq argument: quotes, pipes and the marker's <!-- --> in an argument do not
  * survive a gh started through a .cmd under Windows.
- * @param {string} text @returns {Array<{ user?: { login?: string }, body?: string, html_url?: string }> | null}
+ * @param {string} text @returns {Array<{ user?: { login?: string }, body?: string, html_url?: string, created_at?: string }> | null}
  */
 const readComments = (text) => {
   try {

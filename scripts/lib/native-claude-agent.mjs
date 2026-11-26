@@ -12,6 +12,8 @@ const toolMap = new Map(Object.entries({
   'execute/runInTerminal': ['Bash'], 'execute/getTerminalOutput': ['TaskOutput'], 'execute/killTerminal': ['TaskStop'],
   'execute/sendToTerminal': [], 'execute/testFailure': [], execute: ['Bash', 'TaskOutput', 'TaskStop'],
   'graphify/*': ['mcp__graphify__*'], skill: ['Skill'],
+  // The web alias also grants a web search on Copilot; the native side gets the fetch alone.
+  web: ['WebFetch'],
 }))
 
 function string(value, field) {

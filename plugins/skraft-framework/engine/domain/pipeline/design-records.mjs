@@ -10,16 +10,20 @@
  *             *-superseded.md
  *   G2, G12   every `**Supersedes:** ADR-MMM` of an ADR the run wrote has its registry row, ADR
  *             numbers compared without their leading zeros
+ *   product   the research document DESIGN starts from holds no open `Unknown:` product question
+ *             (product-questions.mjs): DESIGN never decides a business rule
  *
  * @typedef {{ path: string, text: string | null }} Text
- * @typedef {{ matrices: Text[], relied: Text[], written: string[], adrs: Text[], registries: Text[], indexes: Text[] }} Records
+ * @typedef {{ matrices: Text[], relied: Text[], written: string[], adrs: Text[], registries: Text[], indexes: Text[], research?: Text | null }} Records
  *   matrices: the consistency matrices of the tracking folder; relied: the docs/ files they list,
  *   text null when the working copy has none; written: the files under a
  *   docs/adr folder the run changed and that exist; adrs: the ADRs among them; registries: the
- *   supersession registry beside each; indexes: the decisions index beside each.
+ *   supersession registry beside each; indexes: the decisions index beside each; research: the
+ *   latest research document of the tracking folder, null without one.
  */
 
 import { rowNumber, supersededInText } from '../decisions/adr.mjs'
+import { openUnknowns } from './product-questions.mjs'
 
 const MATRIX = /(^|\/)consistency-matrix-[^/]+\.md$/
 const ADR_FOLDER = /(^|\/)docs\/adr\/[^/]+$/
@@ -75,7 +79,8 @@ export const indexOf = (adr) => adr.replace(/[^/]+$/, 'decisions-index.md')
  * @param {Records} records
  * @returns {string[]}
  */
-export const recordFailures = ({ matrices, relied, written, adrs, registries, indexes }) => [
+export const recordFailures = ({ matrices, relied, written, adrs, registries, indexes, research = null }) => [
+  ...unknownFailures(research),
   ...matrixFailures(matrices),
   ...reliedFailures(matrices, relied),
   ...written.filter((path) => VERDICT_NAME.test(path)).map((path) => `${path}: an ADR's verdict goes in its Status line, never in its file name (G14)`),
@@ -127,3 +132,10 @@ const hasRow = (registry, old, own) => registry.split('\n').some((line) => {
   const named = [...line.matchAll(ADR_ID)].map((match) => Number(match[1]))
   return named.includes(old) && named.includes(own)
 })
+
+/**
+ * Each product question the research document leaves `Unknown:`, with no `Decision:` under it.
+ * @param {Text | null} research
+ */
+const unknownFailures = (research) => openUnknowns(research?.text ?? '').map(({ id, question }) =>
+  `${research?.path}: ${id} is an open Unknown (${question}): DESIGN starts once a human answers it, recorded under it as \`Decision: <date> — <author> — <answer>\``)

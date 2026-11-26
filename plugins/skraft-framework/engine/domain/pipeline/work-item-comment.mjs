@@ -1,4 +1,5 @@
 import { escapedAsHtml } from './azure-thread.mjs'
+import { markdownOf } from './html-markdown.mjs'
 
 /**
  * The comment of a run on its work item, found again among the work item's comments: the same
@@ -33,3 +34,18 @@ export const keptCommentOf = (site, { number, marker, url }, comments) => {
   const marks = (/** @type {any} */ comment) => [marker, escapedAsHtml(marker)].some((mark) => String(comment?.text).startsWith(mark))
   return comments.find((comment) => commentUrl(site, number, comment?.id) === url) ?? comments.findLast(marks)
 }
+
+/**
+ * The comments of a work item as the story's comments: who wrote each, when, and its text in
+ * Markdown, as the work item's fields are read; a deleted one left out.
+ * @param {any[]} comments the work item's comments, as REST answers them: `createdBy`, `createdDate`, `text`
+ * @returns {import('../../application/ports/code-host.mjs').IssueComment[]}
+ */
+export const storyComments = (comments) => comments.filter((comment) => comment?.isDeleted !== true).map(storyComment)
+
+/** @param {any} comment */
+const storyComment = ({ createdBy, createdDate, text }) => ({
+  author: String(createdBy?.displayName ?? createdBy?.uniqueName ?? ''),
+  date: String(createdDate ?? ''),
+  body: markdownOf(String(text ?? '')),
+})

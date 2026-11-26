@@ -793,8 +793,8 @@ parts:
             label_en: "Issue comments"
             sidebar_position: 10
             doc: reference/issue-comments
-            purpose_fr: "Les deux commentaires que skraft garde sur l'issue d'une story : le suivi du run et la proposition de raffinement, chaque partie et quand agir."
-            purpose_en: "The two comments skraft keeps on a story's issue: the run's progress comment and the refinement proposal, each part and when to act."
+            purpose_fr: "Les commentaires que skraft garde sur l'issue d'une story : le suivi du run, les questions produit de la recherche et la proposition de raffinement, chaque partie et quand agir ; et les commentaires qu'un run lit."
+            purpose_en: "The comments skraft keeps on a story's issue: the run's progress, the product questions of its research and the refinement proposal, each part and when to act; and the comments a run reads."
           - id: backlog-canvas
             type: editorial
             label_fr: "Canvas du backlog et carte des stories"

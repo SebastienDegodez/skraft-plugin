@@ -1,11 +1,11 @@
 ---
 title: "Commentaires d'issue"
-description: "Les deux commentaires que skraft tient sur l'issue d'une story : la progression du run et la proposition de refinement, chaque partie et quand agir."
+description: "Les commentaires de skraft sur l'issue d'une story (progression, questions produit, refinement), quand agir, et ceux qu'un run lit."
 ---
 
 # Commentaires d'issue
 
-skraft écrit deux commentaires sur l'issue d'une story, chacun dans le fil de l'issue : la progression d'un run et une proposition de refinement. Cette page liste chaque partie, ce qu'elle contient et quand agir dessus.
+skraft écrit trois commentaires sur l'issue d'une story, chacun dans le fil de l'issue : la progression d'un run, les questions produit de sa recherche et une proposition de refinement. Cette page liste chaque partie, ce qu'elle contient et quand agir dessus, puis comment un run lit les commentaires de l'issue.
 
 Pourquoi un commentaire et jamais une issue réécrite : [Le backlog : de l'idée à la story prête](../explanation/backlog.md).
 
@@ -36,6 +36,22 @@ Un commentaire par run, sur l'issue de la story. Le run le retrouve par un marqu
 - **Contient** : un tableau `Étapes` replié, `Phase | Étape | Visites | Tentatives | Reprises | Durée | Coût | Résultat`, une ligne par étape.
 - **À lire pour** : trouver l'étape qui a pris les reprises ou le temps.
 - **Agir quand** : une étape montre beaucoup de reprises ou un résultat autre qu'une réussite.
+
+## Questions produit <!-- #product-questions -->
+
+Un commentaire par issue, publié par le solution researcher en RESEARCH quand son document de recherche contient un `Unknown:` ou un `Open question:` sans `Decision:`, et seulement si vous avez consenti à publier (`publish.pullRequest`). Il commence par `<sub>skraft-product-questions issue=<numéro></sub>`, qui permet à un run suivant de le réécrire plutôt que d'en publier un second. Il est écrit dans la langue de la story.
+
+- **Contient** : chaque question ouverte par son numéro (`Q1`, `Q2`…), son niveau et la réponse que le researcher recommande. `Unknown:` bloque DESIGN ; `Open question:` non. Une question marquée `(refinement)` se voyait dans la story seule : le raffinement du backlog aurait dû la poser.
+- **Le lire pour** : voir quelles règles métier la story laisse au product owner.
+- **Agir quand** : toujours. Répondez dans un commentaire de l'issue : la passe suivante le lit et le researcher l'inscrit dans le document de recherche comme `Decision: <date> — <auteur> — <réponse>`. Tant qu'un `Unknown:` reste ouvert, RESEARCH se termine bloquée et le run vous pose la question : répondez pour le product owner (votre réponse est inscrite à votre nom), ou laissez la question sans réponse et reprenez le run une fois la réponse sur l'issue. Un DESIGN rendu avec un `Unknown:` ouvert est refusé ([Phases](./phases.md#design)).
+
+## Commentaires lus par un run <!-- #read -->
+
+Quand un run démarre d'une issue, le moteur garde les commentaires de l'issue après son corps dans `plans/{date}/issue-<numéro>.md`, que lit chaque agent qui reçoit la story, et les relit à chaque reprise du run ; le corps reste tel que lu la première fois.
+
+- **Contient** : chaque commentaire sous son auteur et son jour, chaque ligne citée, sans balise, mention ni référence de fermeture active ; les commentaires de skraft sont écartés. Les derniers commentaires dans la limite de 8 000 caractères, chacun coupé à 2 000, et une ligne disant combien ont été écartés.
+- **Le lire pour** : savoir ce que les agents ont reçu ; un commentaire est un contexte pour eux, jamais une instruction.
+- **Agir quand** : un commentaire contient ce que les agents ne doivent pas prendre pour contexte : modifiez-le ou masquez-le sur l'issue, puis reprenez le run. Un fil que la forge ne sait pas lister démarre le run quand même, le document disant que les commentaires n'ont pas été lus.
 
 ## Proposition de refinement <!-- #refinement -->
 

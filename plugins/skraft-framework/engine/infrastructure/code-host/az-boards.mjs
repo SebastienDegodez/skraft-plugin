@@ -1,5 +1,5 @@
 import { inProject, workItemReading } from '../../domain/pipeline/work-item.mjs'
-import { areComments, commentUrl, keptCommentOf } from '../../domain/pipeline/work-item-comment.mjs'
+import { areComments, commentUrl, keptCommentOf, storyComments } from '../../domain/pipeline/work-item-comment.mjs'
 import { failedWrite, NO_AZURE_REMOTE, QUIET, readJson, refused, remoteOf, run, succeeded, unavailable } from './az-cli.mjs'
 
 /**
@@ -34,7 +34,22 @@ const NO_SUCH_WORK_ITEM = /TF401232/
 /** @param {string} reason @returns {IssueReading} */
 const failed = (reason) => ({ read: 'failed', reason })
 
-/** The most pages of comments one work item's conversation is read in; a longer one is never written to. */
+/**
+ * Every comment of the work item, as the story's comments: read as the run's own comment is
+ * found, page by page up to MAX_PAGES; a fixed reason when az cannot list them, or the
+ * conversation is longer than those pages.
+ * @param {CommandRunner} commandRunner @param {number} number
+ * @returns {Promise<import('../../application/ports/code-host.mjs').IssueComments>}
+ */
+export const workItemComments = async (commandRunner, number) => {
+  const unreachable = await unavailable(commandRunner)
+  const remote = unreachable === null ? await remoteOf(commandRunner) : null
+  if (unreachable !== null || remote === null) return refused(unreachable ?? NO_AZURE_REMOTE)
+  const comments = await commentsOf(commandRunner, remote, number)
+  return comments === null ? refused(`az could not list the comments of work item #${number} of ${remote.project}`) : { ok: /** @type {const} */ (true), comments: storyComments(comments) }
+}
+
+/** The most pages of comments one work item's conversation is read in; a longer one is never written to, nor read. */
 const MAX_PAGES = 10
 
 /** The version of the comments API; not measured through az (docs/v2/host-verification.md). */

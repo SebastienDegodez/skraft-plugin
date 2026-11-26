@@ -1,6 +1,6 @@
 // The forge a run started from an issue reads it from: the working copy's origin names it, and a
 // fake gh, first on this process's PATH for the test's length, answers for it (no test reaches a
-// forge). gh is signed in and shows the story's issue; it answers nothing else, so the run keeps
+// forge). gh is signed in and shows the story's issue, which has no comment; it answers nothing else, so the run keeps
 // no comment on the issue and pushes nothing. Every driver reads PATH from this process: its
 // child processes inherit it, the Node adapters read process.env.
 import { chmodSync, readFileSync, writeFileSync } from 'node:fs'
@@ -37,6 +37,8 @@ const FAKE_GH = [
   "const shown = JSON.parse(readFileSync(join(here, 'gh-issues.json'), 'utf8')).find((issue) => String(issue.number) === args[2])",
   "if (args[0] === 'issue' && shown) { process.stdout.write(JSON.stringify(shown)); process.exit(0) }",
   "if (args[0] === 'issue') { process.stderr.write(`GraphQL: Could not resolve to an issue or pull request with the number of ${args[2]}. (repository.issue)\\n`); process.exit(1) }",
+  // The issue's comments, listed page by page: it has none.
+  "if (args[0] === 'api' && /\\/issues\\/\\d+\\/comments$/.test(args.at(-1)) && !args.some((arg) => arg.startsWith('--method='))) process.exit(0)",
   'process.exit(1)',
   '',
 ].join('\n')

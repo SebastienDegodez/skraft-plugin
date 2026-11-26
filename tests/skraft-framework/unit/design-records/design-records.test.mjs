@@ -162,3 +162,27 @@ test('an architect whose consistency matrix lists no file of a durable docs/ fol
     [3, 'done', null, []],
   ])
 })
+
+test('DESIGN handed in while the research still holds an open Unknown product question is sent back naming it; an Assumption, an Open question or an answered Unknown sends nothing back', async () => {
+  const RESEARCH = 'research/2026-10-11/checkout-research.md'
+  const questions = (more) => [
+    '# Research: checkout', '', '## Product questions',
+    '- Q1 Assumption: card only, the story names no other way to pay. Recommended: confirm.',
+    '- **Q2** — Open question: should a receipt be mailed? Recommended: no.',
+    '- Q3 unknown : Is a refund allowed after 30 days? Recommended: no refund past 30 days.', ...more, '',
+  ].join('\n')
+  const researcher = (text) => agent({ work: ({ tracking }) => tracking.write(SLUG, RESEARCH, text) })
+  const host = scripted({}, (it) => [
+    researcher(questions([]))(it),
+    agent()(it),
+    async (dispatch) => { await it.tracking.write(SLUG, RESEARCH, questions(['  Decision: 2026-10-11 — po — no refund past 30 days.'])); return agent()(it)(dispatch) },
+    () => ({ ok: false, unavailable: true, text: '' }),
+  ])
+
+  await host.start()
+
+  assert.deepEqual(design(host).map(({ attempt, outcome, code, failures }) => [attempt, outcome, code, failures]), [
+    [1, 'failed', 'design-records', [`${RESEARCH}: Q3 is an open Unknown (Is a refund allowed after 30 days? Recommended: no refund past 30 days.): DESIGN starts once a human answers it, recorded under it as \`Decision: <date> — <author> — <answer>\``]],
+    [2, 'done', null, []],
+  ])
+})

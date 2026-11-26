@@ -27,6 +27,9 @@
  *   body: the comment's text as written (on Azure DevOps decoded as `normalisedComment` reads it),
  *   null when the forge has no comment there.
  * @typedef {{ number: number, title: string, url: string, body: string }} Issue
+ * @typedef {{ author: string, date: string, body: string }} IssueComment
+ *   author: the forge's name for who wrote it; date: when, ISO 8601 as the forge gives it; body: Markdown, as written.
+ * @typedef {{ ok: true, comments: IssueComment[] } | { ok: false, reason: string }} IssueComments
  * @typedef {{ read: 'issue', issue: Issue } | { read: 'missing' } | { read: 'pull-request' } | { read: 'other-project', project: string } | { read: 'not-a-story' } | { read: 'failed', reason: string }} IssueReading
  *   missing: the forge answered and has no issue of that number; pull-request: the number is a
  *   pull request's; other-project: the work item is of another project than the remote's, which
@@ -67,6 +70,7 @@
  *   keepPullRequestComment: (request: PullRequestCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
  *   readComment: (url: string) => Promise<CommentReading>,
  *   issue: (number: number) => Promise<IssueReading>,
+ *   issueComments: (number: number) => Promise<IssueComments>,
  *   storyLink: (issue: number, closes: boolean) => string | null,
  *   bodyLimit: number,
  *   commentLimit: number,
@@ -93,6 +97,8 @@
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that
  *   number on the repository gh would pick in a clone of a fork, its body as written; failed when
  *   there is no remote, no forge client, no sign-in to that forge, or the forge refused.
+ *   issueComments: every comment of that issue, in any order; failed with a fixed reason when the forge
+ *   client cannot list them, which refuses no run.
  *   keepPullRequestComment: keepIssueComment on a pull request (GitHub: the same comment route; Azure
  *   Repos: a thread of the pull request, posted closed, its first comment rewritten). readComment:
  *   the comment at a URL keepIssueComment or keepPullRequestComment gave, read back. bodyLimit: the

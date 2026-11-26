@@ -680,7 +680,7 @@ export class InMemoryAgentCatalog {
  */
 export class InMemoryCodeHost {
   /**
-   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null, issues?: Record<number, { title: string, body: string } | 'pull-request' | 'not-a-story' | { project: string }> }} [forge]
+   * @param {{ unavailable?: string | null, branch?: string | null, defaultBranch?: string | null, remotes?: string[], open?: Array<{ number: number, head: string, state?: string, body?: string }>, fails?: Record<string, string>, repository?: { host: string, repository: string } | null, issues?: Record<number, { title: string, body: string, comments?: Array<{ author: string, date: string, body: string }> } | 'pull-request' | 'not-a-story' | { project: string }> }} [forge]
    *   repository: the host and `<owner>/<repo>` the remote names, null when it names none;
    *   issues: the issues of the forge by number, 'pull-request' for a number that is one,
    *   'not-a-story' for a work item of another type, `{ project }` for one of another project than the remote's, which it names; without
@@ -722,6 +722,8 @@ export class InMemoryCodeHost {
     this.link = link
     /** @type {number[]} */
     this.issuesRead = []
+    /** @type {number[]} the issues whose comments were read, in order */
+    this.commentsRead = []
     this.missing = unavailable
     this.named = repository
     this.branch = branch
@@ -759,6 +761,13 @@ export class InMemoryCodeHost {
     if (found === 'pull-request' || found === 'not-a-story') return { read: found }
     if (found?.project !== undefined) return { read: 'other-project', project: found.project }
     return found ? { read: 'issue', issue: { number, title: found.title, url: `${this.pages}/issues/${number}`, body: found.body } } : { read: 'missing' }
+  }
+  /** The issue's comments, as the forge lists them: those its `comments` gives, none unless given; `fails.comments` refuses the read. */
+  async issueComments(number) {
+    this.commentsRead.push(number)
+    if (this.fails.comments) return { ok: false, reason: this.fails.comments }
+    const found = this.issues?.[number]
+    return { ok: true, comments: (typeof found === 'object' && found?.comments) || [] }
   }
   async remotes() { return this.remoteNames }
   async repository() { return this.named }

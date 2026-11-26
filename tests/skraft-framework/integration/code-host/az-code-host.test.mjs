@@ -297,6 +297,28 @@ test('a conversation longer than one page is read page by page, up to ten pages;
   assert.equal(tooLong.forge.calls().filter((call) => call[0] === 'devops').length, 10)
 })
 
+test('the comments of a work item are read page by page through az devops invoke, each with who wrote it, when and its text in Markdown, a deleted one left out; a longer conversation, or one az cannot list, is a fixed reason', async (t) => {
+  const comments = [
+    { id: 500, text: '<div>Is <b>cash</b> in scope?</div>', createdBy: { displayName: 'Alice Martin', uniqueName: 'alice@acme.com' }, createdDate: '2026-10-09T09:30:00Z' },
+    { id: 501, text: 'gone', isDeleted: true, createdBy: { displayName: 'Bob' }, createdDate: '2026-10-09T10:00:00Z' },
+    { id: 502, text: 'Q1: card only.', createdBy: { uniqueName: 'po@acme.com' }, createdDate: '2026-10-10T08:00:00Z' },
+  ]
+  const paged = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, pageSize: 2, comments } })
+
+  assert.deepEqual(await paged.codeHost().issueComments(42), { ok: true, comments: [
+    { author: 'Alice Martin', date: '2026-10-09T09:30:00Z', body: 'Is **cash** in scope?' },
+    { author: 'po@acme.com', date: '2026-10-10T08:00:00Z', body: 'Q1: card only.' },
+  ] })
+  assert.deepEqual(paged.forge.calls().filter((call) => call.includes('--query-parameters')).map((call) => call[call.indexOf('--query-parameters') + 1]), ['continuationToken=2'])
+  assert.deepEqual(paged.forge.writes(), [])
+
+  const tooLong = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, pageSize: 1, comments: Array.from({ length: 30 }, (_, index) => ({ id: 500 + index, text: 'a person' })) } })
+  assert.deepEqual(await tooLong.codeHost().issueComments(42), { ok: false, reason: 'az could not list the comments of work item #42 of Shop Team' })
+  const unreadable = repository(t, { az: { ...SIGNED_IN, ...IN_STORY, unreadableList: true } })
+  assert.deepEqual(await unreadable.codeHost().issueComments(42), { ok: false, reason: 'az could not list the comments of work item #42 of Shop Team' })
+  assert.deepEqual(await repository(t, { remote: null }).codeHost().issueComments(42), { ok: false, reason: 'the working copy has no Git remote whose URL names an Azure DevOps organization, project and repository' })
+})
+
 test('a work item of another project is never written to, an az that fails or answers what skraft cannot read writes nothing twice, and none of what az prints reaches a reason', async (t) => {
   const elsewhere = repository(t, { az: { ...SIGNED_IN, workItems: { 42: { ...SHOP_STORY, fields: { ...SHOP_STORY.fields, 'System.TeamProject': 'Other' } } } } })
   assert.deepEqual(await elsewhere.codeHost().keepIssueComment(commentRequest(elsewhere.root)), { ok: false, reason: 'work item #42 is not in project Shop Team of the Git remote, so skraft wrote nothing on it' })
