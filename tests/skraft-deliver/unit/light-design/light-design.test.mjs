@@ -176,3 +176,13 @@ test('a new ADR numbered as another ADR of an open design branch is refused: bot
   assert.equal(first.outcome, 'failed')
   assert.deepEqual(first.failures.filter((line) => line.includes('open design branch')), [`${ADR}: the open design branch design/epic-7 numbers another ADR 001; number yours after the highest ADR of that branch too.`])
 })
+
+test('a light design that assumed what the story leaves open shows each assumption to a person, who may REVISE it', async () => {
+  const { host, deps, run } = session()
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(lightDesigner({ body: '# Checkout receipt\n\n## Assumptions\n\n- The receipt is mailed once the payment is captured.\n\n## Use cases\n\nMail the receipt.\n' })(host))
+  const waiting = await createRunPipeline(deps).run()
+  assert.equal(waiting.code, 'light-design-review', waiting.reason)
+  assert.match(host.human.questions.at(-1).text, /Where the story leaves a choice open, it assumed: - The receipt is mailed once the payment is captured\. REVISE with your answer when one is wrong\./)
+  assert.doesNotMatch(host.human.questions.at(-1).text, /DESIGN is advised/)
+})

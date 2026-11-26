@@ -1,6 +1,6 @@
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { citedPaths, readBrief } from '../../domain/architecture/brief.mjs'
-import { DESIGN_PLUGIN, decisionLine, lightDesignReasons } from '../../domain/architecture/light-design.mjs'
+import { DESIGN_PLUGIN, assumptionsOf, decisionLine, lightDesignReasons } from '../../domain/architecture/light-design.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { acceptOnMerge, newProposedAdrs } from '../decisions/adr-ratification.mjs'
 import { bindDocuments } from './context.mjs'
@@ -45,8 +45,9 @@ const reviewPlan = async ({ deps, slug, journal }) => {
   if (typeof adrs === 'string') return { environment: adrs }
   const design = await designOf(deps, plan, adrs)
   const reasons = lightDesignReasons(design)
-  if (adrs.length === 0 && reasons.length === 0) return { answered: { answer: 'APPROVED', reason: 'the light design wrote no ADR to ratify and stays a light design' } }
-  return { text: reviewText(plan, design, reasons), subjects: [plan.brief, ...adrs] }
+  const assumed = assumptionsOf(design.text)
+  if (adrs.length === 0 && reasons.length === 0 && assumed === null) return { answered: { answer: 'APPROVED', reason: 'the light design wrote no ADR to ratify, assumed nothing and stays a light design' } }
+  return { text: reviewText(plan, design, { reasons, assumed }), subjects: [plan.brief, ...adrs] }
 }
 
 /** The brief and the ADRs the light design wrote, as the working branch holds them. @param {any} deps @param {any} plan @param {string[]} paths */
@@ -57,9 +58,13 @@ const designOf = async (deps, plan, paths) => {
   return { brief: /** @type {any} */ (readBrief(text)), text, adrs }
 }
 
-/** @param {any} plan @param {{ adrs: Array<{ path: string, text: string }> }} design @param {string[]} reasons */
-const reviewText = (plan, { adrs }, reasons) => [
+/**
+ * @param {any} plan @param {{ adrs: Array<{ path: string, text: string }> }} design
+ * @param {{ reasons: string[], assumed: string | null }} doubts
+ */
+const reviewText = (plan, { adrs }, { reasons, assumed }) => [
   `The light design of #${plan.issue} wrote ${plan.brief}${adrsWritten(adrs)}.`,
+  ...(assumed === null ? [] : [`Where the story leaves a choice open, it assumed: ${assumed} REVISE with your answer when one is wrong.`]),
   ...(reasons.length === 0 ? [] : [`It goes beyond a light design: ${reasons.join('; ')}; DESIGN is advised.`]),
   `APPROVED ${adrs.length === 0 ? 'goes on' : 'ratifies them, accepted on the merge of the delivery pull request, and goes on'} to DISTILL; REVISE sends the light design back with your corrections; DESIGN pauses the delivery until ${DESIGN_PLUGIN} merges a brief for the story; STOP ends the delivery.`,
 ].join(' ')

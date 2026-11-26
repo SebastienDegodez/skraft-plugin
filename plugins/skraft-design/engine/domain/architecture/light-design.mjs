@@ -40,5 +40,20 @@ const replacing = ({ path, text }) => {
 /** @param {number} count @param {number} limit @param {(count: number) => string} sentence */
 const over = (count, limit, sentence) => (count > limit ? [`${sentence(count)}, more than ${limit}`] : [])
 
+const ASSUMPTIONS_SECTION = /^## Assumptions[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m
+const NONE = /^none\.?$/i
+const ASSUMPTIONS_LENGTH = 1000
+
+/**
+ * What the light design assumed where the story leaves a choice open, as its brief's
+ * `## Assumptions` states it on one line; null when it assumed nothing.
+ * @param {string} text the brief's whole text
+ */
+export const assumptionsOf = (text) => {
+  const stated = (ASSUMPTIONS_SECTION.exec(text)?.[1] ?? '').replace(/\s+/g, ' ').trim()
+  if (stated === '' || NONE.test(stated)) return null
+  return stated.length > ASSUMPTIONS_LENGTH ? `${stated.slice(0, ASSUMPTIONS_LENGTH)}…` : stated
+}
+
 /** The one-sentence decision of an ADR, as its header states it. @param {string} text */
 export const decisionLine = (text) => field(text, 'decision') ?? 'no decision line'

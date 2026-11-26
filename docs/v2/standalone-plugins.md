@@ -122,8 +122,9 @@ identity, cites only the plan's components and existing files, and cites each AD
 `Accepted` or written by this light design; every ADR it wrote is cited, under a number no open
 `design/*` branch gives another ADR. The ADR checks of every step apply as well.
 
-`light_design_review` then settles it. With no ADR, and nothing beyond a light design, the
-engine approves it. Beyond a light design means, each read without a model: an ADR that replaces
+`light_design_review` then settles it. With no ADR, no assumption in its `## Assumptions` and
+nothing beyond a light design, the engine approves it; an assumption is shown to the person, who
+answers it with REVISE. Beyond a light design means, each read without a model: an ADR that replaces
 or amends a decision already taken, a bounded context the brief marks `(new)`, more than two
 ADRs, more than eight criteria or more than three components. Otherwise a person reads each ADR's
 decision and each reason: `APPROVED` marks the ADRs Accepted on the branch, effective on the
