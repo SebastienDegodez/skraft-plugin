@@ -6655,33 +6655,6 @@
     ],
     "acceptance-designer": [
       {
-        "id": "45690881699:agent:acceptance-designer:2026-11-25T20:12:48.211Z",
-        "timestamp": "2026-11-25T20:12:48.211Z",
-        "commit": "0d5c3c2f1333dfdbcc5ddbf28bd7422649e41b16",
-        "run": "45690881699",
-        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/45690881699",
-        "runner": "vally-agent",
-        "model": "claude-sonnet-5.5",
-        "judgeModel": "none",
-        "state": "pass",
-        "reason": "conforms on every trial (9/9 at or above 0.9)",
-        "descriptorSha": "67a1c380b4da3ba6bed0066e716a54a4aed171ba5bb6830941ac22c5b1cbb0cf",
-        "netWin": 1,
-        "trialCount": 9,
-        "meanScore": 1,
-        "confidenceInterval": {
-          "low": null,
-          "high": null
-        },
-        "signTest": {
-          "wins": 0,
-          "ties": 0,
-          "losses": 0,
-          "pValue": null
-        },
-        "metrics": null
-      },
-      {
         "id": "45690881699:agent:acceptance-designer:2026-11-25T20:13:19.338Z",
         "timestamp": "2026-11-25T20:13:19.338Z",
         "commit": "0d5c3c2f1333dfdbcc5ddbf28bd7422649e41b16",
@@ -6912,6 +6885,33 @@
         "netWin": 1,
         "trialCount": 3,
         "meanScore": 1,
+        "confidenceInterval": {
+          "low": null,
+          "high": null
+        },
+        "signTest": {
+          "wins": 0,
+          "ties": 0,
+          "losses": 0,
+          "pValue": null
+        },
+        "metrics": null
+      },
+      {
+        "id": "45883016042:agent:acceptance-designer:2026-11-26T19:44:00.492Z",
+        "timestamp": "2026-11-26T19:44:00.492Z",
+        "commit": "93e688dd616caf134c0ff6b8774127e62d685d66",
+        "run": "45883016042",
+        "url": "https://github.com/SebastienDegodez/skraft-plugin/actions/runs/45883016042",
+        "runner": "vally-agent",
+        "model": "claude-sonnet-5.5",
+        "judgeModel": "none",
+        "state": "regression",
+        "reason": "broke conformance on 4 of 25 trial(s) (threshold 0.9)",
+        "descriptorSha": "0ba6e2c4bf5905facae2c3a95d679700f2790ac37f0f002ec2c1ee70efcc8fe0",
+        "netWin": 0.68,
+        "trialCount": 25,
+        "meanScore": 0.965,
         "confidenceInterval": {
           "low": null,
           "high": null
