@@ -103,7 +103,7 @@ test('/skraft on a new slug starts at once and spawns the researcher on its outp
   const [started] = await mod.journal('checkout')
   assert.deepEqual(started.story, { issue: 42, title: 'Pay by card' })
   assert.deepEqual(started.artifacts, [issueFile(started.at.slice(0, 10))])
-  assert.deepEqual(briefOf(spawn.prompt).inputs.map((path) => [path.startsWith(mod.root), path.endsWith(`.copilot-tracking/skraft-plans/checkout/${started.artifacts[0]}`)]), [[true, true]])
+  assert.deepEqual(briefOf(spawn.prompt).inputs.map((path) => [path.startsWith(mod.root), path.endsWith(join('.copilot-tracking', 'skraft-plans', 'checkout', ...started.artifacts[0].split('/')))]), [[true, true]])
   assert.equal(await readFile(join(mod.root, '.copilot-tracking', 'skraft-plans', 'checkout', ...started.artifacts[0].split('/')), 'utf8'), `# Issue #42: ${ISSUE.title}\n\n${ISSUE.url}\n\n${ISSUE.body}\n`)
 }))
 
