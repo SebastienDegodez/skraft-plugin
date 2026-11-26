@@ -32,9 +32,23 @@ const fenced = (lines) => ['```text', ...lines, '```']
  */
 export const questionComment = (question, language, on = 'issue') => {
   const words = wordsOf(language)
-  const body = question.questions ? questionsBody(question, words) : question.block ? blockBody(question, words) : decisionBody(question, words)
+  const body = bodyOf(question, words)
   return [questionMarker(question.key), '', ...body.title, '', words.intro[on], '', ...body.lines, '', `<sub>${words.key(code(question.key))}</sub>`, ''].join('\n')
 }
+
+/** What a question's comment says, by what the question holds. @param {any} question @param {any} words */
+const bodyOf = (question, words) => {
+  if (question.questions) return questionsBody(question, words)
+  if (question.block) return blockBody(question, words)
+  return question.facts?.refreshConflict ? conflictBody(question, words) : decisionBody(question, words)
+}
+
+/** REFRESH stopped on a merge conflict: the person merges the branch, then answers again. @param {any} question @param {any} words */
+const conflictBody = ({ options }, words) => ({
+  title: [`### ${words.instructionTitle}`],
+  lines: [words.refreshConflict, '', ...answerTable(['instruction', 'REFRESH', ...options], 'blocked', words), '',
+    `**${words.reply}**`, ...fenced(['/skraft-answer REFRESH'])],
+})
 
 /** A step blocked: what blocks it, what it left, then the answers. @param {any} question @param {any} words */
 const blockBody = ({ block, options }, words) => ({
@@ -54,10 +68,10 @@ const blockHeadline = (block, words) => `**${words.blocks(code(block.step))}** â
 const leftLines = ({ from, failures }, words) => (failures.length === 0 ? [] : ['', `**${words.left(code(from), failures.length)}**`, ...failures.map((line) => `- ${inert(oneLine(line))}`)])
 
 /** A question with options: the question as asked, then the answers. @param {any} question @param {any} words */
-const decisionBody = ({ kind, text, options }, words) => ({
+const decisionBody = ({ kind, text, options, facts }, words) => ({
   title: [`### ${words.decisionTitle}`],
   lines: [
-    `**${words.question}**`, '', ...quotedText(text), '',
+    `**${words.question}**`, '', ...(facts && words.texts[kind] ? words.texts[kind](facts) : quotedText(text)), '',
     ...answerTable(options, kind, words), '',
     `**${words.reply}**`, ...fenced([`/skraft-answer ${options[0]}`]),
   ],
@@ -112,6 +126,8 @@ export const answeredComment = (question, answer, language, author = null) => {
 const askedLine = (question, words) => {
   if (question.block) return blockHeadline(question.block, words)
   if (question.questions) return words.questionsTitle(question.questions.length)
+  if (question.facts?.refreshConflict) return words.refreshConflict
+  if (question.facts && words.texts[question.kind]) return words.texts[question.kind](question.facts)[0]
   return inert(oneLine(String(question.text).replace(REFRESH_SENTENCE, '').split('\n')[0]))
 }
 

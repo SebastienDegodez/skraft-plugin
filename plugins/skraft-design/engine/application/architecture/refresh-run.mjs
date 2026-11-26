@@ -62,6 +62,6 @@ const baseMove = (base, sha) => {
 const conflicted = async ({ slug, journal }, answered) => {
   const step = journal.events.findLast(({ type, key }) => type === 'question.asked' && key === answered.key)?.step ?? 'design'
   const text = `REFRESH could not take the default branch into this run's branch: Git stopped on a conflict and undid the merge. Merge the default branch into the branch yourself, then answer REFRESH again, an instruction, or STOP.${REFRESH_OFFER}`
-  const question = await contextQuestion(journal, { key: `${answered.key}-refresh`, kind: 'blocked', text, step })
+  const question = await contextQuestion(journal, { key: `${answered.key}-refresh`, kind: 'blocked', text, step, details: { facts: { refreshConflict: true } } })
   return waitingFor(slug, question)
 }

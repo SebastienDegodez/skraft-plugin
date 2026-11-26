@@ -57,7 +57,7 @@ const consentToExclusions = async ({ deps, slug, journal }, stories) => {
   const hash = await deps.hasher.sha256(JSON.stringify(stories))
   const key = `architecture-blocked-${passIndex(journal.events)}-${hash.slice(0, 12)}`
   const text = `The solution architect blocked these stories: ${stories.map(({ issue, reason }) => `#${issue}: ${reason}`).join('; ')}. Continue without them or stop? Use /skraft-refine for excluded stories.${REFRESH_OFFER}`
-  const question = await contextQuestion(journal, { key, kind: 'architecture-blocked', text, step: 'design_review' })
+  const question = await contextQuestion(journal, { key, kind: 'architecture-blocked', text, step: 'design_review', details: { facts: { stories } } })
   if (!question.answer) return waitingFor(slug, question)
   if (question.answer === 'STOP') return stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.')
   return excludeStories({ deps, slug, journal }, key, stories)

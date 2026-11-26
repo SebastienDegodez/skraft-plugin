@@ -235,6 +235,7 @@ const asked = (run, event) => {
   if (event.incident) Object.assign(run.questions[key], { incident: event.incident, incidents: event.incidents ?? [] })
   if (event.questions) run.questions[key].questions = event.questions
   if (event.block) run.questions[key].block = event.block
+  if (event.facts) run.questions[key].facts = event.facts
   run.question = run.questions[key]
 }
 

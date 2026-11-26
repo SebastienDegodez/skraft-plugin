@@ -29,7 +29,7 @@ const askToGoOn = async ({ deps, slug, journal }, overlaps) => {
   const hash = await deps.hasher.sha256(JSON.stringify(overlaps))
   const lines = overlaps.map(({ branch, context }) => `${branch} also changes the context ${context}`).join('; ')
   const text = `Other open design branches change contexts this run changes: ${lines}. Continue and publish this design anyway, or stop and design again once they merge?`
-  const question = await contextQuestion(journal, { key: `architecture-concurrent-${hash.slice(0, 12)}`, kind: 'architecture-concurrent', text, step: 'pr_writer' })
+  const question = await contextQuestion(journal, { key: `architecture-concurrent-${hash.slice(0, 12)}`, kind: 'architecture-concurrent', text, step: 'pr_writer', details: { facts: { overlaps } } })
   if (!question.answer) return waitingFor(slug, question)
   return question.answer === 'STOP' ? stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.') : null
 }

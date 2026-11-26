@@ -1,7 +1,15 @@
+import { code, inert, oneLine } from '../reporting/markdown-safety.mjs'
+
 /**
  * The words of a CI design run's question comments, per story language: the headings, the effect
  * of each answer by the kind of question, and why a step is blocked (#662).
  */
+
+/** A story the architect cannot design, on one line: its number and the reason it gave. @param {string} colon @returns {(story: { issue: number, reason: string }) => string} */
+const storyLine = (colon) => ({ issue, reason }) => `- #${issue}${colon} ${inert(oneLine(reason))}`
+
+/** An open design branch and a context it changes too. @param {string} verb @param {{ branch: string, context: string }} overlap */
+const overlapLine = (verb, { branch, context }) => `- ${code(branch)} ${verb} ${code(context)}`
 
 /** @param {string} agent @param {number} attempt */
 const twiceEn = (agent, attempt) => `${agent} failed the same way on attempts ${attempt - 1} and ${attempt}.`
@@ -48,6 +56,11 @@ export const QUESTION_WORDS = Object.freeze({
       'architecture-exclusions': { CONTINUE: 'goes on without the excluded stories' },
       'architecture-concurrent': { CONTINUE: 'publishes this design anyway' },
     },
+    texts: {
+      'architecture-blocked': ({ stories }) => ['The architect cannot design these stories:', ...stories.map(storyLine(':')), '', 'Go on without them, or stop. Refine the stories left out with /skraft-refine.'],
+      'architecture-concurrent': ({ overlaps }) => ['Other open design branches change contexts this run changes:', ...overlaps.map((one) => overlapLine('also changes the context', one)), '', 'Publish this design anyway, or stop and design again once they are merged.'],
+    },
+    refreshConflict: 'REFRESH could not take the default branch into this run\'s branch: Git stopped on a conflict and undid the merge. Merge the default branch into the branch yourself, then answer REFRESH again.',
   }),
   fr: Object.freeze({
     instructionTitle: 'Le run attend votre instruction',
@@ -85,5 +98,10 @@ export const QUESTION_WORDS = Object.freeze({
       'architecture-exclusions': { CONTINUE: 'continue sans les stories exclues' },
       'architecture-concurrent': { CONTINUE: 'publie ce design quand même' },
     },
+    texts: {
+      'architecture-blocked': ({ stories }) => ['L’architecte ne peut pas concevoir ces stories :', ...stories.map(storyLine(' :')), '', 'Continuez sans elles, ou arrêtez. Affinez les stories laissées de côté avec /skraft-refine.'],
+      'architecture-concurrent': ({ overlaps }) => ['D’autres branches de design ouvertes changent des contextes que ce run change :', ...overlaps.map((one) => overlapLine('change aussi le contexte', one)), '', 'Publiez ce design quand même, ou arrêtez et concevez à nouveau une fois qu’elles sont fusionnées.'],
+    },
+    refreshConflict: 'REFRESH n’a pas pu reprendre la branche par défaut dans la branche de ce run : Git s’est arrêté sur un conflit et a annulé la fusion. Fusionnez vous-même la branche par défaut dans la branche, puis répondez REFRESH à nouveau.',
   }),
 })

@@ -160,8 +160,8 @@ test('a human-blocked architecture decision opens an engine-approved draft PR wi
   assert.ok(host.codeHost.pullRequests[0].body.includes(`A decision waits on a person (key \`${key}\`): it is asked in a comment of its own on this pull request, where the reply goes`), host.codeHost.pullRequests[0].body)
   const [asked] = host.codeHost.pullRequestComments
   assert.match(asked.body, /^### A decision waits on you$/m)
-  assert.match(asked.body, /^> The solution architect blocked these stories: #43: Missing business decision\./m)
-  assert.doesNotMatch(asked.body, /> .*REFRESH takes the default branch/)
+  assert.ok(asked.body.includes('**The question**\n\nThe architect cannot design these stories:\n- #43: Missing business decision.\n\nGo on without them, or stop. Refine the stories left out with /skraft-refine.'), asked.body)
+  assert.doesNotMatch(asked.body, /REFRESH takes the default branch/)
   assert.ok(asked.body.includes('| Answer | Effect |\n| --- | --- |\n| `CONTINUE` | goes on without the blocked stories |\n| `REFRESH` | takes the default branch as it is now, detects the components again and designs again from RESEARCH |\n| `STOP` | ends the run |'), asked.body)
   assert.ok(asked.body.includes('```text\n/skraft-answer CONTINUE\n```'), asked.body)
 })
@@ -965,4 +965,57 @@ test('a forge that refuses to make the draft ready leaves the run\'s pull reques
   assert.match(published.reason, /gh could not make pull request #42 ready for review on acme\/shop/)
   assert.equal(host.codeHost.pullRequests[0].draft, true)
   assert.ok(host.events().some(({ type, write, outcome }) => type === 'forge.write' && write === 'pull-request-ready' && outcome === 'refused'))
+})
+
+test('in CI a question reads in the story\'s language: the stories the architect cannot design, then its answer, in French', async () => {
+  const french = (number) => ({ ...story(number), title: 'Paiement par carte', body: 'AC-1 : le reçu est visible pour le client dans la page de paiement.' })
+  const { host, deps, run } = session([french(42), french(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  deps.architectureForge.read = async () => ({ ok: true, issue: french(42) })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), agent({ work: async ({ workspace, git, tracking }) => {
+    const [current] = JSON.parse(await tracking.read('epic-42', 'plans/architecture-pass.json')).stories
+    const path = 'docs/architecture/runs/epic-42/42-paiement-par-carte.md'
+    await workspace.write(path, briefOf(current))
+    git.change(path)
+    await tracking.write('epic-42', 'details/blocked-stories.json', JSON.stringify([{ issue: 43, reason: 'Il manque la décision métier.' }]))
+  } })(host))
+  const paused = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(paused.question.kind, 'architecture-blocked', paused.reason)
+  const [asked] = host.codeHost.pullRequestComments
+  assert.ok(asked.body.includes('**La question**\n\nL’architecte ne peut pas concevoir ces stories :\n- #43 : Il manque la décision métier.\n\nContinuez sans elles, ou arrêtez. Affinez les stories laissées de côté avec /skraft-refine.'), asked.body)
+  assert.match(asked.body, /^\| `CONTINUE` \| continue sans les stories bloquées \|$/m)
+  assert.doesNotMatch(asked.body, /The solution architect/)
+  host.codeHost.permissions = { maintainer: 'write' }
+  await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer continue' })
+  await draftInCi(deps, { status: 'waiting', slug: 'epic-42' })
+  assert.match(asked.body, /^\*\*Réponse enregistrée, de maintainer :\*\* `CONTINUE`\n\n> L’architecte ne peut pas concevoir ces stories :$/m)
+})
+
+test('in CI the open design branches that change the same contexts are listed in the question\'s comment, one per line', async () => {
+  const other = { branch: 'design/epic-7', paths: ['docs/architecture/contexts/checkout/event-model/pay.md'] }
+  const { host, deps, run } = session([story(42)], 'issue-42', { concurrent: [other], config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ issue: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42')(host))
+  const paused = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(paused.question.kind, 'architecture-concurrent', paused.reason)
+  const [asked] = host.codeHost.pullRequestComments
+  assert.ok(asked.body.includes('**The question**\n\nOther open design branches change contexts this run changes:\n- `design/epic-7` also changes the context `checkout`\n\nPublish this design anyway, or stop and design again once they are merged.'), asked.body)
+  assert.match(asked.body, /^\| `CONTINUE` \| publishes this design anyway \|$/m)
+})
+
+test('in CI a REFRESH Git stops on a conflict asks, in its comment, to merge the default branch by hand, then REFRESH again', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  deps.architectureRepository.snapshot = async () => ({ ok: true, sha: 'main-2', paths: [], read: async () => null })
+  await run.start({ issue: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), agent({ result: { status: 'blocked', summary: 'No component of this working copy carries the stories.' } })(host))
+  await draftInCi(deps, await createRunPipeline(deps).run())
+  const question = host.events().findLast(({ type }) => type === 'question.asked')
+  host.git.takeFails = true
+  await createDecide(deps).decide({ key: question.key, answer: 'REFRESH' })
+  await draftInCi(deps, await createRunPipeline(deps).run())
+  const conflict = host.codeHost.comments.findLast(({ body }) => body.startsWith(`<!-- skraft-design:question:v1 key=${question.key}-refresh -->`))
+  assert.ok(conflict, host.codeHost.comments.map(({ body }) => body.split('\n')[0]).join(', '))
+  assert.match(conflict.body, /^REFRESH could not take the default branch into this run's branch: Git stopped on a conflict and undid the merge\. Merge the default branch into the branch yourself, then answer REFRESH again\.$/m)
+  assert.match(conflict.body, /^\| `REFRESH` \| takes the default branch as it is now/m)
+  assert.ok(conflict.body.includes('```text\n/skraft-answer REFRESH\n```'), conflict.body)
 })
