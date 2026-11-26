@@ -16,12 +16,14 @@ const NODE = JSON.stringify(process.execPath)
 const FOLDER = 'logs/runs/deliver-1-1'
 
 const attemptWithRepl = async (t) => {
+  let host = null
+  // Before the repository's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(() => host?.close())
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   await toDeliveryAttempt(cwd)
-  const host = mcpHost({ roots: [cwd] })
+  host = mcpHost({ roots: [cwd] })
   await host.initialize()
-  t.after(() => host.close())
   return { cwd, host }
 }
 

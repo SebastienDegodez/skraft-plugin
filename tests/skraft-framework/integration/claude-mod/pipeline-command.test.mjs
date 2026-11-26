@@ -97,13 +97,13 @@ test('/skraft on a new slug starts at once and spawns the researcher on its outp
   assert.ok(spawn.prompt.includes('- Story: #42 — Pay by card'), spawn.prompt)
   const [output] = briefPaths(spawn.prompt).outputs
   assert.ok(output.startsWith(mod.root), output)
-  assert.match(output, /[\\/]\.copilot-tracking\/skraft-plans\/checkout\/research\/\d{4}-\d{2}-\d{2}\/checkout-research\.md$/)
+  assert.match(output, /[\\/]\.copilot-tracking[\\/]skraft-plans[\\/]checkout[\\/]research[\\/]\d{4}-\d{2}-\d{2}[\\/]checkout-research\.md$/)
   assert.deepEqual(seen, [RESEARCH_TEMPLATE])
   assert.equal(await readFile(mod.activeSlugPath, 'utf8'), 'checkout\n')
   const [started] = await mod.journal('checkout')
   assert.deepEqual(started.story, { issue: 42, title: 'Pay by card' })
   assert.deepEqual(started.artifacts, [issueFile(started.at.slice(0, 10))])
-  assert.deepEqual(briefOf(spawn.prompt).inputs.map((path) => [path.startsWith(mod.root), path.endsWith(`.copilot-tracking/skraft-plans/checkout/${started.artifacts[0]}`)]), [[true, true]])
+  assert.deepEqual(briefOf(spawn.prompt).inputs.map((path) => [path.startsWith(mod.root), path.endsWith(join('.copilot-tracking', 'skraft-plans', 'checkout', ...started.artifacts[0].split('/')))]), [[true, true]])
   assert.equal(await readFile(join(mod.root, '.copilot-tracking', 'skraft-plans', 'checkout', ...started.artifacts[0].split('/')), 'utf8'), `# Issue #42: ${ISSUE.title}\n\n${ISSUE.url}\n\n${ISSUE.body}\n`)
 }))
 

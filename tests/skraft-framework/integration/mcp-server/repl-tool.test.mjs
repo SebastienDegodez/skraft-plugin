@@ -67,12 +67,14 @@ test('in the attempt of the software engineer, a cell runs real programs, variab
 })
 
 test('two skraft_repl calls sent together share one kernel, the one the orphan journal names, and the second is told the first cell runs', BOUNDED, async (t) => {
+  let host = null
+  // Before the repository's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(() => host?.close())
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   await toDeliveryAttempt(cwd)
-  const host = mcpHost({ roots: [cwd] })
+  host = mcpHost({ roots: [cwd] })
   await host.initialize()
-  t.after(() => host.close())
   const code = 'await new Promise((done) => setTimeout(done, 3000)); process.pid'
 
   const [first, second] = await Promise.all([host.call('skraft_repl', { code }), host.call('skraft_repl', { code })])
@@ -82,14 +84,16 @@ test('two skraft_repl calls sent together share one kernel, the one the orphan j
 })
 
 test('skraft_status answers well before the system gives a process\'s start time, while a run starts', BOUNDED, async (t) => {
+  let host = null
+  // Before the repository's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(() => host?.close())
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   await toDeliveryAttempt(cwd)
   const slowReader = { file: process.execPath, args: ['-e', 'setTimeout(() => console.log("slow start time"), 8000)'] }
   const adapt = (adapters, directory) => ({ ...adapters, repl: { ...adapters.repl, orphans: createOrphanJournal({ folder: join(directory, '.copilot-tracking', 'skraft-repl'), creationOf: (pid) => processCreation(pid, process.platform, slowReader) }) } })
-  const host = mcpHost({ roots: [cwd], adapt })
+  host = mcpHost({ roots: [cwd], adapt })
   await host.initialize()
-  t.after(() => host.close())
   await host.call('skraft_repl', { code: '1' })
 
   host.write(JSON.stringify({ jsonrpc: '2.0', id: 'starts-a-run', method: 'tools/call', params: { name: 'skraft_repl', arguments: { code: `globalThis.long = run([${NODE}, '-e', 'setTimeout(() => {}, 5000)']); 1` } } }))
@@ -179,12 +183,14 @@ test('with no attempt open, skraft_repl_reset is refused with a fixed text', BOU
 })
 
 test('skraft_repl_reset during a cell waiting on a run ends the kernel and the run: the cell answers repl-reset, and the next skraft_repl starts a fresh kernel whose runs take the next ids', BOUNDED, async (t) => {
+  let host = null
+  // Before the repository's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(() => host?.close())
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   await toDeliveryAttempt(cwd)
-  const host = mcpHost({ roots: [cwd] })
+  host = mcpHost({ roots: [cwd] })
   await host.initialize()
-  t.after(() => host.close())
   await host.call('skraft_repl', { code: 'var kept = 1' })
   const waiting = host.call('skraft_repl', { code: `await run([${NODE}, '-e', 'setInterval(() => {}, 1000)'])` })
   const journal = join(cwd, '.copilot-tracking', 'skraft-repl', `${process.pid}.json`)
@@ -200,12 +206,14 @@ test('skraft_repl_reset during a cell waiting on a run ends the kernel and the r
 })
 
 test('skraft_repl_reset is never refused as busy: during a cell that never yields it answers within ten seconds, and with no kernel it says there was none', BOUNDED, async (t) => {
+  let host = null
+  // Before the repository's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(() => host?.close())
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   await toDeliveryAttempt(cwd)
-  const host = mcpHost({ roots: [cwd] })
+  host = mcpHost({ roots: [cwd] })
   await host.initialize()
-  t.after(() => host.close())
   const none = await host.call('skraft_repl_reset')
   host.write(JSON.stringify({ jsonrpc: '2.0', id: 'spins', method: 'tools/call', params: { name: 'skraft_repl', arguments: { code: 'while (true) {}' } } }))
   await new Promise((done) => setTimeout(done, 300))
@@ -219,6 +227,9 @@ test('skraft_repl_reset is never refused as busy: during a cell that never yield
 })
 
 test('skraft_repl_reset waits for no other tool: it answers while skraft_status is still running', BOUNDED, async (t) => {
+  let host = null
+  // Before the repository's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(() => host?.close())
   const { cwd } = pipelineRepository(t)
   await skraft(cwd, ['init', SLUG])
   await toDeliveryAttempt(cwd)
@@ -229,9 +240,8 @@ test('skraft_repl_reset waits for no other tool: it answers while skraft_status 
     const current = adapters.activePipeline.current
     return { ...adapters, activePipeline: { ...adapters.activePipeline, current: async () => { slow.entered(); await new Promise((done) => setTimeout(done, 4000)); return current() } } }
   }
-  const host = mcpHost({ roots: [cwd], adapt })
+  host = mcpHost({ roots: [cwd], adapt })
   await host.initialize()
-  t.after(() => host.close())
   const entered = new Promise((resolve) => { slow.entered = resolve })
   slow.armed = true
 
