@@ -82,7 +82,13 @@ the draft it opened to ask a person; a forge that refuses leaves the publication
 `publish.draft` keeps its meaning for skraft-deliver. `skraft_deliver_start` takes the same `mode`,
 journaled as `run.mode`: a CI delivery asks each of its questions in a comment of its own, on the
 story's issue until its branch holds a commit, then on its draft pull request, and records
-`/skraft-answer` replies the same way. A scope question stops it at once. A
+`/skraft-answer` replies the same way; a refusal takes its corrections after it
+(`/skraft-answer REVISE …`). `ci/skraft-deliver.yml` is the workflow a project copies: a reply on the
+story or the draft resumes the story's latest delivery (`deliver/issue-<n>`, or its newest
+`-run-<k>`), its tracking folder kept as an artifact named after the run, so that a new delivery of
+the story never overwrites an earlier one's; a reply to a design run is left to skraft-design's
+workflow. The project's toolchain is installed by steps the team adds there: the agents never
+install one. A scope question stops it at once. A
 `/skraft-answer` comment (then one `Q1: B` line per question, one option, or one JSON object; the
 key may be left out) is recorded by `engine/drivers/cli/ci-reply.mjs`, without a model, only
 when the forge says its author has `admin`, `maintain` or `write` access, with the provenance

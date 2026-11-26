@@ -1,0 +1,176 @@
+# skraft-deliver in CI (#662). Copy this file into the project as .github/workflows/skraft-deliver.yml.
+#
+# - Run it by hand (workflow_dispatch) with one story issue: the delivery runs in mode "ci". When it
+#   waits on a person, the engine asks each question in a comment of its own: on the story while
+#   the delivery's branch holds no commit, then on its draft pull request. A new question never
+#   rewrites an earlier one; once answered, its comment says what was recorded and by whom.
+# - Answer with one comment: /skraft-answer, then one option (`/skraft-answer approved`), or a
+#   refusal and your corrections (`/skraft-answer REVISE mail the receipt from orders`), or an
+#   instruction in your own words for a blocked step. The comment resumes the same delivery: the
+#   engine records it only when its author has write access to the repository (admin, maintain or
+#   write) and it answers the pending question.
+# - The delivery waits on a design (a brief not merged yet, a stale ADR)? Merge the design, then
+#   answer /skraft-answer RESUME; or CONTINUE to deliver on a light design.
+#
+# - The workflow gives the publication consent for this repository (ci-consent.mjs), in the job's
+#   own home: committing this file is the team's consent. skraft-deliver-config.json must be
+#   committed with the project's components, their commands and their Gherkin choice.
+# - The agents run the project's commands through the engine's REPL and never install a toolchain:
+#   add the steps that install it below, where the file says so.
+#
+# Secrets:
+# - SKRAFT_DELIVER_JOURNAL_KEY: 64 hexadecimal characters (`openssl rand -hex 32`); the journal is
+#   signed with it, so the job that resumes verifies what the pausing job wrote.
+# - ANTHROPIC_API_KEY: the Claude Code host that conducts the agents.
+# Variables:
+# - SKRAFT_PLUGIN_REF: the skraft-plugin ref the plugin is taken from (a tag), main by default.
+
+name: skraft-deliver
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Story issue number
+        required: true
+  issue_comment:
+    # edited: a reply corrected in place; the engine refuses a key that is already answered.
+    types: [created, edited]
+
+concurrency:
+  group: skraft-deliver-${{ github.event.issue.number || github.event.inputs.issue }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  deliver:
+    # A comment resumes only a delivery, and only when it is a reply; the engine checks the
+    # author's access before anything runs.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.comment.body, '/skraft-answer')
+    runs-on: ubuntu-latest
+    # A delivery runs the project's build and tests between two questions.
+    timeout-minutes: 300
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SKRAFT_DELIVER_JOURNAL_KEY: ${{ secrets.SKRAFT_DELIVER_JOURNAL_KEY }}
+      PLUGIN: ${{ github.workspace }}/.skraft-plugin/plugins/skraft-deliver
+    steps:
+      # The latest delivery of the story the reply is on: deliver/issue-<n>, or its newest
+      # deliver/issue-<n>-run-<k>. A reply to anything else (a design run) is not this job's.
+      - name: Find the delivery the reply answers
+        id: target
+        if: github.event_name == 'issue_comment'
+        env:
+          NUMBER: ${{ github.event.issue.number }}
+          ON_PULL_REQUEST: ${{ github.event.issue.pull_request && 'yes' || '' }}
+        run: |
+          if [ -n "$ON_PULL_REQUEST" ]; then
+            head="$(gh pr view "$NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName --jq .headRefName)"
+          else
+            head="$(gh api "repos/$GITHUB_REPOSITORY/branches?per_page=100" --paginate --jq '.[].name' \
+              | grep -E "^deliver/issue-$NUMBER(-run-[0-9]+)?$" \
+              | awk -F'-run-' '{ print (NF > 1 ? $2 : 1) "\t" $0 }' | sort -n | tail -1 | cut -f2)"
+          fi
+          case "$head" in
+            deliver/*) echo "branch=$head" >> "$GITHUB_OUTPUT" ;;
+            *) echo "no delivery answers #$NUMBER: this reply is not for skraft-deliver" ;;
+          esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+        with:
+          ref: ${{ steps.target.outputs.branch || github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+        with:
+          repository: SebastienDegodez/skraft-plugin
+          ref: ${{ vars.SKRAFT_PLUGIN_REF || 'main' }}
+          path: .skraft-plugin
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+        with:
+          node-version: '22'
+
+      # The project's toolchain goes here: the agents never install one. For a Java project, for
+      # instance, pin actions/setup-java to a commit and give it the JDK and the build tool the
+      # project asks (distribution, java-version, cache: maven). The runner's Docker serves
+      # Testcontainers and Microcks.
+
+      - name: Restore the delivery this reply resumes
+        if: steps.target.outputs.branch != ''
+        env:
+          BRANCH: ${{ steps.target.outputs.branch }}
+        run: |
+          name="skraft-deliver-${BRANCH#deliver/}"
+          id="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name&per_page=1" --jq '.artifacts[0].id // empty')"
+          if [ -z "$id" ]; then echo "no kept delivery for $BRANCH"; exit 1; fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/run.zip"
+          mkdir -p .copilot-tracking/skraft-deliver-runs
+          unzip -q -o "$RUNNER_TEMP/run.zip" -d .copilot-tracking/skraft-deliver-runs
+
+      - name: Record the reply
+        if: steps.target.outputs.branch != ''
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+        run: |
+          printf '%s' "$COMMENT" > "$RUNNER_TEMP/comment.md"
+          node "$PLUGIN/engine/drivers/cli/ci-reply.mjs" --author "$AUTHOR" --comment-file "$RUNNER_TEMP/comment.md"
+
+      - name: Consent to publish on this repository
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+        run: node "$PLUGIN/engine/drivers/cli/ci-consent.mjs"
+
+      - name: Install Claude Code
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+        run: npm install --global @anthropic-ai/claude-code
+
+      - name: Deliver
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE: ${{ github.event.inputs.issue }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            task="Use the skraft-deliver skill to deliver issue #$ISSUE with mode ci."
+          else
+            task="Use the skraft-deliver skill to resume the active delivery: call skraft_deliver_next."
+          fi
+          printf '%s\n\n%s\n' "$task The workspace is $GITHUB_WORKSPACE." \
+            "This is a CI run: never answer a question yourself. When the engine waits, report its result and stop. Run every agent in the foreground and wait for its final reply: never end your turn while an agent is still running." > "$RUNNER_TEMP/prompt.txt"
+          claude -p --plugin-dir "$PLUGIN" --permission-mode acceptEdits \
+            --allowedTools "mcp__plugin_skraft-deliver_skraft-deliver,Agent,Read,Write,Edit,Glob,Grep,Skill,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(mkdir -p:*)" \
+            < "$RUNNER_TEMP/prompt.txt"
+
+      # Fails the job when the delivery waits on a question no comment holds.
+      - name: Check the question reached people
+        if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+        run: node "$PLUGIN/engine/drivers/cli/ci-check.mjs"
+
+      # Kept under the delivery's own name, so that a new delivery of the story keeps the earlier one's.
+      - name: Name the kept delivery
+        id: kept
+        if: always() && (github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != '')
+        run: |
+          slug="$(cat .copilot-tracking/skraft-deliver-runs/.active-slug 2>/dev/null || true)"
+          echo "name=skraft-deliver-${slug:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the delivery for the next reply
+        if: always() && (github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != '')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.kept.outputs.name }}
+          path: .copilot-tracking/skraft-deliver-runs/
+          include-hidden-files: true
+          overwrite: true
+          retention-days: 30

@@ -133,6 +133,14 @@ Review and merge the architecture PR yourself. Ask the host to use `skraft-deliv
 Its separate setup and `skraft-deliver-config.json` preserve independent publication choices,
 commands and Gherkin bindings. Use the same `baseBranch` as design.
 
+To deliver in CI, copy `plugins/skraft-deliver/ci/skraft-deliver.yml` into `.github/workflows/`,
+commit `skraft-deliver-config.json` with the project's components, add the secrets
+`SKRAFT_DELIVER_JOURNAL_KEY` and `ANTHROPIC_API_KEY`, and add the steps that install the project's
+toolchain where the file says so: the agents never install one. Run it with a story: each question
+is asked in a comment of its own, on the story, then on the draft pull request (the light design
+to ratify, the scenarios and their red), and answered with `/skraft-answer`, such as
+`/skraft-answer REVISE mail the receipt from orders`.
+
 Delivery reads the brief and cited documents from one fetched commit of that merged base,
 then supplies snapshots to its agents. DISTILL, scenario review, human approval, TDD,
 gates, implementation review and optional visuals precede the delivery PR, which also removes
