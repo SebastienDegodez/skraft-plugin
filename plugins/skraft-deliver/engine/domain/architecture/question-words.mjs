@@ -31,6 +31,7 @@ export const QUESTION_WORDS = Object.freeze({
     instructionExample: '<your instruction>',
     optionOrWords: '<option or your words>',
     recorded: 'Recorded answer:',
+    recordedFrom: (author) => `Recorded answer, from ${author}:`,
     key: (key) => `Key: ${key}`,
     causes: {
       'agent-blocked': ({ agent }) => `${agent} cannot go on.`,
@@ -67,6 +68,7 @@ export const QUESTION_WORDS = Object.freeze({
     instructionExample: '<votre instruction>',
     optionOrWords: '<option ou vos mots>',
     recorded: 'Réponse enregistrée :',
+    recordedFrom: (author) => `Réponse enregistrée, de ${author} :`,
     key: (key) => `Clé : ${key}`,
     causes: {
       'agent-blocked': ({ agent }) => `${agent} ne peut pas continuer.`,

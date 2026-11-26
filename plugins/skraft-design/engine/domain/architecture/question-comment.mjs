@@ -99,11 +99,12 @@ const openQuestion = (asked, words) => [
  * The comment of a question once answered: the answer the run recorded, then the question as it
  * was asked, without the reply it asked for.
  * @param {{ key: string, text: string, block?: any, questions?: any[] }} question @param {string} answer
- * @param {import('../reporting/language.mjs').Language} language
+ * @param {import('../reporting/language.mjs').Language} language @param {string | null} [author] the forge login of who answered, when the journal holds it
  */
-export const answeredComment = (question, answer, language) => {
+export const answeredComment = (question, answer, language, author = null) => {
   const words = wordsOf(language)
-  return [questionMarker(question.key), '', `### ${words.answeredTitle}`, '', `**${words.recorded}** ${code(quoted(answer))}`, '',
+  const recorded = author === null ? words.recorded : words.recordedFrom(cell(author))
+  return [questionMarker(question.key), '', `### ${words.answeredTitle}`, '', `**${recorded}** ${code(quoted(answer))}`, '',
     `> ${askedLine(question, words)}`, '', `<sub>${words.key(code(question.key))}</sub>`, ''].join('\n')
 }
 

@@ -76,17 +76,17 @@ const postQuestion = async (deps, { slug, journal, codeHost }, { question, on, n
 
 /** The questions posted, answered since and not marked yet. @param {any[]} events */
 const unmarked = (events) => {
-  const answered = new Map(events.filter(({ type }) => type === 'question.answered').map(({ key, answer }) => [key, answer]))
+  const answered = new Map(events.filter(({ type }) => type === 'question.answered').map(({ key, answer, author = null }) => [key, { answer, author }]))
   const marked = new Set(events.filter(({ type }) => type === 'architecture.question-answered').map(({ key }) => key))
   return events.filter(({ type, key, number }) => type === 'architecture.question-posted' && number !== undefined && answered.has(key) && !marked.has(key))
-    .map((posted) => ({ ...posted, answer: answered.get(posted.key) }))
+    .map((posted) => ({ ...posted, ...answered.get(posted.key) }))
 }
 
 /** @param {any} deps @param {{ slug: string, journal: any, codeHost: any }} opened @param {any} posted */
 const markOne = async (deps, { slug, journal, codeHost }, posted) => {
   const run = deriveRun(journal.events)
   const asked = run.questions[posted.key] ?? { key: posted.key, text: '' }
-  const body = answeredComment(asked, String(posted.answer), await storyLanguage(deps, slug, run))
+  const body = answeredComment(asked, String(posted.answer), await storyLanguage(deps, slug, run), posted.author)
   const kept = await keep({ ...deps, codeHost }, slug, { ...posted, body })
   if (kept.ok) await journal.append('architecture.question-answered', { key: posted.key, url: kept.url })
 }

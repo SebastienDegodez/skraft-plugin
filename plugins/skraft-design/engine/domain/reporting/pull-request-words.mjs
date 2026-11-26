@@ -67,7 +67,7 @@ const EN = Object.freeze({
   pendingInComment: (key) => `A decision waits on a person (key ${key}): it is asked in a comment of its own on this pull request, where the reply goes`,
   leftOut: (issue, reason) => `Story #${issue} left out: ${reason ?? 'the issue is closed'}`,
   oversized: (path, kb) => `${path} is ${kb} KB, past the 15 KB a shared document keeps: split it`,
-  answeredDecision: (key, answer) => `Answered (key ${key}): ${answer}`,
+  answeredDecision: (key, answer, author) => `Answered${author === null ? '' : ` by ${author}`} (key ${key}): ${answer}`,
   replyRead: (author, answers) => `@${author}'s reply, as the engine read it: ${answers}. The design went on with it; correct it in the review of this pull request if it is not what was meant`,
   replyUnread: (author, reason) => `@${author}'s reply could not be read: ${reason}. Reply again with one line per question, such as Q1: B`,
   /** @param {string} node @param {string} reason */
@@ -134,7 +134,7 @@ const FR = Object.freeze({
   pendingInComment: (key) => `Une décision attend une personne (clé ${key}) : elle est posée dans un commentaire à part de cette pull request, où l’on répond`,
   leftOut: (issue, reason) => `Story #${issue} écartée : ${reason ?? 'l’issue est fermée'}`,
   oversized: (path, kb) => `${path} fait ${kb} Ko, au-delà des 15 Ko d’un document partagé : découpez-le`,
-  answeredDecision: (key, answer) => `Répondu (clé ${key}) : ${answer}`,
+  answeredDecision: (key, answer, author) => `Répondu${author === null ? '' : ` par ${author}`} (clé ${key}) : ${answer}`,
   replyRead: (author, answers) => `Réponse de @${author}, telle que le moteur l’a lue : ${answers}. Le design a continué avec elle ; corrigez-la dans la revue de cette PR si ce n’est pas ce qui était voulu`,
   replyUnread: (author, reason) => `La réponse de @${author} n’a pas pu être lue : ${reason}. Répondez de nouveau avec une ligne par question, par exemple Q1: B`,
   noDecision: 'Aucune consignée : aucun ADR proposé ne sera accepté à la fusion dans ce run.',

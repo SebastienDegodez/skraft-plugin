@@ -23,7 +23,7 @@ import { asksAction, reviewCount, stepHeading, stepTable } from './review-table.
  *   slug: string, story: { issue?: number | null, title?: string | null } | null, link: string | null, prose: Prose | null,
  *   adrs: Array<{ path: string, number: number, title: string | null }>,
  *   reds: RedCommit[], evidence: EvidenceFact[], review: ReviewFacts, status: string,
- *   pendingQuestion: import('./run-status.mjs').WaitingQuestion | null, answered?: Array<{ key: string, answer: string }>,
+ *   pendingQuestion: import('./run-status.mjs').WaitingQuestion | null, answered?: Array<{ key: string, answer: string, author?: string | null }>,
  *   report: import('./run-report.mjs').RunReport, models: { families: string[], models: string[] },
  *   visuals: import('./visuals.mjs').Visuals | null,
  *   bodyLimit: number, commentLimit: number, language: import('./language.mjs').Language,
@@ -238,7 +238,7 @@ const decisionLines = (facts) => {
     ...facts.adrs.map(({ path, number, title }) => `- ADR-${String(number).padStart(3, '0')}${title ? ` ${title}` : ''} (${code(path)}), ${words.acceptedOnMerge}`),
     ...(facts.excluded ?? []).map(({ issue, reason }) => `- ${words.leftOut(issue, reason === null ? null : inert(oneLine(reason)))}`),
     ...(facts.oversized ?? []).map(({ path, kb }) => `- ${words.oversized(code(path), kb)}`),
-    ...(facts.answered ?? []).map(({ key, answer }) => `- ${words.answeredDecision(code(key), inert(shortLine(answer)))}`),
+    ...(facts.answered ?? []).map(({ key, answer, author = null }) => `- ${words.answeredDecision(code(key), inert(shortLine(answer)), author === null ? null : inert(oneLine(author)))}`),
     ...(facts.replies ?? []).map((reply) => `- ${replyLine(reply, words)}`),
     ...pendingDecisionLines(facts.pendingQuestion, words),
   ]

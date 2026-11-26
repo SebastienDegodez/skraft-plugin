@@ -71,12 +71,13 @@ const confirmThenRecord = async (confirmation, journal, slug, question, reading)
   if (!HUMAN_PROVENANCES.includes(confirmation.by)) return refused(slug, question.key, 'unknown-provenance', UNKNOWN_PROVENANCE)
   const confirmed = await confirmation.confirm({ slug, key: question.key, answer: reading.answer })
   if (!confirmed.ok) return refused(slug, question.key, confirmed.code, confirmed.reason)
-  return record(journal, slug, question, { ...reading, by: confirmation.by })
+  return record(journal, slug, question, { ...reading, by: confirmation.by, ...(confirmation.author ? { author: confirmation.author } : {}) })
 }
 
 /**
  * @param {import('../journal/run-journal.mjs').OpenJournal} journal @param {string} slug @param {AskedQuestion} question
- * @param {{ answer: string, reason: string | null, by: string, model?: string | null, cost?: number | null, costUnit?: unknown }} reading
+ * @param {{ answer: string, reason: string | null, by: string, author?: string, model?: string | null, cost?: number | null, costUnit?: unknown }} reading
+ *   author: the forge login of the person whose comment answered, the forge having said they may
  * @returns {Promise<DecideOutcome>}
  */
 const record = async (journal, slug, { key }, { answer, reason, by, ...usage }) => {

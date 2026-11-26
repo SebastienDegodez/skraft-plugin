@@ -262,7 +262,7 @@ const MACHINE_QUESTIONS = Object.freeze(['environment', 'unforeseen'])
  */
 const answeredByPeople = (events, run) => events
   .filter(({ type, key, by }) => type === 'question.answered' && !NOT_A_PERSON.includes(by) && !MACHINE_QUESTIONS.includes(run.questions[key]?.kind))
-  .map(({ key, answer }) => ({ key, answer: String(answer) }))
+  .map(({ key, answer, author = null }) => ({ key, answer: String(answer), author }))
 
 const readReplies = (events) => events.filter((event) => ['reply.interpreted', 'reply.uninterpretable'].includes(event.type))
   .map(({ author, answers = null, reason = null }) => ({ author, answers, reason }))

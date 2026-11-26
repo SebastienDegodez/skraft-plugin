@@ -67,6 +67,7 @@ const openQuestionsOf = (journal, key) => {
  */
 const writerConfirmation = (codeHost, author) => ({
   by: 'pr-comment',
+  author,
   confirm: async () => writerCheck(author, await codeHost.permissionOf(author)),
 })
 
