@@ -17,7 +17,7 @@ const session = (options = {}) => {
     number: 42, title: 'Checkout', body: 'AC-1: receipt visible.', story: true, forge: 'github', repository: 'shop/checkout',
   } }) }, architectureRepository: {
     branch: async (request) => { branches.push(request); return { ok: true } },
-    snapshot: async () => ({ ok: true, sha: 'merged-sha', paths: [] }), unmerged: async () => ({ ok: true, found: false }),
+    snapshot: async () => ({ ok: true, sha: 'merged-sha', paths: [] }), unmerged: async () => ({ ok: true, found: false }), concurrent: async () => ({ ok: true, branches: [] }),
   } }
   const run = createDeliveryRun(deps)
   return { host, deps, branches, run }

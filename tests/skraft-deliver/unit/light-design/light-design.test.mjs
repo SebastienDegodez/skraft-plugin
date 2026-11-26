@@ -14,7 +14,7 @@ const session = (options = {}) => {
   const deps = { ...host.deps,
     hasher: { sha256: async (text) => createHash('sha256').update(text).digest('hex'), hmacSha256: async (key, text) => createHmac('sha256', key).update(text).digest('hex') },
     architectureForge: { read: async () => ({ ok: true, issue: { number: 42, title: 'Checkout receipt', body: BODY, story: true, forge: 'github', repository: 'shop/checkout' } }) },
-    architectureRepository: { branch: async () => ({ ok: true }), snapshot: async () => ({ ok: true, sha: 'merged-sha', paths: [], read: async () => null }), unmerged: async () => ({ ok: true, found: false }) },
+    architectureRepository: { branch: async () => ({ ok: true }), snapshot: async () => ({ ok: true, sha: 'merged-sha', paths: [], read: async () => null }), unmerged: async () => ({ ok: true, found: false }), concurrent: async () => ({ ok: true, branches: [] }) },
   }
   return { host, deps, run: createDeliveryRun(deps) }
 }
@@ -153,4 +153,26 @@ test('DESIGN pauses the delivery; once skraft-design merged a brief, RESUME bind
   assert.deepEqual([manifest.mode, manifest.sha, manifest.brief], ['merged', 'designed-sha', merged.path])
   const wait = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design_wait').map(({ answer, outcome }) => [answer, outcome])
   assert.deepEqual(wait, [['RESUME', 'answered'], ['BRIEF', 'skipped']])
+})
+
+test('an ADR a person ratified at the light design stays as they ratified it: a later attempt that rewrites it, even back to Proposed, is refused', async () => {
+  const { host, deps, run } = session({ answers: [{ answer: 'APPROVED' }] })
+  await run.start({ issue: 42 })
+  const rewrites = agent({ work: ({ git }) => { host.workspace.files.set(ADR, adrText().replace('notification gateway', 'mail service')); git.change(ADR) } })
+  host.agentRunner.behaviours.push(lightDesigner(withAdr)(host), rewrites(host), rewrites(host))
+  await createRunPipeline(deps).run()
+  const distill = host.events().find(({ type, step }) => type === 'step.recorded' && step === 'distill')
+  assert.equal(distill.outcome, 'failed')
+  assert.ok(distill.failures.some((line) => line.includes(`${ADR} was ratified by a person at the light design: restore it as they ratified it`)), JSON.stringify(distill.failures))
+})
+
+test('a new ADR numbered as another ADR of an open design branch is refused: both would merge under one number', async () => {
+  const { host, deps, run } = session()
+  deps.architectureRepository.concurrent = async ({ own }) => ({ ok: true, branches: [{ branch: 'design/epic-7', paths: ['docs/adr/adr-001-pay-later.md', 'docs/architecture/context-map.md'], own }] })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(lightDesigner(withAdr)(host), lightDesigner(withAdr)(host))
+  await createRunPipeline(deps).run()
+  const [first] = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'light_design')
+  assert.equal(first.outcome, 'failed')
+  assert.deepEqual(first.failures.filter((line) => line.includes('open design branch')), [`${ADR}: the open design branch design/epic-7 numbers another ADR 001; number yours after the highest ADR of that branch too.`])
 })

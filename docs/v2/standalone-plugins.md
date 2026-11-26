@@ -119,8 +119,8 @@ nothing else: no document of `docs/architecture/` but its brief, no code, no tes
 
 The engine checks each attempt as it checks any other: the brief reads, carries the engine's
 identity, cites only the plan's components and existing files, and cites each ADR it relies on,
-`Accepted` or written by this light design; every ADR it wrote is cited. The ADR checks of
-every step apply as well.
+`Accepted` or written by this light design; every ADR it wrote is cited, under a number no open
+`design/*` branch gives another ADR. The ADR checks of every step apply as well.
 
 `light_design_review` then settles it. With no ADR, and nothing beyond a light design, the
 engine approves it. Beyond a light design means, each read without a model: an ADR that replaces
@@ -128,7 +128,9 @@ or amends a decision already taken, a bounded context the brief marks `(new)`, m
 ADRs, more than eight criteria or more than three components. Otherwise a person reads each ADR's
 decision and each reason: `APPROVED` marks the ADRs Accepted on the branch, effective on the
 merge of the delivery pull request, `REVISE` runs the light design again with their words,
-`DESIGN` pauses the delivery, `STOP` ends it. An approved brief is bound as `mode=light` in `architecture/context.json`, read by
+`DESIGN` pauses the delivery, `STOP` ends it. The engine keeps the SHA-256 of each ratified ADR
+(`plans/ratified-adrs.json`) and refuses any later attempt that changes or deletes one: what the
+person ratified is what the pull request merges. An approved brief is bound as `mode=light` in `architecture/context.json`, read by
 DISTILL, DELIVER and their lenses as a merged one, and leaves the branch before the pull request
 as a merged one does.
 

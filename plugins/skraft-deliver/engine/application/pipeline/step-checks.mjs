@@ -9,7 +9,7 @@ import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../dom
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { checkDesignRecords } from './design-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
-import { lightBriefFailures } from '../architecture/light-design.mjs'
+import { lightBriefFailures, ratifiedFailures } from '../architecture/light-design.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
 import { redRunOf, tracedRuns } from './evidence-checks.mjs'
 import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './scenario-checks.mjs'
@@ -124,7 +124,7 @@ export const checkStep = async (context, step) => {
   if ('stop' in read) return withCommitsOfBlocked(context, step, read.stop)
   const commits = await checkCommits(context.deps, context, { ...step, plan: read.plan.plan })
   if (commits.environment !== null) return { ...environmentOnly(commits.environment), commits: commits.checked }
-  const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
+  const adr = await adrChecks(context, read.touched)
   if (typeof adr === 'string') return { ...environmentOnly(adr), commits: commits.checked }
   const evidence = await evidenceOf(context, step)
   const found = [...resultFailures(read.reading), ...read.records, ...read.plan.failures, ...read.prose, ...read.scope.failures, ...adrLines(adr), ...commits.found]
@@ -217,7 +217,7 @@ const readWritten = async ({ deps, slug, config, base }, step) => {
 export const writtenFailures = async (context, step) => {
   const read = await readWritten(context, step)
   if ('stopped' in read) return { ok: /** @type {const} */ (false), reason: read.stopped }
-  const adr = await adrFailures(context.deps, { base: context.base, touched: read.touched })
+  const adr = await adrChecks(context, read.touched)
   if (typeof adr === 'string') return { ok: /** @type {const} */ (false), reason: adr }
   return { ok: /** @type {const} */ (true), failures: foundIn(read, adr) }
 }
@@ -266,6 +266,17 @@ const researchRecords = async (deps, slug, precreated, config) => {
 const coded = (code, lines) => (typeof lines === 'string' ? lines : lines.map((line) => ({ code, line })))
 
 /** @param {string[]} lines @returns {Failure[]} */
+/**
+ * What the ADRs an attempt touched break: their lifecycle, and a change to one a person ratified at
+ * a light design; a string when the machine cannot tell.
+ * @param {CheckContext} context @param {string[]} touched
+ * @returns {Promise<string[] | string>}
+ */
+const adrChecks = async (context, touched) => {
+  const adr = await adrFailures(context.deps, { base: context.base, touched })
+  return typeof adr === 'string' ? adr : [...adr, ...await ratifiedFailures(context.deps, context.slug, touched)]
+}
+
 const adrLines = (lines) => lines.map((line) => ({ code: /** @type {const} */ ('adr-lifecycle'), line }))
 
 /** @param {string} reason @returns {StepCheck} */

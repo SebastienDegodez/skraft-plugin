@@ -2,6 +2,7 @@ import { adrStatus, briefPath, briefProblem, citedPaths, freshnessOf, normalBody
 import { branchSlug } from '../../domain/pipeline/slug.mjs'
 import { loadConfig } from '../config/bases.mjs'
 import { newProposedAdrs } from '../decisions/adr-ratification.mjs'
+import { adrNumber } from '../../domain/decisions/adr.mjs'
 
 /**
  * A delivery's light design (#669): with no brief merged for its story, a light designer writes one
@@ -35,7 +36,8 @@ export const lightDesignPlan = async (deps, slug) => {
 /**
  * Why the light brief an attempt left sends the light designer back: none, unreadable, another
  * identity than the plan's, a component the plan does not list, a cited file missing, an ADR
- * neither Accepted nor a new Proposed one, or a new ADR the brief does not cite.
+ * neither Accepted nor a new Proposed one, a new ADR the brief does not cite or whose number an
+ * open design branch already gives another ADR.
  * @param {any} deps @param {{ slug: string, base: ReadonlyArray<{ component: string | null, sha: string }> }} run
  * @returns {Promise<string[]>}
  */
@@ -53,7 +55,21 @@ export const lightBriefFailures = async (deps, { slug, base }) => {
 const uncitedFailures = async (deps, brief, base) => {
   const written = await newProposedAdrs(deps, base)
   if (typeof written === 'string') return [written]
-  return written.filter((path) => !brief.adrs.includes(path)).map((path) => `${path}: cite it in the brief's adrs and in each criterion that relies on it, or delete it.`)
+  return [...written.filter((path) => !brief.adrs.includes(path)).map((path) => `${path}: cite it in the brief's adrs and in each criterion that relies on it, or delete it.`),
+    ...await takenNumbers(deps, written)]
+}
+
+/**
+ * Each new ADR whose number an open design branch gives another ADR: both would merge under one
+ * number. A Git that cannot list those branches leaves the numbers to the review of the pull request.
+ * @param {any} deps @param {string[]} written
+ */
+const takenNumbers = async (deps, written) => {
+  const others = await deps.architectureRepository.concurrent({ own: await deps.sourceControl.branch('.') })
+  if (!others.ok || written.length === 0) return []
+  const taken = others.branches.flatMap(({ branch, paths }) => paths.filter((path) => path.startsWith('docs/adr/') && adrNumber(path) !== null).map((path) => ({ branch, path })))
+  return written.flatMap((path) => taken.filter((other) => other.path !== path && adrNumber(other.path) === adrNumber(path))
+    .map(({ branch }) => `${path}: the open design branch ${branch} numbers another ADR ${String(adrNumber(path)).padStart(3, '0')}; number yours after the highest ADR of that branch too.`))
 }
 
 /** @param {any} plan */
@@ -89,4 +105,33 @@ const acceptedOrNew = async (deps, text, path, sha) => {
   const status = adrStatus(text)
   if (status === 'Accepted') return true
   return status === 'Proposed' && sha !== null && !await deps.sourceControl.existsAt('.', sha, path)
+}
+
+/** The ADRs a person ratified at the light design, each with the SHA-256 of its text then. */
+export const RATIFIED_FILE = 'plans/ratified-adrs.json'
+
+/**
+ * Keeps the fingerprint of each ADR a person just ratified, as the branch holds it once accepted.
+ * @param {any} deps @param {string} slug @param {string[]} adrs
+ */
+export const recordRatified = async (deps, slug, adrs) => {
+  const ratified = {}
+  for (const path of adrs) ratified[path] = await deps.hasher.sha256(normalBody((await deps.workspace.read(path)) ?? ''))
+  await deps.files.write(slug, RATIFIED_FILE, `${JSON.stringify(ratified, null, 2)}\n`)
+}
+
+/**
+ * Each ADR a person ratified that an attempt changed or deleted since: what they ratified is what
+ * the delivery pull request merges.
+ * @param {any} deps @param {string} slug @param {string[]} touched
+ * @returns {Promise<string[]>}
+ */
+export const ratifiedFailures = async (deps, slug, touched) => {
+  const ratified = JSON.parse((await deps.files.read(slug, RATIFIED_FILE)) ?? '{}')
+  const failures = []
+  for (const path of touched.filter((file) => file in ratified)) {
+    const text = await deps.workspace.read(path)
+    if (text === null || await deps.hasher.sha256(normalBody(text)) !== ratified[path]) failures.push(`${path} was ratified by a person at the light design: restore it as they ratified it; another decision needs a new ADR, a light design or a design run.`)
+  }
+  return failures
 }

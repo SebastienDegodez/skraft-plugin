@@ -4,7 +4,7 @@ import { DESIGN_PLUGIN, decisionLine, lightDesignReasons } from '../../domain/ar
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { acceptOnMerge, newProposedAdrs } from '../decisions/adr-ratification.mjs'
 import { bindDocuments } from './context.mjs'
-import { lightDesignPlan } from './light-design.mjs'
+import { lightDesignPlan, recordRatified } from './light-design.mjs'
 
 /**
  * The two questions of a delivery's light design (#669): which architecture the story starts
@@ -87,6 +87,7 @@ const approve = async ({ deps, slug, journal }) => {
   if (adrs.length > 0) {
     const accepted = await acceptOnMerge(deps, { adrs, issue: issueOf(run.story) })
     if (!accepted.ok) return { environment: accepted.error }
+    await recordRatified(deps, slug, adrs)
   }
   await bindLightBrief({ deps, slug, journal })
   return { failures: [] }
