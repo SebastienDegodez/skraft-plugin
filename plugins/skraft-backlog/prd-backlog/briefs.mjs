@@ -42,8 +42,9 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
  * @param {{ prd: string, map: string, story: string, epic: string, output: string, language: 'fr' | 'en',
  *   attempt: number, problems: string[], findings: string[], answers?: string[] }} brief
  * answers: the product owner's answers to open questions of the story, as "Q1: question → answer"
+ * criteria: the PRD's own acceptance criteria for what the story covers, as "AC-001: statement"
  */
-export const storyBrief = ({ prd, map, story, epic, output, language, attempt, problems, findings, answers = [] }) => lines([
+export const storyBrief = ({ prd, map, story, epic, output, language, attempt, problems, findings, answers = [], criteria = [] }) => lines([
   `Write story ${story} of epic ${epic} (attempt ${attempt}).`,
   'Load the skill `story-elaboration` and follow it; it loads `issue-refinement` for the story rules.',
   '',
@@ -55,6 +56,9 @@ export const storyBrief = ({ prd, map, story, epic, output, language, attempt, p
   `Each entry of \`dependencies\` reads exactly ${DEPENDENCY_EXAMPLE}, one per story of the map's \`after\`.`,
   `Write the story in ${languageOf(language)}, the language of the PRD; keep every id as written.`,
   languageRule(language),
+  criteria.length ? '' : null,
+  criteria.length ? 'The PRD writes these acceptance criteria for what this story covers: start from them, keep their meaning and their id, add none that contradicts them:' : null,
+  criteria.length ? bullets(criteria) : null,
   problems.length ? '' : null,
   problems.length ? `The checks refused ${output}. Fix exactly these problems:` : null,
   problems.length ? bullets(problems) : null,
@@ -128,11 +132,12 @@ export const splitBrief = ({ prd, map, story, output, language, attempt, problem
  */
 export const frameBrief = ({ prd, inventory, output, language, asked }) => lines([
   'Frame the slicing of this PRD: do not slice yet.',
-  'Load the skill `backlog-slicing`.',
+  'Load the skill `backlog-slicing` (its Framing section is enough; load no other skill).',
   '',
   'Read:',
   bullets([`PRD: ${prd}`, `Requirement inventory: ${inventory}`]),
   '',
+  'The PRD is read-only and its format is not a question: never ask to reformat, restructure or renumber it. The inventory says what a script read; its `format`, `epicSource`, `cited`, `status` and `mvp` are already asked by the workflow when they need an answer.',
   `Write only: ${output} — { "questions": [ { "question", "why", "options": [2 to 4 answers], "recommended": <index of the option you recommend> } ] }. Its directory exists; write no other file.`,
   'Ask at most 5 questions whose answer changes how you would cut epics and stories: the MVP scope, the tracer bullet of an epic, an ambiguous order, a capability that could be one story or several. Never ask what the PRD already states.',
   asked.length ? 'These are already asked; do not repeat them:' : null,

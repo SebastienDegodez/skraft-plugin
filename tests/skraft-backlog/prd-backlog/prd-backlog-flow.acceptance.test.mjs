@@ -250,7 +250,9 @@ test('the workflow refuses a missing PRD, a PRD without FR ids, and an unknown e
   assert.match((await run({})).reason, /args\.prd: the path of the PRD is required/)
   assert.equal((await run({ prd: 'docs/prd/absent-sentinel.md' })).reason, 'args.prd: the PRD cannot be read')
   await writeFile(join(cwd, 'docs', 'prd', 'vide-sentinel.md'), '# Vide\n\nAucune exigence.\n')
-  assert.equal((await run({ prd: 'docs/prd/vide-sentinel.md' })).reason, 'args.prd: the PRD defines no FR-### requirement')
+  assert.equal((await run({ prd: 'docs/prd/vide-sentinel.md' })).reason, 'args.prd: the PRD defines no functional requirement — an id such as FR-001, US-001 or a prefix its frontmatter declares (requirement_id_prefixes), opening a heading, a bullet, a line, a bold run or the first cell of a table row; the PRD itself is never rewritten')
+  const format = await run({ ...ARGS, format: 'bmad-sentinel' })
+  assert.deepEqual([format.code, format.reason.includes('sentinel')], ['invalid-args', false], 'a format it does not read is refused, never echoed')
   const unknown = await run({ ...ARGS, approve: true, epics: ['EP-404-sentinel'] })
   assert.equal(unknown.status, 'refused')
   assert.equal(unknown.reason, 'args.epics: an epic it names is not in the story map')
@@ -402,7 +404,7 @@ test('agents are called by their plugin id with no model; an argument that names
   for (const extra of [{ agentIds: { 'backlog-slicer': 'mine:backlog-slicer' } }, { models: { 'story-writer': 'some-model' } }, { 'unknown-key-sentinel': true }]) {
     const refused = simulatedContext({ args: { ...ARGS, frame: false, ...extra } })
     const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), refused)
-    assert.deepEqual(result, { status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections and frame; nothing was started' })
+    assert.deepEqual(result, { status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame and format; nothing was started' })
     assert.deepEqual([refused.calls, refused.phases], [[], []], 'nothing ran')
   }
 })

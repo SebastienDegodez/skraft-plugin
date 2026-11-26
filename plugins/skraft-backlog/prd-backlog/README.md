@@ -5,7 +5,9 @@ decides: every check is a function here, every verdict comes from `review-verdic
 
 - `workflow.mjs`: `PRD_BACKLOG_META` and the workflow body (`ctx.step`, `ctx.agent`,
   `ctx.parallel`, `ctx.pause`).
-- `prd-inventory.mjs`: the requirement ids of a PRD and the epic of each FR.
+- `prd-inventory.mjs`: what a PRD defines, read as written and never rewritten (skraft, HVE,
+  BMad or by hand): its requirement ids and their families, the epic of each FR and where epics
+  come from, the ids it cites without defining, its status, its MVP cut, the AC linked to each FR.
 - `story-map.mjs`: the normalization of `story-map.json` (what a script fixes instead of the
   slicer), its checks (coverage, ids, milestones, tracer, dependencies, cycles, size warnings) and
   the build order.
@@ -139,7 +141,9 @@ no assessment (no backlog, no story map yet, a map that cannot be read) `get_sta
 ## Framing (FRAME): questions before the first slice
 
 When no story map passes yet, the run asks before it cuts (`framing.mjs`): the code asks what the
-PRD shows (several channels in one epic, milestones, epics past 12 FRs, where the NFRs go) and
+PRD shows (a PRD in draft, FRs named but never defined, how to cut epics the PRD does not
+propose — with why, what it brings and what it costs —, several channels in one epic,
+milestones (from its MVP section when it has one), epics past 12 FRs, where the NFRs go) and
 the slicer adds up to 5 questions only a reader sees (MVP scope, tracer, order). They are written
 to `framing.json` — `{ version, questions: [{ id, source: 'prd' | 'slicer', question, why?,
 options, recommended, epic? }], answers: { [id]: { text, at } } }` — and the run pauses

@@ -263,8 +263,12 @@ const checkCoverage = (map, inventory, { problems, warnings }) => {
   const known = new Set(inventory.requirements.map((r) => r.id))
   const deferred = new Map((map.deferred ?? []).map((d) => [d.id, d.reason]))
   const covered = new Set(storiesOf(map).flatMap((s) => s.covers))
+  const cited = new Set((inventory.cited ?? []).map((c) => c.id))
   for (const story of storiesOf(map)) {
-    for (const id of story.covers) if (!known.has(id)) problems.push(`${story.id} covers ${id}, which the PRD does not define`)
+    for (const id of story.covers.filter((c) => !known.has(c))) {
+      if (cited.has(id)) warnings.push(`${story.id} covers ${id}, which the PRD names but never defines`)
+      else problems.push(`${story.id} covers ${id}, which the PRD does not define`)
+    }
   }
   for (const [id, reason] of deferred) {
     if (!known.has(id)) problems.push(`deferred ${id} is not defined by the PRD`)

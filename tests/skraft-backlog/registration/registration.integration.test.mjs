@@ -141,7 +141,7 @@ test('a run reads the session directory when it starts: none yet is refused, the
 
   const sdk = simulatedSdk({ session: { rpc: { metadata: { snapshot: async () => ({ workingDirectory: joinedIn }) } } } })
   await register(sdk)
-  assert.match((await run(sdk)).reason, /defines no FR-### requirement/, 'the PRD is read in the joined directory')
+  assert.match((await run(sdk)).reason, /defines no functional requirement/, 'the PRD is read in the joined directory')
   sdk.joins[0].onEvent({ type: 'session.context_changed', data: { cwd: 'relative/ignored' } })
   sdk.joins[0].onEvent({ type: 'session.context_changed', data: { cwd: movedTo } })
   assert.match((await run(sdk)).reason, /cannot be read/, 'the PRD is looked for where the session moved')

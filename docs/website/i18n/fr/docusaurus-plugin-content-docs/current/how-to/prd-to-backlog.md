@@ -16,9 +16,8 @@ leurs milestones.
   workflow `skraft-prd-backlog` est un workflow dynamique de Copilot CLI.
 - `gh` connecté (`gh auth status`) avec le droit de créer des issues, labels et milestones sur le
   dépôt cible.
-- Le PRD dans le dépôt, écrit sur le gabarit canonique : chaque exigence en puce
-  `` * `FR-001` : <énoncé> `` (de même `NFR-`, `AC-`, `CON-`, `GOAL-`), chaque epic en titre
-  `### EP-001 : <titre>`.
+- Le PRD dans le dépôt, tel que l'outil qui l'a écrit l'a laissé (skraft, `prd-builder` de HVE,
+  BMad ou à la main) : skraft le lit et ne le réécrit jamais.
 - Aucun `skraft-config.json` : `skraft-backlog` n'en lit aucune clé, donc il tourne dans un dépôt que `/skraft-init` n'a jamais touché. Le refus `skraft is not initialised` n'appartient qu'au pipeline d'ingénierie.
 
 ## 1. Vérifier le PRD
@@ -30,8 +29,19 @@ leurs milestones.
 * `FR-002` : Le client paie sa commande par carte.
 ```
 
-Une exigence `FR` appartient à l'epic du titre placé au-dessus d'elle. Un PRD sans aucune
-exigence `FR-###` est refusé.
+Une exigence est définie là où son id ouvre un titre, une puce, une ligne, un passage en gras ou
+la première cellule d'une ligne de tableau : `` * `FR-001` : … ``, `FR-001: …`,
+`**FR-1 Titre.** …`, `| FR-001 | … |`. Un id qui n'apparaît que dans une liste ou une matrice de
+traçabilité est une référence. En plus de `FR`, `US` compte comme exigence, et le frontmatter
+d'un PRD HVE (`requirement_id_prefixes`) ajoute ses propres préfixes.
+
+Les epics viennent du PRD quand il en propose : titres `### EP-001 : …`, features `FEAT-###`, ou
+titres sous une section de features. Quand il n'en propose aucune, le cadrage explique la
+découpe au product owner : une epic par capacité livrée et déployée ensemble (un bounded context
+n'est une epic que s'il se déploie seul). Une exigence `FR` appartient à l'epic sous laquelle
+elle est écrite. Un PRD encore en brouillon, ou qui cite une exigence sans jamais la définir,
+devient une question de cadrage : le PRD n'est jamais modifié. Un PRD sans aucune exigence est
+refusé.
 
 ## 2. Lancer le workflow
 
@@ -50,6 +60,7 @@ Run the skraft-prd-backlog workflow with prd docs/prds/commande-en-ligne.md
 | `approve` | `true` : ni questions du découpeur au cadrage, ni pause sur la carte des stories |
 | `dryRun` | `true` : simuler la publication |
 | `frame` | `false` : découper sans questions de cadrage |
+| `format` | `hve` : lire les familles d'exigences que déclare un PRD HVE ; par défaut : détecté |
 | `corrections` | `true` : appliquer les corrections acceptées dans le canvas (étape 5) |
 
 Toute autre clé est refusée (`invalid-args`) et rien ne démarre. Les fichiers de travail sont
@@ -133,7 +144,7 @@ jamais à l'agent.
 
 | Message | Action |
 |---|---|
-| `args.prd: the PRD defines no FR-### requirement` | Écrire les exigences en puces `` * `FR-001` : … ``. |
+| `args.prd: the PRD defines no functional requirement — …` | Vérifier que chaque id d'exigence ouvre sa ligne, sa puce, son titre, son passage en gras ou sa ligne de tableau ; pour un PRD HVE à préfixes propres, passer `format: hve`. Le PRD lui-même n'est jamais réécrit. |
 | `agents not registered in this session: …` | Redémarrer la session Copilot, ou réinstaller `skraft-backlog`, puis relancer. |
 | `SLICE: N problem(s) left after 3 attempts` | Lire les problèmes listés, corriger `story-map.json` à la main, relancer. |
 | `args.epics: an epic it names is not in the story map` | Reprendre les identifiants `EP-…` de `story-map.json`. |

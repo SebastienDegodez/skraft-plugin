@@ -16,9 +16,8 @@ milestones.
   `skraft-prd-backlog` workflow is a Copilot CLI dynamic workflow.
 - `gh` signed in (`gh auth status`) with the right to create issues, labels and milestones on
   the target repository.
-- The PRD in the repository, written on the canonical template: each requirement as a bullet
-  `` * `FR-001` : <statement> `` (likewise `NFR-`, `AC-`, `CON-`, `GOAL-`), each epic as a
-  heading `### EP-001 : <title>`.
+- The PRD in the repository, as the tool that wrote it left it (skraft, HVE `prd-builder`, BMad
+  or by hand): skraft reads it and never rewrites it.
 - No `skraft-config.json`: `skraft-backlog` reads no key of it, so it runs in a repository `/skraft-init` never touched. The refusal `skraft is not initialised` belongs to the engineering pipeline alone.
 
 ## 1. Check the PRD
@@ -30,8 +29,18 @@ milestones.
 * `FR-002` : The customer pays for the order by card.
 ```
 
-An `FR` requirement belongs to the epic of the heading above it. A PRD with no `FR-###`
-requirement is refused.
+A requirement is defined where its id opens a heading, a bullet, a line, a bold run or the first
+cell of a table row: `` * `FR-001` : … ``, `FR-001: …`, `**FR-1 Title.** …`, `| FR-001 | … |`.
+An id that only appears in a list or a traceability matrix is a reference. Besides `FR`, `US`
+counts as a requirement, and an HVE PRD's frontmatter (`requirement_id_prefixes`) adds its own
+prefixes.
+
+Epics come from the PRD when it proposes them: `### EP-001 : …` headings, `FEAT-###` features,
+or the headings under a features section. When it proposes none, the framing explains the cut to
+the product owner: one epic per capability delivered and deployed together (a bounded context is
+an epic only when it deploys on its own). An FR belongs to the epic it sits under. A PRD in
+draft, or one naming an FR it never defines, becomes a framing question: the PRD is never
+changed. A PRD with no requirement at all is refused.
 
 ## 2. Start the workflow
 
@@ -50,6 +59,7 @@ Run the skraft-prd-backlog workflow with prd docs/prds/online-ordering.md
 | `approve` | `true`: no slicer questions in the framing, no pause on the story map |
 | `dryRun` | `true`: simulate the publication |
 | `frame` | `false`: slice without framing questions |
+| `format` | `hve`: read the requirement families an HVE PRD declares; default: detected |
 | `corrections` | `true`: apply the corrections accepted in the canvas (step 5) |
 
 Any other key is refused (`invalid-args`) and nothing starts. The working files are under
@@ -132,7 +142,7 @@ never to the agent.
 
 | Message | Action |
 |---|---|
-| `args.prd: the PRD defines no FR-### requirement` | Write the requirements as bullets `` * `FR-001` : … ``. |
+| `args.prd: the PRD defines no functional requirement — …` | Check that each requirement id opens its line, bullet, heading, bold run or table row; for an HVE PRD with prefixes of its own, pass `format: hve`. The PRD itself is never rewritten. |
 | `agents not registered in this session: …` | Restart the Copilot session, or reinstall `skraft-backlog`, then run again. |
 | `SLICE: N problem(s) left after 3 attempts` | Read the problems listed, fix `story-map.json` by hand, run again. |
 | `args.epics: an epic it names is not in the story map` | Use the `EP-…` ids of `story-map.json`. |

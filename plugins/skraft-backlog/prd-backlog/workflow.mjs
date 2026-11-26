@@ -20,7 +20,7 @@ import { LENSES, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } fro
 import { framingLines, framingOf, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { CorrectionFailed, acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
-import { fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
+import { FORMATS, criteriaFor, fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
 import { PublishBlocked, createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
 import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
@@ -69,12 +69,12 @@ export const BREAKER = Object.freeze({ share: 0.5, min: 3 })
 export const PRD_BACKLOG_META = Object.freeze({
   name: 'skraft-prd-backlog',
   description:
-    'Turn an approved PRD into a reviewed GitHub backlog: epics as tracking issues, INVEST stories that pass the ' +
+    'Turn a PRD, read as written and never rewritten, into a reviewed GitHub backlog: epics as tracking issues, INVEST stories that pass the ' +
     'Definition of Ready as sub-issues, blocked-by links and milestones. Pauses twice for a human: after the story ' +
     'map, and on the handoff review box. args: { prd: path of the PRD, slug?: kebab-case scope (default: the PRD file ' +
     'name), repo?: owner/repo to publish to (default: the repository of the working directory), epics?: epic ids to ' +
     'elaborate (default: all), approve?: true to skip the story-map pause, dryRun?: true to simulate the publication, ' +
-    'frame?: false to slice without the framing questions, ' +
+    'frame?: false to slice without the framing questions, format?: hve to read the requirement families an HVE PRD declares (default: detected), ' +
     'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch }. ' +
     'The agents are the plugin\'s; their model is the session\'s, never an argument.',
   limits: Object.freeze({ maxConcurrentSubagents: MAX_CONCURRENT_AGENTS }),
@@ -87,12 +87,17 @@ export const PRD_BACKLOG_META = Object.freeze({
       prd: { type: 'string' }, slug: { type: 'string' }, repo: { type: 'string' },
       epics: { type: 'array', items: { type: 'string' } },
       approve: { type: 'boolean' }, dryRun: { type: 'boolean' }, corrections: { type: 'boolean' }, frame: { type: 'boolean' },
+      format: { type: 'string', enum: [...FORMATS] },
     }),
   }),
 })
 
+/** `args.format` names a format the workflow does not read: refused, never echoed. */
+const INVALID_FORMAT = Object.freeze({ status: 'refused', code: 'invalid-args', reason: `args.format: the workflow reads ${FORMATS.join(', ')} or, without format, any PRD; nothing was started` })
+const NO_REQUIREMENT = 'args.prd: the PRD defines no functional requirement — an id such as FR-001, US-001 or a prefix its frontmatter declares (requirement_id_prefixes), opening a heading, a bullet, a line, a bold run or the first cell of a table row; the PRD itself is never rewritten'
+
 /** Arguments are model-written: a key the workflow does not take is refused, never echoed. */
-const INVALID_ARGS = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections and frame; nothing was started' })
+const INVALID_ARGS = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame and format; nothing was started' })
 /** @param {unknown} args */
 const unknownKeys = (args) => Object.keys(args && typeof args === 'object' ? args : {}).some((key) => !Object.hasOwn(PRD_BACKLOG_META.argsSchema.properties, key))
 
@@ -257,13 +262,14 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
   if (prdText === null) return { status: 'refused', reason: 'args.prd: the PRD cannot be read' }
   const slug = typeof ctx.args.slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(ctx.args.slug) ? ctx.args.slug : slugOf(path)
   const dir = join(cwd, '.copilot-tracking', 'skraft-plans', slug, 'backlog')
-  const inventory = await ctx.step(`inventory-v1:${slug}`, () => inventoryOf(prdText))
-  if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', reason: 'args.prd: the PRD defines no FR-### requirement' }
+  if (ctx.args.format !== undefined && !FORMATS.includes(ctx.args.format)) return INVALID_FORMAT
+  const inventory = await ctx.step(`inventory-v2:${slug}`, () => inventoryOf(prdText, ctx.args.format ? { format: ctx.args.format } : {}))
+  if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', code: 'no-requirement', reason: NO_REQUIREMENT, unread: inventory.cited.map((c) => `${c.id} (line ${c.lines[0]})`) }
   await write(join(dir, 'inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`)
   const repoInfo = await ctx.step('repo-v1', () => repositoryOf(ctx.args.repo, gh))
   const pass = await ctx.step('pass-v1', () => `${now()}|${Math.random().toString(36).slice(2, 10)}`)
   const relativePrd = relative(cwd, path).split(sep).join('/')
-  ctx.log(`${slug}: ${inventory.requirements.length} requirement ids, ${inventory.epics.length} epics in the PRD`)
+  ctx.log(`${slug}: ${inventory.requirements.length} requirement ids, ${inventory.epics.length} epics in the PRD (format ${inventory.format}, ${inventory.formatSource}; epics from ${inventory.epicSource})`)
   return {
     cwd, slug, prd: path, prdText, dir, inventory, map: /** @type {any} */ (null),
     handoffDir: join(cwd, '.copilot-tracking', 'github-issues', 'prds', slug),
@@ -670,6 +676,7 @@ const writeStory = async (ctx, run, planned, { findings = [], problems = [], fir
       prd: run.prd, map: join(run.dir, 'story-map.json'), story: planned.id, epic: planned.epic, output: storyPath(run, planned.id),
       language: run.inventory.language, attempt, problems: last.problems, findings: attempt === first ? findings : [],
       answers: await pendingAnswers(run, planned.id),
+      criteria: criteriaFor(run.inventory, planned.covers).map((c) => `${c.id}: ${c.statement}`),
     }), { output: storyPath(run, planned.id) })
     const read = await readStory(run, planned, answers)
     await track(run, planned.id, read.file ? 'written' : needsCorrection(read) ? 'held' : 'refused', attempt)
