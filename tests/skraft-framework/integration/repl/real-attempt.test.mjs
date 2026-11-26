@@ -18,13 +18,15 @@ const NODE = JSON.stringify(process.execPath)
 const SERVER_CREATED = await processCreation(process.pid)
 
 const realRun = (t, call, { kernels = createNodeKernelHost() } = {}) => {
+  let repl = null
+  // Before the folder's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(() => repl?.close())
   const root = tempFolder(t)
   mkdirSync(join(root, 'api'))
   const orphans = createOrphanJournal({ folder: join(root, '.copilot-tracking', 'skraft-repl') })
   const host = scripted({}, (it) => nominal(it).map((behaviour, index) => (index === 3 ? agent({ work: async (repos) => { await call(repl, root); green(SLUG, 'Checkout', '')(repos) } })(it) : behaviour)))
   host.deps.repl = { root, kernels, launcher: createProgramLauncher({ root }), orphans, locks: new InMemoryRunLock(host.tracking, 'a'), server: { pid: process.pid, created: SERVER_CREATED }, budgetMs: 30_000, digests: createRunDigests() }
-  const repl = createRepl(host.deps, { entry: null, reaped: false })
-  t.after(() => repl.close())
+  repl = createRepl(host.deps, { entry: null, reaped: false })
   return { host, repl, root, orphans }
 }
 
