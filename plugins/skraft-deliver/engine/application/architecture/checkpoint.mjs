@@ -9,3 +9,6 @@ export const architectureCheckpoint = async () => null
 
 /** A delivery workflow has no architecture pass to complete: its node, were one ejected, goes on. */
 export const completeArchitecturePass = async () => ({ answered: { answer: 'CONTINUE', reason: 'a delivery run has no architecture pass' } })
+
+/** A delivery offers no REFRESH: its blocking questions add nothing. */
+export const REFRESH_OFFER = ''

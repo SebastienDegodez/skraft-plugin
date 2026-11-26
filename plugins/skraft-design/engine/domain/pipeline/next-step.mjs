@@ -129,7 +129,7 @@ const accept = (workflow, run, last) => {
  */
 const begin = (workflow, run) => {
   const first = run.start ?? /** @type {{ to: string }} */ (workflow.edges.find((edge) => edge.from === workflow.start)).to
-  return enter(workflow.nodes[first], { ...FRESH, visit: 1 }, run)
+  return enter(workflow.nodes[first], { ...FRESH, visit: (run.nodes[first]?.visit ?? 0) + 1 }, run)
 }
 
 /**

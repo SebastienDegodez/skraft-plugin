@@ -21,6 +21,7 @@
  *   filesAt: (dir: string, sha: string) => Promise<string[] | null>,
  *   commitFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string, output: string }>,
  *   retireFiles: (dir: string, paths: string[], message: string) => Promise<{ ok: true } | { ok: false, error: string, output: string }>,
+ *   takeBase: (dir: string, sha: string, message: string) => Promise<{ ok: true } | { ok: false, error: string, output: string, conflict?: boolean }>,
  *   commitCopies: (dir: string, copies: Array<{ from: string, to: string, within: string }>, message: string) => Promise<{ ok: true } | { ok: false, error: string, refused?: string[] }>,
  *   refusedImages: (dir: string, files: Array<{ from: string, within: string }>) => Promise<string[]>,
  * }} SourceControl
@@ -44,7 +45,8 @@
  *   when Git cannot tell. commitFiles: stages the files (relative to dir)
  *   and commits them alone with that message; ok with nothing to commit; on a refusal, output is
  *   what Git printed (a hook that refused it, a missing identity). retireFiles: removes the
- *   tracked files (relative to dir) from the working copy and commits their removal alone, the same way. commitCopies: copies
+ *   tracked files (relative to dir) from the working copy and commits their removal alone, the same way. takeBase: takes the
+ *   commit into the current branch, a fast-forward or a merge commit with that message; a conflict undoes the merge. commitCopies: copies
  *   each file, byte for byte, from `from` to `to` (all relative to dir), ignored or not, then
  *   commits the copies alone with that message; refused lists the files it copies none of, each
  *   a symbolic link, resolving outside its folder `within`, or not a PNG. On a failure nothing

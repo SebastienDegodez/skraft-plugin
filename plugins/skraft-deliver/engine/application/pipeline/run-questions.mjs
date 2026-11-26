@@ -19,7 +19,7 @@ import { mayAnswerQuestion } from '../../domain/decisions/questions.mjs'
 import { mayJudgeIncident, unforeseenStop, unforeseenText } from '../../domain/decisions/unforeseen.mjs'
 import { recordJudgment } from '../decisions/decide-usecase.mjs'
 import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
-import { completeArchitecturePass } from '../architecture/checkpoint.mjs'
+import { completeArchitecturePass, REFRESH_OFFER } from '../architecture/checkpoint.mjs'
 import { ARCHITECTURE_MODE, LIGHT_DESIGN_REVIEW } from '../architecture/light-design-review.mjs'
 import { ARCHITECTURE_WAIT } from '../architecture/architecture-wait.mjs'
 
@@ -385,7 +385,7 @@ export const blockQuestion = async (context, run, next) => {
     const kind = acceptable(ceiling.findings) ? REVIEW_CEILING : BLOCKED
     return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: withReport(context, reviewCeilingText(ceiling), step), subjects: [] })
   }
-  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, blockText(blockOf(context, next, step)), step), subjects: [] })
+  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, `${blockText(blockOf(context, next, step))}${REFRESH_OFFER}`, step), subjects: [] })
 }
 
 /**

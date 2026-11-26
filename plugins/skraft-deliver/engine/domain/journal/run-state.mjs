@@ -282,6 +282,17 @@ const finished = (run, event) => {
   run.finished = event
 }
 
+/**
+ * The run took the default branch as it is now (REFRESH): its bases move there and it starts over
+ * from its first node, each node keeping its count of visits so that a new pass never reuses an
+ * earlier one's folders.
+ * @param {RunState} run @param {RunEvent} event
+ */
+const refreshed = (run, event) => {
+  run.base = event.base
+  Object.assign(run, untraversed(), { nodes: run.nodes, question: null })
+}
+
 /** @type {Readonly<Record<string, (run: RunState, event: RunEvent) => void>>} */
 const ON_EVENT = Object.freeze({
   __proto__: null,
@@ -294,4 +305,5 @@ const ON_EVENT = Object.freeze({
   'architecture.scope': (run, event) => { run.mode = event.mode ?? 'interactive' },
   'architecture.pass-completed': (run) => { run.traversals = {} },
   'run.finished': finished,
+  'run.refreshed': refreshed,
 })

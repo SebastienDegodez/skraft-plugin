@@ -8,6 +8,7 @@
     "application/architecture/design-components.mjs",
     "application/architecture/design-run.mjs",
     "application/architecture/readiness.mjs",
+    "application/architecture/refresh-run.mjs",
     "application/architecture/reply-interpreter.mjs",
     "application/architecture/story-briefs.mjs",
     "application/decisions/comment-answer-usecase.mjs",

@@ -81,6 +81,16 @@ when the forge says its author has `admin`, `maintain` or `write` access, with t
 workflow artifact and the journal is signed with the `SKRAFT_DESIGN_JOURNAL_KEY` repository
 secret. `ci/skraft-design.yml` is the workflow a project copies.
 
+A run keeps the default branch it started from, its research and `plans/components.json`. A
+person who sees the default branch moved while the run waited (a merged back end, a new
+configuration) answers `REFRESH` to its blocking question (`blocked`, `architecture-blocked`), in
+chat or with `/skraft-answer REFRESH`. In the same run and journal, the engine takes the default
+branch into the run's branch (a fast-forward while it holds no commit of its own, a merge commit
+otherwise), journals `run.refreshed` with both commits, detects the components again and starts
+again from RESEARCH, each node keeping its count of visits. A merge conflict is undone and asks
+the person to merge the branch themselves, then answer REFRESH again. A delivery offers no
+REFRESH.
+
 Once every pass of a run is accepted, the engine rewrites each of its briefs at `"version": 2`
 with `"pins"`: the SHA-256 of each cited document's text, newlines normalised. Delivery refuses a
 brief whose pinned document reads otherwise on the merged base (`architecture-stale`, naming the

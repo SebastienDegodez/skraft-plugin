@@ -19,6 +19,7 @@ export const createGitSourceControl = ({ commandRunner }) => Object.freeze({
   isAncestor: (/** @type {string} */ dir, /** @type {string} */ ancestor, /** @type {string} */ descendant) => isAncestor(gitThrough(commandRunner), dir, { ancestor, descendant }),
   commitFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => commitFiles(commandRunner, dir, { paths, message }),
   retireFiles: (/** @type {string} */ dir, /** @type {string[]} */ paths, /** @type {string} */ message) => retireFiles(commandRunner, dir, { paths, message }),
+  takeBase: (/** @type {string} */ dir, /** @type {string} */ sha, /** @type {string} */ message) => takeBase(commandRunner, dir, { sha, message }),
   commitCopies: (/** @type {string} */ dir, /** @type {Copy[]} */ copies, /** @type {string} */ message) => commitCopies(commandRunner, dir, { copies, message }),
   refusedImages: (/** @type {string} */ dir, /** @type {Array<{ from: string, within: string }>} */ files) => refusedOf(commandRunner, dir, files),
 })
@@ -175,6 +176,20 @@ const retireFiles = async (commandRunner, dir, { paths, message }) => {
   const removed = await git(['rm', '--quiet', '--', ...paths])
   if (!succeeded(removed)) return failed('git rm', removed)
   return commitStaged(git, paths, message)
+}
+
+/**
+ * A commit of the default branch taken into the current branch: a fast-forward when the branch
+ * holds no commit of its own, a merge commit with that message otherwise; a conflict undoes the
+ * merge, leaving the branch and the working copy as they were.
+ * @param {CommandRunner} commandRunner @param {string} dir @param {{ sha: string, message: string }} request
+ */
+const takeBase = async (commandRunner, dir, { sha, message }) => {
+  const git = (/** @type {string[]} */ args) => commandRunner.run({ argv: ['git', ...args], cwd: dir })
+  const merged = await git(['merge', '--no-edit', '-m', message, '--end-of-options', sha])
+  if (succeeded(merged)) return { ok: /** @type {const} */ (true) }
+  await git(['merge', '--abort'])
+  return { ...failed('git merge', merged), conflict: true }
 }
 
 /**

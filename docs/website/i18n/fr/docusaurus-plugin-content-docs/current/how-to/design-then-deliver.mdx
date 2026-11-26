@@ -162,6 +162,15 @@ document cite est faux), ou REDESIGN a une issue modifiee, qui demande d'abord K
 Corrigez-le par une PR design, fusionnez-la, revenez sur la branche de livraison et repondez
 RESUME ; ou repondez CONTINUE pour livrer sur un design leger, ou STOP.
 
+### La branche par defaut a change pendant que design attendait {/* #refresh */}
+
+Un run de design garde la branche par defaut de son depart, sa recherche et ses composants. Si
+elle a change pendant que le run vous attendait (un backend fusionne depuis, une configuration
+ajoutee), repondez REFRESH : dans le meme run, sa branche reprend la branche par defaut telle
+qu'elle est, les composants sont detectes a nouveau et le design repart de RESEARCH. En CI,
+commentez `/skraft-answer REFRESH`. En cas de conflit, fusionnez vous-meme la branche par defaut
+dans la branche du run, puis repondez REFRESH a nouveau.
+
 ### Design exclut une story {/* #readiness */}
 
 Seules les stories ouvertes entrent dans une passe de conception ; les stories fermees sont

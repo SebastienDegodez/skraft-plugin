@@ -572,6 +572,16 @@ export class InMemoryGit {
     this.commit(subject, paths.map((path) => tidy(`${dir}/${path}`)), rest.join('\n').trim())
     return { ok: true }
   }
+  /**
+   * The default branch as it is now taken into the run's branch: its commit joins the history, as
+   * a fast-forward or a merge would; `taken` keeps each one, `takeFails` makes Git refuse it.
+   */
+  async takeBase(dir, sha, message) {
+    if (this.takeFails) return { ok: false, conflict: true, error: 'git merge failed', output: 'CONFLICT (content)' }
+    ;(this.taken ??= []).push({ dir, sha, message })
+    this.locate(dir).repo.history.push({ sha, subject: message.split('\n')[0], body: '', files: [] })
+    return { ok: true }
+  }
   /** Each file copied where `to` says, relative to dir, then the copies committed alone; `copies` keeps them in order. */
   async refusedImages(dir, files) { return files.filter(({ from }) => this.refuses.includes(from)).map(({ from }) => from) }
   async commitCopies(dir, copies, message) {

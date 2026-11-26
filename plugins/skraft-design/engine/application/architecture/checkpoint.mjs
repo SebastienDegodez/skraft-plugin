@@ -6,11 +6,17 @@ import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { concurrencyCheckpoint } from './concurrent-designs.mjs'
 import { OPEN_QUESTIONS_FILE, openQuestions, questionsText } from '../../domain/architecture/open-questions.mjs'
 import { interpretReply } from './reply-interpreter.mjs'
+import { REFRESH_OFFER, refreshCheckpoint } from './refresh-run.mjs'
+
+export { REFRESH_OFFER }
 
 /** What a checkpoint gives when it settled a question itself: the run takes its next step again. */
 export const AGAIN = Object.freeze({ again: true })
 
-export const architectureCheckpoint = async (context, next) => {
+/** A REFRESH a person asked for comes first, whatever the next step; then that step's own checkpoint. */
+export const architectureCheckpoint = async (context, next) => (await refreshCheckpoint(context)) ?? stepCheckpoint(context, next)
+
+const stepCheckpoint = async (context, next) => {
   if (next.node?.id === 'design') return researchCheckpoint(context)
   if (next.node?.id === 'pr_writer') return concurrencyCheckpoint(context)
   if (next.node?.id !== 'design_review') return null
@@ -50,7 +56,7 @@ const researchCheckpoint = async (context) => {
 const consentToExclusions = async ({ deps, slug, journal }, stories) => {
   const hash = await deps.hasher.sha256(JSON.stringify(stories))
   const key = `architecture-blocked-${passIndex(journal.events)}-${hash.slice(0, 12)}`
-  const text = `The solution architect blocked these stories: ${stories.map(({ issue, reason }) => `#${issue}: ${reason}`).join('; ')}. Continue without them or stop? Use /skraft-refine for excluded stories.`
+  const text = `The solution architect blocked these stories: ${stories.map(({ issue, reason }) => `#${issue}: ${reason}`).join('; ')}. Continue without them or stop? Use /skraft-refine for excluded stories.${REFRESH_OFFER}`
   const question = await contextQuestion(journal, { key, kind: 'architecture-blocked', text, step: 'design_review' })
   if (!question.answer) return waitingFor(slug, question)
   if (question.answer === 'STOP') return stopRun({ slug, journal }, 'architecture-stopped', 'A human stopped architecture design.')

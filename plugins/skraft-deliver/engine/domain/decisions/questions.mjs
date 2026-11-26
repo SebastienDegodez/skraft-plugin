@@ -44,7 +44,7 @@ export const ADR_ACCEPTED_ON_MERGE = 'ACCEPTED_ON_MERGE'
 /** @type {Readonly<Record<QuestionKind, QuestionSpec>>} */
 const QUESTIONS = Object.freeze({
   'architecture-exclusions': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Scope', instruction: false }),
-  'architecture-blocked': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Blocked', instruction: false }),
+  'architecture-blocked': Object.freeze({ options: Object.freeze(['CONTINUE', 'REFRESH', 'STOP']), refusals: Object.freeze([]), header: 'Blocked', instruction: false }),
   'architecture-pass': Object.freeze({ options: Object.freeze(['NEXT', 'COMPLETE']), refusals: Object.freeze([]), header: 'Pass', instruction: false }),
   'architecture-concurrent': Object.freeze({ options: Object.freeze(['CONTINUE', 'STOP']), refusals: Object.freeze([]), header: 'Concurrent', instruction: false }),
   'architecture-questions': Object.freeze({ options: Object.freeze([STOP]), refusals: Object.freeze([]), header: 'Questions', instruction: true }),

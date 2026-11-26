@@ -154,6 +154,15 @@ wrong), or REDESIGN to a changed issue, which asks KEEP or REDESIGN first. Fix i
 PR, merge it, check out the delivery branch again and answer RESUME; or answer CONTINUE to deliver
 on a light design, or STOP.
 
+### The default branch moved while design waited {/* #refresh */}
+
+A design run keeps the default branch it started from, its research and its components. When the
+branch moved while the run waited on you (a back end merged since, a configuration added), answer
+REFRESH: in the same run, its branch takes the default branch as it is now, the components are
+detected again and the design starts again from RESEARCH. In CI, comment `/skraft-answer REFRESH`.
+On a merge conflict, merge the default branch into the run's branch yourself, then answer REFRESH
+again.
+
 ### Design excludes a story {/* #readiness */}
 
 Only open stories enter a design pass; closed stories are excluded. Architecture-blocked stories

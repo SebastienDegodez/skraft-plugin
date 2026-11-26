@@ -154,7 +154,7 @@ test('a human-blocked architecture decision opens an engine-approved draft PR wi
   assert.equal(host.codeHost.pullRequests.length, 1)
   assert.equal(host.codeHost.pullRequests[0].draft, true)
   assert.match(host.codeHost.pullRequests[0].body, /Human decision pending/)
-  assert.match(host.codeHost.pullRequests[0].body, /Options: `CONTINUE`, `STOP`/)
+  assert.match(host.codeHost.pullRequests[0].body, /Options: `CONTINUE`, `REFRESH`, `STOP`/)
   assert.match(host.codeHost.pullRequests[0].body, /\/skraft-answer/)
 })
 
@@ -830,4 +830,69 @@ test('a design asks nothing of Gherkin: a component that has not decided on it d
   host.agentRunner.behaviours.push(agent()(host), contextDesign('issue-42')(host))
   const outcome = await createRunPipeline(deps).run()
   assert.equal(outcome.status, 'done', outcome.reason)
+})
+
+test('a run blocked while the default branch moved on takes it with REFRESH: the same run detects its components again and designs again from RESEARCH', async () => {
+  const { host, deps, run } = session()
+  deps.architectureRepository.snapshot = async () => ({ ok: true, sha: 'main-2', paths: [], read: async () => null })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ result: { status: 'blocked', summary: 'No component of this working copy carries the stories.' } })(host))
+  const blocked = await createRunPipeline(deps).run()
+  assert.equal(blocked.status, 'waiting', blocked.reason)
+  const question = host.events().findLast(({ type }) => type === 'question.asked')
+  assert.match(question.text, /REFRESH takes the default branch as it is now, detects the components again and designs again from RESEARCH, in this run\./)
+
+  // Meanwhile the default branch gained a front end, which the configuration now lists.
+  const config = JSON.parse(host.workspace.files.get('skraft-design-config.json'))
+  host.workspace.files.set('skraft-design-config.json', JSON.stringify({ ...config, components: [...config.components, { ...config.components[0], name: 'web', root: 'web', stack: 'react' }] }))
+  assert.equal((await createDecide(deps).decide({ key: question.key, answer: 'REFRESH' })).ok, true)
+  host.agentRunner.behaviours.push(agent()(host), agent({ result: { status: 'blocked', summary: 'Still undecided.' } })(host))
+  await createRunPipeline(deps).run()
+
+  assert.deepEqual(host.agentRunner.dispatches.map(({ agent: id }) => id), ['design-solution-researcher', 'design-solution-architect', 'design-solution-researcher', 'design-solution-architect'])
+  assert.deepEqual(host.git.taken.map(({ sha }) => sha), ['main-2'])
+  const refreshed = host.events().find(({ type }) => type === 'run.refreshed')
+  assert.deepEqual([refreshed.key, refreshed.from, refreshed.to], [question.key, 'root-0', 'main-2'])
+  assert.deepEqual(JSON.parse(await host.tracking.read('issue-42', 'plans/components.json')).map(({ root }) => root), ['.', 'web'])
+  // The same run, with its journal: no new run, the research's second pass on a visit of its own.
+  assert.equal(host.events().filter(({ type }) => type === 'run.started').length, 1)
+  assert.deepEqual(host.events().filter(({ type, step }) => type === 'step.started' && step === 'research').map(({ visit }) => visit), [1, 2])
+})
+
+test('a REFRESH Git stops on a conflict asks the person to merge the default branch themselves, then takes it on their next REFRESH', async () => {
+  const { host, deps, run } = session()
+  deps.architectureRepository.snapshot = async () => ({ ok: true, sha: 'main-2', paths: [], read: async () => null })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(agent()(host), agent({ result: { status: 'blocked', summary: 'No component of this working copy carries the stories.' } })(host))
+  await createRunPipeline(deps).run()
+  const question = host.events().findLast(({ type }) => type === 'question.asked')
+  host.git.takeFails = true
+  await createDecide(deps).decide({ key: question.key, answer: 'REFRESH' })
+  const waiting = await createRunPipeline(deps).run()
+  assert.equal(waiting.status, 'waiting', waiting.reason)
+  assert.match(waiting.reason, /REFRESH could not take the default branch into this run's branch: Git stopped on a conflict and undid the merge\. Merge the default branch into the branch yourself, then answer REFRESH again, an instruction, or STOP\./)
+  assert.equal(host.events().some(({ type }) => type === 'run.refreshed'), false)
+  assert.equal(host.agentRunner.dispatches.length, 2)
+
+  host.git.takeFails = false
+  const again = host.events().findLast(({ type }) => type === 'question.asked')
+  await createDecide(deps).decide({ key: again.key, answer: 'REFRESH' })
+  host.agentRunner.behaviours.push(agent()(host), agent({ result: { status: 'blocked', summary: 'Still undecided.' } })(host))
+  await createRunPipeline(deps).run()
+  assert.deepEqual(host.events().filter(({ type }) => type === 'run.refreshed').map(({ key }) => key), [again.key])
+  assert.equal(host.agentRunner.dispatches[2].agent, 'design-solution-researcher')
+})
+
+test('in CI, a run refreshed before anything is designed still asks on the issue: its branch past the new base holds nothing of its own', async () => {
+  const { host, deps, run } = session([story(42)], 'issue-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  deps.architectureRepository.snapshot = async () => ({ ok: true, sha: 'main-2', paths: [], read: async () => null })
+  await run.start({ issue: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), agent({ result: { status: 'blocked', summary: 'No component of this working copy carries the stories.' } })(host))
+  await draftInCi(deps, await createRunPipeline(deps).run())
+  const question = host.events().findLast(({ type }) => type === 'question.asked')
+  await createDecide(deps).decide({ key: question.key, answer: 'REFRESH' })
+  host.agentRunner.behaviours.push(agent()(host), agent({ result: { status: 'blocked', summary: 'Still undecided.' } })(host))
+  const settled = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(settled.draft?.on, 'issue', JSON.stringify(settled.draft))
+  assert.equal(host.codeHost.pullRequests.length, 0)
 })
