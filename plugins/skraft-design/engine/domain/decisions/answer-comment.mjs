@@ -2,7 +2,8 @@
  * A reply posted in a comment: `/skraft-answer`, then the answer as a person writes it (#662):
  * - one line per open question, `Q1: B`, `q2 = keep the basket` (an option or their own words);
  * - one word or line for a question with options, `continue`;
- * - or one JSON object, `{"key":"…","answer":…}`, as before.
+ * - or one JSON object, `{"key":"…","answer":…,"reason":"…"}`, as before;
+ * - a refusal such as REVISE takes its reason after it, on its line or the next ones.
  * The key may be left out: the reply then answers the one decision the run waits on. A comment
  * that does not start with `/skraft-answer` is no reply; no model reads any of it.
  */
@@ -23,13 +24,16 @@ const parsed = (text) => {
 /** @param {unknown} answer */
 const answerShape = (answer) => (typeof answer === 'string' && answer.trim() !== '') || (answer !== null && typeof answer === 'object' && !Array.isArray(answer))
 
-/** @typedef {{ ok: true, key: string | null, answer: unknown } | { ok: false, reason: string }} CommentReading */
+/** @typedef {{ ok: true, key: string | null, answer: unknown, reason?: string } | { ok: false, reason: string }} CommentReading */
+
+/** A reason the JSON form gives, kept when it says something. @param {unknown} reason */
+const reasonOf = (reason) => (typeof reason === 'string' && reason.trim() !== '' ? { reason: reason.trim() } : {})
 
 /** The JSON form: its key and its answer. @param {string} rest @returns {CommentReading} */
 const jsonReply = (rest) => {
   const reply = /** @type {any} */ (parsed(rest))
   if (!answerShape(reply?.answer) || (reply.key !== undefined && (typeof reply.key !== 'string' || reply.key.trim() === ''))) return { ok: false, reason: NOT_A_REPLY }
-  return { ok: true, key: typeof reply.key === 'string' ? reply.key.trim() : null, answer: reply.answer }
+  return { ok: true, key: typeof reply.key === 'string' ? reply.key.trim() : null, answer: reply.answer, ...reasonOf(reply.reason) }
 }
 
 /** The free form: one line per question, or the person's words. @param {string[]} lines @returns {CommentReading} */

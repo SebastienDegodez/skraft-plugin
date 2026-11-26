@@ -28,9 +28,31 @@ const answerComment = async (deps, { body, author }) => {
   if (!loaded.ok) return { ok: false, slug: null, key: reply.key, code: 'config-invalid', reason: loaded.reason }
   const { codeHost } = await forgeAdapters(deps, loaded.config.forge)
   const confirmation = writerConfirmation(codeHost, author)
-  const decided = await createDecide({ ...deps, confirmation }).decide({ key: reply.key, answer: reply.answer })
+  const decided = await createDecide({ ...deps, confirmation }).decide(await withReason(deps, reply))
   // Only prose goes to the interpreter: a reply whose lines each name a question is read as written.
   return decided.code === 'invalid-answer' && typeof reply.answer === 'string' ? keptForInterpretation(deps, confirmation, { decided, author, body }) : decided
+}
+
+/**
+ * A refusal and its reason in one reply: `REVISE`, then the person's corrections on its line or the
+ * next ones, when the question it answers takes REVISE with a reason; any other reply as it reads.
+ * @param {any} deps @param {{ key: string | null, answer: unknown, reason?: string }} reply
+ */
+const withReason = async (deps, { key, answer, reason }) => {
+  const decision = { key, answer, ...(reason === undefined ? {} : { reason }) }
+  if (typeof answer !== 'string' || reason !== undefined) return decision
+  const question = await answeredQuestion(deps, key)
+  const [first, ...rest] = answer.trim().split(/\s+/)
+  const option = first.replace(/[:.,;-]+$/, '').toUpperCase()
+  return question?.refusals?.includes(option) && rest.length > 0 ? { key, answer: option, reason: rest.join(' ') } : decision
+}
+
+/** The question a reply answers: the one its key names, else the one the run waits on. @param {any} deps @param {string | null} key */
+const answeredQuestion = async (deps, key) => {
+  const opened = await openActiveRun(deps, null)
+  if (!opened.ok) return null
+  const run = deriveRun(opened.journal.events)
+  return key === null ? run.question : run.questions[key] ?? null
 }
 
 /** The most of a reply kept for its interpreter. */
