@@ -4,6 +4,7 @@ import { recordVisuals } from '../publish/visuals.mjs'
 import { leave } from './run-routes.mjs'
 import { publishResearch } from '../architecture/publish-research.mjs'
 import { retireBrief } from '../architecture/retire-brief.mjs'
+import { finalPublication } from '../architecture/checkpoint.mjs'
 
 /**
  * @typedef {import('./run-pipeline-usecase.mjs').Context} Context
@@ -46,7 +47,7 @@ const PUBLISHERS = Object.freeze({
     const research = await publishResearch({ deps, slug, journal, config })
     if (!research.ok) return { stop: { status: 'blocked', slug, phase: 'PUBLISH', code: 'research-publication-failed', reason: research.reason } }
     await retireBrief(deps, { slug, journal })
-    const publication = await publishPullRequest(deps, { slug, journal, config, workflow: loaded.workflow })
+    const publication = await publishPullRequest(deps, { slug, journal, config: { ...config, publish: finalPublication(config.publish) }, workflow: loaded.workflow })
     return { outcome: publication.published ? 'published' : 'local', reason: publication.reason }
   },
   'playwright-visuals': (context, run, next) => recordedVisuals(context, run, next),

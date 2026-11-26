@@ -36,6 +36,7 @@ export const createGhCodeHost = ({ commandRunner }) => Object.freeze({
 const pullRequestsOf = (commandRunner) => ({
   findPullRequest: (/** @type {string} */ head) => findPullRequest(commandRunner, head),
   readPullRequest: (/** @type {number} */ number) => readOwn(commandRunner, number),
+  markReady: (/** @type {number} */ number) => markReady(commandRunner, number),
   create: (/** @type {PullRequestRequest} */ request) => create(commandRunner, request),
   edit: (/** @type {{ number: number, bodyFile: string }} */ request) => edit(commandRunner, request),
 })
@@ -255,7 +256,7 @@ const readList = (text) => {
 }
 
 /** What `gh pr view` prints of a pull request the run opened, read back. */
-const OWN_VIEWED = 'number,url,state,body,headRefName,isCrossRepository'
+const OWN_VIEWED = 'number,url,state,body,headRefName,isCrossRepository,isDraft'
 
 /**
  * The pull request of that number on the remote pull requests go to, its body whole (a listing
@@ -275,8 +276,8 @@ const readOwn = async (commandRunner, number) => {
 /** @param {string} text @returns {import('../../application/ports/code-host.mjs').ReadPullRequest | null} */
 const readOwnJson = (text) => {
   try {
-    const { number, url, state, body, headRefName, isCrossRepository } = JSON.parse(text)
-    return typeof body === 'string' && typeof headRefName === 'string' ? { number, url, state: /** @type {any} */ (String(state).toLowerCase()), body, head: headRefName, fromFork: isCrossRepository !== false } : null
+    const { number, url, state, body, headRefName, isCrossRepository, isDraft } = JSON.parse(text)
+    return typeof body === 'string' && typeof headRefName === 'string' ? { number, url, state: /** @type {any} */ (String(state).toLowerCase()), body, head: headRefName, fromFork: isCrossRepository !== false, draft: isDraft === true } : null
   } catch {
     return null
   }
@@ -388,6 +389,17 @@ const edit = async (commandRunner, { number, bodyFile, attachments = [] }) => {
   const sent = (await sendable(commandRunner, attachments)).attachments
   const result = await runBeside(commandRunner, ['gh', 'pr', 'edit', String(number), `--repo=${remote.repository}`, `--body-file=${bodyFile}`, ...attachArgs(sent)], bodyFile)
   return answered(result, sent) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not update pull request #${number} on ${remote.repository}`)
+}
+
+/**
+ * A draft pull request made ready for review, through `gh pr ready`.
+ * @param {CommandRunner} commandRunner @param {number} number
+ */
+const markReady = async (commandRunner, number) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_REMOTE)
+  const result = await run(commandRunner, ['gh', 'pr', 'ready', String(number), `--repo=${remote.repository}`])
+  return succeeded(result) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `gh could not make pull request #${number} ready for review on ${remote.repository}`)
 }
 
 /** gh's `--attach <file>#<alt>`, the file named as the body refers to it, from the body file's folder. @param {import('../../application/ports/code-host.mjs').Attachment[]} attachments */

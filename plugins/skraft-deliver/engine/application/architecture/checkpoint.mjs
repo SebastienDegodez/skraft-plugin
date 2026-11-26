@@ -12,3 +12,6 @@ export const completeArchitecturePass = async () => ({ answered: { answer: 'CONT
 
 /** A delivery offers no REFRESH: its blocking questions add nothing. */
 export const REFRESH_OFFER = ''
+
+/** A delivery's pull request is a draft or not as publish.draft says. @param {any} publish the configuration's */
+export const finalPublication = (publish) => publish

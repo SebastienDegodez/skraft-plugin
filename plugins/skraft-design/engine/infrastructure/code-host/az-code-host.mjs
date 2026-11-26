@@ -73,6 +73,7 @@ const extensionMissing = async (commandRunner) => {
 const pullRequestsOf = (commandRunner) => ({
   findPullRequest: (/** @type {string} */ head) => findPullRequest(commandRunner, head),
   readPullRequest: (/** @type {number} */ number) => readOwn(commandRunner, number),
+  markReady: (/** @type {number} */ number) => markReady(commandRunner, number),
   create: (/** @type {PullRequestRequest} */ request) => create(commandRunner, request),
   edit: (/** @type {{ number: number, bodyFile: string }} */ request) => edit(commandRunner, request),
 })
@@ -201,7 +202,7 @@ const NO_SUCH_PULL_REQUEST = /TF401180/
 const ownPullRequestOf = (remote, number, json) => {
   if (json?.pullRequestId !== number || typeof json.sourceRefName !== 'string' || !isTextOrNone(json.description)) return null
   if (String(json.repository?.name).toLowerCase() !== remote.repository.toLowerCase()) return null
-  return { ...foundOf(remote, json), head: json.sourceRefName.replace(/^refs\/heads\//, ''), fromFork: json.forkSource != null }
+  return { ...foundOf(remote, json), head: json.sourceRefName.replace(/^refs\/heads\//, ''), fromFork: json.forkSource != null, draft: json.isDraft === true }
 }
 
 /**
@@ -237,6 +238,17 @@ const open = async (commandRunner, remote, { base, head, title, bodyFile, draft,
 }
 
 /** Replaces the pull request's description. @param {CommandRunner} commandRunner @param {{ number: number, bodyFile: string }} request */
+/**
+ * A draft pull request published, through `az repos pr update --draft false`.
+ * @param {CommandRunner} commandRunner @param {number} number
+ */
+const markReady = async (commandRunner, number) => {
+  const remote = await remoteOf(commandRunner)
+  if (remote === null) return refused(NO_AZURE_REMOTE)
+  const result = await run(commandRunner, ['az', 'repos', 'pr', 'update', `--id=${number}`, '--draft=false', `--organization=${remote.organization}`, ...QUIET])
+  return succeeded(result) ? { ok: /** @type {const} */ (true) } : failedWrite(result, `az could not publish draft pull request #${number} on ${remote.project}/${remote.repository}`)
+}
+
 const edit = async (commandRunner, { number, bodyFile }) => {
   const remote = await remoteOf(commandRunner)
   if (remote === null) return refused(NO_AZURE_REMOTE)

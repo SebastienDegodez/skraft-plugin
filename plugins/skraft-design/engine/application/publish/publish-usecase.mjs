@@ -4,6 +4,7 @@ import { loadConfig } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { JournalConflict } from '../journal/run-journal.mjs'
 import { publishPullRequest } from './pull-request.mjs'
+import { finalPublication } from '../architecture/checkpoint.mjs'
 
 /**
  * @typedef {Parameters<typeof openActiveRun>[0] & import('./pull-request.mjs').PublishDeps & import('../workflow/load-workflow.mjs').WorkflowDeps & Parameters<typeof loadConfig>[0]} PublishCommandDeps
@@ -41,7 +42,7 @@ const publish = async (deps) => {
  */
 const requestedPublication = async (deps, request) => {
   await request.journal.append('publish.requested', { by: 'skraft publish', consent: request.config.publish.pullRequest })
-  return publishPullRequest(deps, { ...request, requested: true })
+  return publishPullRequest(deps, { ...request, config: { ...request.config, publish: finalPublication(request.config.publish) }, requested: true })
 }
 
 /**

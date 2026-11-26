@@ -987,6 +987,7 @@ ignorés sous win32, la CI `windows-latest` de la pull request donne la mesure.
 - Windows : `CommandRunner` arrête l'arbre par `taskkill /PID <pid> /T /F` puis lâche les tubes ; vérifié seulement par le test Windows de la CI, pas sur une machine (#248).
 - Ce que l'hôte fait d'un run en pause ou annulé : le pilote relance une annulation seulement quand `ctx.signal` est annulé (une `AbortError` seule est l'échec de ce qui l'a levée) ; que le SDK annule le signal avant de rejeter les appels en cours est lu dans son source 1.0.101 (`awaitWorkflowOperation`), non mesuré (#247).
 - La clé `subagents.agents` de `~/.copilot/settings.json` que lit `skraft doctor`.
+- skraft-design rend sa pull request prête pour revue à la fin d'un run : `gh pr ready <n> --repo=<repo>` (GitHub) et `az repos pr update --id=<n> --draft=false` (Azure DevOps), l'état de brouillon lu par `gh pr view --json isDraft` et le champ `isDraft` de `az repos pr show`. Ni la sortie ni le code de retour de ces commandes ne sont mesurés ; seuls les doubles des tests le sont.
 
 ## VS Code (lot 10) — ce que les pilotes supposent, non mesuré
 

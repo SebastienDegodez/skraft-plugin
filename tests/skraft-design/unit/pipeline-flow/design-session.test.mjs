@@ -91,6 +91,8 @@ test('research and reviewed story architecture publish a single research comment
   assert.equal(comments.length, 1)
   assert.equal(comments[0].edits, 0)
   assert.equal(host.codeHost.pullRequests.length, 1)
+  // A design run ends on a pull request ready for review: its merge ratifies the architecture.
+  assert.equal(host.codeHost.pullRequests[0].draft, false)
 })
 
 test('an epic runs separate reviewed passes of twenty stories and one remaining story', async () => {
@@ -913,4 +915,38 @@ test('in CI, a run refreshed before anything is designed still asks on the issue
   const settled = await draftInCi(deps, await createRunPipeline(deps).run())
   assert.equal(settled.draft?.on, 'issue', JSON.stringify(settled.draft))
   assert.equal(host.codeHost.pullRequests.length, 0)
+})
+
+test('in CI the draft the run opened to ask a person is made ready for review once the design is done', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(host.codeHost.pullRequests[0].draft, true)
+  host.codeHost.permissions = { maintainer: 'write' }
+  assert.equal((await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer\nQ1: A\nQ2: KEEP' })).ok, true)
+  host.agentRunner.behaviours.push(agent({ work: async ({ tracking }) => { await tracking.write('epic-42', 'details/open-questions.json', '[]') } })(host))
+  const finished = await draftInCi(deps, await createRunPipeline(deps).run())
+  assert.equal(finished.status, 'done', finished.reason)
+  assert.equal(host.codeHost.pullRequests.length, 1)
+  assert.equal(host.codeHost.pullRequests[0].draft, false)
+  assert.ok(host.codeHost.calls.includes(`ready #${host.codeHost.pullRequests[0].number}`), host.codeHost.calls.join(', '))
+  assert.ok(host.events().some(({ type, number }) => type === 'pull-request.ready' && number === host.codeHost.pullRequests[0].number))
+})
+
+test('a forge that refuses to make the draft ready leaves the run\'s pull request local, saying why, its body up to date', async () => {
+  const { host, deps, run } = session([story(42), story(43)], 'epic-42', { config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } } })
+  await run.start({ epic: 42, mode: 'ci' })
+  host.agentRunner.behaviours.push(agent()(host), questioningArchitect(host, 'epic-42'))
+  await draftInCi(deps, await createRunPipeline(deps).run())
+  host.codeHost.permissions = { maintainer: 'write' }
+  await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer\nQ1: A\nQ2: KEEP' })
+  host.codeHost.fails.ready = 'gh could not make pull request #42 ready for review on acme/shop'
+  host.agentRunner.behaviours.push(agent({ work: async ({ tracking }) => { await tracking.write('epic-42', 'details/open-questions.json', '[]') } })(host))
+  await createRunPipeline(deps).run()
+  const published = host.events().findLast(({ type, step }) => type === 'step.recorded' && step === 'publish')
+  assert.equal(published.outcome, 'local')
+  assert.match(published.reason, /gh could not make pull request #42 ready for review on acme\/shop/)
+  assert.equal(host.codeHost.pullRequests[0].draft, true)
+  assert.ok(host.events().some(({ type, write, outcome }) => type === 'forge.write' && write === 'pull-request-ready' && outcome === 'refused'))
 })

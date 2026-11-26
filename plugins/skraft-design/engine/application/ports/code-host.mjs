@@ -4,8 +4,8 @@
  *
  * @typedef {{ number: number, url: string }} PullRequest
  * @typedef {PullRequest & { state: 'open' | 'closed' | 'merged', body: string }} FoundPullRequest
- * @typedef {FoundPullRequest & { head: string, fromFork: boolean }} ReadPullRequest
- *   body: the whole description; head: its source branch, as the forge names it; fromFork: it comes from a fork of the
+ * @typedef {FoundPullRequest & { head: string, fromFork: boolean, draft?: boolean }} ReadPullRequest
+ *   body: the whole description; head: its source branch, as the forge names it; draft: it is a draft; fromFork: it comes from a fork of the
  *   remote's repository, not from the repository itself.
  * @typedef {{ path: string, alt: string, reference: string }} Attachment
  *   path: a file of the working copy, relative to it; alt: its alt text, made safe to publish;
@@ -63,6 +63,7 @@
  *   readPullRequest: (number: number) => Promise<{ ok: true, found: ReadPullRequest | null } | { ok: false, reason: string }>,
  *   create: (request: PullRequestRequest) => Promise<({ ok: true, note?: string } & PullRequest) | Failed>,
  *   edit: (request: { number: number, bodyFile: string, body: string, attachments: Attachment[] }) => Promise<Done>,
+ *   markReady: (number: number) => Promise<Done>,
  *   keepIssueComment: (request: IssueCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
  *   keepPullRequestComment: (request: PullRequestCommentRequest) => Promise<{ ok: true, url: string } | Failed>,
  *   readComment: (url: string) => Promise<CommentReading>,
@@ -88,7 +89,7 @@
  *   when there is none; its body may be cut (Azure DevOps lists 400 characters of a description).
  *   readPullRequest: the pull request of that number, its description whole; null when the forge
  *   has none. create: opens one; note: a fixed line on what it could not do (link the issue).
- *   edit: replaces the body of one. keepIssueComment: rewrites the comment at url; without one, or
+ *   edit: replaces the body of one. markReady: makes a draft one ready for review. keepIssueComment: rewrites the comment at url; without one, or
  *   when it is gone, the signed-in user's latest comment of that issue holding the marker; without
  *   one either, posts a new comment. Gives the URL of the comment kept. issue: the issue of that
  *   number on the repository gh would pick in a clone of a fork, its body as written; failed when

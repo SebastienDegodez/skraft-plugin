@@ -383,7 +383,30 @@ const settled = async (deps, request, { pull, open }) => {
   const whole = await deps.codeHost.readPullRequest(found.number)
   if (!whole.ok || whole.found === null) return notOpened(whole.ok ? unreadReason(open.found.number) : whole.reason)
   const live = { ...located, found: whole.found, liveHash: await hashOf(deps, whole.found.body) }
-  return unsettled === null ? updated(deps, request, live) : reconciled(deps, request, { ...live, sent: unsettled.bodyHash })
+  return unsettled === null ? updatedThenReady(deps, request, live) : reconciled(deps, request, { ...live, sent: unsettled.bodyHash })
+}
+
+/** The open pull request's body brought up to date, then the pull request made ready when it is due. @param {OnForge} deps @param {PublishRequest} request @param {any} live */
+const updatedThenReady = async (deps, request, live) => {
+  const done = await updated(deps, request, live)
+  return done.published ? readied(deps, request, live.found, done) : done
+}
+
+/**
+ * A draft the run opened to ask a person, its body now the final one, made ready for review: a
+ * publication that is no draft leaves none behind. One a person made ready already, or a draft
+ * publication, stays as it is.
+ * @param {OnForge} deps @param {PublishRequest} request @param {{ number: number, url: string, draft?: boolean }} found @param {Publication} done
+ * @returns {Promise<Publication>}
+ */
+const readied = async (deps, { journal, config }, found, done) => {
+  if (config.publish.draft === true || found.draft !== true) return done
+  const write = { write: 'pull-request-ready', subject: String(found.number) }
+  const made = await deps.codeHost.markReady(found.number)
+  if (!made.ok) return unwritten(journal, write, made)
+  await journal.append('pull-request.ready', { number: found.number, url: found.url })
+  await journalWrite(journal, write, { outcome: 'applied' })
+  return { ...done, reason: `${done.reason}; made ready for review` }
 }
 
 /**

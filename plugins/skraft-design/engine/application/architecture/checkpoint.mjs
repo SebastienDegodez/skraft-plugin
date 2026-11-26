@@ -110,3 +110,10 @@ const pinRun = async ({ deps, slug, journal }) => {
 
 const nextPass = (events) => (events.find((event) => event.type === 'architecture.scope')?.stories.length > (passIndex(events) + 1) * 20 ? 'NEXT' : 'COMPLETE')
 const answered = (answer) => ({ answered: { answer, reason: 'The engine accounted for every story in this architecture pass.' } })
+
+/**
+ * The publication a design run ends on: a pull request ready for review, whatever publish.draft
+ * says, its merge being the ratification of the architecture; the draft the run opened to ask a
+ * person is made ready then. @param {any} publish the configuration's
+ */
+export const finalPublication = (publish) => ({ ...publish, draft: false })
