@@ -20,14 +20,14 @@ export const stopRun = async ({ slug, journal }, code, reason) => {
   return stopped(slug, code, reason)
 }
 
-export const bindDocuments = async ({ files }, { slug, journal }, { documents, sha, path }) => {
+export const bindDocuments = async ({ files }, { slug, journal }, { documents, sha, path, mode = 'merged' }) => {
   const artifacts = []
   for (const { path: source, text } of documents) {
     const snapshot = `architecture/${source}`
     await files.write(slug, snapshot, text)
     artifacts.push(snapshot)
   }
-  artifacts.push(await writeArchitectureContext(files, slug, { mode: 'merged', sha, brief: path, documents }))
+  artifacts.push(await writeArchitectureContext(files, slug, { mode, sha, brief: path, documents }))
   await journal.append('architecture.bound', { artifacts })
 }
 

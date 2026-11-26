@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { agent, API, pipelineHost } from '../support/pipeline-host.mjs'
+import { lightDesigner } from '../support/light-designer.mjs'
 import { createDeliveryRun } from '../../../../plugins/skraft-deliver/engine/application/architecture/delivery-run.mjs'
 import { createAgentLoop } from '../../../../plugins/skraft-deliver/engine/drivers/cli/agent-loop.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-deliver/engine/application/pipeline/run-pipeline-usecase.mjs'
@@ -10,7 +11,9 @@ import { createHash, createHmac } from 'node:crypto'
 const session = (options = {}) => {
   const host = pipelineHost({ slug: 'issue-42', ...options })
   const branches = []
-  const deps = { ...host.deps, architectureForge: { read: async () => ({ ok: true, issue: {
+  // The brief's fingerprint is a SHA-256 of the issue body, as on a developer machine.
+  const hasher = { sha256: async (text) => createHash('sha256').update(text).digest('hex'), hmacSha256: async (key, text) => createHmac('sha256', key).update(text).digest('hex') }
+  const deps = { ...host.deps, hasher, architectureForge: { read: async () => ({ ok: true, issue: {
     number: 42, title: 'Checkout', body: 'AC-1: receipt visible.', story: true, forge: 'github', repository: 'shop/checkout',
   } }) }, architectureRepository: {
     branch: async (request) => { branches.push(request); return { ok: true } },
@@ -20,25 +23,25 @@ const session = (options = {}) => {
   return { host, deps, branches, run }
 }
 
-test('no architecture starts at DISTILL, never RESEARCH or DESIGN, and resumes pending work', async () => {
+test('no architecture starts with a light design before DISTILL, never RESEARCH, and resumes pending work', async () => {
   const { host, deps, branches, run } = session()
   const started = await run.start({ issue: 42 })
   assert.equal(started.status, 'ready', started.reason)
-  assert.match(started.notice, /No architecture brief/)
+  assert.match(started.notice, /No architecture brief found for this story\. A light design writes one before DISTILL\./)
   const loop = createAgentLoop({ adapters: deps, log: () => {}, then: { next: 'next', record: 'record', review: () => 'review' } })
   const step = await loop.next()
   assert.equal(step.status, 'dispatch', step.reason)
-  assert.deepEqual(step.dispatches.map(({ agent }) => agent), ['deliver-acceptance-designer'])
+  assert.deepEqual(step.dispatches.map(({ agent }) => agent), ['deliver-light-designer'])
   assert.equal((await run.prepare()).status, 'ready')
   assert.equal((await loop.next()).code, 'not-recorded')
   assert.deepEqual(branches, [{ name: 'deliver/issue-42', existing: false }])
-  assert.equal(host.events().some(({ phase }) => ['RESEARCH', 'DESIGN'].includes(phase)), false)
+  assert.equal(host.events().some(({ phase }) => phase === 'RESEARCH'), false)
 })
 
 test('delivery retains human scenario approval, TDD, gates and final review before its local PR', async () => {
   const { host, deps, run } = session({ scenarioReviews: [null, { answer: 'APPROVED' }] })
   await run.start({ issue: 42 })
-  host.agentRunner.behaviours.push(agent()(host), agent()(host))
+  host.agentRunner.behaviours.push(lightDesigner()(host), agent()(host), agent()(host))
   const first = await createRunPipeline(deps).run()
   assert.equal(first.status, 'waiting', first.reason)
   assert.equal(host.agentRunner.dispatches.some(({ agent }) => agent === 'deliver-software-engineer'), false)
@@ -49,16 +52,14 @@ test('delivery retains human scenario approval, TDD, gates and final review befo
   assert.ok(lenses.includes('deliver-test-integrity-lens'), lenses.join(', '))
   // the gates run through skraft_deliver_repl; the DELIVER review's quality-gates lens judges them from the signed trace
   assert.ok(lenses.includes('deliver-quality-gates-lens'), lenses.join(', '))
-  // Each lens reads the architecture context the delivery bound, here the absence of any design.
+  // Each lens reads the architecture context the delivery bound, here its light design.
   const lensBriefs = host.agentRunner.reviewed().filter(({ agent: id }) => id.endsWith('-lens'))
-  assert.ok(lensBriefs.every(({ prompt }) => /architecture\/context\.json/.test(prompt) && /mode=absent/.test(prompt)), lensBriefs.map(({ agent: id }) => id).join(', '))
+  assert.ok(lensBriefs.every(({ prompt }) => /architecture\/context\.json/.test(prompt) && /mode=light/.test(prompt)), lensBriefs.map(({ agent: id }) => id).join(', '))
   assert.ok(host.events().some(({ type, step, outcome }) => type === 'step.recorded' && step === 'publish' && outcome === 'local'))
 })
 
 const architectureSession = ({ changed = false, status = 'Accepted', options = {} } = {}) => {
   const context = session(options)
-  context.deps.hasher = { sha256: async (text) => createHash('sha256').update(text).digest('hex'),
-    hmacSha256: async (key, text) => createHmac('sha256', key).update(text).digest('hex') }
   const path = 'docs/architecture/stories/42-checkout.md'
   const adr = 'docs/adr/adr-001-checkout.md'
   const brief = { version: 1, issue: 42, forge: 'github', repository: 'shop/checkout',

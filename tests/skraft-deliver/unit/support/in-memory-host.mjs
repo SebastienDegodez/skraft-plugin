@@ -621,7 +621,7 @@ export const PLUGIN_AGENTS = Object.freeze([
   'deliver-consistency-lens', 'deliver-architecture-compliance-lens', 'deliver-fitness-lens',
   'deliver-coverage-lens', 'deliver-business-alignment-lens', 'deliver-testability-lens', 'deliver-boundary-enforcement-lens',
   'deliver-test-integrity-lens', 'deliver-architecture-boundaries-lens', 'deliver-cold-reader-lens', 'deliver-quality-gates-lens', 'deliver-mock-fidelity-lens', 'deliver-contract-fidelity-lens',
-  'deliver-finding-refuter', 'deliver-pr-writer',
+  'deliver-finding-refuter', 'deliver-pr-writer', 'deliver-light-designer',
 ])
 
 /** The mocking and contract testing skills the plugin ships, the skills a component asks for. */

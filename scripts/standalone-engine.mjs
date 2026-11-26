@@ -24,8 +24,11 @@ const NAMES = Object.freeze([
   ['design-', 'deliver-'],
 ])
 
-/** Words both plugins write alike though they start like a name: the DESIGN phase's records check, its module and its code. */
-const KEPT = Object.freeze(['design-records'])
+/**
+ * Words both plugins write alike though they hold a name: the DESIGN phase's records check, its
+ * module and its code; a delivery's light design, its modules, plan and question.
+ */
+const KEPT = Object.freeze(['design-records', 'light-design'])
 
 /** A source file's text as its copy holds it. @param {string} text */
 export const translate = (text) => {

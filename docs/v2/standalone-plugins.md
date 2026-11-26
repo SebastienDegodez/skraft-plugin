@@ -104,9 +104,30 @@ With no brief, the manifest records `mode=absent`; no prior DESIGN document or A
 An unmerged brief is refused as `architecture-unmerged`. A cited ADR with `Superseded` or
 `Rejected` status is refused as `architecture-stale`; any status other than `Accepted` is
 also refused. A changed issue body asks a human to `KEEP` the brief or `REDESIGN`; the latter
-stops delivery and points to design, without invoking it. With no brief, delivery records a
-notice and starts at DISTILL, never RESEARCH or DESIGN. Forge and repository identity must
+stops delivery and points to design, without invoking it. Forge and repository identity must
 match, so another repository's issue with the same number is not accepted.
+
+## Light design
+
+With no brief merged for its story, delivery records a notice and writes
+`plans/light-design.json`: the story's identity, the path of its brief
+(`docs/architecture/runs/<run>/<number>-<slug>.md`) and the components it may cite. The
+workflow's `architecture_mode` node, answered by the engine, then leads to `light_design`
+instead of DISTILL; it never runs RESEARCH. `deliver-light-designer` writes the brief, in the
+same v1 format, and an ADR only for a decision that passes the eligibility gate. It writes
+nothing else: no document of `docs/architecture/` but its brief, no code, no test.
+
+The engine checks each attempt as it checks any other: the brief reads, carries the engine's
+identity, cites only the plan's components and existing files, and cites each ADR it relies on,
+`Accepted` or written by this light design; every ADR it wrote is cited. The ADR checks of
+every step apply as well.
+
+`light_design_review` then settles it. With no ADR, the engine approves it. With one, a person
+reads each ADR's decision: `APPROVED` marks them Accepted on the branch, effective on the merge
+of the delivery pull request, `REVISE` runs the light design again with their words, `STOP` ends
+the delivery. An approved brief is bound as `mode=light` in `architecture/context.json`, read by
+DISTILL, DELIVER and their lenses as a merged one, and leaves the branch before the pull request
+as a merged one does.
 
 ## Isolation and hosts
 

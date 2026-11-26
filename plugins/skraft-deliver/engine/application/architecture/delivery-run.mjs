@@ -3,6 +3,7 @@ import { openActiveRun } from '../pipeline/active-run.mjs'
 import { createArchitectureReader } from './read-architecture.mjs'
 import { bindDocuments, contextQuestion, stopped, stopRun, waitingFor, writeArchitectureContext } from './context.mjs'
 import { runIdentity } from './run-identity.mjs'
+import { writeLightDesignPlan } from './light-design.mjs'
 import { issueDocument } from '../../domain/pipeline/artifacts.mjs'
 
 export const createDeliveryRun = (deps) => Object.freeze({
@@ -38,7 +39,7 @@ const prepare = async (deps) => {
   if (!read.ok) return { status: 'refused', ...read }
   await deps.files.write(opened.slug, opened.journal.events[0].artifacts[0], issueDocument(read.issue))
   const found = await createArchitectureReader(deps).find(read.issue)
-  return bindOrAsk(deps, opened, found)
+  return bindOrAsk(deps, { ...opened, issue: read.issue }, found)
 }
 
 const bindOrAsk = async (deps, opened, found) => {
@@ -53,10 +54,12 @@ const bindOrAsk = async (deps, opened, found) => {
   return { status: 'ready', slug: opened.slug, architecture: found.path }
 }
 
-const withoutBrief = async ({ slug, journal }, deps) => {
-  const notice = 'No architecture brief found for this story. Delivery starts at DISTILL.'
+/** No brief merged for the story: a light design writes one before DISTILL, under the plan the engine gives it. */
+const withoutBrief = async ({ slug, journal, issue }, deps) => {
+  const notice = 'No architecture brief found for this story. A light design writes one before DISTILL.'
   const context = await writeArchitectureContext(deps.files, slug, { mode: 'absent', documents: [] })
-  await journal.append('architecture.bound', { artifacts: [context], notice })
+  const plan = await writeLightDesignPlan(deps, slug, issue)
+  await journal.append('architecture.bound', { artifacts: [context, plan], notice })
   return { status: 'ready', slug, notice }
 }
 

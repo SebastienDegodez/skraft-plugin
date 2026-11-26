@@ -9,6 +9,7 @@ import { allowedPaths, makesCommits, rootFiles, trackingFolder } from '../../dom
 import { adrFailures } from '../decisions/adr-checks.mjs'
 import { checkDesignRecords } from './design-records.mjs'
 import { checkResearchRecords } from './research-records.mjs'
+import { lightBriefFailures } from '../architecture/light-design.mjs'
 import { EJECTED } from '../workflow/called-workflows.mjs'
 import { redRunOf, tracedRuns } from './evidence-checks.mjs'
 import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './scenario-checks.mjs'
@@ -18,7 +19,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  * @typedef {import('../../domain/pipeline/commits.mjs').JudgedCommit} JudgedCommit
  * @typedef {import('../../domain/config/skraft-config.mjs').Component} Component
  * @typedef {import('../../domain/config/skraft-config.mjs').SkraftConfig} SkraftConfig
- * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
+ * @typedef {'missing-outputs' | 'invalid-result' | 'design-records' | 'research-records' | 'light-brief' | 'scenarios' | 'pull-request-prose' | 'agent-blocked' | 'write-scope' | 'uncommitted' | 'adr-lifecycle' | 'commit-convention' | 'tdd'} FailureCode
  * @typedef {{ repository: string, sha: string, subject: string, kind: string, verdict: string }} CheckedCommit
  * @typedef {{
  *   missing: string[], failures: string[], code: FailureCode | null, commits: CheckedCommit[],
@@ -54,7 +55,7 @@ import { planOf, scenarioFailures, scenarioJudging, scenarioRecord } from './sce
  */
 
 /** Failure codes, the first one found naming the step's refusal. */
-const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
+const PRIORITY = /** @type {const} */ (['missing-outputs', 'invalid-result', 'design-records', 'research-records', 'light-brief', 'scenarios', 'pull-request-prose', 'write-scope', 'uncommitted', 'adr-lifecycle', 'commit-convention', 'tdd'])
 
 /**
  * Where each repository of the run stands before an attempt: its HEAD and the files already
@@ -250,6 +251,7 @@ const proseFailures = async ({ files }, slug, { role, outputs }, missing) => {
 const keptRecords = async (deps, { role, precreated }, { slug, base, config }) => {
   if (role.records) return coded('design-records', await checkDesignRecords(deps, { slug, base }))
   if (role.citations) return researchRecords(deps, slug, precreated, config)
+  if (role.brief) return coded('light-brief', await lightBriefFailures(deps, { slug, base }))
   return []
 }
 

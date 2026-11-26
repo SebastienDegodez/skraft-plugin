@@ -12,7 +12,7 @@ import { readQuestionAnswers } from '../architecture/open-questions.mjs'
  * story's scenarios, its walking skeleton and the acceptance test of S1 before DELIVER builds them: APPROVED goes on, REVISE
  * sends DISTILL back with the human's corrections.
  *
- * @typedef {'adr-merge-acceptance' | 'scenario-review'} NodeQuestion
+ * @typedef {'adr-merge-acceptance' | 'scenario-review' | 'architecture-pass' | 'architecture-mode' | 'light-design-review'} NodeQuestion
  * @typedef {NodeQuestion | 'environment' | 'unforeseen' | 'review-consent' | 'blocked' | 'review-ceiling' | 'configuration'} QuestionKind
  * @typedef {{ options: readonly string[], refusals: readonly string[], header: string, instruction: boolean }} QuestionSpec
  *   options: the answers, the one that lets the run go on first; refusals: the answers that send
@@ -52,6 +52,8 @@ const QUESTIONS = Object.freeze({
   'architecture-refresh': Object.freeze({ options: Object.freeze(['KEEP', 'REDESIGN']), refusals: Object.freeze([]), header: 'Architecture', instruction: false }),
   'adr-merge-acceptance': Object.freeze({ options: Object.freeze([ADR_ACCEPTED_ON_MERGE]), refusals: Object.freeze([]), header: 'ADR', instruction: false }),
   'scenario-review': Object.freeze({ options: Object.freeze(['APPROVED', 'REVISE']), refusals: Object.freeze(['REVISE']), header: 'Scenarios', instruction: false }),
+  'architecture-mode': Object.freeze({ options: Object.freeze(['BRIEF', 'ABSENT']), refusals: Object.freeze([]), header: 'Architecture', instruction: false }),
+  'light-design-review': Object.freeze({ options: Object.freeze(['APPROVED', 'REVISE', STOP]), refusals: Object.freeze(['REVISE']), header: 'Light design', instruction: false }),
   environment: Object.freeze({ options: Object.freeze(['RETRY', 'ABORT']), refusals: Object.freeze([]), header: 'Environment', instruction: false }),
   unforeseen: Object.freeze({ options: Object.freeze(['RETRY', 'RETRY_WITH_NOTE', 'STOP']), refusals: Object.freeze([]), header: 'Incident', instruction: false }),
   'review-consent': Object.freeze({ options: Object.freeze(['ACCEPTED', 'DECLINED']), refusals: Object.freeze([]), header: 'PR comment', instruction: false }),
@@ -61,7 +63,7 @@ const QUESTIONS = Object.freeze({
 })
 
 /** The questions a workflow node may ask. */
-export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-merge-acceptance', 'scenario-review', 'architecture-pass']))
+export const NODE_QUESTIONS = Object.freeze(/** @type {NodeQuestion[]} */ (['adr-merge-acceptance', 'scenario-review', 'architecture-pass', 'architecture-mode', 'light-design-review']))
 
 /** A reason is kept on one line, at most this long. */
 const REASON_LENGTH = 500

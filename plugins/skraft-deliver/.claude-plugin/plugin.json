@@ -17,6 +17,7 @@
     "./com.anthropic.claude-code/agents/deliver-contract-fidelity-lens.md",
     "./com.anthropic.claude-code/agents/deliver-coverage-lens.md",
     "./com.anthropic.claude-code/agents/deliver-finding-refuter.md",
+    "./com.anthropic.claude-code/agents/deliver-light-designer.md",
     "./com.anthropic.claude-code/agents/deliver-mock-fidelity-lens.md",
     "./com.anthropic.claude-code/agents/deliver-pr-writer.md",
     "./com.anthropic.claude-code/agents/deliver-quality-gates-lens.md",

@@ -13,13 +13,14 @@ import { joinRelative } from '../config/relative-path.mjs'
  * @typedef {'cycle' | 'red' | null} TddMode
  *   cycle: each failing test commit, then the code that passes it; red: failing acceptance tests
  *   only, with the skeleton they call; null: no test commit.
- * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, files?: readonly string[], shell?: boolean, citations?: boolean, scenarios?: boolean }} Role
+ * @typedef {{ outputs: readonly OutputSpec[], writes: readonly string[], components: readonly ComponentPaths[], records: boolean, scan: boolean, tdd: TddMode, prose: boolean, files?: readonly string[], shell?: boolean, citations?: boolean, scenarios?: boolean, brief?: boolean }} Role
  *   writes: folders relative to the working copy; files: files at the working copy's root the role
  *   may change, never created as folders; components: which paths of every component of
  *   skraft-design-config.json the agent may write; records: the engine checks the DESIGN records
  *   (consistency matrix, ADR names and supersessions) its attempts leave;
  *   scan: the engine scans the code for its structural commitments before each attempt;
  *   citations: the engine checks the citations of the research document its attempts leave;
+ *   brief: the engine checks the light brief of a delivery its attempts leave;
  *   scenarios: the agent writes the story's scenarios, in the folders the components' bdd names;
  *   tdd: how its commits drive the tests; prose: the engine checks the pull request prose its
  *   output holds (a summary line of at most 72 characters, no section left empty);
@@ -79,6 +80,19 @@ const ROLES = Object.freeze({
     tdd: 'red',
     prose: false,
     shell: true,
+  }),
+  // A delivery's light designer writes the story's brief under docs/architecture/runs/ and the
+  // ADRs it needs, nothing else: the shared documents of docs/architecture/ are a design run's.
+  'design-light-designer': Object.freeze({
+    outputs: Object.freeze([]),
+    writes: Object.freeze(['docs/adr', 'docs/architecture/runs']),
+    components: Object.freeze([]),
+    records: false,
+    brief: true,
+    scan: false,
+    tdd: null,
+    prose: false,
+    shell: false,
   }),
   'design-software-engineer': DELIVERING,
   // The design-pr-writer writes the prose of the pull request the publish node opens, nothing else.

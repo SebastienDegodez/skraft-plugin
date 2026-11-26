@@ -134,7 +134,9 @@ Delivery reads the brief and cited documents from one fetched commit of that mer
 then supplies snapshots to its agents. DISTILL, scenario review, human approval, TDD,
 gates, implementation review and optional visuals precede the delivery PR, which also removes
 the story's brief in one engine commit; git keeps it, and the documents it cites stay.
-Without a brief, delivery announces its absence and still starts at DISTILL.
+Without a brief, delivery announces its absence and runs a light design before DISTILL: one
+brief for the story, and an ADR only when a decision deserves one, which you ratify before
+DISTILL relies on it.
 
 Resume by asking the same plugin to continue its active run. State stays under
 `.copilot-tracking/skraft-design-runs/` or `.copilot-tracking/skraft-deliver-runs/`;

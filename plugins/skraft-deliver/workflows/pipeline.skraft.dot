@@ -2,6 +2,9 @@ digraph deliver {
   graph [version="2", goal="Deliver the story", input_architecture="optional", input_story="required"]
 
   start    [shape=Mdiamond]
+  architecture_mode [shape=hexagon, question="architecture-mode", phase="DESIGN"]
+  light_design [shape=box, agent="deliver-light-designer", phase="DESIGN"]
+  light_design_review [shape=hexagon, question="light-design-review"]
   distill  [shape=box, agent="deliver-acceptance-designer", phase="DISTILL"]
   subgraph cluster_distill_review {
     label="DISTILL review"
@@ -21,7 +24,13 @@ digraph deliver {
   publish  [shape=parallelogram, publish="pull-request"]
   exit     [shape=Msquare]
 
-  start -> distill
+  start -> architecture_mode
+  architecture_mode -> distill [label="BRIEF"]
+  architecture_mode -> light_design [label="ABSENT"]
+  light_design -> light_design_review
+  light_design_review -> distill [label="APPROVED"]
+  light_design_review -> light_design [label="REVISE", max_visits=2]
+  light_design_review -> exit [label="STOP"]
   distill -> distill_review_lenses
   distill_review_lenses -> distill_review_coverage -> distill_review_refuter
   distill_review_lenses -> distill_review_business_alignment -> distill_review_refuter

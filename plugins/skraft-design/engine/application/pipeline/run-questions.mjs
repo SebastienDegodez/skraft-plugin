@@ -20,6 +20,7 @@ import { mayJudgeIncident, unforeseenStop, unforeseenText } from '../../domain/d
 import { recordJudgment } from '../decisions/decide-usecase.mjs'
 import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
 import { completeArchitecturePass } from '../architecture/checkpoint.mjs'
+import { ARCHITECTURE_MODE, LIGHT_DESIGN_REVIEW } from '../architecture/light-design-review.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -97,6 +98,7 @@ const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
 const QUESTIONNAIRES = Object.freeze({
   'adr-merge-acceptance': ADR_ACCEPTANCE, 'scenario-review': SCENARIO_REVIEW,
   'architecture-pass': { plan: completeArchitecturePass, act: async () => ({ failures: [] }) },
+  'architecture-mode': ARCHITECTURE_MODE, 'light-design-review': LIGHT_DESIGN_REVIEW,
 })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */

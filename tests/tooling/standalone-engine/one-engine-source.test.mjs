@@ -13,9 +13,9 @@ const write = (root, files) => {
   }
 }
 
-test('a source file reads in the copy with the delivery plugin\'s names, the DESIGN phase\'s records check kept as it is', () => {
-  const source = "import { x } from './design-records.mjs'\n// skraft_design_next, SKRAFT_DESIGN_JOURNAL_KEY, Skraft Design - Orchestrator, design-finding-refuter in skraft-design\n"
-  assert.equal(translate(source), "import { x } from './design-records.mjs'\n// skraft_deliver_next, SKRAFT_DELIVER_JOURNAL_KEY, Skraft Deliver - Orchestrator, deliver-finding-refuter in skraft-deliver\n")
+test('a source file reads in the copy with the delivery plugin\'s names, the DESIGN phase\'s records check and the light design kept as they are', () => {
+  const source = "import { x } from './design-records.mjs'\n// skraft_design_next, SKRAFT_DESIGN_JOURNAL_KEY, Skraft Design - Orchestrator, design-finding-refuter in skraft-design\n// 'light-design-review' asked after design-light-designer\n"
+  assert.equal(translate(source), "import { x } from './design-records.mjs'\n// skraft_deliver_next, SKRAFT_DELIVER_JOURNAL_KEY, Skraft Deliver - Orchestrator, deliver-finding-refuter in skraft-deliver\n// 'light-design-review' asked after deliver-light-designer\n")
 })
 
 test('the comparison names a copy that drifted, one missing, and one only the copy holds; owned and pending files are left alone', async (t) => {

@@ -142,7 +142,9 @@ puis transmet leurs copies aux agents. DISTILL, revue des scenarios, validation 
 gates, revue d'implementation et visuels optionnels precedent la PR de livraison, qui retire
 aussi le brief de la story en un commit du moteur ; git le garde, et les documents qu'il cite
 restent.
-Sans brief, deliver annonce son absence et commence quand meme a DISTILL.
+Sans brief, deliver annonce son absence et fait un design leger avant DISTILL : un brief pour
+la story, et un ADR seulement quand une decision le merite, que vous ratifiez avant que
+DISTILL ne s'appuie dessus.
 
 Pour reprendre, demandez au meme plugin de continuer son run actif. L'etat reste sous
 `.copilot-tracking/skraft-design-runs/` ou `.copilot-tracking/skraft-deliver-runs/` ;
