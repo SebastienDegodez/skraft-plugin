@@ -1,12 +1,13 @@
-import { cell, code } from './markdown-safety.mjs'
-import { qualityEvidence, isTestPlan, redCommits, testPlanPaths } from './run-facts.mjs'
+import { code } from './markdown-safety.mjs'
+import { qualityEvidence, isTestPlan, testPlanPaths } from './run-facts.mjs'
 import { qaLines, qaTable } from './qa-evidence.mjs'
 import { lensesText, reviewPasses } from './review-passes.mjs'
 
 /**
  * qa-report.md: what a qualification team reads to judge the story, from the journal alone: the
- * test plan, the traced runs the delivery stands on, the red commits
- * of its TDD cycles, each review's verdict. Every text an agent or a tool wrote sits in a code
+ * test plan, the traced runs the delivery stands on, each review's verdict. The red commits prove
+ * the TDD loop to a developer, not to QA: the pull request holds them. Every text an agent or a
+ * tool wrote sits in a code
  * span; the rest is the engine's.
  *
  * @typedef {import('../journal/run-state.mjs').RunEvent} RunEvent
@@ -28,7 +29,6 @@ export const renderQaReport = ({ slug, status, events, outcomes }) => [
   ...section('Test plan', testPlanLines(events)),
   ...qaSections(qaFacts(events, outcomes)),
   ...section('Quality evidence', gateLines(events)),
-  ...section('TDD red commits', redCommitLines(events)),
   ...section('Reviews', reviewLines(events)),
 ].join('\n')
 
@@ -61,17 +61,6 @@ const gateLines = (events) => {
   const evidence = qualityEvidence(events)
   if (evidence.length === 0) return ['No traced run has been checked yet.']
   return ['| Gate | Folder | Run | Log |', '| --- | --- | ---: | --- |', ...evidence.map(({ gate, folder, run, log }) => `| ${gate} | ${code(folder)} | ${run} | [${log}](${log}) |`)]
-}
-
-/** @param {RunEvent[]} events */
-const redCommitLines = (events) => {
-  const commits = redCommits(events)
-  if (commits.length === 0) return ['No red commit yet.']
-  return [
-    '| Commit | Subject |',
-    '| --- | --- |',
-    ...commits.map(({ sha, subject }) => `| ${code(sha)} | ${cell(code(subject))} |`),
-  ]
 }
 
 /** @param {RunEvent[]} events */
