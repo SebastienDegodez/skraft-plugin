@@ -20,6 +20,8 @@ const openKernel = async (t) => {
   // Before the folder's hook: hooks run in order, and Windows keeps the folder of a live kernel.
   t.after(async () => {
     for (const program of live.values()) program.kill('SIGKILL', 0)
+    // Windows keeps the folder until each program has exited, not only been killed.
+    await Promise.race([Promise.allSettled([...live.values()].map((program) => program.done)), new Promise((done) => setTimeout(done, 10_000).unref())])
     await kernel?.stop()
   })
   const root = tempFolder(t)

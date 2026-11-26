@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.110](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.109...v2.0.0-alpha.110) (2026-11-26)
+
+### 🐛 Bug Fixes
+
+* **repl:** Windows behaves as macOS — a stopped kernel is gone, paths have one separator, CI jobs stop after their time ([#675](https://github.com/SebastienDegodez/skraft-plugin/issues/675)) ([1719481](https://github.com/SebastienDegodez/skraft-plugin/commit/1719481c8ae1707a7ed832a110bbe43a08afecd9)), closes [#647](https://github.com/SebastienDegodez/skraft-plugin/issues/647)
+
 ## [2.0.0-alpha.109](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.108...v2.0.0-alpha.109) (2026-11-23)
 
 ### 🐛 Bug Fixes
