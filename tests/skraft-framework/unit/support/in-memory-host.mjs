@@ -625,7 +625,7 @@ export const SHIPPED_COMPONENT_SKILLS = Object.freeze([
 ])
 
 /** The skills holding the gates a producer's review judges its outputs by. */
-export const SHIPPED_CHECKLIST_SKILLS = Object.freeze(['acceptance-review-criteria'])
+export const SHIPPED_CHECKLIST_SKILLS = Object.freeze(['acceptance-review-coverage', 'acceptance-review-business-alignment', 'acceptance-review-testability', 'acceptance-review-boundary-enforcement'])
 
 /** The gate names some shipped lenses give in their descriptor, as `| Gate | Name | …` holds them. */
 export const SHIPPED_GATE_NAMES = Object.freeze({

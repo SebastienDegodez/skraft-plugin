@@ -1,6 +1,12 @@
+---
+name: acceptance-review-coverage
+description: "Use when reviewing DISTILL artefacts as the coverage-lens, or self-checking them before the review: gates G1, G2. Checks that every acceptance criterion and business rule of a DISTILL story has its own scenario, edge and error cases included."
+---
+
 # Coverage lens — gates
 
-Gates G1 and G2 of `acceptance-review-criteria`, the gates the `coverage-lens` judges by. Severities, the fields of a finding and the proven `existing` row: `SKILL.md`.
+Gates G1, G2 of the DISTILL review, the gates the `coverage-lens` judges by. A finding's `gate` names one row below.
+
 
 | Gate | ID | Definition | Pass condition | Fail severity |
 |---|---|---|---|---|

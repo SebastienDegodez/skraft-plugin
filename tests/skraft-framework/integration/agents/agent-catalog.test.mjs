@@ -141,7 +141,8 @@ test('the plugin ships the mocking skill of each strategy, the contract testing 
   const { agentCatalog } = createNodeAdapters({ cwd: tempFolder(t), pluginRoot: PLUGIN_ROOT })
   const names = [
     ...['dotnet', 'python', 'typescript'].flatMap((family) => [`mocking-microcks-${family}`, `mocking-inprocess-${family}`]),
-    'contract-testing', 'contract-testing-dotnet', 'contract-testing-python', 'acceptance-review-criteria',
+    'contract-testing', 'contract-testing-dotnet', 'contract-testing-python',
+    'acceptance-review-coverage', 'acceptance-review-business-alignment', 'acceptance-review-testability', 'acceptance-review-boundary-enforcement',
   ]
 
   const located = await Promise.all(names.map(async (name) => (await agentCatalog.skill(name))?.path ?? null))
@@ -153,5 +154,5 @@ test('every lens the plugin ships points its brief at a skill file that exists',
 
   const located = async (agent) => (await agentCatalog.skills(agent)).found.map(({ name, path }) => ({ name, path }))
   assert.deepEqual(await located('consistency-lens'), [{ name: 'architecture-review-criteria', path: join(PLUGIN_ROOT, 'skills', 'architecture-review-criteria', 'SKILL.md') }])
-  assert.deepEqual(await located('coverage-lens'), [{ name: 'acceptance-review-criteria', path: join(PLUGIN_ROOT, 'skills', 'acceptance-review-criteria', 'SKILL.md') }])
+  assert.deepEqual(await located('coverage-lens'), [{ name: 'acceptance-review-coverage', path: join(PLUGIN_ROOT, 'skills', 'acceptance-review-coverage', 'SKILL.md') }])
 })

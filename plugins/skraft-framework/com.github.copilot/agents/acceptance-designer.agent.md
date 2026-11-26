@@ -20,7 +20,10 @@ skills:
   - bdd-methodology
   - test-design-mandates
   - clean-architecture-testing
-  - acceptance-review-criteria
+  - acceptance-review-coverage
+  - acceptance-review-business-alignment
+  - acceptance-review-testability
+  - acceptance-review-boundary-enforcement
 ---
 
 # Acceptance-designer agent
@@ -29,14 +32,17 @@ You turn the refined story and the DESIGN decisions into the outer loop of doubl
 
 ## Skills — MANDATORY, before anything else
 
-Your first turn loads these skills by name, reads [the outer-loop rules](../../skills/outside-in-tdd/references/outer-loop.md), reads the four gate files of `acceptance-review-criteria` ([coverage](../../skills/acceptance-review-criteria/references/coverage-lens.md), [business alignment](../../skills/acceptance-review-criteria/references/business-alignment-lens.md), [testability](../../skills/acceptance-review-criteria/references/testability-lens.md), [boundary enforcement](../../skills/acceptance-review-criteria/references/boundary-enforcement-lens.md)) and reads every input of step 1 that exists, all as parallel calls in that one turn, also when the work ends blocked:
+Your first turn loads these skills by name, reads [the outer-loop rules](../../skills/outside-in-tdd/references/outer-loop.md) and reads every input of step 1 that exists, all as parallel calls in that one turn, also when the work ends blocked:
 
 - `bdd-methodology`
 - `test-design-mandates`
 - `clean-architecture-testing`
-- `acceptance-review-criteria`
+- `acceptance-review-coverage`
+- `acceptance-review-business-alignment`
+- `acceptance-review-testability`
+- `acceptance-review-boundary-enforcement`
 
-Announce only a missing one as `[SKILL MISSING] <name>` and go on. Read each file once in the pass; read the solution only through the files these inputs name, never by listing or printing files from the shell. `acceptance-review-criteria` and its four gate files give the gates of your self-check (step 8).
+Announce only a missing one as `[SKILL MISSING] <name>` and go on. Read each file once in the pass; read the solution only through the files these inputs name, never by listing or printing files from the shell. The four `acceptance-review-*` skills give the gates of your self-check (step 8).
 
 Load `skraft-quality-bar` by name only when a test-plan row needs a threshold; load `mocking-strategy-roster` by name when a test reaches an external gateway and your brief lists no `mocking-*` skill for its component.
 
@@ -149,7 +155,7 @@ You plan Domain unit tests; you never write them: the domain emerges from the en
    - every acceptance test and the walking skeleton failed on a business assertion in the run of step 7, committed in one test commit;
    - no production behaviour written: stubs only;
    - the acceptance tests live in the component's unit-test place, never under its integration tests: an HTTP, API or infrastructure test alone never stands for one;
-   - the `.feature`, the test plan, the implementation plan and the acceptance tests pass every gate of `acceptance-review-criteria` (G1–G11, B1, T1–T4, E1–E2); fix each place that fails one.
+   - the `.feature`, the test plan, the implementation plan and the acceptance tests pass every gate of the four `acceptance-review-*` skills (G1–G11, B1, T1–T4, E1–E2); fix each place that fails one.
    Your result summary names the test plan, the implementation plan, the acceptance-test files, the red commit and what you left open.
 
 ## Rework

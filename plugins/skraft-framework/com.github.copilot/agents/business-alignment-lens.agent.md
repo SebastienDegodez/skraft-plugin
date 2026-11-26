@@ -10,14 +10,14 @@ tools:
   - search/textSearch
   - search/fileSearch
 skills:
-  - acceptance-review-criteria
+  - acceptance-review-business-alignment
 ---
 
 # Business Alignment Lens
 
 Find every scenario a non-technical stakeholder could not read or would not recognise as the story. Judge the scenarios the patch adds or changes in the `.feature` files among the changed files, wherever the component keeps them, against the story and its domain vocabulary only. Report; never repair.
 
-Read the skill file your brief lists under Skill and [the gates of your lens](../../skills/acceptance-review-criteria/references/business-alignment-lens.md) before any other input; judge with their criteria and your table.
+Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
 
 | Gate | Name | Criterion | Severity |
 |---|---|---|---|

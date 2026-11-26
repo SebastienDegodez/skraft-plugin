@@ -13,20 +13,17 @@ Formal gate definitions and verdict rubric for the DISTILL review. Applied acros
 
 ## Gate Definitions (G1–G11, B1, T1–T4, E1–E2)
 
-Every gate id is unique across the four lenses: a finding's `gate` names one row of the files below.
+Every gate id is unique across the four lenses. Each lens loads the skill of its own gates; no lens loads this one.
 
-| Lens | Gates | Definitions, pass conditions, severities and how to check |
+| Lens | Gates | Skill |
 |---|---|---|
-| coverage-lens | G1, G2 | [references/coverage-lens.md](references/coverage-lens.md) |
-| business-alignment-lens | G3, G4, B1 | [references/business-alignment-lens.md](references/business-alignment-lens.md) |
-| testability-lens | G5, G6, T2, T3, T4, T1, G11 | [references/testability-lens.md](references/testability-lens.md) |
-| boundary-enforcement-lens | G7, G8, E1, E2, G9, G10 | [references/boundary-enforcement-lens.md](references/boundary-enforcement-lens.md) |
+| coverage-lens | G1, G2 | `acceptance-review-coverage` |
+| business-alignment-lens | G3, G4, B1 | `acceptance-review-business-alignment` |
+| testability-lens | G5, G6, T2, T3, T4, T1, G11 | `acceptance-review-testability` |
+| boundary-enforcement-lens | G7, G8, E1, E2, G9, G10 | `acceptance-review-boundary-enforcement` |
 
-- A lens reads the file of its own lens before any other input and judges with it.
-- A reviewer that judges another's finding reads the file of the gate that finding cites.
-- An agent that checks its own DISTILL outputs before its result reads the four files: every gate applies to its outputs.
-
-**Proven `existing` row:** `Priority` `existing`, and its Scenario cell names the covering test (file and test name, a test the research document lists under `Existing tests`), the command that ran it filtered to it, and its result `passed`. An `existing` row missing the test, the command or the result, or whose result is not `passed`, is exempt from neither G6 nor G7: it is a finding of each gate it would skip.
+- A reviewer that judges another's finding loads the skill of the gate that finding cites.
+- An agent that checks its own DISTILL outputs before its result loads the four skills: every gate applies to its outputs.
 
 ---
 
@@ -49,7 +46,7 @@ Every gate id is unique across the four lenses: a finding's `gate` names one row
 | `fail` | ≥1 gate in this lens has a finding. |
 
 Each finding includes:
-- `gate` — one id of the gate files above (G1–G11, B1, T1–T4, E1–E2)
+- `gate` — one id of the four gate skills above (G1–G11, B1, T1–T4, E1–E2)
 - `severity` — BLOCKER / HIGH / MEDIUM / LOW
 - `finding` — plain-language description of the problem
 - `location` — file path and line/scenario reference

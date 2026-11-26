@@ -18,7 +18,7 @@ test('DISTILL G7 takes its use case boundaries from the event model, in the lens
   const criteria = {
     'com.anthropic.claude-code/agents/boundary-enforcement-lens.md G7 row': g7Row(read('com.anthropic.claude-code/agents/boundary-enforcement-lens.md')),
     'com.github.copilot/agents/boundary-enforcement-lens.agent.md G7 row': g7Row(read('com.github.copilot/agents/boundary-enforcement-lens.agent.md')),
-    'skills/acceptance-review-criteria/references/boundary-enforcement-lens.md G7 row': g7Row(read('skills/acceptance-review-criteria/references/boundary-enforcement-lens.md')),
+    'skills/acceptance-review-boundary-enforcement/SKILL.md G7 row': g7Row(read('skills/acceptance-review-boundary-enforcement/SKILL.md')),
     'skills/acceptance-review-criteria/references/gate-definitions.md G7 section': g7Section(read('skills/acceptance-review-criteria/references/gate-definitions.md')),
   }
   const wrong = Object.entries(criteria)
