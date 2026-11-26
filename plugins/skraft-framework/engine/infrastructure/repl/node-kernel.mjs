@@ -11,7 +11,8 @@ import { windowsTreeKill } from '../process/node-processes.mjs'
  * @typedef {import('../../application/ports/kernel-host.mjs').CellOutcome} CellOutcome
  * @typedef {import('node:child_process').ChildProcess} Child
  * @typedef {{ id: number, printed: string[], taken: number, interrupted: boolean, abandoned: boolean, settle: (outcome: CellOutcome) => void, done: Promise<CellOutcome> }} Cell
- * @typedef {{ child: Child, events: KernelEvents, cell: Cell | null, late: string[], stopped: boolean, cells: number, left: CellOutcome | null }} State
+ * @typedef {{ child: Child, events: KernelEvents, cell: Cell | null, late: string[], stopped: boolean, cells: number, left: CellOutcome | null, gone: Promise<void> }} State
+ *   gone: settles when the kernel process has exited.
  *   left: the end of a cell that ended after its budget, while nobody waited for it; the next `wait` hands it over.
  */
 
@@ -47,7 +48,7 @@ const start = (entry, events, { cwd, firstRid, startMs }) => new Promise((resolv
   const child = fork(entry, [join(cwd, '.repl', 'lib'), String(firstRid)], { cwd, execArgv: [...KERNEL_FLAGS], detached: GROUPED, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], windowsHide: true })
   if (GROUPED && child.pid !== undefined) groupStarted(child.pid)
   /** @type {State} */
-  const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null }
+  const state = { child, events, cell: null, late: [], stopped: false, cells: 0, left: null, gone: new Promise((done) => child.once('exit', () => done())) }
   const deadlines = [setTimeout(() => notReady(state, reject), READY_MS), setTimeout(() => notReady(state, reject), startMs)]
   child.once('error', reject)
   child.once('exit', () => { deadlines.forEach(clearTimeout); reject(new Error('the kernel exited before it was ready')) })
@@ -228,7 +229,8 @@ const restart = (state, cell) => {
 
 /**
  * Ends the kernel with every process its cells started: its process group under POSIX (the
- * kernel leads one of its own), its tree under Windows.
+ * kernel leads one of its own), its tree under Windows, the kernel alone when taskkill cannot
+ * start or leaves it running.
  * @param {State} state
  */
 const endKernel = (state) => {
@@ -238,6 +240,21 @@ const endKernel = (state) => {
   const { file, args } = windowsTreeKill(pid)
   const killer = spawn(file, args, { stdio: 'ignore', windowsHide: true, timeout: TREE_KILL_MS })
   killer.once('error', () => state.child.kill('SIGKILL'))
+  killer.once('close', () => state.child.kill('SIGKILL'))
+}
+
+/**
+ * Settles once the kernel process has exited, or after TREE_KILL_MS: a stop never holds its caller
+ * longer, and a kernel already gone settles at once.
+ * @param {State} state @returns {Promise<void>}
+ */
+const gone = (state) => {
+  if (state.child.exitCode !== null || state.child.signalCode !== null || state.child.pid === undefined) return Promise.resolve()
+  return new Promise((done) => {
+    const timer = setTimeout(done, TREE_KILL_MS)
+    timer.unref()
+    void state.gone.then(() => { clearTimeout(timer); done() })
+  })
 }
 
 /** @param {State} state */
@@ -249,10 +266,11 @@ const crashed = (state) => {
   state.events.onGone('crashed')
 }
 
-/** @param {State} state */
+/** @param {State} state @returns {Promise<void>} */
 const stop = (state) => {
-  if (state.stopped) return
+  if (state.stopped) return gone(state)
   state.stopped = true
   endKernel(state)
   if (state.cell !== null) state.cell.settle(outcome(state, state.cell, 'stopped'))
+  return gone(state)
 }

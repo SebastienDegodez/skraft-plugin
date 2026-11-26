@@ -88,6 +88,8 @@ jobs:
   engine-unit:
     name: Engine unit tests
     runs-on: ubuntu-latest
+    # Normal: under 5 min. Past this, the job hangs.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -101,6 +103,8 @@ jobs:
   engine-lint:
     name: Engine lint (function size and complexity)
     runs-on: ubuntu-latest
+    # Normal: under 5 min. Past this, the job hangs.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -120,6 +124,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    # Normal: Windows engine integration about 10 min, everything else under 5. Past this, the job hangs.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -133,6 +139,8 @@ jobs:
   pipeline-canvas:
     name: Pipeline canvas in a browser (Playwright)
     runs-on: ubuntu-latest
+    # Normal: under 5 min. Past this, the job hangs.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -150,6 +158,8 @@ jobs:
   claude-mod:
     name: Claude Code mod
     runs-on: ubuntu-latest
+    # Normal: under 5 min. Past this, the job hangs.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -167,6 +177,8 @@ jobs:
   tooling:
     name: Repository tooling tests
     runs-on: ubuntu-latest
+    # Normal: under 5 min. Past this, the job hangs.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -186,6 +198,8 @@ jobs:
   checks:
     name: Plugin copies, dispatch tree, model policy
     runs-on: ubuntu-latest
+    # Normal: under 5 min. Past this, the job hangs.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -215,6 +229,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    # Normal: under 5 min. Past this, the job hangs.
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
