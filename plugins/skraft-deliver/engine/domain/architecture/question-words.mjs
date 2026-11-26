@@ -1,4 +1,5 @@
 import { code, inert, oneLine } from '../reporting/markdown-safety.mjs'
+import { DESIGN_PLUGIN } from './light-design.mjs'
 
 /**
  * The words of a CI design run's question comments, per story language: the headings, the effect
@@ -10,6 +11,34 @@ const storyLine = (colon) => ({ issue, reason }) => `- #${issue}${colon} ${inert
 
 /** An open design branch and a context it changes too. @param {string} verb @param {{ branch: string, context: string }} overlap */
 const overlapLine = (verb, { branch, context }) => `- ${code(branch)} ${verb} ${code(context)}`
+
+/** A table of rows, its header first. @param {string[]} head @param {string[][]} rows */
+const table = (head, rows) => [`| ${head.join(' | ')} |`, `| ${head.map(() => '---').join(' | ')} |`, ...rows.map((row) => `| ${row.map((one) => inert(oneLine(one)).replaceAll('|', '\\|')).join(' | ')} |`)]
+
+/** A list under a bold heading, nothing when it lists nothing. @param {string} heading @param {string[]} items */
+const listed = (heading, items) => (items.length === 0 ? [] : [`**${heading}**`, ...items.map((item) => `- ${inert(oneLine(item))}`), ''])
+
+/** The end of a run's output, folded, in a fence no line of it can close. @param {string} summary @param {string | null} tail @param {string} none */
+const folded = (summary, tail, none) => (tail === null ? [none] : [`<details><summary>${summary}</summary>`, '', '````text', ...tail.replaceAll('````', '```').split('\n'), '````', '', '</details>'])
+
+/** The scenarios, the order DELIVER builds them in, and their red. @param {any} words @param {any} facts */
+const scenarioLines = (words, { scenarios, features, groups, skeleton, exemption, red, redTail }) => [
+  `**${words.scenarios(scenarios.length)}**`, '',
+  ...table(['#', words.scenario, words.component, words.tags], scenarios.map(({ index, title, component, tags }) => [`S${index}`, title, component, tags.join(' ')])), '',
+  ...(features.length === 0 ? [] : [words.writtenIn(features.map(code).join(', ')), '']),
+  `**${words.order}**`, ...groups.map(({ index, scenarios: numbers }) => `${index}. ${numbers.map((number) => `S${number}`).join(', ')}`), '',
+  ...(skeleton === null ? [words.noSkeleton(inert(oneLine(String(exemption)))), ''] : []),
+  `**${words.red}** ${red.sha.slice(0, 7)} ${code(red.subject)} — ${red.files.map(code).join(', ')}`, '',
+  words.checkRed, '', ...folded(words.redRun, redTail, words.noRedRun),
+]
+
+/** The light design a person reads: its brief, each ADR's decision, what it assumed, what goes beyond. @param {any} words @param {any} facts */
+const lightLines = (words, { brief, adrs, assumptions, reasons }) => [
+  words.wrote(code(brief)), '',
+  ...(adrs.length === 0 ? [] : [`**${words.adrs}**`, '', ...table([words.adr, words.decision], adrs.map(({ path, decision }) => [path, decision])), '']),
+  ...listed(words.assumedHeading, assumptions),
+  ...listed(words.beyond, reasons),
+]
 
 /** @param {string} agent @param {number} attempt */
 const twiceEn = (agent, attempt) => `${agent} failed the same way on attempts ${attempt - 1} and ${attempt}.`
@@ -55,8 +84,30 @@ export const QUESTION_WORDS = Object.freeze({
       'architecture-blocked': { CONTINUE: 'goes on without the blocked stories' },
       'architecture-exclusions': { CONTINUE: 'goes on without the excluded stories' },
       'architecture-concurrent': { CONTINUE: 'publishes this design anyway' },
+      'architecture-wait': { RESUME: `reads the merged base again, once ${DESIGN_PLUGIN} merged a brief for the story`, CONTINUE: 'delivers on a light design instead' },
+      'light-design-review': { APPROVED: 'ratifies its ADRs, accepted on the merge of the delivery pull request, and goes on to DISTILL', REVISE: 'sends the light design back with your corrections', DESIGN: `pauses the delivery until ${DESIGN_PLUGIN} merges a brief for the story` },
+      'scenario-review': { APPROVED: 'DELIVER makes them pass', REVISE: 'sends DISTILL back with your corrections' },
+      'architecture-refresh': { KEEP: 'delivers on the merged brief as it is', REDESIGN: 'pauses the delivery for a new design of the story' },
     },
+    refusalHint: (refusal) => `${refusal} takes your corrections after it, on its line or the next ones: \`/skraft-answer ${refusal} <your corrections>\`.`,
+    scenarios: (count) => `The story's scenarios (${count})`, scenario: 'Scenario', component: 'Component', tags: 'Tags',
+    writtenIn: (files) => `Written in ${files}.`,
+    order: 'The order DELIVER makes them pass in',
+    noSkeleton: (exemption) => `The story has no walking skeleton: ${exemption}`,
+    red: 'Their red:',
+    checkRed: 'skraft does not run them: check that each fails on its own assertion.',
+    redRun: 'The end of the designer\'s traced run of them',
+    noRedRun: 'The designer traced no run of them: ask for it with REVISE.',
+    wrote: (brief) => `The light design wrote ${brief}.`,
+    adrs: 'ADRs to ratify', adr: 'ADR', decision: 'Decision',
+    assumedHeading: 'What it assumed where the story leaves a choice open',
+    beyond: 'What goes beyond a light design (DESIGN is advised)',
     texts: {
+      'architecture-wait': ({ issue, why, merged, branch }) => [`The delivery of #${issue} waits for a design: ${inert(oneLine(why ?? 'a person asked for one at its light design.'))}`,
+        ...(merged === null ? [] : ['', `The merged base now reads: ${inert(oneLine(merged))}`]), '', `Run ${DESIGN_PLUGIN} on #${issue} and merge its pull request, check out ${code(branch)} again, then answer RESUME.`],
+      'light-design-review': (facts) => lightLines(QUESTION_WORDS.en, facts),
+      'scenario-review': (facts) => scenarioLines(QUESTION_WORDS.en, facts),
+      'architecture-refresh': ({ brief }) => [`The story's issue changed since its brief ${code(brief)} was designed.`],
       'architecture-blocked': ({ stories }) => ['The architect cannot design these stories:', ...stories.map(storyLine(':')), '', 'Go on without them, or stop. Refine the stories left out with /skraft-refine.'],
       'architecture-concurrent': ({ overlaps }) => ['Other open design branches change contexts this run changes:', ...overlaps.map((one) => overlapLine('also changes the context', one)), '', 'Publish this design anyway, or stop and design again once they are merged.'],
     },
@@ -97,8 +148,30 @@ export const QUESTION_WORDS = Object.freeze({
       'architecture-blocked': { CONTINUE: 'continue sans les stories bloquées' },
       'architecture-exclusions': { CONTINUE: 'continue sans les stories exclues' },
       'architecture-concurrent': { CONTINUE: 'publie ce design quand même' },
+      'architecture-wait': { RESUME: `relit la base fusionnée, une fois que ${DESIGN_PLUGIN} a fusionné un brief pour la story`, CONTINUE: 'livre plutôt sur un design léger' },
+      'light-design-review': { APPROVED: 'ratifie ses ADR, acceptés à la fusion de la pull request de livraison, et passe à DISTILL', REVISE: 'renvoie le design léger avec vos corrections', DESIGN: `met la livraison en pause jusqu’à ce que ${DESIGN_PLUGIN} fusionne un brief pour la story` },
+      'scenario-review': { APPROVED: 'DELIVER les fait passer', REVISE: 'renvoie DISTILL avec vos corrections' },
+      'architecture-refresh': { KEEP: 'livre sur le brief fusionné tel qu’il est', REDESIGN: 'met la livraison en pause pour un nouveau design de la story' },
     },
+    refusalHint: (refusal) => `${refusal} prend vos corrections après lui, sur sa ligne ou les suivantes : \`/skraft-answer ${refusal} <vos corrections>\`.`,
+    scenarios: (count) => `Les scénarios de la story (${count})`, scenario: 'Scénario', component: 'Composant', tags: 'Étiquettes',
+    writtenIn: (files) => `Écrits dans ${files}.`,
+    order: 'L’ordre dans lequel DELIVER les fait passer',
+    noSkeleton: (exemption) => `La story n’a pas de walking skeleton : ${exemption}`,
+    red: 'Leur rouge :',
+    checkRed: 'skraft ne les lance pas : vérifiez que chacun échoue sur sa propre assertion.',
+    redRun: 'La fin du run tracé du designer',
+    noRedRun: 'Le designer n’en a tracé aucun run : demandez-le avec REVISE.',
+    wrote: (brief) => `Le design léger a écrit ${brief}.`,
+    adrs: 'ADR à ratifier', adr: 'ADR', decision: 'Décision',
+    assumedHeading: 'Ce qu’il a supposé là où la story laisse un choix ouvert',
+    beyond: 'Ce qui dépasse un design léger (DESIGN est conseillé)',
     texts: {
+      'architecture-wait': ({ issue, why, merged, branch }) => [`La livraison de #${issue} attend un design : ${inert(oneLine(why ?? 'une personne en a demandé un à son design léger.'))}`,
+        ...(merged === null ? [] : ['', `La base fusionnée indique maintenant : ${inert(oneLine(merged))}`]), '', `Lancez ${DESIGN_PLUGIN} sur #${issue} et fusionnez sa pull request, revenez sur ${code(branch)}, puis répondez RESUME.`],
+      'light-design-review': (facts) => lightLines(QUESTION_WORDS.fr, facts),
+      'scenario-review': (facts) => scenarioLines(QUESTION_WORDS.fr, facts),
+      'architecture-refresh': ({ brief }) => [`L’issue de la story a changé depuis la conception de son brief ${code(brief)}.`],
       'architecture-blocked': ({ stories }) => ['L’architecte ne peut pas concevoir ces stories :', ...stories.map(storyLine(' :')), '', 'Continuez sans elles, ou arrêtez. Affinez les stories laissées de côté avec /skraft-refine.'],
       'architecture-concurrent': ({ overlaps }) => ['D’autres branches de design ouvertes changent des contextes que ce run change :', ...overlaps.map((one) => overlapLine('change aussi le contexte', one)), '', 'Publiez ce design quand même, ou arrêtez et concevez à nouveau une fois qu’elles sont fusionnées.'],
     },

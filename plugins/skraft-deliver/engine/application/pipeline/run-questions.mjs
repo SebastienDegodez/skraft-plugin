@@ -92,7 +92,21 @@ const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
   const features = namedFeatures(/** @type {string} */ (await context.deps.files.read(context.slug, plan)))
   const { skeleton, exemption, list, groups } = scenarios
   const log = redLogOf(context, writer)
-  return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle, groups, log }), subjects: oracle.files }
+  const facts = { scenarios: list, features, skeleton, exemption, red: { sha: oracle.sha, subject: oracle.subject, files: oracle.files }, groups, redTail: await redTailOf(context, writer) }
+  return { text: scenarioReviewText({ scenarios: list, features, skeleton, exemption, oracle, groups, log }), subjects: oracle.files, fields: { facts } }
+}
+
+/** The most of the red run's output a person reads beside the scenarios: its last lines. */
+const RED_TAIL = Object.freeze({ lines: 30, characters: 3000 })
+
+/**
+ * The end of what the designer's traced run of the acceptance tests printed; null when it traced none.
+ * @param {Context} context @param {string} writer
+ */
+const redTailOf = async ({ deps, slug, journal }, writer) => {
+  const kept = journal.events.findLast((/** @type {RunEvent} */ event) => event.type === 'evidence.checked' && event.red === true && event.step === writer)
+  const text = kept === undefined ? null : await deps.files.read(slug, kept.runs[0].log)
+  return text === null ? null : text.trimEnd().split('\n').slice(-RED_TAIL.lines).join('\n').slice(-RED_TAIL.characters)
 }
 
 /** @type {Readonly<Record<NodeQuestion, Questionnaire>>} */

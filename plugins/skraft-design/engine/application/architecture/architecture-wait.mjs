@@ -26,7 +26,13 @@ const waitPlan = async (context) => {
   const read = await mergedBrief(context)
   if ('environment' in read) return read
   if (read.found?.status === 'current') return { answered: { answer: 'BRIEF', reason: `${read.found.path} merged for this story` } }
-  return { text: waitText(context, read), subjects: [], options: [...ASKED] }
+  return { text: waitText(context, read), subjects: [], options: [...ASKED], fields: { facts: waitFacts(context, read) } }
+}
+
+/** Why the delivery waits and what the merged base reads now, apart from the text. @param {any} context @param {{ plan: any, found: any }} read */
+const waitFacts = ({ slug, journal }, { plan, found }) => {
+  const why = journal.events.findLast(({ type }) => type === 'architecture.bound')?.wait?.reason ?? null
+  return { issue: plan.issue, why, merged: found === null || found.reason === why ? null : found.reason, branch: `deliver/${slug}` }
 }
 
 /**

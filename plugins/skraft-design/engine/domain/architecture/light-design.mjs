@@ -57,12 +57,20 @@ const ASSUMPTIONS_LENGTH = 1500
  * @param {string} text the brief's whole text
  */
 export const assumptionsOf = (text) => {
-  const section = sectionOf(text, 'Assumptions')
-  const items = itemsOf(section)
-  const stated = items.length > 0 ? items : [section.replace(/\s+/g, ' ').trim()].filter((one) => one !== '' && !NONE.test(one))
+  const stated = assumedItems(text)
   if (stated.length === 0) return null
   const shown = fitting(stated.map((item, index) => `(${index + 1}) ${item}`))
   return [...shown, ...(shown.length < stated.length ? [`and ${stated.length - shown.length} more in the brief`] : [])].join('; ')
+}
+
+/**
+ * Each thing the light design assumed, as its brief's `## Assumptions` lists it; none when it
+ * assumed nothing. @param {string} text the brief's whole text
+ */
+export const assumedItems = (text) => {
+  const section = sectionOf(text, 'Assumptions')
+  const items = itemsOf(section)
+  return items.length > 0 ? items : [section.replace(/\s+/g, ' ').trim()].filter((one) => one !== '' && !NONE.test(one))
 }
 
 /** The leading items whose total length fits, at least one. @param {string[]} items */

@@ -85,7 +85,7 @@ const changed = async (deps, { slug, journal, issue }, found) => {
   const identity = await deps.hasher.sha256(`${found.sha}:${found.fingerprint}`)
   const question = await contextQuestion(journal, {
     key: `architecture-refresh-${identity.slice(0, 16)}`, kind: 'architecture-refresh',
-    text: 'The issue body changed since design. KEEP the merged brief or REDESIGN before delivery?',
+    text: 'The issue body changed since design. KEEP the merged brief or REDESIGN before delivery?', details: { facts: { brief: found.path } },
   })
   if (!question.answer) return waitingFor(slug, question)
   if (question.answer === 'KEEP') return null

@@ -1,6 +1,6 @@
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { citedPaths, readBrief } from '../../domain/architecture/brief.mjs'
-import { DESIGN_PLUGIN, assumptionsOf, decisionLine, lightDesignReasons } from '../../domain/architecture/light-design.mjs'
+import { DESIGN_PLUGIN, assumedItems, assumptionsOf, decisionLine, lightDesignReasons } from '../../domain/architecture/light-design.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { acceptOnMerge, newProposedAdrs } from '../decisions/adr-ratification.mjs'
 import { bindDocuments } from './context.mjs'
@@ -47,8 +47,13 @@ const reviewPlan = async ({ deps, slug, journal }) => {
   const reasons = lightDesignReasons(design)
   const assumed = assumptionsOf(design.text)
   if (adrs.length === 0 && reasons.length === 0 && assumed === null) return { answered: { answer: 'APPROVED', reason: 'the light design wrote no ADR to ratify, assumed nothing and stays a light design' } }
-  return { text: reviewText(plan, design, { reasons, assumed }), subjects: [plan.brief, ...adrs] }
+  return { text: reviewText(plan, design, { reasons, assumed }), subjects: [plan.brief, ...adrs], fields: { facts: reviewFacts(plan, design, reasons) } }
 }
+
+/** What a person reads of the light design apart from the text: the brief, each ADR's decision, what it assumed, what goes beyond. @param {any} plan @param {any} design @param {string[]} reasons */
+const reviewFacts = (plan, { text, adrs }, reasons) => ({
+  brief: plan.brief, adrs: adrs.map(({ path, text: adr }) => ({ path, decision: decisionLine(adr) })), assumptions: assumedItems(text), reasons,
+})
 
 /** The brief and the ADRs the light design wrote, as the working branch holds them. @param {any} deps @param {any} plan @param {string[]} paths */
 const designOf = async (deps, plan, paths) => {

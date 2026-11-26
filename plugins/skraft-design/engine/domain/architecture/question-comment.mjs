@@ -68,12 +68,13 @@ const blockHeadline = (block, words) => `**${words.blocks(code(block.step))}** â
 const leftLines = ({ from, failures }, words) => (failures.length === 0 ? [] : ['', `**${words.left(code(from), failures.length)}**`, ...failures.map((line) => `- ${inert(oneLine(line))}`)])
 
 /** A question with options: the question as asked, then the answers. @param {any} question @param {any} words */
-const decisionBody = ({ kind, text, options, facts }, words) => ({
+const decisionBody = ({ kind, text, options, refusals = [], facts }, words) => ({
   title: [`### ${words.decisionTitle}`],
   lines: [
     `**${words.question}**`, '', ...(facts && words.texts[kind] ? words.texts[kind](facts) : quotedText(text)), '',
     ...answerTable(options, kind, words), '',
     `**${words.reply}**`, ...fenced([`/skraft-answer ${options[0]}`]),
+    ...refusals.map((refusal) => `\n${words.refusalHint(refusal)}`),
   ],
 })
 
