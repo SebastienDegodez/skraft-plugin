@@ -52,6 +52,20 @@ test('an epic leaves its closed stories out without asking, in one journal that 
   assert.deepEqual(JSON.parse(await host.tracking.read('epic-42', 'plans/architecture-pass.json')).stories.map(({ number }) => number), [42])
 })
 
+test('a CI design run can reopen its journal using the repository signing key', async () => {
+  const key = 'ab'.repeat(32)
+  const journalKeys = {
+    available: async () => true,
+    create: async () => ({ id: 'repository-secret', key }),
+    read: async (id) => id === 'repository-secret' ? key : null,
+  }
+  const { run, loop } = session([story(42)], 'epic-42', { journalKeys })
+  const started = await run.start({ epic: 42, mode: 'ci' })
+  assert.equal(started.status, 'ready', started.reason)
+  const next = await loop.next()
+  assert.equal(next.status, 'dispatch', next.reason)
+})
+
 test('research and reviewed story architecture publish a single research comment and architecture PR', async () => {
   const { host, deps, run } = session([story(42)], 'issue-42', {
     config: { publish: { ...SETTLED_PUBLISH, pullRequest: true } },

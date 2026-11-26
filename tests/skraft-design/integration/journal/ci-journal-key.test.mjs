@@ -18,6 +18,7 @@ const runners = async (t, env) => {
 test('with the repository secret, the job that resumes a CI run reads the key the pausing job signed with', async (t) => {
   const { pausing, resuming } = await runners(t, { SKRAFT_DESIGN_JOURNAL_KEY: SECRET })
   const created = await pausing.journalKeys.create()
+  assert.equal(created.id, 'repository-secret')
   assert.equal(created.key, SECRET)
   assert.equal(await resuming.journalKeys.read(created.id), SECRET)
 })

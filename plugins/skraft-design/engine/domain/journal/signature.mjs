@@ -7,6 +7,7 @@
  */
 
 export const ADOPTED = 'journal.adopted'
+export const REPOSITORY_KEY_ID = 'repository-secret'
 
 /**
  * The journal's runs of lines signed under one key: from the first line, then from each
@@ -37,7 +38,7 @@ export const signatureOf = (line) => {
 /** @param {string} line the first line of a segment @returns {string | null} null when it names no key id of this form */
 export const keyIdOf = (line) => {
   const { keyId } = JSON.parse(line)
-  return typeof keyId === 'string' && KEY_ID.test(keyId) ? keyId : null
+  return typeof keyId === 'string' && (keyId === REPOSITORY_KEY_ID || KEY_ID.test(keyId)) ? keyId : null
 }
 
 /** @param {number} line 1-based @param {string} detail */

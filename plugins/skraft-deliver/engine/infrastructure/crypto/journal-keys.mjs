@@ -1,3 +1,5 @@
+import { REPOSITORY_KEY_ID } from '../../domain/journal/signature.mjs'
+
 /**
  * JournalKeys in the developer's home folder, `<home>/.skraft-deliver/journal-keys/<id>.key`, on any
  * host's FileFunctions; the random bytes come from the Web Crypto that Node and the Claude Code
@@ -21,12 +23,6 @@ export const createJournalKeys = ({ files, home, writeSecret = files.write, make
   },
   available: async () => fixedKey !== null || (await home()) !== null,
 })
-
-/**
- * The id a journal signed with the repository's key names: every runner of a CI run that holds the
- * secret reads the same key under it, though no runner keeps its HOME (#662).
- */
-export const REPOSITORY_KEY_ID = 'repository-secret'
 
 /** @param {string} secret */
 const repositoryKey = async (secret) => {
