@@ -23,3 +23,6 @@ export const STANDALONE_TOOLS = [
   tool('precheck', 'Check the current worker attempt without approving it or starting any agent.'),
   tool('report', 'Read run time, cost and retries.'),
 ]
+
+/** No agent of a design run runs the project's commands: the REPL tools are not offered. */
+export const STANDALONE_REPL = false

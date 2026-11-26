@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
-import { cp, mkdtemp, mkdir, realpath, rm } from 'node:fs/promises'
+import { cp, mkdtemp, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -26,6 +26,13 @@ for (const kind of ['design', 'deliver']) {
       assert.ok(tools.every(({ name }) => name.startsWith(`skraft_${kind}_`)))
       assert.ok(tools.some(({ name }) => name === `skraft_${kind}_start`))
       assert.ok(tools.every(({ inputSchema }) => inputSchema.additionalProperties === false))
+      // Every tool of its server an agent of the plugin declares, in either agent tree, is offered and answers.
+      const declared = await declaredServerTools(plugin, kind)
+      assert.deepEqual(declared.filter((name) => !tools.some((offered) => offered.name === name)), [])
+      for (const name of declared.filter((one) => one.includes('_repl'))) {
+        const outside = await client.call('tools/call', { name, arguments: { workspace, ...(name.endsWith('_repl') ? { code: '1' } : {}) } })
+        assert.equal(outside.error, undefined, `${name}: ${JSON.stringify(outside.error)}`)
+      }
       const refused = await client.call('tools/call', { name: `skraft_${kind}_start`, arguments: { workspace, executable: 'not-allowed' } })
       assert.equal(refused.result.isError, true)
       const setup = await client.call('tools/call', { name: `skraft_${kind}_setup`, arguments: { workspace } })
@@ -34,6 +41,25 @@ for (const kind of ['design', 'deliver']) {
       assert.equal(client.stderr(), '')
     })
   }
+}
+
+/**
+ * The tools of the plugin's own MCP server its agent descriptors name: Claude Code's as
+ * `mcp__plugin_<plugin>_<plugin>__<tool>`, Copilot's as `<plugin>/<tool>`.
+ * @param {string} plugin the plugin's folder @param {string} kind
+ */
+const declaredServerTools = async (plugin, kind) => {
+  const names = new Set()
+  const prefixes = [`- mcp__plugin_skraft-${kind}_skraft-${kind}__`, `- skraft-${kind}/`]
+  for (const tree of ['com.anthropic.claude-code/agents', 'com.github.copilot/agents']) {
+    for (const file of await readdir(join(plugin, tree))) {
+      for (const line of (await readFile(join(plugin, tree, file), 'utf8')).split('\n').map((one) => one.trim())) {
+        const prefix = prefixes.find((one) => line.startsWith(one))
+        if (prefix) names.add(line.slice(prefix.length))
+      }
+    }
+  }
+  return [...names].sort()
 }
 
 const connect = (t, server, workspace) => {

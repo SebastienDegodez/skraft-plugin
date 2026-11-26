@@ -30,11 +30,11 @@ const messageOf = (error) => String(error?.message ?? error)
 export const declaredServerTools = (agentsDir, server) => [...new Set(readdirSync(agentsDir).filter((name) => name.endsWith('.agent.md'))
   .flatMap((name) => readFileSync(join(agentsDir, name), 'utf8').split('\n').map((line) => line.trim()).filter((line) => line.startsWith(`- ${server}/`)).map((line) => line.slice(2))))].sort()
 
-/** The MCP tools the plugin's engine declares, by name. */
+/** The MCP tools the plugin's server offers, by name: its own, and the REPL when its agents run the project's commands. */
 const engineTools = async (plugin) => {
   const kind = plugin.replace(/^skraft-/, '')
-  const { STANDALONE_TOOLS } = await import(pathToFileURL(join(REPO_ROOT, 'plugins', plugin, 'engine', 'drivers', 'cli', 'standalone-tools.mjs')).href)
-  return STANDALONE_TOOLS.map(({ name }) => name).filter((name) => name.startsWith(`skraft_${kind}_`)).sort()
+  const { offeredTools } = await import(pathToFileURL(join(REPO_ROOT, 'plugins', plugin, 'engine', 'drivers', 'cli', 'mcp-tools.mjs')).href)
+  return offeredTools().map(({ name }) => name).filter((name) => name.startsWith(`skraft_${kind}_`)).sort()
 }
 
 const permissionHandler = (sdk) => async (request, invocation) => {

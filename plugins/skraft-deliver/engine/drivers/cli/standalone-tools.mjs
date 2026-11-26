@@ -20,3 +20,6 @@ export const STANDALONE_TOOLS = [
   tool('precheck', 'Check the current worker attempt without approving it or starting any agent.'),
   tool('report', 'Read run time, cost and retries.'),
 ]
+
+/** The acceptance designer, the engineer and the quality-gates lens run the project's commands: the REPL tools are offered. */
+export const STANDALONE_REPL = true

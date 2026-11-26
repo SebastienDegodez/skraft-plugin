@@ -1,4 +1,4 @@
-import { STANDALONE_TOOLS } from './standalone-tools.mjs'
+import { STANDALONE_REPL, STANDALONE_TOOLS } from './standalone-tools.mjs'
 import { UNFORESEEN_GUIDANCE } from '../../domain/decisions/unforeseen.mjs'
 
 /**
@@ -157,11 +157,16 @@ export const TOOLS = Object.freeze([
   }),
 ])
 
+/** The REPL tools, offered by a plugin whose agents run the project's commands. */
+const REPL_TOOLS = Object.freeze(['skraft_design_repl', 'skraft_design_repl_reset'])
+
 /**
- * The tools a host is offered: the agent loop only to one that conducts it.
- * @param {boolean} loop @returns {readonly SkraftTool[]}
+ * The tools a host is offered: the plugin's own, and the REPL when its agents run the project's
+ * commands (skraft-deliver's acceptance designer, engineer and quality-gates lens): without it they
+ * could trace no red, no green and no gate (#621).
+ * @returns {readonly SkraftTool[]}
  */
-export const offeredTools = () => STANDALONE_TOOLS
+export const offeredTools = () => [...STANDALONE_TOOLS, ...(STANDALONE_REPL ? TOOLS.filter(({ name }) => REPL_TOOLS.includes(name)) : [])]
 
 /** The JSON Schema of each kind. @type {Record<Kind, object>} */
 const SCHEMAS = Object.freeze({
