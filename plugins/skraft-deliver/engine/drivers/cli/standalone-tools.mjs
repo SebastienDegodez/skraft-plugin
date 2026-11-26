@@ -8,7 +8,8 @@ const tool = (operation, description, parameters = {}, required = []) => ({
 })
 
 export const STANDALONE_TOOLS = [
-  tool('start', 'Deliver one story from DISTILL, with or without a merged architecture brief.', { issue: parameter('count', 'Story issue number.') }, ['issue']),
+  tool('start', 'Deliver one story, with or without a merged architecture brief.', { issue: parameter('count', 'Story issue number.'),
+    mode: parameter('string', 'interactive (default) when a developer runs it, ci when a CI workflow does: a CI delivery waiting on a person asks in a comment of its own.') }, ['issue']),
   tool('next', 'Advance this delivery run. Dispatch only the returned agents with their exact prompts; save each final reply unchanged, then call record. Never dispatch from a worker.'),
   tool('record', 'Consume saved worker replies and advance the same run.'),
   tool('status', 'Read the active run and its exact pending question.'),

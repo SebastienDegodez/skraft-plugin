@@ -1,15 +1,20 @@
 import { createDraftPublication } from '../publish/draft-publication-usecase.mjs'
-import { architectureEvents } from './story-briefs.mjs'
 import { askOnIssue, markAnswered } from './ask-on-issue.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { waitingOn } from '../../domain/reporting/run-status.mjs'
 
-/** How a design run is driven: a developer's host asks people natively, CI asks them in the draft (#662). */
+/** How a run is driven: a developer's host asks people natively, CI asks them in comments (#662). */
 export const MODES = Object.freeze(['interactive', 'ci'])
 
-/** The mode the run was started in; interactive for a run that named none. @param {any[]} events */
-export const modeOf = (events) => events.find((event) => event.type === 'architecture.scope')?.mode ?? 'interactive'
+/**
+ * The mode the run was started in, as a design run's scope or a delivery's run.mode says it;
+ * interactive for a run that named none. @param {any[]} events
+ */
+export const modeOf = (events) => events.find((event) => event.type === 'architecture.scope' || event.type === 'run.mode')?.mode ?? 'interactive'
+
+/** The run's events, as its journal holds them. @param {any} deps @param {string} slug */
+const eventsOf = async (deps, slug) => (await deps.journal.lines(slug)).map((line) => JSON.parse(line))
 
 /**
  * In CI nobody answers in a chat. Each question a person answered since gets its comment marked
@@ -21,7 +26,7 @@ export const modeOf = (events) => events.find((event) => event.type === 'archite
  */
 export const draftInCi = async (deps, outcome) => {
   if (outcome.slug === null) return outcome
-  const events = await architectureEvents(deps, outcome.slug)
+  const events = await eventsOf(deps, outcome.slug)
   if (modeOf(events) !== 'ci') return outcome
   await markAnswered(deps, outcome.slug)
   if (outcome.status !== 'waiting') return outcome

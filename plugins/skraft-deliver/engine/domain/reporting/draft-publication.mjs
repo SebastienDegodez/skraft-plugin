@@ -4,9 +4,11 @@ const DRAFTABLE_QUESTIONS = new Set(['architecture-blocked', 'architecture-pass'
 /**
  * Decisions a developer answers in the chat; only a CI run, which has none, asks them in the draft
  * (#662): the architect's questions, the excluded stories, an agent's block and a review at its
- * ceiling. Before anything is committed a CI run asks on its issue instead.
+ * ceiling; a delivery's wait for a design, its light design and its scenarios. Before anything is
+ * committed a CI run asks on its issue instead.
  */
-const CI_DRAFTABLE_QUESTIONS = new Set(['architecture-exclusions', 'architecture-questions', 'architecture-concurrent', 'blocked', 'review-ceiling'])
+const CI_DRAFTABLE_QUESTIONS = new Set(['architecture-exclusions', 'architecture-questions', 'architecture-concurrent', 'blocked', 'review-ceiling',
+  'architecture-wait', 'light-design-review', 'scenario-review'])
 
 /** @param {any} run @param {string} kind */
 const draftable = (run, kind) => DRAFTABLE_QUESTIONS.has(kind) || (run.mode === 'ci' && CI_DRAFTABLE_QUESTIONS.has(kind))

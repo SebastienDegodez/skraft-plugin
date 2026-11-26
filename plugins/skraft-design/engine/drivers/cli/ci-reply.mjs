@@ -1,5 +1,5 @@
 // The CI workflow's entry for a `/skraft-answer` reply read in a draft pull request (#662): it hands
-// the saved comment and its author to the design engine, which records it only when the author has
+// the saved comment and its author to the engine, which records it only when the author has
 // write access and the reply answers the pending question. No model reads the comment, and no MCP
 // tool offers this to one. node ci-reply.mjs --author <login> --comment-file <path>
 import { readFileSync } from 'node:fs'

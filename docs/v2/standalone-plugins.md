@@ -79,7 +79,10 @@ once a person answered it, the engine rewrites its comment to say what it record
 request's decisions list every answer. A design run always ends on a pull request ready for review,
 whatever `publish.draft` says, its merge being the ratification: it opens it ready, or makes ready
 the draft it opened to ask a person; a forge that refuses leaves the publication local, saying why.
-`publish.draft` keeps its meaning for skraft-deliver. A scope question stops it at once. A
+`publish.draft` keeps its meaning for skraft-deliver. `skraft_deliver_start` takes the same `mode`,
+journaled as `run.mode`: a CI delivery asks each of its questions in a comment of its own, on the
+story's issue until its branch holds a commit, then on its draft pull request, and records
+`/skraft-answer` replies the same way. A scope question stops it at once. A
 `/skraft-answer` comment (then one `Q1: B` line per question, one option, or one JSON object; the
 key may be left out) is recorded by `engine/drivers/cli/ci-reply.mjs`, without a model, only
 when the forge says its author has `admin`, `maintain` or `write` access, with the provenance

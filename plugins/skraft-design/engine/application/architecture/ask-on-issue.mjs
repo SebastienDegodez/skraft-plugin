@@ -22,8 +22,7 @@ export const askOnIssue = async (deps, { slug, question }) => {
   if (!opened.ok) return opened
   const pushed = await pushedBranch(opened.journal, opened.codeHost, await opened.codeHost.currentBranch())
   if (!pushed.ok) return { ok: false, slug, code: 'not-pushed', reason: pushed.reason }
-  const number = opened.journal.events.find((event) => event.type === 'architecture.scope').root.number
-  return postQuestion(deps, opened, { question, on: 'issue', number })
+  return postQuestion(deps, opened, { question, on: 'issue', number: issueOfRun(opened.journal.events) })
 }
 
 /**
@@ -48,6 +47,9 @@ export const markAnswered = async (deps, slug) => {
   for (const posted of unmarked(opened.journal.events)) await markOne(deps, opened, posted)
   return { ok: true }
 }
+
+/** The issue a run asks on: a design run's issue or epic, a delivery's story. @param {any[]} events */
+const issueOfRun = (events) => events.find((event) => event.type === 'architecture.scope')?.root.number ?? deriveRun(events).story?.issue
 
 /** @param {any} deps @param {string} slug */
 const forgeOf = async (deps, slug) => {

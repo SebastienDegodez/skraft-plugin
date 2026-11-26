@@ -4,6 +4,9 @@ import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createArchitectureForge } from '../../infrastructure/architecture/forge.mjs'
 import { createMergedRepository } from '../../infrastructure/architecture/merged-repository.mjs'
 import { createDeliveryRun } from '../../application/architecture/delivery-run.mjs'
+import { checkInCi, draftInCi } from '../../application/architecture/ci-mode.mjs'
+import { createCommentAnswer } from '../../application/decisions/comment-answer-usecase.mjs'
+import { createDraftPublication } from '../../application/publish/draft-publication-usecase.mjs'
 import { createAgentLoop } from './agent-loop.mjs'
 import { createObserve } from '../../application/pipeline/observe-usecase.mjs'
 import { createDecide } from '../../application/decisions/decide-usecase.mjs'
@@ -65,16 +68,28 @@ const adaptersFor = async (services) => {
     architectureRepository: createMergedRepository({ ...adapters, base: config.config.baseBranch ?? 'main' }) } }
 }
 
-const execute = async (operation, args, deps, services, log) => {
-  if (operation === 'setup') return setup(deps, services, args)
-  if (operation === 'answer') return createDecide(deps).decide(args)
-  if (operation === 'precheck') return createPrecheck(deps).precheck()
-  if (operation === 'status') return createObserve(deps).view()
-  if (operation === 'report') return createObserve(deps).report()
+const execute = (operation, args, deps, services, log) => (Object.hasOwn(SIMPLE, operation) ? SIMPLE[operation](args, deps, services) : executePipeline(operation, args, deps, services, log))
+
+/** The operations that run one use case and hand back its outcome; the pipeline's own run through the loop. */
+const SIMPLE = Object.freeze({
+  setup: (args, deps, services) => setup(deps, services, args),
+  answer: (args, deps) => createDecide(deps).decide(args),
+  // A reply a CI workflow read in a comment; ci-reply.mjs alone asks it, no MCP tool offers it (#662).
+  reply: (args, deps) => createCommentAnswer(deps).answer(args),
+  // What a CI job ends on; ci-check.mjs alone asks it, no MCP tool offers it (#662).
+  'ci-check': (args, deps) => checkInCi(deps),
+  precheck: (args, deps) => createPrecheck(deps).precheck(),
+  status: (args, deps) => createObserve(deps).view(),
+  draft: (args, deps) => createDraftPublication(deps).publish(),
+  report: (args, deps) => createObserve(deps).report(),
+})
+
+// A CI delivery that comes to wait on a person asks in a comment before it hands back (#662).
+const executePipeline = async (operation, args, deps, services, log) => {
   const run = createDeliveryRun(deps)
   const prepared = operation === 'start' ? await run.start(args) : await run.prepare()
-  if (prepared.status !== 'ready') return prepared
-  return advance(operation, deps, services, log, prepared)
+  if (prepared.status !== 'ready') return draftInCi(deps, prepared)
+  return draftInCi(deps, await advance(operation, deps, services, log, prepared))
 }
 
 const advance = async (operation, deps, services, log, prepared) => {

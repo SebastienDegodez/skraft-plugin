@@ -5,28 +5,39 @@ import { acceptBrief, contextQuestion, stopped, waitingFor, writeArchitectureCon
 import { runIdentity } from './run-identity.mjs'
 import { writeLightDesignPlan } from './light-design.mjs'
 import { issueDocument } from '../../domain/pipeline/artifacts.mjs'
+import { MODES } from './ci-mode.mjs'
 
 export const createDeliveryRun = (deps) => Object.freeze({
   start: (request) => start(deps, request),
   prepare: () => prepare(deps),
 })
 
-const start = async (deps, { issue }) => {
+const start = async (deps, { issue, mode = 'interactive' }) => {
   if (!Number.isSafeInteger(issue) || issue < 1) return stopped(null, 'invalid-issue', 'Choose a positive story issue number.')
+  if (!MODES.includes(mode)) return { status: 'refused', ok: false, code: 'invalid-mode', reason: `mode is ${MODES.join(' or ')}.` }
   const read = await deps.architectureForge.read(issue)
   if (!read.ok) return { status: 'refused', ...read }
   if (!read.issue.story) return stopped(null, 'issue-not-a-story', 'Delivery accepts a story, not an epic or feature.')
+  return startStory(deps, read.issue, mode)
+}
+
+/** The story's run: a new one on its own branch, or the one it resumes. */
+const startStory = async (deps, story, mode) => {
+  const issue = story.number
   const identity = await runIdentity(deps, `issue-${issue}`)
   if (!identity.ok) return { status: 'refused', ...identity }
   const { slug } = identity
   const branched = await deps.architectureRepository.branch({ name: `deliver/${slug}`, existing: identity.existing })
   if (!branched.ok) return { status: 'refused', ...branched }
-  return initializeStory(deps, slug, read.issue)
+  return initializeStory(deps, slug, story, mode)
 }
 
-const initializeStory = async (deps, slug, issue) => {
+/** A new delivery's journal, its mode in it: a CI one asks people in comments. */
+const initializeStory = async (deps, slug, issue, mode) => {
   const initialized = await createInit({ ...deps, initialIssue: issue }).init({ slug, story: { issue: issue.number, title: issue.title } })
   if (!initialized.ok) return { status: 'refused', ...initialized }
+  const opened = await openActiveRun(deps, slug)
+  if (opened.ok && !opened.journal.events.some(({ type }) => type === 'run.mode')) await opened.journal.append('run.mode', { mode })
   return prepare(deps)
 }
 

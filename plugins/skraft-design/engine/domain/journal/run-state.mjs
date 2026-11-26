@@ -305,6 +305,7 @@ const ON_EVENT = Object.freeze({
   'question.answered': answered,
   'architecture.bound': (run, event) => { run.artifacts = [...new Set([...run.artifacts, ...event.artifacts])] },
   'architecture.scope': (run, event) => { run.mode = event.mode ?? 'interactive' },
+  'run.mode': (run, event) => { run.mode = event.mode },
   'architecture.pass-completed': (run) => { run.traversals = {} },
   'run.finished': finished,
   'run.refreshed': refreshed,

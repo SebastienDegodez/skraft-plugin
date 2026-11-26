@@ -796,8 +796,17 @@ export class InMemoryCodeHost {
     this.calls.push(`view #${number}`)
     if (this.fails.view) return { ok: false, reason: this.fails.view }
     const found = this.unseen.has('view') ? undefined : this.pullRequests.find((pull) => pull.number === number && !pull.hidden)
-    return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body, head: found.head, fromFork: found.fork === true } : null }
+    return { ok: true, found: found ? { number: found.number, url: found.url, state: found.state, body: found.body, head: found.head, fromFork: found.fork === true, draft: found.draft === true } : null }
   }
+  /** A draft pull request made ready for review; `fails.ready` makes the forge refuse it. */
+  async markReady(number) {
+    this.calls.push(`ready #${number}`)
+    if (this.fails.ready) return { ok: false, reason: this.fails.ready }
+    this.pullRequests.find((pull) => pull.number === number).draft = false
+    return { ok: true }
+  }
+  /** The access the forge gives a login on the repository, `permissions` by login; none otherwise. */
+  async permissionOf(login) { return (this.permissions ?? {})[login] ?? 'none' }
   async create({ base, head, title, bodyFile, draft, issue, attachments }) {
     this.calls.push(`create ${base} <- ${head}${draft ? ' (draft)' : ''}: ${title}`)
     if (this.fails.create) return { ok: false, reason: this.fails.create }
