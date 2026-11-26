@@ -155,9 +155,15 @@ test('a human-blocked architecture decision opens an engine-approved draft PR wi
   assert.equal(published.ok, true, published.reason)
   assert.equal(host.codeHost.pullRequests.length, 1)
   assert.equal(host.codeHost.pullRequests[0].draft, true)
-  assert.match(host.codeHost.pullRequests[0].body, /Human decision pending/)
-  assert.match(host.codeHost.pullRequests[0].body, /Options: `CONTINUE`, `REFRESH`, `STOP`/)
-  assert.match(host.codeHost.pullRequests[0].body, /\/skraft-answer/)
+  // The body names the decision; its comment asks it, laid out as a person reads it.
+  const { key } = (await createObserve(deps).view()).question
+  assert.ok(host.codeHost.pullRequests[0].body.includes(`A decision waits on a person (key \`${key}\`): it is asked in a comment of its own on this pull request, where the reply goes`), host.codeHost.pullRequests[0].body)
+  const [asked] = host.codeHost.pullRequestComments
+  assert.match(asked.body, /^### A decision waits on you$/m)
+  assert.match(asked.body, /^> The solution architect blocked these stories: #43: Missing business decision\./m)
+  assert.doesNotMatch(asked.body, /> .*REFRESH takes the default branch/)
+  assert.ok(asked.body.includes('| Answer | Effect |\n| --- | --- |\n| `CONTINUE` | goes on without the blocked stories |\n| `REFRESH` | takes the default branch as it is now, detects the components again and designs again from RESEARCH |\n| `STOP` | ends the run |'), asked.body)
+  assert.ok(asked.body.includes('```text\n/skraft-answer CONTINUE\n```'), asked.body)
 })
 
 test('status exposes draft eligibility only for pending architecture decisions', async () => {
@@ -401,12 +407,14 @@ test('in CI the engine publishes the draft itself, every open question in its bo
   assert.equal(settled.status, 'waiting', settled.reason)
   assert.equal(settled.draft?.ok, true, settled.draft?.reason)
   assert.equal(host.codeHost.pullRequests.length, 1)
-  const [{ draft, body }] = host.codeHost.pullRequests
+  const [{ draft }] = host.codeHost.pullRequests
   assert.equal(draft, true)
-  assert.match(body, /Q1 \(#42 AC-1\): How is the receipt proved in this slice\?/)
-  assert.match(body, /`A`: Through the HTTP entry point — The browser proof waits for the UI story\./)
-  assert.match(body, /`EMPTY`: Empty it — The customer starts again\./)
-  assert.ok(body.includes('  ```text\n  /skraft-answer\n  Q1: <option or your words>\n  Q2: <option or your words>\n  ```'), body)
+  const [{ body }] = host.codeHost.pullRequestComments
+  assert.match(body, /^### The architect's questions \(2\)$/m)
+  assert.match(body, /^#### Q1 · #42 · AC-1\n\nHow is the receipt proved in this slice\?$/m)
+  assert.match(body, /^\| `A` \*\(assumed meanwhile\)\* \| Through the HTTP entry point \| The browser proof waits for the UI story\. \|$/m)
+  assert.match(body, /^\| `EMPTY` \| Empty it \| The customer starts again\. \|$/m)
+  assert.ok(body.includes('```text\n/skraft-answer\nQ1: <option or your words>\nQ2: <option or your words>\n```'), body)
 })
 
 test('a researcher blocked in CI, nothing designed yet, asks on the epic with the branch pushed', async () => {
@@ -424,7 +432,13 @@ test('a researcher blocked in CI, nothing designed yet, asks on the epic with th
   assert.equal(asked.length, 1)
   assert.equal(asked[0].edits, 0)
   assert.equal(asked[0].number, 42)
-  assert.match(asked[0].body, /Options: `STOP`/)
+  assert.match(asked[0].body, /^### The run waits on your instruction$/m)
+  assert.match(asked[0].body, /^\*\*What blocks `research`\*\* — design-solution-researcher cannot go on\.$/m)
+  assert.match(asked[0].body, /^- Two questions need the product owner\.$/m)
+  assert.match(asked[0].body, /^\| your instruction, in your own words \| runs the step again on a new pass, with what it left and your words \|$/m)
+  assert.match(asked[0].body, /^\| `REFRESH` \| takes the default branch as it is now, detects the components again and designs again from RESEARCH \|$/m)
+  assert.match(asked[0].body, /^\| `STOP` \| ends the run \|$/m)
+  assert.doesNotMatch(asked[0].body, /copilot-tracking/)
   assert.ok(host.events().some(({ type, write, outcome }) => type === 'forge.write' && write === 'push' && outcome === 'applied'))
 })
 
@@ -546,11 +560,12 @@ test('in CI a block met after something is committed goes to the draft, and a re
   assert.equal(host.codeHost.pullRequestComments.length, 2)
   assert.ok(first.body.startsWith(`<!-- skraft-design:question:v1 key=${asked.question.key} -->`), first.body)
   assert.ok(second.body.startsWith(`<!-- skraft-design:question:v1 key=${question.key} -->`), second.body)
-  assert.match(second.body, /skraft-design waits on a person\. Answer in one comment on this pull request:/)
+  assert.match(second.body, /skraft-design waits on a person; answer in one comment on this pull request\./)
   assert.match(second.body, /The product owner decides the receipt proof\./)
   assert.equal(second.edits, 0)
   assert.equal(first.edits, 1)
-  assert.match(first.body, /skraft-design recorded the answer to this question: `Q1 \(#42 AC-1\): A/)
+  assert.match(first.body, /^### Question answered\n\n\*\*Recorded answer:\*\* `Q1 \(#42 AC-1\): A/m)
+  assert.match(first.body, /^> The architect's questions \(2\)$/m)
   assert.match(first.bodies[0], /How is the receipt proved in this slice\?/)
   assert.match(host.codeHost.pullRequests[0].body, new RegExp(`Answered \\(key \`${asked.question.key}\`\\): Q1 \\(#42 AC-1\\): A`))
   assert.equal(blocked.draft.on, 'pull-request')

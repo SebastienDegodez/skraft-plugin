@@ -24,7 +24,8 @@ export const waitingOn = (run) => {
   if (asked === null || asked.answer !== null) return null
   const waiting = { key: asked.key, kind: asked.kind, text: asked.text, options: asked.options, refusals: asked.refusals, header: asked.header }
   // The architect's open questions reach the host one by one, each with its own options (#662).
-  return asked.questions ? { ...waiting, questions: asked.questions } : waiting
+  if (asked.questions) return { ...waiting, questions: asked.questions }
+  return asked.block ? { ...waiting, block: asked.block } : waiting
 }
 
 /**

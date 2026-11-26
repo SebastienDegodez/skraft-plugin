@@ -259,31 +259,12 @@ const replyLine = ({ author, answers, reason }, words) => (answers === null
   ? words.replyUnread(inert(oneLine(author)), inert(oneLine(reason ?? '')))
   : words.replyRead(inert(oneLine(author)), Object.entries(answers).map(([id, value]) => `${inert(oneLine(id))}: ${inert(oneLine(String(value)))}`).join(', ')))
 
-/** @param {import('./run-status.mjs').WaitingQuestion | null} question @param {Words} words */
-export const pendingDecisionLines = (question, words) => {
-  if (question === null) return []
-  if (question.questions) return openQuestionLines(question, words)
-  const key = code(question.key)
-  const options = question.options.map(code).join(', ')
-  return [
-    `- ${words.pendingDecision(inert(oneLine(question.text)), key)}`,
-    `  ${words.pendingOptions(options)}`,
-    `  ${words.pendingReply(question.key)}`,
-  ]
-}
-
 /**
- * The architect's open questions, each with its options, and one reply that answers them all (#662).
- * @param {any} question @param {Words} words
+ * The decision the run waits on, as the pull request's body says it: one line, its key, and that
+ * it is asked in a comment of its own, where the reply goes (#662).
+ * @param {import('./run-status.mjs').WaitingQuestion | null} question @param {Words} words
  */
-const openQuestionLines = (question, words) => [
-  `- ${words.pendingQuestions(question.questions.length, code(question.key))}`,
-  ...question.questions.flatMap((asked) => [
-    `  - ${inert(oneLine(`${asked.id} (#${asked.issue} ${asked.criterion}): ${asked.question}`))}`,
-    ...asked.options.map((option) => `    - ${code(option.id)}: ${inert(oneLine(`${option.label} — ${option.consequence}`))}`),
-  ]),
-  ...words.pendingReplyAll(question.questions.map(({ id }) => id)).map((line) => `  ${line}`),
-]
+export const pendingDecisionLines = (question, words) => (question === null ? [] : [`- ${words.pendingInComment(code(question.key))}`])
 
 /** @param {RedCommit[]} reds @param {Words} words */
 const redLines = (reds, words) => (reds.length === 0

@@ -1,6 +1,6 @@
 import { createDraftPublication } from '../publish/draft-publication-usecase.mjs'
 import { architectureEvents } from './story-briefs.mjs'
-import { askOnIssue, askOnPullRequest, markAnswered } from './ask-on-issue.mjs'
+import { askOnIssue, markAnswered } from './ask-on-issue.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { waitingOn } from '../../domain/reporting/run-status.mjs'
@@ -27,18 +27,7 @@ export const draftInCi = async (deps, outcome) => {
   if (outcome.status !== 'waiting') return outcome
   // The question as the run holds it: an agent's block hands back no question in its outcome.
   const asked = { slug: outcome.slug, question: waitingOn(deriveRun(events)) }
-  return { ...outcome, draft: (await designed(deps, events)) ? await draftAndAsk(deps, asked) : await askOnIssue(deps, asked) }
-}
-
-/**
- * The draft published, then the question asked in a comment of its own on it.
- * @param {any} deps @param {{ slug: string, question: any }} asked
- */
-const draftAndAsk = async (deps, asked) => {
-  const published = await createDraftPublication(deps).publish()
-  if (!published.ok) return published
-  const comment = await askOnPullRequest(deps, asked)
-  return { ...published, on: 'pull-request', url: comment.ok ? comment.url : null, comment }
+  return { ...outcome, draft: (await designed(deps, events)) ? await createDraftPublication(deps).publish() : await askOnIssue(deps, asked) }
 }
 
 /**

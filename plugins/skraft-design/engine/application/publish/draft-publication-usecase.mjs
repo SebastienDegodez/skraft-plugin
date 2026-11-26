@@ -5,6 +5,8 @@ import { loadConfig } from '../config/bases.mjs'
 import { loadWorkflow } from '../workflow/load-workflow.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { publishPullRequest } from './pull-request.mjs'
+import { askOnPullRequest } from '../architecture/ask-on-issue.mjs'
+import { waitingOn } from '../../domain/reporting/run-status.mjs'
 
 /**
  * @typedef {Parameters<typeof openActiveRun>[0] & Parameters<typeof loadConfig>[0] & Parameters<typeof loadWorkflow>[0] & import('./pull-request.mjs').PublishDeps} DraftPublicationDeps
@@ -36,9 +38,20 @@ const publishEligibleDraft = async (deps, slug, journal) => {
   if (config.config.publish.pullRequest !== true) return refused(slug, 'publication-not-consented', 'Draft publication requires the publication consent for this repository (skraft_design_setup)')
   const loaded = await loadWorkflow(deps, { agents: false })
   if (!loaded.ok) return refused(slug, 'workflow-invalid', loaded.reason)
-  return guarded(slug, () => publishPullRequest(deps, {
+  const published = await guarded(slug, () => publishPullRequest(deps, {
     slug, journal, workflow: loaded.workflow, config: { ...config.config, publish: { ...config.config.publish, draft: true } },
   }))
+  return published.ok ? askedThere(deps, slug, journal, published) : published
+}
+
+/**
+ * The draft published, the question it waits on asked in a comment of its own there: its body
+ * names the decision and leaves the question to that comment (#662).
+ * @param {DraftPublicationDeps} deps @param {string} slug @param {any} journal @param {DraftPublicationOutcome} published
+ */
+const askedThere = async (deps, slug, journal, published) => {
+  const comment = await askOnPullRequest(deps, { slug, question: waitingOn(deriveRun(journal.events)) })
+  return { ...published, on: 'pull-request', url: comment.ok ? comment.url : null, comment }
 }
 
 /** @param {string} slug @param {() => ReturnType<typeof publishPullRequest>} publishing */

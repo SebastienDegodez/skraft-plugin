@@ -2,6 +2,7 @@ import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { engineMessage, issueOf } from '../../domain/pipeline/commits.mjs'
 import { COMPONENTS_FILE, designComponents } from './design-components.mjs'
 import { contextQuestion, stopped, waitingFor } from './context.mjs'
+import { REFRESH_SENTENCE } from '../../domain/architecture/question-words.mjs'
 
 /**
  * REFRESH: a design run that waits on a person while the default branch moved on takes it as it is
@@ -12,7 +13,7 @@ import { contextQuestion, stopped, waitingFor } from './context.mjs'
 export const REFRESH = 'REFRESH'
 
 /** What the run's blocking questions add, so that a person knows REFRESH is an answer. */
-export const REFRESH_OFFER = ' REFRESH takes the default branch as it is now, detects the components again and designs again from RESEARCH, in this run.'
+export const REFRESH_OFFER = REFRESH_SENTENCE
 
 /** A checkpoint that settled REFRESH: the run takes its next step again. */
 const AGAIN = Object.freeze({ again: true })

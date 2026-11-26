@@ -177,14 +177,21 @@ const openAsk = async ({ journal }, next) => {
  * Journals a question about a node.
  * @param {Context} context
  * @param {{ kind: import('../../domain/decisions/questions.mjs').QuestionKind, step: string, visit: number }} about
- * @param {{ text: string, subjects: string[], options?: string[] }} plan options: those a person may answer, when fewer than the kind's
+ * @param {{ text: string, subjects: string[], options?: string[], fields?: Record<string, unknown> }} plan options: those a person may answer, when fewer than the kind's; fields: what the question carries besides
  * @returns {Promise<AskedQuestion>}
  */
-export const askQuestion = async ({ journal }, { kind, step, visit }, { text, subjects, options }) => {
-  const question = { ...questionOf(kind, nextKey(journal, step), text), ...(options === undefined ? {} : { options }) }
+export const askQuestion = async ({ journal }, { kind, step, visit }, { text, subjects, options, fields = {} }) => {
+  const question = { ...questionOf(kind, nextKey(journal, step), text), ...(options === undefined ? {} : { options }), ...fields }
   await journal.append('question.asked', { ...question, step, visit, subjects })
   return { ...question, step, visit, subjects, answer: null, reason: null }
 }
+
+/**
+ * What a person reads of a block, apart from the text: the step, why, what it left and whether
+ * REFRESH is an answer; never the tracking folder's paths.
+ * @param {ReturnType<typeof blockOf>} block
+ */
+const shownBlock = ({ step, code, from, agent, failures, attempt }) => ({ step, code, from, agent, failures: [...failures], attempt, refresh: REFRESH_OFFER !== '' })
 
 /** The question an ask node asks. @param {WorkStep} next */
 const nodeQuestion = ({ node, visit }) => ({ kind: /** @type {NodeQuestion} */ (node.question), step: node.id, visit })
@@ -385,7 +392,8 @@ export const blockQuestion = async (context, run, next) => {
     const kind = acceptable(ceiling.findings) ? REVIEW_CEILING : BLOCKED
     return askQuestion(context, { kind, step, visit: run.nodes[step].visit }, { text: withReport(context, reviewCeilingText(ceiling), step), subjects: [] })
   }
-  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, `${blockText(blockOf(context, next, step))}${REFRESH_OFFER}`, step), subjects: [] })
+  const block = blockOf(context, next, step)
+  return askQuestion(context, { kind: BLOCKED, step, visit: run.nodes[step].visit }, { text: withReport(context, `${blockText(block)}${REFRESH_OFFER}`, step), subjects: [], fields: { block: shownBlock(block) } })
 }
 
 /**
