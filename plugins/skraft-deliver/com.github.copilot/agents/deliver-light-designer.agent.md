@@ -55,7 +55,8 @@ Then, in the story's language, these sections:
 - Write an ADR only for a candidate that passes the Eligibility Gate; zero ADRs is the normal outcome. A choice inside one context goes in the brief's `## Use cases`.
 - Write it as `docs/adr/adr-{NNN}-{subject}.md` from the Blank Template of `deliver-architecture-decisions`: YAML header first, `status: Proposed`, `ratified_by: null`, a `decision:` of one sentence, numbered after the highest ADR in `docs/adr/`, three digits; append its row to `docs/adr/decisions-index.md` with `Ratified by: —`.
 - An ADR reads on its own: no file path, no acceptance criterion, no issue number, no version, no other ADR.
-- Never change an ADR that existed before your pass, whatever its status. A person ratifies yours before DISTILL: never set one `Accepted`.
+- Never change an ADR that existed before your pass, with one exception: when an `Accepted` decision stands in the story's way, your new ADR carries `**Supersedes:** ADR-MMM — {reason}` right after its Status line, and the old one gets only its status lines set to `Superseded by ADR-NNN`, with a row `| {date} | ADR-MMM | ADR-NNN | {reason} |` in `docs/adr/supersessions.md`. The engine then asks a person whether to design the story first.
+- A person ratifies your ADRs before DISTILL: never set one `Accepted`.
 
 ## Boundaries
 

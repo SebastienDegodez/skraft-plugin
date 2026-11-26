@@ -102,22 +102,27 @@ test('changed architecture requires native KEEP before any DISTILL handoff', asy
   assert.equal(host.events().find(({ type }) => type === 'question.answered').by, 'decide')
 })
 
-test('REDESIGN ends the delivery run without binding architecture or dispatching workers', async () => {
+test('REDESIGN pauses the delivery for a design: it accepts no brief, dispatches no worker and asks how to go on', async () => {
   const { host, deps, run } = architectureSession({ changed: true })
   const waiting = await run.start({ issue: 42 })
   await createDecide(deps).decide({ key: waiting.question.key, answer: 'REDESIGN' })
-  assert.equal((await run.prepare()).code, 'architecture-redesign')
-  assert.equal(host.events().find(({ type }) => type === 'run.finished').status, 'cancelled')
-  assert.equal(host.events().some(({ type }) => type === 'architecture.bound'), false)
+  assert.equal((await run.prepare()).status, 'ready')
+  const paused = await createRunPipeline(deps).run()
+  assert.equal(paused.code, 'architecture-wait', paused.reason)
+  assert.match(paused.reason, /waits for a design: A person asked to design the story again: its issue changed since its brief\./)
+  assert.deepEqual(host.human.questions.at(-1).options, ['RESUME', 'CONTINUE', 'STOP'])
+  assert.equal(host.events().some(({ type }) => type === 'run.finished' || type === 'architecture.accepted'), false)
   assert.equal(host.agentRunner.dispatches.length, 0)
 })
 
-test('a delivery run refuses, before any dispatch, a brief whose ADR the merged base does not hold ratified: Proposed, Rejected or Superseded', async () => {
+test('a brief whose ADR the merged base does not hold ratified, Proposed, Rejected or Superseded, pauses the delivery for a design before any dispatch', async () => {
   for (const status of ['Proposed', 'Rejected', 'Superseded']) {
-    const { host, run } = architectureSession({ status })
+    const { host, deps, run } = architectureSession({ status })
     const started = await run.start({ issue: 42 })
-    assert.equal(started.code, 'architecture-stale', status)
-    assert.match(started.reason, /docs\/adr\/adr-001-checkout\.md is not Accepted on the merged base/, status)
+    assert.equal(started.status, 'ready', status)
+    const paused = await createRunPipeline(deps).run()
+    assert.equal(paused.code, 'architecture-wait', status)
+    assert.match(paused.reason, /docs\/adr\/adr-001-checkout\.md is not Accepted on the merged base/, status)
     assert.equal(host.agentRunner.dispatches.length, 0, status)
   }
 })
@@ -143,4 +148,14 @@ test('a delivery whose component has not decided on Gherkin is refused before an
   assert.equal(outcome.code, 'configuration-incomplete', outcome.reason)
   assert.match(outcome.reason, /api: bdd is unanswered/)
   assert.equal(host.agentRunner.dispatches.length, 0)
+})
+
+test('a delivery waiting for a design goes on with a light design when a person answers CONTINUE', async () => {
+  const { host, deps, run } = architectureSession({ status: 'Proposed', options: { answers: [{ answer: 'CONTINUE' }], scenarioReviews: [null] } })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(lightDesigner()(host), agent()(host))
+  await createRunPipeline(deps).run()
+  assert.deepEqual(host.agentRunner.dispatches.slice(0, 2).map(({ agent: id }) => id), ['deliver-light-designer', 'deliver-acceptance-designer'])
+  assert.deepEqual(host.events().filter(({ type, step }) => type === 'step.recorded' && ['architecture_mode', 'design_wait'].includes(step)).map(({ step, answer, next }) => [step, answer, next]),
+    [['architecture_mode', 'WAIT', 'design_wait'], ['design_wait', 'CONTINUE', 'light_design']])
 })

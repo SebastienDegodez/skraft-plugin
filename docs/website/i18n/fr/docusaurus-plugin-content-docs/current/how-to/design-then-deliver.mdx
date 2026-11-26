@@ -153,13 +153,14 @@ Fermer ce dialogue laisse le run en pause.
 
 ## Depannage {/* #troubleshooting */}
 
-### Architecture refusee {/* #freshness */}
+### Deliver attend un design {/* #freshness */}
 
-`architecture-unmerged` : fusionnez la PR design avant de reessayer.
-`architecture-stale` : un ADR cite n'est pas Accepted dans la base fusionnee ; publiez et fusionnez
-une PR design avec une decision valide avant deliver.
-Une issue modifiee demande KEEP ou REDESIGN ; seule une personne choisit.
-`architecture-invalid` : corrigez l'en-tete du brief ou le document cite manquant par une PR design.
+Un brief sur lequel deliver ne peut pas s'appuyer met la livraison en pause au lieu de la refuser :
+`architecture-unmerged` (la PR design n'est pas encore fusionnee), `architecture-stale` (un ADR cite
+n'est pas Accepted dans la base fusionnee), `architecture-invalid` (un en-tete de brief ou un
+document cite est faux), ou REDESIGN a une issue modifiee, qui demande d'abord KEEP ou REDESIGN.
+Corrigez-le par une PR design, fusionnez-la, revenez sur la branche de livraison et repondez
+RESUME ; ou repondez CONTINUE pour livrer sur un design leger, ou STOP.
 
 ### Design exclut une story {/* #readiness */}
 

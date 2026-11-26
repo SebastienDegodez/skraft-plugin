@@ -73,7 +73,7 @@ test('a light design that writes an ADR waits for a person to ratify it; APPROVE
   assert.equal(waiting.status, 'waiting', waiting.reason)
   assert.equal(waiting.code, 'light-design-review')
   const [question] = host.human.questions
-  assert.deepEqual(question.options, ['APPROVED', 'REVISE', 'STOP'])
+  assert.deepEqual(question.options, ['APPROVED', 'REVISE', 'DESIGN', 'STOP'])
   assert.match(question.text, /The light design of #42 wrote docs\/architecture\/runs\/issue-42\/42-checkout-receipt\.md and one ADR that DISTILL and DELIVER will rely on: docs\/adr\/adr-001-mail-receipts\.md: Receipts leave the shop through the notification gateway\./)
   assert.equal(host.agentRunner.dispatches.some(({ agent: id }) => id === 'deliver-acceptance-designer'), false)
   assert.equal((await createRunPipeline(deps).run()).status, 'waiting')
@@ -101,4 +101,56 @@ test('REVISE sends the light design back with the person\'s corrections; STOP en
   assert.equal(outcome.code, 'stopped', outcome.reason)
   assert.match(outcome.reason, /A human stopped the delivery at its light design\./)
   assert.equal(stopped.host.agentRunner.dispatches.some(({ agent: id }) => id === 'deliver-acceptance-designer'), false)
+})
+
+test('a light design that goes beyond a light design asks a person even with no ADR, naming each reason and advising DESIGN', async () => {
+  const { host, deps, run } = session()
+  await run.start({ issue: 42 })
+  const criteria = Array.from({ length: 9 }, (_, index) => ({ id: `AC-${index + 1}`, components: ['.'], adrs: [] }))
+  host.agentRunner.behaviours.push(lightDesigner({ brief: { criteria }, body: '# Checkout receipt\n\n## Context\n\nReceipts (new)\n\n## Use cases\n\nMail the receipt.\n' })(host))
+  const waiting = await createRunPipeline(deps).run()
+  assert.equal(waiting.code, 'light-design-review', waiting.reason)
+  const { text } = host.human.questions.at(-1)
+  assert.match(text, /It goes beyond a light design: the brief names a bounded context the context map does not hold; the story has 9 acceptance criteria, more than 8; DESIGN is advised\./)
+  assert.match(text, /^The light design of #42 wrote docs\/architecture\/runs\/issue-42\/42-checkout-receipt\.md\. /)
+})
+
+test('an ADR that replaces an Accepted one is a reason to design the story first', async () => {
+  const accepted = 'docs/adr/adr-003-paper-receipts.md'
+  const { host, deps, run } = session({ files: { [accepted]: adrText('Accepted').replace('ADR-001', 'ADR-003') } })
+  host.git.published.add(accepted)
+  await run.start({ issue: 42 })
+  const replacing = adrText().replace('**Status:** Proposed\n', '**Status:** Proposed\n\n**Supersedes:** ADR-003 — receipts are no longer printed\n')
+  host.agentRunner.behaviours.push(lightDesigner({ ...withAdr, adrs: { [ADR]: replacing } })(host))
+  await createRunPipeline(deps).run()
+  assert.match(host.human.questions.at(-1).text, /It goes beyond a light design: docs\/adr\/adr-001-mail-receipts\.md replaces or amends ADR-003, a decision already taken; DESIGN is advised\./)
+})
+
+/** A brief skraft-design merged for story #42, as the merged base holds it. */
+const mergedBrief = () => {
+  const path = 'docs/architecture/runs/epic-1/42-checkout-receipt.md'
+  const header = { version: 1, issue: 42, forge: 'github', repository: 'shop/checkout', bodySha256: createHash('sha256').update(BODY).digest('hex'),
+    components: ['.'], criteria: [{ id: 'AC-1', components: ['.'], adrs: [] }], adrs: [], documents: [] }
+  return { path, text: `<!-- skraft-architecture-brief:v1\n${JSON.stringify(header)}\n-->\n\n# Designed checkout receipt\n` }
+}
+
+test('DESIGN pauses the delivery; once skraft-design merged a brief, RESUME binds it, drops the light design from the branch and DISTILL relies on the merged brief', async () => {
+  const { host, deps, run } = session({ answers: [{ answer: 'DESIGN' }, null, { answer: 'RESUME' }], scenarioReviews: [null] })
+  await run.start({ issue: 42 })
+  host.agentRunner.behaviours.push(lightDesigner(withAdr)(host), agent()(host))
+  const paused = await createRunPipeline(deps).run()
+  assert.equal(paused.code, 'architecture-wait', paused.reason)
+  assert.match(paused.reason, /Run skraft-design on #42 and merge its pull request, check out deliver\/issue-42 again, then answer RESUME/)
+  assert.deepEqual(host.human.questions.at(-1).options, ['RESUME', 'CONTINUE', 'STOP'])
+  const merged = mergedBrief()
+  deps.architectureRepository.snapshot = async () => ({ ok: true, sha: 'designed-sha', paths: [merged.path], read: async (name) => (name === merged.path ? merged.text : null) })
+  const resumed = await createRunPipeline(deps).run()
+  assert.equal(resumed.code, 'scenario-review', resumed.reason)
+  const lightBrief = 'docs/architecture/runs/issue-42/42-checkout-receipt.md'
+  assert.deepEqual(host.git.engineCommits.filter(({ message }) => message.startsWith('docs(issue-42): drop the light design')).map(({ paths }) => paths), [[lightBrief, ADR]])
+  assert.equal(host.workspace.files.has(lightBrief) || host.workspace.files.has(ADR), false)
+  const manifest = JSON.parse(await host.tracking.read('issue-42', 'architecture/context.json'))
+  assert.deepEqual([manifest.mode, manifest.sha, manifest.brief], ['merged', 'designed-sha', merged.path])
+  const wait = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'design_wait').map(({ answer, outcome }) => [answer, outcome])
+  assert.deepEqual(wait, [['RESUME', 'answered'], ['BRIEF', 'skipped']])
 })

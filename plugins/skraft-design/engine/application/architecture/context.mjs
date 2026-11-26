@@ -36,3 +36,13 @@ export const writeArchitectureContext = async (files, slug, { mode, sha = null, 
   await files.write(slug, 'architecture/context.json', `${JSON.stringify(context, null, 2)}\n`)
   return 'architecture/context.json'
 }
+
+/**
+ * A brief merged for the story, bound as its architecture: snapshots of what it cites, then the
+ * acceptance retireBrief reads before the pull request.
+ * @param {any} deps @param {{ slug: string, journal: any }} run @param {{ path: string, sha: string, status: string, documents: Array<{ path: string, text: string }> }} found
+ */
+export const acceptBrief = async (deps, run, found) => {
+  await bindDocuments(deps, run, found)
+  await run.journal.append('architecture.accepted', { path: found.path, sha: found.sha, status: found.status })
+}

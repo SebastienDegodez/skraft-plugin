@@ -101,11 +101,11 @@ Its `architecture/context.json` maps source paths to those snapshots and records
 merged commit. Producers and reviewers resolve architecture only through that mapping.
 With no brief, the manifest records `mode=absent`; no prior DESIGN document or ADR is required.
 
-An unmerged brief is refused as `architecture-unmerged`. A cited ADR with `Superseded` or
-`Rejected` status is refused as `architecture-stale`; any status other than `Accepted` is
-also refused. A changed issue body asks a human to `KEEP` the brief or `REDESIGN`; the latter
-stops delivery and points to design, without invoking it. Forge and repository identity must
-match, so another repository's issue with the same number is not accepted.
+A brief delivery cannot rely on does not refuse the run: it pauses it for a design. That is an
+unmerged brief (`architecture-unmerged`), a cited ADR with any status other than `Accepted`
+(`architecture-stale`), an invalid brief, or a changed issue body for which a human answered
+`REDESIGN` rather than `KEEP`. Only a merged base Git cannot read refuses. Forge and repository
+identity must match, so another repository's issue with the same number is not accepted.
 
 ## Light design
 
@@ -122,12 +122,22 @@ identity, cites only the plan's components and existing files, and cites each AD
 `Accepted` or written by this light design; every ADR it wrote is cited. The ADR checks of
 every step apply as well.
 
-`light_design_review` then settles it. With no ADR, the engine approves it. With one, a person
-reads each ADR's decision: `APPROVED` marks them Accepted on the branch, effective on the merge
-of the delivery pull request, `REVISE` runs the light design again with their words, `STOP` ends
-the delivery. An approved brief is bound as `mode=light` in `architecture/context.json`, read by
+`light_design_review` then settles it. With no ADR, and nothing beyond a light design, the
+engine approves it. Beyond a light design means, each read without a model: an ADR that replaces
+or amends a decision already taken, a bounded context the brief marks `(new)`, more than two
+ADRs, more than eight criteria or more than three components. Otherwise a person reads each ADR's
+decision and each reason: `APPROVED` marks the ADRs Accepted on the branch, effective on the
+merge of the delivery pull request, `REVISE` runs the light design again with their words,
+`DESIGN` pauses the delivery, `STOP` ends it. An approved brief is bound as `mode=light` in `architecture/context.json`, read by
 DISTILL, DELIVER and their lenses as a merged one, and leaves the branch before the pull request
 as a merged one does.
+
+A paused delivery waits on `design_wait`. Each visit reads the merged base again: a brief merged
+for the story since is bound without a question, and the light brief and unratified ADRs leave
+the branch in one engine commit. Otherwise a person answers `RESUME` once skraft-design merged
+its pull request and the delivery branch is checked out again, `CONTINUE` to deliver on a light
+design, or `STOP`. skraft-deliver never starts skraft-design: the two plugins share nothing but
+the merged documents.
 
 ## Isolation and hosts
 

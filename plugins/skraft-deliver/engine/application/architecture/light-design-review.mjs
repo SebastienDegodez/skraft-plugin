@@ -1,6 +1,6 @@
 import { deriveRun } from '../../domain/journal/run-state.mjs'
 import { citedPaths, readBrief } from '../../domain/architecture/brief.mjs'
-import { field } from '../../domain/decisions/adr.mjs'
+import { DESIGN_PLUGIN, decisionLine, lightDesignReasons } from '../../domain/architecture/light-design.mjs'
 import { issueOf } from '../../domain/pipeline/commits.mjs'
 import { acceptOnMerge, newProposedAdrs } from '../decisions/adr-ratification.mjs'
 import { bindDocuments } from './context.mjs'
@@ -11,19 +11,26 @@ import { lightDesignPlan } from './light-design.mjs'
  * from, which the engine settles itself, then what a person makes of the light design.
  */
 
-/** The architecture a delivery starts from: the brief it accepted from the merged base, else none. */
+/** The architecture a delivery starts from: the brief it accepted from the merged base, a design to wait for, else none. */
 export const ARCHITECTURE_MODE = Object.freeze({
-  plan: async ({ journal }) => ({ answered: journal.events.some(({ type }) => type === 'architecture.accepted')
-    ? { answer: 'BRIEF', reason: 'a brief merged for this story' }
-    : { answer: 'ABSENT', reason: 'no brief merged for this story' } }),
+  plan: async ({ journal }) => ({ answered: modeOf(journal.events) }),
   act: async () => ({ failures: [] }),
 })
 
+/** BRIEF when the delivery accepted a merged brief, WAIT when it found one it cannot deliver on, else ABSENT. @param {any[]} events */
+const modeOf = (events) => {
+  if (events.some(({ type }) => type === 'architecture.accepted')) return { answer: 'BRIEF', reason: 'a brief merged for this story' }
+  const wait = events.findLast(({ type }) => type === 'architecture.bound')?.wait
+  return wait ? { answer: 'WAIT', reason: wait.reason } : { answer: 'ABSENT', reason: 'no brief merged for this story' }
+}
+
 /**
- * The light design read by a person when it wrote an ADR, which they ratify, and settled by the
- * engine otherwise. APPROVED binds the brief as the story's architecture, its ADRs accepted on the
- * merge of the delivery's pull request; REVISE sends the light design back with the person's words;
- * STOP ends the delivery.
+ * The light design read by a person when it wrote an ADR, which they ratify, or went beyond a light
+ * design (lightDesignReasons), and settled by the
+ * engine when it wrote none and stays a light design. APPROVED binds the brief as the story's
+ * architecture, its ADRs accepted on the merge of the delivery's pull request; REVISE sends the
+ * light design back with the person's words; DESIGN pauses the delivery for a design run; STOP
+ * ends the delivery.
  */
 export const LIGHT_DESIGN_REVIEW = Object.freeze({
   plan: (context) => reviewPlan(context),
@@ -36,22 +43,39 @@ const reviewPlan = async ({ deps, slug, journal }) => {
   if (plan === null) return { environment: 'the run holds no light design plan; start the delivery again' }
   const adrs = await newProposedAdrs(deps, deriveRun(journal.events).base)
   if (typeof adrs === 'string') return { environment: adrs }
-  if (adrs.length === 0) return { answered: { answer: 'APPROVED', reason: 'the light design wrote no ADR to ratify' } }
-  return { text: await reviewText(deps, plan, adrs), subjects: [plan.brief, ...adrs] }
+  const design = await designOf(deps, plan, adrs)
+  const reasons = lightDesignReasons(design)
+  if (adrs.length === 0 && reasons.length === 0) return { answered: { answer: 'APPROVED', reason: 'the light design wrote no ADR to ratify and stays a light design' } }
+  return { text: reviewText(plan, design, reasons), subjects: [plan.brief, ...adrs] }
 }
 
-/** @param {any} deps @param {any} plan @param {string[]} adrs */
-const reviewText = async (deps, plan, adrs) => {
-  const decisions = []
-  for (const path of adrs) decisions.push(`${path}: ${field(await deps.workspace.read(path) ?? '', 'decision') ?? 'no decision line'}`)
-  return [`The light design of #${plan.issue} wrote ${plan.brief} and ${adrs.length === 1 ? 'one ADR' : `${adrs.length} ADRs`} that DISTILL and DELIVER will rely on: ${decisions.join('; ')}.`,
-    'APPROVED ratifies them, accepted on the merge of the delivery pull request, and goes on to DISTILL; REVISE sends the light design back with your corrections; STOP ends the delivery.'].join(' ')
+/** The brief and the ADRs the light design wrote, as the working branch holds them. @param {any} deps @param {any} plan @param {string[]} paths */
+const designOf = async (deps, plan, paths) => {
+  const text = /** @type {string} */ (await deps.workspace.read(plan.brief))
+  const adrs = []
+  for (const path of paths) adrs.push({ path, text: (await deps.workspace.read(path)) ?? '' })
+  return { brief: /** @type {any} */ (readBrief(text)), text, adrs }
+}
+
+/** @param {any} plan @param {{ adrs: Array<{ path: string, text: string }> }} design @param {string[]} reasons */
+const reviewText = (plan, { adrs }, reasons) => [
+  `The light design of #${plan.issue} wrote ${plan.brief}${adrsWritten(adrs)}.`,
+  ...(reasons.length === 0 ? [] : [`It goes beyond a light design: ${reasons.join('; ')}; DESIGN is advised.`]),
+  `APPROVED ${adrs.length === 0 ? 'goes on' : 'ratifies them, accepted on the merge of the delivery pull request, and goes on'} to DISTILL; REVISE sends the light design back with your corrections; DESIGN pauses the delivery until ${DESIGN_PLUGIN} merges a brief for the story; STOP ends the delivery.`,
+].join(' ')
+
+/** The ADRs the light design wrote, each with its decision; nothing when it wrote none. @param {Array<{ path: string, text: string }>} adrs */
+const adrsWritten = (adrs) => {
+  if (adrs.length === 0) return ''
+  const count = adrs.length === 1 ? 'one ADR' : `${adrs.length} ADRs`
+  return ` and ${count} that DISTILL and DELIVER will rely on: ${adrs.map(({ path, text }) => `${path}: ${decisionLine(text)}`).join('; ')}`
 }
 
 /** @param {any} context @param {{ answer: string | null, reason: string | null }} asked */
 const reviewAct = async (context, { answer, reason }) => {
   if (answer === 'STOP') return { stop: 'A human stopped the delivery at its light design.' }
   if (answer === 'REVISE') return { failures: [`A human read the light design and asks for these corrections: ${reason}`] }
+  if (answer === 'DESIGN') return { failures: [] }
   return approve(context)
 }
 

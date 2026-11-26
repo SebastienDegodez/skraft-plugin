@@ -21,6 +21,7 @@ import { recordJudgment } from '../decisions/decide-usecase.mjs'
 import { knownRecovery } from '../../domain/decisions/known-recoveries.mjs'
 import { completeArchitecturePass } from '../architecture/checkpoint.mjs'
 import { ARCHITECTURE_MODE, LIGHT_DESIGN_REVIEW } from '../architecture/light-design-review.mjs'
+import { ARCHITECTURE_WAIT } from '../architecture/architecture-wait.mjs'
 
 /**
  * The questions a run puts to a human: an ask node's, and the one the engine asks when the
@@ -42,7 +43,7 @@ import { ARCHITECTURE_MODE, LIGHT_DESIGN_REVIEW } from '../architecture/light-de
  *   loaded: { workflow: import('../../domain/workflow/workflow.mjs').Workflow },
  * }} Context
  * @typedef {{ answer: string, reason: string | null }} Answer
- * @typedef {{ answered: Answer & { subjects?: string[], newAdrs?: string[] } } | { text: string, subjects: string[] } | { environment: string }} Plan
+ * @typedef {{ answered: Answer & { subjects?: string[], newAdrs?: string[] } } | { text: string, subjects: string[], options?: string[] } | { environment: string }} Plan
  *   answered: an automatic decision on no Proposed ADRs or their acceptance on PR merge;
  *   environment: the machine cannot tell what to ask.
  * @typedef {{ failures: string[] } | { environment: string, incident?: import('../../domain/pipeline/incidents.mjs').Incident, incidents?: import('../../domain/pipeline/incidents.mjs').FailureIncident[] } | { stop: string }} Act
@@ -98,7 +99,7 @@ const scenarioReviewPlan = async (context, { scenarios, nodes }) => {
 const QUESTIONNAIRES = Object.freeze({
   'adr-merge-acceptance': ADR_ACCEPTANCE, 'scenario-review': SCENARIO_REVIEW,
   'architecture-pass': { plan: completeArchitecturePass, act: async () => ({ failures: [] }) },
-  'architecture-mode': ARCHITECTURE_MODE, 'light-design-review': LIGHT_DESIGN_REVIEW,
+  'architecture-mode': ARCHITECTURE_MODE, 'light-design-review': LIGHT_DESIGN_REVIEW, 'architecture-wait': ARCHITECTURE_WAIT,
 })
 
 /** @param {string[] | string} adrs a string: why they cannot be listed @returns {Plan} */
@@ -176,11 +177,11 @@ const openAsk = async ({ journal }, next) => {
  * Journals a question about a node.
  * @param {Context} context
  * @param {{ kind: import('../../domain/decisions/questions.mjs').QuestionKind, step: string, visit: number }} about
- * @param {{ text: string, subjects: string[] }} plan
+ * @param {{ text: string, subjects: string[], options?: string[] }} plan options: those a person may answer, when fewer than the kind's
  * @returns {Promise<AskedQuestion>}
  */
-export const askQuestion = async ({ journal }, { kind, step, visit }, { text, subjects }) => {
-  const question = questionOf(kind, nextKey(journal, step), text)
+export const askQuestion = async ({ journal }, { kind, step, visit }, { text, subjects, options }) => {
+  const question = { ...questionOf(kind, nextKey(journal, step), text), ...(options === undefined ? {} : { options }) }
   await journal.append('question.asked', { ...question, step, visit, subjects })
   return { ...question, step, visit, subjects, answer: null, reason: null }
 }

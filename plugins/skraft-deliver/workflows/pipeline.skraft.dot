@@ -5,6 +5,7 @@ digraph deliver {
   architecture_mode [shape=hexagon, question="architecture-mode", phase="DESIGN"]
   light_design [shape=box, agent="deliver-light-designer", phase="DESIGN"]
   light_design_review [shape=hexagon, question="light-design-review"]
+  design_wait [shape=hexagon, question="architecture-wait"]
   distill  [shape=box, agent="deliver-acceptance-designer", phase="DISTILL"]
   subgraph cluster_distill_review {
     label="DISTILL review"
@@ -27,10 +28,16 @@ digraph deliver {
   start -> architecture_mode
   architecture_mode -> distill [label="BRIEF"]
   architecture_mode -> light_design [label="ABSENT"]
+  architecture_mode -> design_wait [label="WAIT"]
   light_design -> light_design_review
   light_design_review -> distill [label="APPROVED"]
   light_design_review -> light_design [label="REVISE", max_visits=2]
+  light_design_review -> design_wait [label="DESIGN", max_visits=2]
   light_design_review -> exit [label="STOP"]
+  design_wait -> distill [label="BRIEF"]
+  design_wait -> design_wait [label="RESUME", max_visits=50]
+  design_wait -> light_design [label="CONTINUE"]
+  design_wait -> exit [label="STOP"]
   distill -> distill_review_lenses
   distill_review_lenses -> distill_review_coverage -> distill_review_refuter
   distill_review_lenses -> distill_review_business_alignment -> distill_review_refuter

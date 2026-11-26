@@ -1,7 +1,7 @@
 import { createInit } from '../pipeline/init-usecase.mjs'
 import { openActiveRun } from '../pipeline/active-run.mjs'
 import { createArchitectureReader } from './read-architecture.mjs'
-import { bindDocuments, contextQuestion, stopped, stopRun, waitingFor, writeArchitectureContext } from './context.mjs'
+import { acceptBrief, contextQuestion, stopped, waitingFor, writeArchitectureContext } from './context.mjs'
 import { runIdentity } from './run-identity.mjs'
 import { writeLightDesignPlan } from './light-design.mjs'
 import { issueDocument } from '../../domain/pipeline/artifacts.mjs'
@@ -42,28 +42,35 @@ const prepare = async (deps) => {
   return bindOrAsk(deps, { ...opened, issue: read.issue }, found)
 }
 
+/**
+ * The brief merged for the story, bound; none, a light design; one delivery cannot rely on
+ * (unmerged, stale, invalid, or a changed issue a person asked to design again), a wait for a
+ * design, which the workflow's design_wait settles. Only a merged base Git cannot read refuses.
+ */
 const bindOrAsk = async (deps, opened, found) => {
   if (found === null) return withoutBrief(opened, deps)
-  if (!['current', 'changed'].includes(found.status)) return stopped(opened.slug, found.code, found.reason)
-  if (found.status === 'changed') {
-    const refusal = await changed(deps, opened, found)
-    if (refusal) return refusal
-  }
-  await bindDocuments(deps, opened, found)
-  await opened.journal.append('architecture.accepted', { path: found.path, sha: found.sha, status: found.status })
+  if (found.status === 'unreadable') return stopped(opened.slug, found.code, found.reason)
+  if (found.status !== 'current' && found.status !== 'changed') return withoutBrief(opened, deps, { code: found.code, reason: found.reason })
+  const kept = found.status === 'changed' ? await changed(deps, opened, found) : null
+  if (kept !== null) return kept
+  await acceptBrief(deps, opened, found)
   return { status: 'ready', slug: opened.slug, architecture: found.path }
 }
 
-/** No brief merged for the story: a light design writes one before DISTILL, under the plan the engine gives it. */
-const withoutBrief = async ({ slug, journal, issue }, deps) => {
-  const notice = 'No architecture brief found for this story. A light design writes one before DISTILL.'
+/**
+ * No brief to deliver on: a light design writes one before DISTILL, under the plan the engine gives
+ * it, unless the delivery waits for a design first.
+ * @param {any} opened @param {any} deps @param {{ code: string, reason: string } | null} [wait]
+ */
+const withoutBrief = async ({ slug, journal, issue }, deps, wait = null) => {
+  const notice = wait === null ? 'No architecture brief found for this story. A light design writes one before DISTILL.' : `${wait.reason} The delivery waits for a design, or a light design.`
   const context = await writeArchitectureContext(deps.files, slug, { mode: 'absent', documents: [] })
   const plan = await writeLightDesignPlan(deps, slug, issue)
-  await journal.append('architecture.bound', { artifacts: [context, plan], notice })
+  await journal.append('architecture.bound', { artifacts: [context, plan], notice, ...(wait === null ? {} : { wait }) })
   return { status: 'ready', slug, notice }
 }
 
-const changed = async (deps, { slug, journal }, found) => {
+const changed = async (deps, { slug, journal, issue }, found) => {
   const identity = await deps.hasher.sha256(`${found.sha}:${found.fingerprint}`)
   const question = await contextQuestion(journal, {
     key: `architecture-refresh-${identity.slice(0, 16)}`, kind: 'architecture-refresh',
@@ -71,5 +78,5 @@ const changed = async (deps, { slug, journal }, found) => {
   })
   if (!question.answer) return waitingFor(slug, question)
   if (question.answer === 'KEEP') return null
-  return stopRun({ slug, journal }, 'architecture-redesign', 'Run skraft-design for this story, merge its pull request, then start a new delivery run.')
+  return withoutBrief({ slug, journal, issue }, deps, { code: 'architecture-redesign', reason: 'A person asked to design the story again: its issue changed since its brief.' })
 }

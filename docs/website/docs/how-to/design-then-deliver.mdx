@@ -145,13 +145,14 @@ Dismissal leaves the run paused.
 
 ## Troubleshooting {/* #troubleshooting */}
 
-### Architecture is refused {/* #freshness */}
+### Delivery waits for a design {/* #freshness */}
 
-`architecture-unmerged`: merge the design PR before retrying.
-`architecture-stale`: a cited ADR is not Accepted in the merged base; publish and merge a design
-PR that supplies a valid decision before delivery.
-A changed issue asks KEEP or REDESIGN; only a human can choose.
-`architecture-invalid`: correct the brief header or missing cited document through a design PR.
+A brief delivery cannot rely on pauses the delivery instead of refusing it:
+`architecture-unmerged` (the design PR is not merged yet), `architecture-stale` (a cited ADR is
+not Accepted in the merged base), `architecture-invalid` (a brief header or cited document is
+wrong), or REDESIGN to a changed issue, which asks KEEP or REDESIGN first. Fix it through a design
+PR, merge it, check out the delivery branch again and answer RESUME; or answer CONTINUE to deliver
+on a light design, or STOP.
 
 ### Design excludes a story {/* #readiness */}
 
