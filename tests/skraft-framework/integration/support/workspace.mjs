@@ -24,10 +24,14 @@ export const FIXTURES = Object.freeze({
   react: join(REPO, 'tests', 'skills', 'clean-architecture-react', 'fixtures', 'vite-template'),
 })
 
-/** A temp folder removed after the test, by its real path (macOS links /var to /private/var). */
+/**
+ * A temp folder removed after the test, by its real path (macOS links /var to /private/var).
+ * Windows refuses to remove a folder a live process works in, and releases it a little after the
+ * process exits: the removal retries, and a hook that ends such a process is registered before it.
+ */
 export const tempFolder = (t, prefix = 'skraft-it-') => {
   const dir = realpathSync.native(mkdtempSync(join(tmpdir(), prefix)))
-  t.after(() => rmSync(dir, { recursive: true, force: true }))
+  t.after(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
   return dir
 }
 
