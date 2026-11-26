@@ -60,6 +60,7 @@ Run the skraft-prd-backlog workflow with prd docs/prds/online-ordering.md
 | `dryRun` | `true`: simulate the publication |
 | `frame` | `false`: slice without framing questions |
 | `format` | `hve`: read the requirement families an HVE PRD declares; default: detected |
+| `forge` | `github` or `azure-devops`; default: from the git remote. With `azure-devops`, `repo` is `organization/project` |
 | `corrections` | `true`: apply the corrections accepted in the canvas (step 5) |
 
 Any other key is refused (`invalid-args`) and nothing starts. The working files are under
@@ -156,10 +157,35 @@ canvas also lets you mark each story reviewed and create an epic as soon as it i
 (**Mark reviewed**, **Dry run**, **Create the issues**); these actions belong to the person,
 never to the agent.
 
+## Publish to Azure DevOps Boards
+
+With a git remote on `dev.azure.com` (or `forge: azure-devops` and `repo: organization/project`),
+the same run publishes to Azure Boards through `az` (the `azure-devops` extension, signed in:
+`az account show`). The process of the project decides the cards:
+
+| Process | PRD | Epic of the map | Story |
+|---|---|---|---|
+| Agile | Epic | Feature | User Story |
+| Scrum | Epic | Feature | Product Backlog Item |
+| CMMI | Epic | Feature | Requirement |
+| Basic | — | Epic | Issue |
+
+Each story is the child of its Feature and the successor of the stories it waits on
+(`Predecessor` link); its priority, effort and status are tags, never Story Points or Priority.
+The handoff is under `.copilot-tracking/workitems/prds/<slug>/handoff.md`.
+
+A milestone is an iteration that already exists, matched by name. A missing one is created only
+if you check `Create the missing iterations` in the handoff, and only with the right to create
+iterations. Otherwise, or when the creation is refused, its cards carry the tag
+`milestone/<title>` and the result names the iterations to create by hand. The canvas does not
+create Azure Boards cards: the workflow does, at its handoff.
+
 ## Troubleshooting
 
 | Message | Action |
 |---|---|
+| `Azure DevOps: pass args.repo as organization/project, …` | Pass `repo: organization/project`, or run from a working copy whose remote is on `dev.azure.com`. |
+| `az: … failed` | Check `az account show` and the `azure-devops` extension (`az extension show --name azure-devops`), then resume. |
 | `args.prd: the PRD defines no functional requirement — …` | Check that each requirement id opens its line, bullet, heading, bold run or table row; for an HVE PRD with prefixes of its own, pass `format: hve`. The PRD itself is never rewritten. |
 | `agents not registered in this session: …` | Restart the Copilot session, or reinstall `skraft-backlog`, then run again. |
 | `SLICE: N problem(s) left after 3 attempts` | Read the problems listed, fix `story-map.json` by hand, run again. |

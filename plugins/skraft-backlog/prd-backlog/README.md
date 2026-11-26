@@ -22,6 +22,11 @@ decides: every check is a function here, every verdict comes from `review-verdic
 - `render.mjs`: `story-map.md`, the lens inputs and the GitHub issue bodies.
 - `handoff.mjs`: the planned operations and the HVE planning files.
 - `publish.mjs`: the idempotent publisher over `gh`.
+- `publish-azure.mjs`: the idempotent publisher to Azure DevOps Boards over `az`: the hierarchy
+  read from the project's process (Epic for the PRD, Feature per epic, the requirement type per
+  story; Basic: Epic and Issue), parent and predecessor links, tags, existing iterations (a missing
+  one created only when the handoff box is checked, else a `milestone/` tag), a text marker in
+  each description.
 
 `canvas/` is the backlog canvas the same extension declares:
 

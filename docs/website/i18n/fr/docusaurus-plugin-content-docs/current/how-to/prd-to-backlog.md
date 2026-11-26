@@ -61,6 +61,7 @@ Run the skraft-prd-backlog workflow with prd docs/prds/commande-en-ligne.md
 | `dryRun` | `true` : simuler la publication |
 | `frame` | `false` : découper sans questions de cadrage |
 | `format` | `hve` : lire les familles d'exigences que déclare un PRD HVE ; par défaut : détecté |
+| `forge` | `github` ou `azure-devops` ; par défaut : d'après le remote git. Avec `azure-devops`, `repo` vaut `organisation/projet` |
 | `corrections` | `true` : appliquer les corrections acceptées dans le canvas (étape 5) |
 
 Toute autre clé est refusée (`invalid-args`) et rien ne démarre. Les fichiers de travail sont
@@ -159,10 +160,35 @@ permet aussi de marquer chaque story relue et de créer un epic dès qu'il est p
 relue**, **Aperçu à blanc**, **Créer les issues**) ; ces actions sont réservées à la personne,
 jamais à l'agent.
 
+## Publier dans Azure DevOps Boards
+
+Avec un remote git sur `dev.azure.com` (ou `forge: azure-devops` et `repo: organisation/projet`),
+le même run publie dans Azure Boards par `az` (extension `azure-devops`, connecté :
+`az account show`). Le process du projet décide des cartes :
+
+| Process | PRD | Epic de la carte | Story |
+|---|---|---|---|
+| Agile | Epic | Feature | User Story |
+| Scrum | Epic | Feature | Product Backlog Item |
+| CMMI | Epic | Feature | Requirement |
+| Basic | — | Epic | Issue |
+
+Chaque story est l'enfant de sa Feature et la suivante des stories qu'elle attend (lien
+`Predecessor`) ; sa priorité, son effort et son statut sont des tags, jamais des Story Points ni
+une Priority. Le handoff est sous `.copilot-tracking/workitems/prds/<slug>/handoff.md`.
+
+Un milestone est une itération qui existe déjà, retrouvée par son nom. Une itération manquante
+n'est créée que si vous cochez `Create the missing iterations` dans le handoff, et seulement avec
+le droit de créer des itérations. Sinon, ou si la création est refusée, ses cartes portent le tag
+`milestone/<titre>` et le résultat nomme les itérations à créer à la main. Le canvas ne crée pas
+de cartes Azure Boards : c'est le workflow, à son handoff.
+
 ## Dépannage
 
 | Message | Action |
 |---|---|
+| `Azure DevOps: pass args.repo as organization/project, …` | Passer `repo: organisation/projet`, ou lancer depuis une copie de travail dont le remote est sur `dev.azure.com`. |
+| `az: … failed` | Vérifier `az account show` et l'extension `azure-devops` (`az extension show --name azure-devops`), puis reprendre. |
 | `args.prd: the PRD defines no functional requirement — …` | Vérifier que chaque id d'exigence ouvre sa ligne, sa puce, son titre, son passage en gras ou sa ligne de tableau ; pour un PRD HVE à préfixes propres, passer `format: hve`. Le PRD lui-même n'est jamais réécrit. |
 | `agents not registered in this session: …` | Redémarrer la session Copilot, ou réinstaller `skraft-backlog`, puis relancer. |
 | `SLICE: N problem(s) left after 3 attempts` | Lire les problèmes listés, corriger `story-map.json` à la main, relancer. |

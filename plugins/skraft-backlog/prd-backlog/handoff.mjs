@@ -119,30 +119,36 @@ export const holdBackDependents = (map, notReady, language = 'en') => {
  * The four planning files of the HVE contract, under `.copilot-tracking/github-issues/prds/<slug>/`.
  * @param {Plan} plan
  * @param {Backlog} backlog
- * @param {{ now: string, autonomy?: string }} context now: an ISO timestamp
+ * @param {{ now: string, autonomy?: string, forge?: 'github' | 'azure-devops' }} context now: an ISO timestamp; forge: where the plan goes
  * @returns {Record<string, string>}
  */
-export const renderHandoffFiles = (plan, backlog, { now, autonomy = 'partial' }) => {
+export const renderHandoffFiles = (plan, backlog, { now, autonomy = 'partial', forge = 'github' }) => {
+  const boards = forge === 'azure-devops'
   const guard = ['<!-- markdownlint-disable-file -->', '<!-- markdown-table-prettify-ignore-start -->']
   const end = '<!-- markdown-table-prettify-ignore-end -->'
   const project = backlog.repo ?? 'unresolved'
   return {
     'planning-log.md': [...guard, `# Planning Log - ${backlog.slug}`, '', '* **Planning Type**: prds', `* **Project**: ${project}`, '* **Status**: Waiting for Review', '',
       '## Progress Log', '', `* [${now}] Story map checked and approved; stories written and reviewed by the planning lenses.`, `* [${now}] Handoff written; waiting for human review.`, '',
-      '## Resume Context', '', '* **Current Phase**: Phase 5 — Finalize handoff', '* **Platform**: github', `* **Autonomy**: ${autonomy}`,
+      '## Resume Context', '', '* **Current Phase**: Phase 5 — Finalize handoff', `* **Platform**: ${boards ? 'ado' : 'github'}`, `* **Autonomy**: ${autonomy}`,
       `* **Pending Items**: ${plan.issues.length} creates, ${plan.links.length} links`, `* **Open Questions**: ${plan.notReady.size} stories held back`, '', end, ''].join('\n'),
     'artifact-analysis.md': [...guard, `# PRD Analysis - ${backlog.slug}`, '', `* **Artifact(s)**: ${backlog.prd}`, `* **Project**: ${project}`, '', '## Planned Items', '',
       ...plan.issues.flatMap((issue) => [`### ${issue.ref} - Create - ${issue.title}`, '', `* **Working Item Type**: ${issue.kind === 'epic' ? 'tracking issue (parent)' : 'sub-issue (story)'}`,
         `* **Working Labels**: ${issue.labels.join(', ')}`, `* **Milestone**: ${issue.milestone ?? 'none'}`, `* **Requirements**: ${requirementsOf(issue, backlog)}`, '']),
       ...(plan.notReady.size ? ['## Held back (needs_review)', '', ...[...plan.notReady].map(([id, reasons]) => `* ${id}: ${reasons.join('; ')}`), ''] : []), end, ''].join('\n'),
-    'issues-plan.md': [...guard, '# Issues Plan', '', `* **Project**: ${project}`, `* **Source Scope**: ${backlog.prd}`, '',
+    [boards ? 'work-items.md' : 'issues-plan.md']: [...guard, boards ? '# Work Items Plan' : '# Issues Plan', '', `* **Project**: ${project}`, `* **Source Scope**: ${backlog.prd}`, '',
       ...plan.issues.flatMap((issue) => issueEntry(issue, plan)), end, ''].join('\n'),
     'handoff.md': [...guard, `# Handoff - ${backlog.slug}`, '', `* **Project**: ${project}`, `* **Autonomy**: ${autonomy}`, '',
-      '## Repository setup', '', ...plan.labels.map((l) => `* [ ] Label \`${l.name}\``), ...plan.milestones.map((m) => `* [ ] Milestone \`${m.title}\`${m.dueOn ? ` (due ${m.dueOn})` : ''}`), '',
+      ...(boards ? [
+        '## Iterations', '', ...plan.milestones.map((m) => `* Iteration \`${m.title}\`${m.dueOn ? ` (finish ${m.dueOn})` : ''}: used when it exists`), '',
+        'An iteration that does not exist is created only if this box is checked, and only with the right to create iterations; otherwise its items carry the tag `milestone/<title>` and the logs say to create it by hand.', '',
+        '> - [ ] Create the missing iterations', '',
+        '## Hierarchy', '', '* One Epic for the PRD, one Feature per epic, one requirement per story (User Story, Product Backlog Item or Requirement, read from the process); without Feature (Basic): Epic per epic, Issue per story.', '',
+      ] : ['## Repository setup', '', ...plan.labels.map((l) => `* [ ] Label \`${l.name}\``), ...plan.milestones.map((m) => `* [ ] Milestone \`${m.title}\`${m.dueOn ? ` (due ${m.dueOn})` : ''}`), '']),
       '## Planned Operations', '', '### Create', '', ...plan.issues.map((i) => `* [ ] ${i.ref} - Create - \`${i.temp}\` - ${i.title}`), '',
       '### Link', '', ...plan.links.map((l) => `* [ ] ${l.ref} - Link - \`${l.from}\` - ${l.type === 'sub-issue' ? `sub-issue \`${l.to}\`` : `blocked by \`${l.to}\``}`), '',
       '### No Change', '', ...(plan.notReady.size ? [...plan.notReady.keys()].map((id) => `* [ ] ${id} - held back (needs_review)`) : ['* [ ] none']), '',
-      '## Planning Files', '', '* `artifact-analysis.md`', '* `issues-plan.md`', '* `planning-log.md`', '',
+      '## Planning Files', '', '* `artifact-analysis.md`', `* \`${boards ? 'work-items.md' : 'issues-plan.md'}\``, '* `planning-log.md`', '',
       '## Human Review', '', 'This section is the execution gate. Only a human may check the box below; the workflow publishes nothing while it is unchecked.', '',
       '> **Note** — The author created this content with assistance from AI. All outputs should be reviewed and validated by a qualified human reviewer before use.', '',
       '> - [ ] Reviewed and validated by a qualified human reviewer', '', end, ''].join('\n'),
