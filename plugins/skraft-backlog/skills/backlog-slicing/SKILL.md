@@ -13,6 +13,18 @@ This skill adds only what a PRD-wide map needs. Load `sprint-planning` for MoSCo
 naming and the dependency graph, and `issue-refinement` for personas, splitting patterns and the
 effort scale; follow them unless a rule below says otherwise.
 
+## Two levels
+
+- **Level 1, epics** (`Slice the PRD into epics`): write every epic of the PRD — id, title,
+  outcome, doneWhen, covers — the milestones, `deferred` and `decisions`, each epic with
+  `stories: []`. Every FR goes in the `covers` of exactly one epic or in `deferred`. The product
+  owner approves the epics.
+- **Level 2, one epic** (`Cut epic EP-… into stories`): write only `{ "stories": [ … ] }` for
+  that epic, the approved map unchanged. Its stories together cover every FR the epic covers and
+  nothing outside it; `after` names stories of this epic or of an epic already cut.
+- Another planner's plan (HVE) named in the brief proposes epics: keep them; each one merged,
+  split or dropped is one `decisions` line saying why.
+
 ## Inputs
 
 - The PRD, read-only: never ask to reformat, restructure or renumber it.

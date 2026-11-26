@@ -765,3 +765,58 @@ test('epic by epic: once EP-001 is reviewed it can be reviewed and created in th
   assert.equal(result.status, 'published')
   assert.equal(github.state.issues.length, 6, 'the final publication creates only EP-002 and its story; nothing twice')
 })
+
+test('two levels: the PO approves the epics, then each selected epic is cut by a fresh agent and approved; a later session takes the next epic', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const github = fakeGitHub()
+  const full = storyMap()
+  const agents = scriptedAgents({
+    'backlog-slicer': async ({ prompt }) => {
+      const epic = /Cut epic (\S+) into stories/.exec(prompt)?.[1]
+      if (epic) {
+        await writeJson(outputOf(prompt), { stories: full.epics.find((e) => e.id === epic).stories.map(({ tracer, ...story }) => story) })
+        return `${epic} cut`
+      }
+      if (/do not slice yet/.test(prompt)) await writeJson(outputOf(prompt), { questions: [] })
+      else await writeJson(outputOf(prompt), { ...full, epics: full.epics.map((e) => ({ ...e, stories: [] })) })
+      return 'done'
+    },
+  })
+  const first = await runUntil({ cwd, github, agents, args: { ...ARGS, epics: ['EP-001'] } })
+  assert.deepEqual(first.runs.map((r) => r.result.paused ?? r.result.status), ['framing-answered', 'story-map-approved', 'stories-approved', 'handoff-reviewed', 'published'])
+  assert.deepEqual(first.runs[1].calls.map((c) => c.label), ['slice · attempt 1'], 'level 1: the epics only')
+  assert.match(first.runs[1].calls[0].prompt, /every epic with `stories: \[\]`/)
+  assert.deepEqual(first.runs[2].calls.map((c) => c.label), ['slice EP-001 · attempt 1'], 'level 2: only the selected epic, by its own agent')
+  assert.match(first.runs[2].calls[0].prompt, /Cut epic EP-001 into stories[\s\S]*never change the story map/)
+  const map = JSON.parse(await readFile(join(backlogDir(cwd), 'story-map.json'), 'utf8'))
+  assert.deepEqual(map.epics.map((e) => [e.id, e.stories.length, e.stories[0]?.tracer ?? null]), [['EP-001', 3, true], ['EP-002', 0, null]])
+  assert.ok(!existsSync(join(backlogDir(cwd), 'slices', 'EP-001.json')), 'the cut is merged into the map, then removed')
+  assert.equal(github.state.issues.length, 4, 'EP-001 and its three stories, nothing of EP-002')
+
+  const second = await runUntil({ cwd, github, agents, args: { ...ARGS, epics: ['EP-002'] } })
+  assert.deepEqual(second.runs.map((r) => r.result.paused ?? r.result.status), ['story-map-approved', 'stories-approved', 'handoff-reviewed', 'published'], 'a fresh session reuses the approved epics, no framing again')
+  assert.deepEqual(second.runs[0].calls.map((c) => c.label), [], 'the epics are not sliced again')
+  assert.deepEqual(second.runs[1].calls.map((c) => c.label), ['slice EP-002 · attempt 1'])
+  assert.equal(github.state.issues.length, 6, 'EP-002 and its story added, EP-001 created once')
+  const number = (title) => github.state.issues.find((i) => i.title.endsWith(title)).number
+  const late = github.state.issues.find((i) => i.title.endsWith('Déposer son permis'))
+  assert.match(late.body, new RegExp(`#${number("Recevoir la décision d'éligibilité")} \\(EP-001-S01\\)`), 'it names the story of the earlier session by its issue')
+  assert.ok(github.state.blockedBy.some((l) => l.issue === late.number && l.blocker === number("Recevoir la décision d'éligibilité")), 'and is blocked by it')
+})
+
+test('a plan the HVE planner left for the PRD reaches the slicer as proposed epics; the plan skraft wrote itself does not', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const hve = join(cwd, '.copilot-tracking', 'workitems', 'prds', 'eligibilite-plan')
+  await mkdir(hve, { recursive: true })
+  await writeFile(join(hve, 'work-items.md'), '# Work Items\n\n* **Source**: docs/prd/eligibilite.md\n\n## WI001 - Create - Epic: Éligibilité\n', 'utf8')
+  const own = join(cwd, '.copilot-tracking', 'github-issues', 'prds', 'eligibilite-old')
+  await mkdir(own, { recursive: true })
+  await writeFile(join(own, 'issues-plan.md'), '* **Source Scope**: docs/prd/eligibilite.md\n', 'utf8')
+  await writeFile(join(own, 'planning-log.md'), '* [x] Story map checked and approved; stories written.\n', 'utf8')
+  const { runs } = await runUntil({ cwd, github: fakeGitHub() })
+  const sliced = runs[1].calls.find((c) => c.label === 'slice · attempt 1')
+  assert.match(sliced.prompt, /Another planner proposed epics for this PRD: \.copilot-tracking\/workitems\/prds\/eligibilite-plan\/work-items\.md\. Keep its epics; for each one you merge, split or drop, write one `decisions` line saying why\./)
+  assert.doesNotMatch(sliced.prompt, /eligibilite-old/)
+})

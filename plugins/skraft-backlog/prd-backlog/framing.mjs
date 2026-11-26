@@ -23,11 +23,12 @@ const isText = (value) => typeof value === 'string' && value.trim() !== ''
 /**
  * The questions the PRD itself raises.
  * @param {import('./prd-inventory.mjs').Inventory} inventory @param {string} prdText
+ * @param {{ plans?: string[] }} [context] plans: the plan files another planner (HVE) left for this PRD
  * @returns {FramingQuestion[]}
  */
-export const prdQuestions = (inventory, prdText) => {
+export const prdQuestions = (inventory, prdText, { plans = [] } = {}) => {
   const language = inventory.language
-  return [statusQuestion(inventory, language), unreadQuestion(inventory, language), epicsQuestion(inventory, language),
+  return [statusQuestion(inventory, language), unreadQuestion(inventory, language), epicsQuestion(inventory, language, plans),
     ...channelQuestions(inventory, language), releaseQuestion(prdText, language, inventory), ...denseQuestions(inventory, language), nfrQuestion(inventory, language)]
     .filter((q) => q !== null)
 }
@@ -74,10 +75,11 @@ const unreadQuestion = (inventory, language) => {
  * the product owner is told why, with what it brings and what it costs.
  * @param {import('./prd-inventory.mjs').Inventory} inventory @param {'fr' | 'en'} language
  */
-const epicsQuestion = (inventory, language) => {
+const epicsQuestion = (inventory, language, plans = []) => {
   if ((inventory.epicSource ?? (inventory.epics.length ? 'ep' : 'none')) !== 'none') return null
   const frs = inventory.requirements.filter((r) => r.kind === 'FR').length
   const small = frs <= DENSE_EPIC
+  const planned = plans.length ? [t(language, `Les épics du plan HVE (${plans.join(', ')}), le slicer dit pourquoi il s’en écarte`, `The epics of the HVE plan (${plans.join(', ')}), the slicer says why it departs from one`)] : []
   return {
     id: 'epics', source: /** @type {const} */ ('prd'),
     question: t(language, `Le PRD ne propose pas d’épics (${frs} exigences) : comment les découper ?`, `The PRD proposes no epics (${frs} requirements): how should they be cut?`),
@@ -85,11 +87,12 @@ const epicsQuestion = (inventory, language) => {
       'Une épic = une capacité livrée et déployée ensemble ; un module ou un bounded context n’est une épic que s’il se déploie seul. + chaque épic se démontre et se déploie seule, peu de dépendances entre épics. − une épic peut toucher plusieurs bounded contexts (risque de conflits de code, d’où des stories ordonnées sur le même code) ; une grande épic peut dépasser 12 stories.',
       'An epic = one capability delivered and deployed together; a module or a bounded context is an epic only when it deploys on its own. + each epic is demonstrated and deployed alone, few dependencies between epics. − an epic may touch several bounded contexts (code conflicts, hence ordered stories on the same code); a large epic may pass 12 stories.'),
     options: [
+      ...planned,
       t(language, 'Une seule épic tant qu’aucun résultat distinct ne justifie de couper', 'A single epic until a distinct outcome justifies a cut'),
       t(language, 'Une épic par capacité livrée et déployée ensemble, proposée par le slicer', 'One epic per capability delivered and deployed together, proposed by the slicer'),
       t(language, 'Une épic par bounded context, même s’il ne se déploie pas seul', 'One epic per bounded context, even when it does not deploy alone'),
     ],
-    recommended: small ? 0 : 1,
+    recommended: planned.length ? 0 : small ? 0 : 1,
   }
 }
 

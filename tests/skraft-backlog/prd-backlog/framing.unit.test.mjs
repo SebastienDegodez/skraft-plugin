@@ -73,3 +73,11 @@ test('an FR the PRD names but never defines is put to the human, never fixed in 
   assert.equal(unread.question, 'The PRD names FR-009 (line 3) but never defines it: what should be done?')
   assert.equal(unread.options[unread.recommended], 'Ignore it, it is a reference or a typo')
 })
+
+test('with an HVE plan for a PRD that proposes no epic, the framing recommends the plan\'s epics', async () => {
+  const { inventoryOf } = await import('../../../plugins/skraft-backlog/prd-backlog/prd-inventory.mjs')
+  const text = prdFormat('hve-brd-builder-prd.md')
+  const epics = prdQuestions(inventoryOf(text), text, { plans: ['.copilot-tracking/workitems/prds/brd/work-items.md'] }).find((q) => q.id === 'epics')
+  assert.equal(epics.options[epics.recommended], 'The epics of the HVE plan (.copilot-tracking/workitems/prds/brd/work-items.md), the slicer says why it departs from one')
+  assert.equal(epics.options.length, 4)
+})

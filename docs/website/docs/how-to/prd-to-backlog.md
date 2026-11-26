@@ -67,7 +67,7 @@ Any other key is refused (`invalid-args`) and nothing starts. The working files 
 
 ## 3. Answer the framing, then approve the map
 
-The run stops twice before it writes the stories. After each answer, resume the paused workflow
+The run stops three times before it writes the stories. After each answer, resume the paused workflow
 from `/workflows`.
 
 1. **Framing** (`framing-answered`): the questions are in `framing.json` (how to slice channels,
@@ -80,8 +80,14 @@ from `/workflows`.
    ```
 
    A question left unanswered takes its recommended option.
-2. **Story map** (`story-map-approved`): read `story-map.md`. To change the slicing, edit
+2. **Epics** (`story-map-approved`): read `story-map.md`. The slicer has cut the PRD into epics
+   only, with what each covers and the milestones; no story yet. To change the cut, edit
    `story-map.json`: the resume checks it again as it reads now. Its tables: [story-map.md](../reference/backlog-canvas.md#story-map).
+   A plan the HVE planner left for the PRD gives the epics the slicer starts from; each one it
+   does not follow has a line in **Decisions**.
+3. **Stories** (`stories-approved`): each epic of the run (`epics`, default all) is cut into
+   stories by a fresh agent, one epic after the other. Read `story-map.md` again, edit
+   `story-map.json` if needed, resume.
 
 ## 4. Let the stories be written and reviewed
 
@@ -95,9 +101,11 @@ each story is approved, refused, or held back because it waits on a refused stor
 *Figure 1 — ELABORATE on an extract of a real PRD, written in French ([demo repository](https://github.com/SebastienDegodez/skraft-demo-event-storming)): eight `story-writer` agents at work.*
 
 **For the product owner: work one epic at a time, in a fresh session.** On a large PRD, approve the
-story map once, then elaborate one epic per run, each run in a new Copilot session so that its
-context starts clean: `epics: ["EP-001"]`, then `["EP-002"]`… The map stays the reference: each run
-reuses `story-map.json` and `framing.json` as they are, and creates as soon as its epic is ready.
+epics once, then cut and elaborate one epic per run, each run in a new Copilot session so that
+its context starts clean: `epics: ["EP-001"]`, then `["EP-002"]`… The map stays the reference: each
+run reuses `story-map.json` and `framing.json` as they are (resume the epics pause unchanged), and
+creates as soon as its epic is ready. A story an earlier session published counts as ready: a
+story waiting on it is not held back.
 
 Re-slice regularly, when the PRD or what the team learned changes the cut: delete `story-map.json`
 (and `framing.json` to be asked the framing again), then run again in a new session. Issues

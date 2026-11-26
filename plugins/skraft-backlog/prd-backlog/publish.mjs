@@ -165,7 +165,7 @@ export const publish = async ({ plan, repo, github, dryRun = false, once = (_key
   const binding = await bindDestination(github, repo)
   const existing = await existingItems(github, repo)
   const report = { binding, mapping: /** @type {Record<string, string>} */ ({}), operations: /** @type {OperationLog[]} */ ([]), failed: 0, skipped: 0 }
-  const numbers = /** @type {Map<string, { number: number, id: number }>} */ (new Map())
+  const numbers = /** @type {Map<string, { number: number, id: number }>} */ (new Map(existing))
   const log = (ref, status, detail) => {
     report.operations.push({ ref, status, detail })
     if (status === 'failed') report.failed += 1

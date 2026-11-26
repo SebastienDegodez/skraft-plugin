@@ -40,6 +40,25 @@ export const MAX_FR_PER_STORY = 4
 /** @param {StoryMap} map @returns {MapStory[]} */
 export const storiesOf = (map) => map.epics.flatMap((epic) => epic.stories)
 
+/**
+ * The epics not cut into stories yet: the first level of the slicing writes every epic of the PRD
+ * with what it covers and no story; the second cuts one epic at a time, each by a fresh agent.
+ * @param {StoryMap} map @returns {MapEpic[]}
+ */
+export const pendingEpics = (map) => map.epics.filter((epic) => epic.stories.length === 0)
+
+/**
+ * The map with the stories one epic was cut into, and the tracer on the first of them. Every
+ * other epic is unchanged.
+ * @param {StoryMap} map @param {string} epicId @param {MapStory[]} stories @returns {StoryMap}
+ */
+export const withEpicStories = (map, epicId, stories) => {
+  const copy = structuredClone(map)
+  const epic = copy.epics.find((e) => e.id === epicId)
+  if (epic) epic.stories = structuredClone(stories)
+  return copy
+}
+
 const isText = (value) => typeof value === 'string' && value.trim() !== ''
 const isTextList = (value) => Array.isArray(value) && value.every(isText)
 const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -234,7 +253,7 @@ const epicShape = (epic, at, problems) => {
   for (const field of ['id', 'title', 'outcome']) if (!isText(epic?.[field])) problems.push(`${at}.${field} must be a non-empty string`)
   if (!isTextList(epic?.doneWhen) || epic.doneWhen.length === 0) problems.push(`${at}.doneWhen must list at least one end check`)
   if (!isTextList(epic?.covers)) problems.push(`${at}.covers must be a list of requirement ids`)
-  if (!Array.isArray(epic?.stories) || epic.stories.length === 0) return problems.push(`${at}.stories must list at least one story`)
+  if (!Array.isArray(epic?.stories)) return problems.push(`${at}.stories must be a list ([] while the epic is not cut into stories yet)`)
   epic.stories.forEach((story, index) => storyShape(story, `${epic.id ?? at}.stories[${index}]`, problems))
 }
 
@@ -275,10 +294,13 @@ const checkCoverage = (map, inventory, { problems, warnings }) => {
     if (!isText(reason)) problems.push(`deferred ${id} has no reason`)
     if (covered.has(id)) problems.push(`${id} is both deferred and covered by a story`)
   }
+  const pending = new Set(pendingEpics(map).flatMap((e) => e.covers))
   for (const requirement of inventory.requirements.filter((r) => r.kind === 'FR')) {
-    if (!covered.has(requirement.id) && !deferred.has(requirement.id)) problems.push(`${requirement.id} is covered by no story and not deferred`)
+    if (!covered.has(requirement.id) && !deferred.has(requirement.id) && !pending.has(requirement.id)) {
+      problems.push(`${requirement.id} is covered by no story and not deferred`)
+    }
   }
-  const nfrs = inventory.requirements.filter((r) => r.kind === 'NFR' && !covered.has(r.id) && !deferred.has(r.id)).map((r) => r.id)
+  const nfrs = inventory.requirements.filter((r) => r.kind === 'NFR' && !covered.has(r.id) && !deferred.has(r.id) && !pending.has(r.id)).map((r) => r.id)
   if (nfrs.length) warnings.push(`no story carries ${nfrs.length} NFR(s): ${nfrs.slice(0, 10).join(', ')}${nfrs.length > 10 ? '…' : ''}`)
 }
 
@@ -295,6 +317,7 @@ const checkEpics = (map, { problems, warnings }) => {
     for (const story of epic.stories) {
       for (const id of story.covers) if (!own.has(id)) problems.push(`${story.id} covers ${id}, which its epic ${epic.id} does not list in covers`)
     }
+    if (!epic.stories.length) continue
     const tracers = epic.stories.filter((s) => s.tracer === true)
     if (tracers.length !== 1 || epic.stories[0].tracer !== true) problems.push(`${epic.id} must open with exactly one tracer story (tracer: true on its first story)`)
     if (epic.stories.length > MAX_STORIES_PER_EPIC) warnings.push(`${epic.id} has ${epic.stories.length} stories: offer a split of the epic`)

@@ -16,7 +16,7 @@
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses/scripts/review-verdict.mjs'
-import { LENSES, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
+import { LENSES, epicSliceBrief, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
 import { framingLines, framingOf, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { CorrectionFailed, acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
@@ -27,7 +27,7 @@ import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.
 import { explanation } from './canvas/ui/i18n.mjs'
 import { judgedOnly, storyVerdicts, triageDefects } from './review.mjs'
 import { CORRECTION_RULES, checkStory, integrationsOf, normalizeStory, openQuestionsOf } from './story.mjs'
-import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
+import { checkStoryMap, normalizeStoryMap, pendingEpics, storiesOf, withEpicStories } from './story-map.mjs'
 
 export const MAX_ATTEMPTS = 3
 
@@ -197,6 +197,17 @@ const stages = async (ctx, run, host) => {
   if (approved.problems.length) return blocked(run, 'SLICE', approved.problems)
   run.map = /** @type {import('./story-map.mjs').StoryMap} */ (approved.map)
   if (unknownEpics(run).length) return outcome(run, 'refused', 'args.epics: an epic it names is not in the story map')
+  if (!correcting) {
+    const cut = await cutEpics(ctx, run)
+    if (run.unavailable) return unavailable(run, 'SLICE')
+    if (cut.problems.length) return blocked(run, 'SLICE', cut.problems)
+    if (cut.epics.length && ctx.args.approve !== true) {
+      await pause(ctx, run, 'stories-approved')
+      const again = await approvedMap(ctx, run)
+      if (again.problems.length) return blocked(run, 'SLICE', again.problems)
+      run.map = /** @type {import('./story-map.mjs').StoryMap} */ (again.map)
+    }
+  }
   if (correcting) {
     ctx.phase?.('CORRECT')
     const corrected = await correct(ctx, run)
@@ -244,7 +255,7 @@ const stages = async (ctx, run, host) => {
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string, slot: ReturnType<typeof slots>,
- *   unavailable?: AgentUnavailable, pausedAt?: string,
+ *   unavailable?: AgentUnavailable, pausedAt?: string, plans: string[], published: Record<string, { number: number, url?: string }>,
  *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
@@ -279,7 +290,39 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
     progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
     progressWrite: Promise.resolve(), salt: sha256(pass).slice(0, 12), pass, slot: slots(MAX_CONCURRENT_AGENTS),
     prdUrl: repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
+    plans: await plannerPlans(cwd, path),
+    published: record((await readJson(join(dir, 'published.json'))).value?.stories),
   }
+}
+
+/** Where the HVE planner leaves its plan of a PRD, per platform. */
+const PLANNER_PLANS = Object.freeze([['github-issues', 'issues-plan.md'], ['workitems', 'work-items.md'], ['jira-issues', 'issues-plan.md']])
+/** The line skraft writes in its own planning log: a plan skraft wrote is no proposal. */
+const SKRAFT_LOG = 'Story map checked and approved'
+
+/**
+ * The plans another planner (HVE) wrote for this PRD: a plan file under
+ * `.copilot-tracking/<platform>/prds/<name>/` that names the PRD's file, skraft's own excepted.
+ * Only their paths: the slicer reads them, no script parses them.
+ * @param {string} cwd @param {string} prd @returns {Promise<string[]>}
+ */
+const plannerPlans = async (cwd, prd) => {
+  const found = []
+  for (const [platform, file] of PLANNER_PLANS) {
+    const root = join(cwd, '.copilot-tracking', platform, 'prds')
+    for (const entry of await readdir(root, { withFileTypes: true }).catch(() => [])) {
+      if (entry.isDirectory() && await isPlannerPlan(join(root, entry.name), file, basename(prd))) found.push(join(root, entry.name, file))
+    }
+  }
+  return found
+}
+
+/** @param {string} dir @param {string} file @param {string} prdName */
+const isPlannerPlan = async (dir, file, prdName) => {
+  const plan = await readFile(join(dir, file), 'utf8').catch(() => null)
+  if (plan === null || !plan.includes(prdName)) return false
+  const log = await readFile(join(dir, 'planning-log.md'), 'utf8').catch(() => '')
+  return !log.includes(SKRAFT_LOG)
 }
 
 /** @param {unknown} repo @param {import('./publish.mjs').GhRun} gh */
@@ -504,7 +547,7 @@ const slice = async (ctx, run) => {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     await dispatch(ctx, run, 'backlog-slicer', `slice · attempt ${attempt}`, sliceBrief({
       prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, attempt, problems,
-      framing: framing ? framingLines(framing) : [],
+      framing: framing ? framingLines(framing) : [], plans: run.plans.map((path) => display(run, path)),
     }), { output })
     const checked = await checkedMap(ctx, run)
     problems = checked.problems
@@ -528,7 +571,7 @@ const frame = async (ctx, run) => {
   let framing = framingOf((await readJson(path)).value)
   if (!framing) {
     ctx.phase?.('FRAME')
-    const questions = prdQuestions(run.inventory, run.prdText)
+    const questions = prdQuestions(run.inventory, run.prdText, { plans: run.plans.map((path) => display(run, path)) })
     framing = { version: 1, questions: [...questions, ...(ctx.args.approve === true ? [] : await askSlicer(ctx, run, questions))], answers: {} }
     await write(path, `${JSON.stringify(framing, null, 2)}\n`)
     ctx.log(`framing: ${framing.questions.length} question(s) in ${display(run, path)}`)
@@ -569,6 +612,59 @@ const checkedMap = async (ctx, run) => {
   const findings = checkStoryMap(map, run.inventory)
   if (!findings.problems.length) await write(join(run.dir, 'story-map.md'), renderStoryMap(/** @type {any} */ (map), { prd: display(run, run.prd), findings }))
   return { problems: findings.problems, map: /** @type {import('./story-map.mjs').StoryMap} */ (map) }
+}
+
+/**
+ * Level 2 of the slicing: each selected epic still without stories is cut by a fresh agent, one
+ * epic at a time in map order (a story may wait on a story of an epic cut before it). The map is
+ * written after each epic that passes the checks.
+ * @param {WorkflowContext} ctx @param {Run} run
+ * @returns {Promise<{ epics: string[], problems: string[] }>}
+ */
+const cutEpics = async (ctx, run) => {
+  const selected = new Set(selectedEpics(run).map((e) => e.id))
+  const todo = pendingEpics(run.map).filter((e) => selected.has(e.id))
+  if (!todo.length) return { epics: [], problems: [] }
+  await ensureDir(ctx, run, join(run.dir, 'slices'))
+  const framing = framingOf((await readJson(join(run.dir, 'framing.json'))).value)
+  for (const epic of todo) {
+    const problems = await cutEpic(ctx, run, epic.id, framing ? framingLines(framing) : [])
+    if (run.unavailable || problems.length) return { epics: [], problems }
+  }
+  return { epics: todo.map((e) => e.id), problems: [] }
+}
+
+/** @param {WorkflowContext} ctx @param {Run} run @param {string} epic @param {string[]} framing @returns {Promise<string[]>} */
+const cutEpic = async (ctx, run, epic, framing) => {
+  const output = join(run.dir, 'slices', `${epic}.json`)
+  let problems = []
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    await dispatch(ctx, run, 'backlog-slicer', `slice ${epic} · attempt ${attempt}`, epicSliceBrief({
+      prd: run.prd, inventory: join(run.dir, 'inventory.json'), map: join(run.dir, 'story-map.json'), epic, output,
+      language: run.inventory.language, attempt, problems, framing, plans: run.plans.map((path) => display(run, path)),
+    }), { output })
+    if (run.unavailable) return []
+    const tried = await triedCut(run, epic, output)
+    problems = tried.problems
+    ctx.log(`${epic} stories attempt ${attempt}: ${problems.length ? `${problems.length} problem(s)` : 'checks pass'}`)
+    if (!problems.length) {
+      run.map = /** @type {import('./story-map.mjs').StoryMap} */ (tried.map)
+      await write(join(run.dir, 'story-map.json'), `${JSON.stringify(run.map, null, 2)}\n`)
+      await write(join(run.dir, 'story-map.md'), renderStoryMap(run.map, { prd: display(run, run.prd), findings: checkStoryMap(run.map, run.inventory) }))
+      await rm(output, { force: true })
+      return []
+    }
+  }
+  return problems.map((p) => `${epic}: ${p}`)
+}
+
+/** The map with the stories the agent wrote for one epic, normalized and checked. @param {Run} run @param {string} epic @param {string} output */
+const triedCut = async (run, epic, output) => {
+  const read = await readJson(output)
+  const stories = 'value' in read ? /** @type {any} */ (read.value)?.stories : undefined
+  if (!Array.isArray(stories) || !stories.length) return { problems: [`${display(run, output)} must hold { "stories": [ … ] } with at least one story`], map: null }
+  const { map } = normalizeStoryMap(withEpicStories(run.map, epic, stories))
+  return { problems: checkStoryMap(map, run.inventory).problems, map }
 }
 
 /** On resume the human may have edited the map: it is checked again, as it reads now. @param {WorkflowContext} ctx @param {Run} run */
@@ -619,7 +715,7 @@ const prepareStoriesDir = async (ctx, run) => {
 
 /** What the workflow writes at the root of the backlog directory; anything else is stray. */
 const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json', 'story-map.md', 'plan.json', 'published.json',
-  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'framing.json', 'stories', 'plans', 'reviews', 'corrections']))
+  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'framing.json', 'stories', 'plans', 'reviews', 'corrections', 'slices']))
 
 /**
  * Removes, and logs, the files no step of the workflow plans: at the root of the backlog, and in
@@ -1225,7 +1321,8 @@ const planOf = (run, epics, results) => {
   const files = new Map()
   const held = new Map()
   const language = run.inventory.language
-  for (const story of storiesOf(run.map)) held.set(story.id, [say(language, 'notElaborated')])
+  const published = run.published ?? {}
+  for (const story of storiesOf(run.map)) if (!Object.hasOwn(published, story.id)) held.set(story.id, [say(language, 'notElaborated')])
   epics.forEach((epic, index) => {
     const result = results[index]
     for (const story of epic.stories) held.set(story.id, [result === undefined ? say(language, 'inProgress') : say(language, 'elaborationFailed', { epic: epic.id })])
@@ -1235,8 +1332,9 @@ const planOf = (run, epics, results) => {
     for (const [id, file] of Object.entries(result.files)) files.set(id, file)
   })
   const notReady = holdBackDependents(run.map, held, language)
-  const ready = new Set(storiesOf(run.map).map((s) => s.id).filter((id) => !notReady.has(id)))
-  const backlog = { slug: run.slug, prd: display(run, run.prd), repo: run.repo, language, prdUrl: run.prdUrl, map: run.map, files, ready, notReady }
+  const elaborated = new Set(epics.flatMap((e) => e.stories.map((s) => s.id)))
+  const ready = new Set(storiesOf(run.map).map((s) => s.id).filter((id) => !notReady.has(id) && elaborated.has(id)))
+  const backlog = { slug: run.slug, prd: display(run, run.prd), repo: run.repo, language, prdUrl: run.prdUrl, map: run.map, files, ready, notReady, published }
   return { plan: planOperations(backlog), backlog, notReady }
 }
 

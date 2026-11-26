@@ -1,6 +1,6 @@
 ---
 name: backlog-slicer
-description: "Dispatched by the skraft-prd-backlog workflow: cuts a PRD, whatever tool wrote it, into epics, stories in build order and milestones, and writes story-map.json. Never invoked directly."
+description: "Dispatched by the skraft-prd-backlog workflow: cuts a PRD, whatever tool wrote it, into epics and milestones (story-map.json), then one epic at a time into stories in build order. Never invoked directly."
 user-invocable: false
 tools:
   - read/readFile
@@ -48,6 +48,8 @@ brief names, never create a file or directory elsewhere.
   pattern of `issue-refinement` before writing the map. Above 3 points, prefer a split; 5 and 8
   stay allowed, with a warning. Never below half a day —
   merge a case or a task into its neighbour.
+- An epics brief (level 1): every epic with `stories: []`, no story. An epic brief (level 2): only
+  the stories of that epic, in the file it names; never change the story map.
 - A split brief names the parts the human accepted: write exactly that many, sharing the covers.
 - A framing brief ("do not slice yet"): write only questions whose answer changes the cut, each
   with 2 to 4 options and the one you recommend; never ask what the PRD states or what the brief

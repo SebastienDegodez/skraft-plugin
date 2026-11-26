@@ -42,7 +42,7 @@ export const planOperations = (backlog) => {
   const counter = { n: 0 }
   const next = () => { counter.n += 1; return { ref: `IS${String(counter.n).padStart(3, '0')}`, temp: `{{TEMP-${counter.n}}}` } }
   const epics = map.epics.filter((e) => e.stories.some((s) => ready.has(s.id)))
-  const temps = {}
+  const temps = Object.fromEntries(Object.entries(backlog.published ?? {}).map(([id, item]) => [id, `#${item.number}`]))
   for (const epic of epics) issues.push(epicIssue(epic, backlog, remember(temps, epic.id, next())))
   for (const story of buildOrder(map).filter((s) => ready.has(s.id))) issues.push(storyIssue(story, backlog, remember(temps, story.id, next()), temps))
   const links = []
@@ -69,14 +69,14 @@ const epicIssue = (epic, { language, prdUrl }, ids) => ({
  * @param {import('./story-map.mjs').MapStory} planned @param {Backlog} backlog
  * @param {{ ref: string, temp: string }} ids @param {Record<string, string>} temps
  */
-const storyIssue = (planned, { map, files, ready, language, prdUrl }, ids, temps) => {
+const storyIssue = (planned, { map, files, ready, language, prdUrl, published = {} }, ids, temps) => {
   const file = /** @type {import('./story.mjs').StoryFile} */ (files.get(planned.id))
   const epic = /** @type {import('./story-map.mjs').MapEpic} */ (map.epics.find((e) => e.stories.includes(planned)))
   return {
     ...ids, kind: /** @type {const} */ ('story'), id: planned.id, title: `feat(${epic.id.toLowerCase()}): ${file.title}`,
     labels: ['skraft-backlog', 'type/story', 'status/ready', `priority/${planned.moscow}`, `effort/${file.effort.points}`],
     milestone: planned.milestone, body: renderStoryIssue(file, { language, prdUrl, parent: temps[epic.id], refs: temps }), parentId: epic.id,
-    after: planned.after, blockedBy: planned.after.filter((id) => ready.has(id)),
+    after: planned.after, blockedBy: planned.after.filter((id) => ready.has(id) || Object.hasOwn(published, id)),
   }
 }
 

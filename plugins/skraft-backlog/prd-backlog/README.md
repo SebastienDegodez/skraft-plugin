@@ -157,6 +157,23 @@ PRD questions only and does not pause; `frame: false` skips framing.
 
 The canvas lists a backlog as soon as `framing.json` exists, before any story map.
 
+## Two levels: the epics, then one epic at a time
+
+The slicer cuts in two levels. Level 1 writes `story-map.json` with every epic of the PRD and
+`stories: []` (`sliceBrief`); a pending epic's FRs count as covered by it. The run pauses
+(`story-map-approved`): the product owner approves the epics. Level 2 cuts each selected epic
+(`epics`, default all) still without stories, one at a time in map order, each by a fresh agent
+(`epicSliceBrief`, `slices/<epic>.json`, merged into the map by `withEpicStories`, checked, then
+removed); the run pauses again (`stories-approved`) when it cut any. A map whose epics already
+have stories is taken as it is. A later session with `epics: ['EP-002']` reuses the approved
+epics and cuts only EP-002; the stories an earlier session published count as ready
+(`published.json`, found again by their marker), so a story waiting on one is not held back.
+
+A plan the HVE planner left for the PRD (`.copilot-tracking/{github-issues,workitems,jira-issues}/prds/*/`
+`issues-plan.md` or `work-items.md` naming the PRD's file, skraft's own excepted) reaches both
+slicer briefs and the framing: its epics are proposals the slicer keeps or explains in
+`decisions`. No script parses that plan.
+
 ## Epic by epic: create as each epic is ready
 
 As soon as an epic is reviewed, the workflow rewrites `plan.json` with its ready stories (the

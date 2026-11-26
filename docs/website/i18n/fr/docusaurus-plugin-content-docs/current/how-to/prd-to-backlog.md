@@ -68,7 +68,7 @@ sous `.copilot-tracking/skraft-plans/<slug>/backlog/`.
 
 ## 3. Répondre au cadrage, puis approuver la carte
 
-Le run s'arrête deux fois avant d'écrire les stories. Après chaque réponse, reprenez le workflow
+Le run s'arrête trois fois avant d'écrire les stories. Après chaque réponse, reprenez le workflow
 en pause depuis `/workflows`.
 
 1. **Cadrage** (`framing-answered`) : les questions sont dans `framing.json` (découpage des
@@ -81,8 +81,14 @@ en pause depuis `/workflows`.
    ```
 
    Une question sans réponse prend l'option recommandée.
-2. **Carte des stories** (`story-map-approved`) : relisez `story-map.md`. Pour changer le
-   découpage, modifiez `story-map.json` : la reprise le revérifie tel qu'il est. Ses tableaux : [story-map.md](../reference/backlog-canvas.md#story-map).
+2. **Epics** (`story-map-approved`) : relisez `story-map.md`. Le découpeur n'a découpé le PRD
+   qu'en epics, avec ce que chacune couvre et les milestones ; pas encore de story. Pour changer
+   la découpe, modifiez `story-map.json` : la reprise le revérifie tel qu'il est. Ses tableaux : [story-map.md](../reference/backlog-canvas.md#story-map).
+   Un plan que le planner HVE a laissé pour le PRD donne les epics dont le découpeur part ;
+   chacune qu'il ne suit pas a une ligne dans **Decisions**.
+3. **Stories** (`stories-approved`) : chaque epic du run (`epics`, par défaut toutes) est
+   découpée en stories par un agent neuf, une epic après l'autre. Relisez `story-map.md`,
+   modifiez `story-map.json` si besoin, reprenez.
 
 ## 4. Laisser écrire et relire les stories
 
@@ -97,10 +103,12 @@ corriger. Chaque compteur, statut et onglet : [Canvas du backlog](../reference/b
 *Figure 1 — ELABORATE sur l'extrait d'un vrai PRD rédigé en français ([dépôt de démonstration](https://github.com/SebastienDegodez/skraft-demo-event-storming)) : huit agents `story-writer` au travail.*
 
 **Pour le product owner : une epic à la fois, dans une session neuve.** Sur un gros PRD,
-approuvez la carte une fois, puis élaborez une epic par run, chaque run dans une nouvelle session
-Copilot pour que son contexte reparte propre : `epics: ["EP-001"]`, puis `["EP-002"]`… La carte
-reste la référence : chaque run reprend `story-map.json` et `framing.json` tels qu'ils sont, et
-crée dès que son epic est prête.
+approuvez les epics une fois, puis découpez et élaborez une epic par run, chaque run dans une
+nouvelle session Copilot pour que son contexte reparte propre : `epics: ["EP-001"]`, puis
+`["EP-002"]`… La carte reste la référence : chaque run reprend `story-map.json` et `framing.json`
+tels qu'ils sont (reprenez la pause des epics sans rien changer), et crée dès que son epic est
+prête. Une story publiée par une session précédente compte comme prête : une story qui l'attend
+n'est pas retenue.
 
 Redécoupez régulièrement, quand le PRD ou ce que l'équipe a appris change la découpe : supprimez
 `story-map.json` (et `framing.json` pour reposer les questions de cadrage), puis relancez dans une
