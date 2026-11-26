@@ -5,8 +5,7 @@ description: "Use when reviewing DISTILL artefacts as the business-alignment-len
 
 # Business-alignment lens — gates
 
-Gates G3, G4, B1 of the DISTILL review, the gates the `business-alignment-lens` judges by. A finding's `gate` names one row below.
-
+Gates G3, G4, B1 of the DISTILL review, the gates the `business-alignment-lens` judges by. A finding's `gate` names one row below; its severities and fields are in `acceptance-review-criteria`. Read [the examples](references/examples.md) only for a gate whose criterion leaves you undecided.
 
 | Gate | ID | Definition | Pass condition | Fail severity |
 |---|---|---|---|---|

@@ -1,19 +1,19 @@
 ---
 name: acceptance-review-criteria
-description: Use when reviewing DISTILL artefacts (Gherkin scenarios, test plans, implementation plans) for quality, completeness, and alignment. Contains the gate definitions and scoring rubric for the DISTILL review lenses.
+description: "Use with the gate skill of a DISTILL review lens, or with all four when self-checking DISTILL artefacts: the severities, the fields of a finding, the proven `existing` row and the verdict rubric shared by every lens."
 ---
 
 # Acceptance Review Criteria
 
 ## Overview
 
-Formal gate definitions and verdict rubric for the DISTILL review. Applied across 4 lenses (coverage, business-alignment, testability, boundary-enforcement) that the engine runs; it computes the verdict from their findings.
+What every DISTILL review lens shares: severities, the fields of a finding, the proven `existing` row, the verdict rubric. Applied across 4 lenses (coverage, business-alignment, testability, boundary-enforcement) that the engine runs; it computes the verdict from their findings.
 
 ---
 
-## Gate Definitions (G1–G11, B1, T1–T4, E1–E2)
+## Lenses and their gate skills (G1–G11, B1, T1–T4, E1–E2)
 
-Every gate id is unique across the four lenses. Each lens loads the skill of its own gates; no lens loads this one.
+Every gate id is unique across the four lenses. Each lens loads this skill and the skill of its own gates.
 
 | Lens | Gates | Skill |
 |---|---|---|
@@ -24,6 +24,8 @@ Every gate id is unique across the four lenses. Each lens loads the skill of its
 
 - A reviewer that judges another's finding loads the skill of the gate that finding cites.
 - An agent that checks its own DISTILL outputs before its result loads the four skills: every gate applies to its outputs.
+
+**Proven `existing` row:** `Priority` `existing`, and its Scenario cell names the covering test (file and test name, a test the research document lists under `Existing tests`), the command that ran it filtered to it, and its result `passed`. An `existing` row missing the test, the command or the result, or whose result is not `passed`, is exempt from neither G6 nor G7: it is a finding of each gate it would skip.
 
 ---
 
@@ -57,4 +59,4 @@ Each finding includes:
 ## References
 
 - [verdict-rubric.md](references/verdict-rubric.md) — how the findings give the verdict, confidence levels, dissent between lenses, example verdicts
-- [gate-definitions.md](references/gate-definitions.md) — detailed gate checklist with examples
+- Worked examples of each gate: `references/examples.md` of its gate skill

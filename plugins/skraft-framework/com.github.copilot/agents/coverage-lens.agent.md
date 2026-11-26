@@ -10,6 +10,7 @@ tools:
   - search/textSearch
   - search/fileSearch
 skills:
+  - acceptance-review-criteria
   - acceptance-review-coverage
 ---
 
@@ -17,7 +18,7 @@ skills:
 
 Find every acceptance criterion or business rule the `.feature` scenarios miss or misstate. Report; never repair.
 
-Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
+Read the skill files your brief lists under Skill before any other input; judge with their criteria and your table.
 
 - The `.feature` files are the `.feature` paths among the changed files, wherever the component keeps them: judge the scenarios the patch adds or changes; open a whole file only when the patch lacks the context a finding needs.
 - Build the trace from each acceptance criterion of the story to its scenarios, and from each scenario back to a criterion.

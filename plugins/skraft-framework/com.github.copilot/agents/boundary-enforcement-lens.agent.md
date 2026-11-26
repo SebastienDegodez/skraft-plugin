@@ -10,6 +10,7 @@ tools:
   - search/textSearch
   - search/fileSearch
 skills:
+  - acceptance-review-criteria
   - acceptance-review-boundary-enforcement
 ---
 
@@ -17,7 +18,7 @@ skills:
 
 Find every scenario or acceptance test that enters the system anywhere but its entry: the Application use case, or the real entry point for the walking skeleton. Report; never repair.
 
-Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
+Read the skill files your brief lists under Skill before any other input; judge with their criteria and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 

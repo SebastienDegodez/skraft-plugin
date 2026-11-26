@@ -12,14 +12,14 @@ const read = (path) => readFileSync(join(PLUGIN, path), 'utf8')
 const EVENT_MODEL = 'event model'
 
 const g7Row = (text) => text.split('\n').find((line) => /^\|[^|]*\|\s*G7\s*\||^\|\s*G7\s*\|/.test(line))
-const g7Section = (text) => text.slice(text.indexOf('### G7'), text.indexOf('\n### ', text.indexOf('### G7') + 1))
+const g7Section = (text) => text.slice(text.indexOf('## G7'), text.indexOf('\n## ', text.indexOf('## G7') + 1))
 
 test('DISTILL G7 takes its use case boundaries from the event model, in the lens of both hosts and in the criteria it applies', () => {
   const criteria = {
     'com.anthropic.claude-code/agents/boundary-enforcement-lens.md G7 row': g7Row(read('com.anthropic.claude-code/agents/boundary-enforcement-lens.md')),
     'com.github.copilot/agents/boundary-enforcement-lens.agent.md G7 row': g7Row(read('com.github.copilot/agents/boundary-enforcement-lens.agent.md')),
     'skills/acceptance-review-boundary-enforcement/SKILL.md G7 row': g7Row(read('skills/acceptance-review-boundary-enforcement/SKILL.md')),
-    'skills/acceptance-review-criteria/references/gate-definitions.md G7 section': g7Section(read('skills/acceptance-review-criteria/references/gate-definitions.md')),
+    'skills/acceptance-review-boundary-enforcement/references/examples.md G7 section': g7Section(read('skills/acceptance-review-boundary-enforcement/references/examples.md')),
   }
   const wrong = Object.entries(criteria)
     .filter(([, text]) => !text || !text.includes(EVENT_MODEL) || /contracts?[-\s](?:document|file|\{)|contracts-/i.test(text))

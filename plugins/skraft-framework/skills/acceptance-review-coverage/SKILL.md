@@ -5,8 +5,7 @@ description: "Use when reviewing DISTILL artefacts as the coverage-lens, or self
 
 # Coverage lens — gates
 
-Gates G1, G2 of the DISTILL review, the gates the `coverage-lens` judges by. A finding's `gate` names one row below.
-
+Gates G1, G2 of the DISTILL review, the gates the `coverage-lens` judges by. A finding's `gate` names one row below; its severities and fields are in `acceptance-review-criteria`. Read [the examples](references/examples.md) only for a gate whose criterion leaves you undecided.
 
 | Gate | ID | Definition | Pass condition | Fail severity |
 |---|---|---|---|---|

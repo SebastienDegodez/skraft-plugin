@@ -19,6 +19,7 @@ skills:
   - bdd-methodology
   - test-design-mandates
   - clean-architecture-testing
+  - acceptance-review-criteria
   - acceptance-review-coverage
   - acceptance-review-business-alignment
   - acceptance-review-testability
@@ -36,12 +37,13 @@ Your first turn loads these skills by name, reads [the outer-loop rules](../../s
 - `bdd-methodology`
 - `test-design-mandates`
 - `clean-architecture-testing`
+- `acceptance-review-criteria`
 - `acceptance-review-coverage`
 - `acceptance-review-business-alignment`
 - `acceptance-review-testability`
 - `acceptance-review-boundary-enforcement`
 
-Announce only a missing one as `[SKILL MISSING] <name>` and go on. Read each file once in the pass; read the solution only through the files these inputs name, never by listing or printing files from the shell. The four `acceptance-review-*` skills give the gates of your self-check (step 8).
+Announce only a missing one as `[SKILL MISSING] <name>` and go on. Read each file once in the pass; read the solution only through the files these inputs name, never by listing or printing files from the shell. The four `acceptance-review-*` gate skills give the gates of your self-check (step 8).
 
 Load `skraft-quality-bar` by name only when a test-plan row needs a threshold; load `mocking-strategy-roster` by name when a test reaches an external gateway and your brief lists no `mocking-*` skill for its component.
 

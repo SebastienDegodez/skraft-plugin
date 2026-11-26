@@ -9,6 +9,7 @@ tools:
   - Glob
   - Skill
 skills:
+  - acceptance-review-criteria
   - acceptance-review-testability
 ---
 
@@ -16,7 +17,7 @@ skills:
 
 Find every scenario or committed acceptance test that cannot be implemented and checked as written. Report; never repair.
 
-Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
+Read the skill files your brief lists under Skill before any other input; judge with their criteria and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - Judge test files from the changed-files list and the patch, never from what a plan says exists.
