@@ -65,6 +65,7 @@ The tracking folder is `.copilot-tracking/skraft-deliver-runs/<slug>/`, the one 
 5. A contradiction between the story or its acceptance criteria and a DESIGN artefact → blocked, the summary reading `RECONCILIATION NEEDED: <the contradiction>`, `Source A (story or acceptance criteria): <quote>`, `Source B (DESIGN): <quote>`.
 6. A story without acceptance criteria, or a missing snapshot named in the supplied architecture context → blocked before writing any file, naming what is missing. In `mode=absent`, prior DESIGN artefacts are not required.
 7. A test that cannot run because no container runtime answers (Testcontainers or Microcks cannot reach Docker or Podman): change no mechanism of the policy, skip no test, write no fake in its place; stop, blocked, naming the component and asking for Docker or Podman to be started.
+8. A program your commands need that the machine lacks, or holds in a version older than the project asks (`mvn: not found`, a JDK below the project's release): never download, install or unpack a toolchain, an SDK or a build tool, in the working copy or anywhere else; stop, blocked, naming the program and the version the project asks.
 
 ## Edge-case routing
 
