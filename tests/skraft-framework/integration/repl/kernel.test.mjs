@@ -15,10 +15,15 @@ const BUDGET = 20_000
  * as the MCP server does: it starts them and streams their output and exit back.
  */
 const openKernel = async (t) => {
-  const root = tempFolder(t)
-  const seen = { runs: [], absent: [], gone: [], killed: [] }
   const live = new Map()
   let kernel = null
+  // Before the folder's hook: hooks run in order, and Windows keeps the folder of a live kernel.
+  t.after(async () => {
+    for (const program of live.values()) program.kill('SIGKILL', 0)
+    await kernel?.stop()
+  })
+  const root = tempFolder(t)
+  const seen = { runs: [], absent: [], gone: [], killed: [] }
   const processes = createLiveProcesses()
   const events = {
     onRun: async (request) => {
@@ -34,10 +39,6 @@ const openKernel = async (t) => {
     onGone: (why) => seen.gone.push(why),
   }
   kernel = await createNodeKernelHost().start(events, root)
-  t.after(() => {
-    kernel.stop()
-    for (const program of live.values()) program.kill('SIGKILL', 0)
-  })
   return { kernel, seen, root }
 }
 
@@ -197,7 +198,7 @@ test('a kernel that is stopped ends with every process its cells started by them
   const pid = Number(started.value)
   t.after(() => { try { process.kill(pid, 'SIGKILL') } catch { /* gone */ } })
 
-  kernel.stop()
+  await kernel.stop()
   let alive = true
   for (let tries = 0; tries < 50 && alive; tries += 1) {
     await new Promise((done) => setTimeout(done, 100))

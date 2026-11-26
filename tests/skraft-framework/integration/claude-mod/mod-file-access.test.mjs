@@ -78,7 +78,9 @@ test('a workspace folder lists one level; a missing path or a file is no folder;
 test('paths are joined with / whatever separator the root came with', () => {
   assert.equal(joinPath('/work', '.copilot-tracking', 'checkout'), '/work/.copilot-tracking/checkout')
   assert.equal(joinPath('/work/', '/assets/', 'templates'), '/work/assets/templates')
-  assert.equal(joinPath('C:\\work\\', 'assets'), 'C:\\work/assets')
+  assert.equal(joinPath('C:\\work\\', 'assets'), 'C:\\work\\assets')
+  assert.equal(joinPath('C:\\work', '.copilot-tracking/skraft-plans', 'checkout'), 'C:\\work\\.copilot-tracking\\skraft-plans\\checkout')
+  assert.equal(joinPath('C:/work', 'assets'), 'C:/work/assets')
   assert.equal(joinPath('/', 'work'), '/work')
   assert.equal(joinPath('/work', '', 'a'), '/work/a')
   assert.equal(createModFiles(nodeModFs).join('/work', 'a'), '/work/a')
