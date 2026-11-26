@@ -45,11 +45,16 @@ const mergedBrief = async ({ deps, slug }) => {
 }
 
 /** @param {any} context @param {{ plan: any, found: any }} read */
-const waitText = ({ slug, journal }, { plan, found }) => [
-  `Delivery of #${plan.issue} waits for a design: ${journal.events.findLast(({ type }) => type === 'architecture.bound')?.wait?.reason ?? 'a person asked for one at its light design.'}`,
-  ...(found === null ? [] : [`The merged base now reads: ${found.reason}`]),
-  `Run ${DESIGN_PLUGIN} on #${plan.issue} and merge its pull request, check out deliver/${slug} again, then answer RESUME: the delivery reads the merged base again. CONTINUE delivers on a light design instead; STOP ends the delivery.`,
-].join(' ')
+const waitText = ({ slug, journal }, { plan, found }) => {
+  const why = journal.events.findLast(({ type }) => type === 'architecture.bound')?.wait?.reason ?? 'a person asked for one at its light design.'
+  return [`Delivery of #${plan.issue} waits for a design: ${why}`,
+    ...(found === null || found.reason === why ? [] : [`The merged base now reads: ${found.reason}`]),
+    nextSteps(slug, plan)].join(' ')
+}
+
+/** What a person does next, whichever made the delivery wait. @param {string} slug @param {any} plan */
+const nextSteps = (slug, plan) =>
+  `Run ${DESIGN_PLUGIN} on #${plan.issue} and merge its pull request, check out deliver/${slug} again, then answer RESUME: the delivery reads the merged base again. CONTINUE delivers on a light design instead; STOP ends the delivery.`
 
 /** @param {any} context @param {{ answer: string | null }} asked */
 const waitAct = async (context, { answer }) => {

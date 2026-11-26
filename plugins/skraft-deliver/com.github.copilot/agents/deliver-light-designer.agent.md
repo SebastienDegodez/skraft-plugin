@@ -45,10 +45,10 @@ Write the file at the plan's `brief` path whole, in one write. It begins with `<
 
 Then, in the story's language, these sections:
 
-1. `## Context`: the bounded context the story belongs to, named as the context map names it; a context the map does not hold yet is named and marked `(new)`.
-2. `## Use cases`: each command or query the story adds or changes, with the aggregate, value objects, domain events and repository or gateway interfaces it needs, each under the glossary's name; a name the glossary lacks is marked `(new)`. No signature, no type of the language.
+1. `## Context`: one `- ` item per bounded context the story touches, named as the context map names it; a context the map does not hold yet is marked `(new)`.
+2. `## Use cases`: one `- ` item per command or query the story adds or changes, with the aggregate, value objects, domain events and repository or gateway interfaces it needs, each under the glossary's name; a name the glossary lacks is marked `(new)`. No signature, no type of the language.
 3. `## Scenario groups`: the criteria grouped by the use case they exercise, in the order DELIVER should build them.
-4. `## Assumptions`: each choice the story leaves open and the option you took, one line each; `None.` when there is none. The engine shows them to a person, whose corrections come back as feedback.
+4. `## Assumptions`: one `- ` item per choice the story leaves open and the option you took; `None.` when there is none. The engine shows them to a person, whose corrections come back as feedback.
 
 ## ADRs
 

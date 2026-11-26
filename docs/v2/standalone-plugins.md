@@ -126,7 +126,8 @@ identity, cites only the plan's components and existing files, and cites each AD
 nothing beyond a light design, the engine approves it; an assumption is shown to the person, who
 answers it with REVISE. Beyond a light design means, each read without a model: an ADR that replaces
 or amends a decision already taken, a bounded context the brief marks `(new)`, more than two
-ADRs, more than eight criteria or more than three components. Otherwise a person reads each ADR's
+ADRs, more than eight criteria, more than three components, more than two bounded contexts in its
+`## Context` or more than six use cases in its `## Use cases`. Otherwise a person reads each ADR's
 decision and each reason: `APPROVED` marks the ADRs Accepted on the branch, effective on the
 merge of the delivery pull request, `REVISE` runs the light design again with their words,
 `DESIGN` pauses the delivery, `STOP` ends it. The engine keeps the SHA-256 of each ratified ADR

@@ -107,11 +107,12 @@ test('a light design that goes beyond a light design asks a person even with no 
   const { host, deps, run } = session()
   await run.start({ issue: 42 })
   const criteria = Array.from({ length: 9 }, (_, index) => ({ id: `AC-${index + 1}`, components: ['.'], adrs: [] }))
-  host.agentRunner.behaviours.push(lightDesigner({ brief: { criteria }, body: '# Checkout receipt\n\n## Context\n\nReceipts (new)\n\n## Use cases\n\nMail the receipt.\n' })(host))
+  const useCases = Array.from({ length: 7 }, (_, index) => `- Use case ${index + 1}`).join('\n')
+  host.agentRunner.behaviours.push(lightDesigner({ brief: { criteria }, body: `# Checkout receipt\n\n## Context\n\n- Receipts (new)\n- Orders\n- Billing\n\n## Use cases\n\n${useCases}\n` })(host))
   const waiting = await createRunPipeline(deps).run()
   assert.equal(waiting.code, 'light-design-review', waiting.reason)
   const { text } = host.human.questions.at(-1)
-  assert.match(text, /It goes beyond a light design: the brief names a bounded context the context map does not hold; the story has 9 acceptance criteria, more than 8; DESIGN is advised\./)
+  assert.match(text, /It goes beyond a light design: the brief names a bounded context the context map does not hold; the story has 9 acceptance criteria, more than 8; it touches 3 bounded contexts, more than 2; it adds or changes 7 use cases, more than 6; DESIGN is advised\./)
   assert.match(text, /^The light design of #42 wrote docs\/architecture\/runs\/issue-42\/42-checkout-receipt\.md\. /)
 })
 
@@ -180,11 +181,19 @@ test('a new ADR numbered as another ADR of an open design branch is refused: bot
 test('a light design that assumed what the story leaves open shows each assumption to a person, who may REVISE it', async () => {
   const { host, deps, run } = session()
   await run.start({ issue: 42 })
-  host.agentRunner.behaviours.push(lightDesigner({ body: '# Checkout receipt\n\n## Assumptions\n\n- The receipt is mailed once the payment is captured.\n\n## Use cases\n\nMail the receipt.\n' })(host))
+  host.agentRunner.behaviours.push(lightDesigner({ body: '# Checkout receipt\n\n## Assumptions\n\n- The receipt is mailed once the payment is captured.\n- A refund mails no receipt.\n\n## Use cases\n\n- Mail the receipt.\n' })(host))
   const waiting = await createRunPipeline(deps).run()
   assert.equal(waiting.code, 'light-design-review', waiting.reason)
-  assert.match(host.human.questions.at(-1).text, /Where the story leaves a choice open, it assumed: - The receipt is mailed once the payment is captured\. REVISE with your answer when one is wrong\./)
+  assert.match(host.human.questions.at(-1).text, /Where the story leaves a choice open, it assumed: \(1\) The receipt is mailed once the payment is captured\.; \(2\) A refund mails no receipt\. REVISE with your answer when one is wrong\./)
   assert.doesNotMatch(host.human.questions.at(-1).text, /DESIGN is advised/)
+
+  const many = session()
+  await many.run.start({ issue: 42 })
+  const long = Array.from({ length: 20 }, (_, index) => `- Assumption ${index + 1}: ${'x'.repeat(100)}`).join('\n')
+  many.host.agentRunner.behaviours.push(lightDesigner({ body: `# Checkout receipt\n\n## Assumptions\n\n${long}\n` })(many.host))
+  await createRunPipeline(many.deps).run()
+  // Whole assumptions only, as many as the question holds, then how many more the brief keeps.
+  assert.match(many.host.human.questions.at(-1).text, /\(12\) Assumption 12: x{100}; and 8 more in the brief REVISE/)
 })
 
 test('the journal the REPL keeps of its live programs is no write of the attempt: it is neither refused nor committed', async () => {

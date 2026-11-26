@@ -122,7 +122,7 @@ test('a brief whose ADR the merged base does not hold ratified, Proposed, Reject
     assert.equal(started.status, 'ready', status)
     const paused = await createRunPipeline(deps).run()
     assert.equal(paused.code, 'architecture-wait', status)
-    assert.match(paused.reason, /docs\/adr\/adr-001-checkout\.md is not Accepted on the merged base/, status)
+    assert.equal(paused.reason.split('docs/adr/adr-001-checkout.md is not Accepted on the merged base').length, 2, paused.reason)
     assert.equal(host.agentRunner.dispatches.length, 0, status)
   }
 })
