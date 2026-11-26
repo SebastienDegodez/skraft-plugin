@@ -1,0 +1,32 @@
+name: diag repl windows hang
+on:
+  push:
+    branches: ['diag/repl-windows-hang']
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Each integration file alone, probed
+        shell: bash
+        env:
+          PROBE_MS: '120000'
+        run: |
+          for f in $(ls tests/skraft-framework/integration/{repl,session-lock,source-control,tracking,unforeseen-failures,workflows}/*.test.mjs); do
+            echo "::group::$f"
+            start=$(date +%s)
+            node --import ./.github/diag/hang-probe.mjs --test --test-reporter=spec "$f" > /tmp/out.txt 2>&1; code=$?
+            echo "EXIT $code in $(( $(date +%s) - start ))s : $f"
+            cat /tmp/out.txt | tail -60
+            echo "::endgroup::"
+            echo "RESULT $code $(( $(date +%s) - start ))s $f" >> /tmp/summary.txt
+          done
+          echo "======== SUMMARY"; cat /tmp/summary.txt
