@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
@@ -20,6 +20,7 @@ jobs:
         env:
           PROBE_MS: '120000'
         run: |
+          set +e
           for f in $(ls tests/skraft-framework/integration/{repl,session-lock,source-control,tracking,unforeseen-failures,workflows}/*.test.mjs); do
             echo "::group::$f"
             start=$(date +%s)
