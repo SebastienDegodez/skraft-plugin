@@ -96,6 +96,17 @@ corriger. Chaque compteur, statut et onglet : [Canvas du backlog](../reference/b
 
 *Figure 1 — ELABORATE sur l'extrait d'un vrai PRD rédigé en français ([dépôt de démonstration](https://github.com/SebastienDegodez/skraft-demo-event-storming)) : huit agents `story-writer` au travail.*
 
+**Pour le product owner : une epic à la fois, dans une session neuve.** Sur un gros PRD,
+approuvez la carte une fois, puis élaborez une epic par run, chaque run dans une nouvelle session
+Copilot pour que son contexte reparte propre : `epics: ["EP-001"]`, puis `["EP-002"]`… La carte
+reste la référence : chaque run reprend `story-map.json` et `framing.json` tels qu'ils sont, et
+crée dès que son epic est prête.
+
+Redécoupez régulièrement, quand le PRD ou ce que l'équipe a appris change la découpe : supprimez
+`story-map.json` (et `framing.json` pour reposer les questions de cadrage), puis relancez dans une
+nouvelle session. Les issues déjà créées ne sont jamais modifiées ni fermées, et une story que la
+nouvelle carte renomme est créée à nouveau : ne redécoupez que les epics pas encore publiées.
+
 ## 5. Corriger une story retenue (si besoin)
 
 Dans le canvas, acceptez une des corrections proposées pour la story (découper, déclarer une

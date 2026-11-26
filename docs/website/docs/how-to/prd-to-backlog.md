@@ -94,6 +94,16 @@ each story is approved, refused, or held back because it waits on a refused stor
 
 *Figure 1 — ELABORATE on an extract of a real PRD, written in French ([demo repository](https://github.com/SebastienDegodez/skraft-demo-event-storming)): eight `story-writer` agents at work.*
 
+**For the product owner: work one epic at a time, in a fresh session.** On a large PRD, approve the
+story map once, then elaborate one epic per run, each run in a new Copilot session so that its
+context starts clean: `epics: ["EP-001"]`, then `["EP-002"]`… The map stays the reference: each run
+reuses `story-map.json` and `framing.json` as they are, and creates as soon as its epic is ready.
+
+Re-slice regularly, when the PRD or what the team learned changes the cut: delete `story-map.json`
+(and `framing.json` to be asked the framing again), then run again in a new session. Issues
+already created are never changed nor closed, and a story the new map renames is created again:
+re-slice only the epics not yet published.
+
 ## 5. Fix a held story (if needed)
 
 In the canvas, accept one of the corrections offered for the story (split it, declare a
