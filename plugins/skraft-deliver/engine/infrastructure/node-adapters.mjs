@@ -1,5 +1,6 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { REPL_ORPHANS } from '../domain/config/skraft-config.mjs'
 import { createNodeFiles, listFolder, writeSecret } from './files/node-files.mjs'
 import { createReviewStore, createTrackingStore, REVIEWS_FOLDER } from './tracking/tracking-store.mjs'
 import { createReviewFolder } from './tracking/review-folder.mjs'
@@ -133,7 +134,7 @@ const replAdapters = (cwd, env) => Object.freeze({
   kernels: createNodeKernelHost(),
   launcher: createProgramLauncher({ root: cwd, env }),
   digests: createRunDigests(),
-  orphans: createOrphanJournal({ folder: join(cwd, '.copilot-tracking', 'skraft-repl') }),
+  orphans: createOrphanJournal({ folder: join(cwd, ...REPL_ORPHANS.split('/')) }),
   locks: createNodeRunLock({ root: cwd }),
   get server() { return thisServer() },
 })

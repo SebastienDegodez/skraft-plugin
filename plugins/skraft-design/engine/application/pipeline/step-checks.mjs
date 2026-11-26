@@ -1,5 +1,5 @@
 import { readOrName } from '../shared/workspace-reading.mjs'
-import { CONFIG_FILE } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, REPL_ORPHANS } from '../../domain/config/skraft-config.mjs'
 import { joinRelative, pathUnder } from '../../domain/config/relative-path.mjs'
 import { readResult } from '../../domain/pipeline/agent-result.mjs'
 import { breaksConvention, commitFailure, issueOf, judgeCommits } from '../../domain/pipeline/commits.mjs'
@@ -89,15 +89,16 @@ export const engineHashes = async (deps) => Promise.all(ENGINE_FILES.map(async (
 const ENGINE_FILES = Object.freeze([CONFIG_FILE])
 
 /**
- * The changed files without the engine files still as they were when the attempt started: a person
- * who changed one between attempts, or before a run resumed, does not make the agent answer for it.
+ * The changed files without the engine files still as they were when the attempt started, a person
+ * who changed one between attempts, or before a run resumed, does not make the agent answer for it;
+ * and without the journal the REPL keeps of its live programs, which no agent writes.
  * @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps @param {string[]} touched
  * @param {Array<{ path: string, hash: string | null }> | undefined} before
  */
 const withoutKeptEngineFiles = async (deps, touched, before) => {
   const kept = []
   for (const entry of before ?? []) if (entry.hash === (await contentHash(deps, entry.path))) kept.push(entry.path)
-  return touched.filter((path) => !kept.includes(path))
+  return touched.filter((path) => !kept.includes(path) && !path.startsWith(`${REPL_ORPHANS}/`))
 }
 
 /** @param {Pick<CheckDeps, 'workspace' | 'hasher'>} deps @param {string} path relative to the working copy */

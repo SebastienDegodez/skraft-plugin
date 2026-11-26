@@ -186,3 +186,15 @@ test('a light design that assumed what the story leaves open shows each assumpti
   assert.match(host.human.questions.at(-1).text, /Where the story leaves a choice open, it assumed: - The receipt is mailed once the payment is captured\. REVISE with your answer when one is wrong\./)
   assert.doesNotMatch(host.human.questions.at(-1).text, /DESIGN is advised/)
 })
+
+test('the journal the REPL keeps of its live programs is no write of the attempt: it is neither refused nor committed', async () => {
+  const { host, deps, run } = session({ scenarioReviews: [null] })
+  await run.start({ issue: 42 })
+  const orphans = '.copilot-tracking/skraft-repl/4242.json'
+  const designer = lightDesigner()(host)
+  host.agentRunner.behaviours.push(async () => { host.workspace.files.set(orphans, '{"runs":[]}'); host.git.change(orphans); return designer() }, agent()(host))
+  await createRunPipeline(deps).run()
+  const [first] = host.events().filter(({ type, step }) => type === 'step.recorded' && step === 'light_design')
+  assert.equal(first.outcome, 'done', JSON.stringify(first.failures))
+  assert.equal(host.git.engineCommits.some(({ paths }) => paths.includes(orphans)), false)
+})

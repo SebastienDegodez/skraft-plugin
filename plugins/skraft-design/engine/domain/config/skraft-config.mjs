@@ -82,6 +82,12 @@ export const LOCAL_CONFIG_FILE = 'skraft-design-config.local.json'
 /** The packages the developer installs for the project's REPL library: listed in `.gitignore`, never committed. */
 export const REPL_PACKAGES = '/.repl/node_modules/'
 
+/**
+ * Where the REPL journals the programs of its live kernels, so that a server killed mid-run leaves
+ * them findable: the engine's, outside any run's tracking folder, never an agent's write.
+ */
+export const REPL_ORPHANS = '.copilot-tracking/skraft-repl'
+
 /** Every line setup lists in the working copy's `.gitignore`. */
 export const SETUP_IGNORES = Object.freeze([LOCAL_CONFIG_FILE, REPL_PACKAGES])
 /** The developer's layer for every working copy, as messages name it. */
