@@ -1,5 +1,35 @@
 # Verdict Rubric
 
+## Lenses and their gate skills (G1–G11, B1, T1–T4, E1–E2)
+
+Every gate id is unique across the four lenses. Each lens loads `acceptance-review-criteria` and the skill of its own gates.
+
+| Lens | Gates | Skill |
+|---|---|---|
+| coverage-lens | G1, G2 | `acceptance-review-coverage` |
+| business-alignment-lens | G3, G4, B1 | `acceptance-review-business-alignment` |
+| testability-lens | G5, G6, T2, T3, T4, T1, G11 | `acceptance-review-testability` |
+| boundary-enforcement-lens | G7, G8, E1, E2, G9, G10 | `acceptance-review-boundary-enforcement` |
+
+- A reviewer that judges another's finding loads the skill of the gate that finding cites.
+- An agent that checks its own DISTILL outputs before its result loads the four skills: every gate applies to its outputs.
+
+## Severity Definitions
+
+| Severity | Definition | Impact |
+|---|---|---|
+| **BLOCKER** | Fundamental correctness violation. The artefact cannot be used by DELIVER as-is. | Always triggers `rejected` verdict. |
+| **HIGH** | Significant quality gap. Increases implementation risk or causes rework in DELIVER. | Triggers `changes_requested` unless no other severity exists. |
+| **MEDIUM** | Quality improvement. Can be implemented but suboptimal. | Triggers `changes_requested`. |
+| **LOW** | Style or consistency issue. Does not affect DELIVER. | `approved` with recommendation. |
+
+## Scoring Rubric (per lens)
+
+| Score | Meaning |
+|---|---|
+| `pass` | All gates in this lens pass. No findings. |
+| `fail` | ≥1 gate in this lens has a finding. |
+
 ## Verdict Decision Table
 
 | Finding distribution across ALL lenses | Verdict |
