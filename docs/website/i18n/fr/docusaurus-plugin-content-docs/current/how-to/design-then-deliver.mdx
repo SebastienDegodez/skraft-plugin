@@ -110,7 +110,9 @@ consequence. Avant la revue, le run attend une seule decision qui les regroupe t
   repart une seule fois avec elles.
 - **En CI**, copiez `plugins/skraft-design/ci/skraft-design.yml` dans `.github/workflows/`, ajoutez
   les secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) et `ANTHROPIC_API_KEY`, puis
-  lancez-le avec une issue ou une epique. Quand le run attend, le moteur publie une PR en brouillon
+  lancez-le avec une issue ou une epique. Un `skraft-design-config.json` commite ne contient pas de
+  `publish` : il est lu par-dessus le consentement du workflow, et son `"pullRequest": false`
+  bloquerait toute PR. Quand le run attend, le moteur publie une PR en brouillon
   et y pose chaque question dans son propre commentaire, avec la reponse a recopier ; tant que rien
   n'est concu, comme pour une recherche qui ne peut pas avancer, il la pose dans un commentaire de
   l'issue ou de l'epique. Une nouvelle question ne reecrit jamais la precedente : une fois repondue,
@@ -142,8 +144,19 @@ commandes et bindings Gherkin independants. Utilisez le meme `baseBranch` que de
 Pour livrer en CI, copiez `plugins/skraft-deliver/ci/skraft-deliver.yml` dans `.github/workflows/`,
 commitez `skraft-deliver-config.json` avec les composants du projet, ajoutez les secrets
 `SKRAFT_DELIVER_JOURNAL_KEY` et `ANTHROPIC_API_KEY`, et ajoutez les etapes qui installent la chaine
-d'outils du projet la ou le fichier l'indique : les agents n'en installent jamais. Lancez-le avec une
-story : chaque question est posee dans son propre commentaire, sur la story, puis sur la PR en
+d'outils du projet la ou le fichier l'indique : les agents n'en installent jamais. Pour un projet
+Java 21 construit avec Maven, par exemple :
+
+```yaml
+- uses: actions/setup-java@<commit> # epinglez la version de confiance
+  if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+  with:
+    distribution: temurin
+    java-version: '21'
+    cache: maven
+```
+
+Lancez-le avec une story : chaque question est posee dans son propre commentaire, sur la story, puis sur la PR en
 brouillon (le design leger a ratifier, les scenarios et leur rouge), et l'on repond avec
 `/skraft-answer`, par exemple `/skraft-answer REVISE envoyer le recu depuis les commandes`.
 

@@ -105,7 +105,9 @@ consequence. Before the review, the run waits on one decision that holds them al
   own words. Every answer reaches the engine at once, and design runs again once with them.
 - **In CI**, copy `plugins/skraft-design/ci/skraft-design.yml` into `.github/workflows/`, add the
   secrets `SKRAFT_DESIGN_JOURNAL_KEY` (`openssl rand -hex 32`) and `ANTHROPIC_API_KEY`, then run it
-  with an issue or an epic. When the run waits, the engine publishes a draft pull request and asks
+  with an issue or an epic. A committed `skraft-design-config.json` holds no `publish`: it is read
+  over the workflow's consent, and its `"pullRequest": false` would stop every pull request. When
+  the run waits, the engine publishes a draft pull request and asks
   each question in a comment of its own there, with the reply to copy; while nothing is designed
   yet, such as a researcher that cannot go on, it asks in a comment on the issue or epic instead.
   A new question never rewrites an earlier one: once answered, its comment says what was
@@ -136,7 +138,19 @@ commands and Gherkin bindings. Use the same `baseBranch` as design.
 To deliver in CI, copy `plugins/skraft-deliver/ci/skraft-deliver.yml` into `.github/workflows/`,
 commit `skraft-deliver-config.json` with the project's components, add the secrets
 `SKRAFT_DELIVER_JOURNAL_KEY` and `ANTHROPIC_API_KEY`, and add the steps that install the project's
-toolchain where the file says so: the agents never install one. Run it with a story: each question
+toolchain where the file says so: the agents never install one. For a Java 21 project built with
+Maven, for instance:
+
+```yaml
+- uses: actions/setup-java@<commit> # pin the release you trust
+  if: github.event_name == 'workflow_dispatch' || steps.target.outputs.branch != ''
+  with:
+    distribution: temurin
+    java-version: '21'
+    cache: maven
+```
+
+Run it with a story: each question
 is asked in a comment of its own, on the story, then on the draft pull request (the light design
 to ratify, the scenarios and their red), and answered with `/skraft-answer`, such as
 `/skraft-answer REVISE mail the receipt from orders`.

@@ -13,8 +13,9 @@
 #   answer /skraft-answer RESUME; or CONTINUE to deliver on a light design.
 #
 # - The workflow gives the publication consent for this repository (ci-consent.mjs), in the job's
-#   own home: committing this file is the team's consent. skraft-deliver-config.json must be
-#   committed with the project's components, their commands and their Gherkin choice.
+#   skraft-deliver-config.local.json, never committed and read over the team's file: committing this
+#   file is the team's consent. skraft-deliver-config.json must be committed with the project's
+#   components, their commands and their Gherkin choice.
 # - The agents run the project's commands through the engine's REPL and never install a toolchain:
 #   add the steps that install it below, where the file says so.
 #

@@ -88,7 +88,11 @@ story or the draft resumes the story's latest delivery (`deliver/issue-<n>`, or 
 `-run-<k>`), its tracking folder kept as an artifact named after the run, so that a new delivery of
 the story never overwrites an earlier one's; a reply to a design run is left to skraft-design's
 workflow. The project's toolchain is installed by steps the team adds there: the agents never
-install one. A scope question stops it at once. A
+install one. The workflow's consent (`ci-consent.mjs`) is kept in the job's
+`skraft-deliver-config.local.json`, never committed and read over the team's file. skraft-design's
+is kept for the repository in the job's own `~/.skraft-design/config.json`, with the team's file
+read over it: a `publish` committed in `skraft-design-config.json` (`"pullRequest": false`) stops
+every CI pull request, so that file holds none. A scope question stops it at once. A
 `/skraft-answer` comment (then one `Q1: B` line per question, one option, or one JSON object; the
 key may be left out) is recorded by `engine/drivers/cli/ci-reply.mjs`, without a model, only
 when the forge says its author has `admin`, `maintain` or `write` access, with the provenance

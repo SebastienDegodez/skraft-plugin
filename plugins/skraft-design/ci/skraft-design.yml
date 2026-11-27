@@ -15,7 +15,8 @@
 #   Answer /skraft-answer REFRESH: the same run takes it as it is now and designs again from RESEARCH.
 #
 # - The workflow gives the publication consent for this repository (ci-consent.mjs), in the job's
-#   own home: committing this file is the team's consent. No skraft-design-config.json is needed;
+#   own home: committing this file is the team's consent; a committed skraft-design-config.json
+#   holds no `publish`, which would be read over it. No skraft-design-config.json is needed;
 #   the merged base is the repository's default branch unless one sets baseBranch.
 #
 # Secrets:
