@@ -1,6 +1,6 @@
 ---
 title: "The backlog: from idea to ready story"
-description: "Why product preparation lives in its own plugin, skraft-backlog: PRD to GitHub or Azure Boards backlog, refinement, triage and sprint automations, and the readiness lenses."
+description: "Why product preparation lives in its own plugin, skraft-backlog: PRD to GitHub or Azure Boards backlog, refinement, automations, readiness lenses."
 persona: tech-lead
 ---
 
