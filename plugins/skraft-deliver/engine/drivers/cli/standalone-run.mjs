@@ -14,7 +14,7 @@ import { createPrecheck } from '../../application/pipeline/precheck-usecase.mjs'
 import { createConfigureComponents } from '../../application/config/configure-components-usecase.mjs'
 import { loadConfig } from '../../application/config/bases.mjs'
 import { chosenForge, forgeAdapters } from '../../application/config/forge.mjs'
-import { CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
+import { CONFIG_FILE, LOCAL_CONFIG_FILE, withPublishSetting } from '../../domain/config/skraft-config.mjs'
 import { CONSENT_TEXT, PUBLISH_CONSENT_TEXT } from '../../domain/decisions/questions.mjs'
 import { unsettledConsents } from '../../domain/decisions/consents.mjs'
 import { isFrontend } from '../../domain/reporting/visuals.mjs'
@@ -100,13 +100,25 @@ const advance = async (operation, deps, services, log, prepared) => {
 const setup = async (deps, services, args) => {
   const configured = await createConfigureComponents(deps).configure({ workingCopyName: basename(services.cwd) })
   if (!configured.ok) return configured
-  let text = await deps.workspace.read(CONFIG_FILE)
-  if (args.pullRequest !== undefined) text = withPublishSetting(JSON.parse(text), 'pullRequest', args.pullRequest)
-  if (args.visuals !== undefined) text = withPublishSetting(JSON.parse(text), 'visuals', args.visuals)
-  const config = JSON.parse(text)
-  if (args.bdd !== undefined) config.components = config.components.map((component) => ({ ...component, bdd: component.bdd ?? args.bdd }))
-  await deps.workspace.write(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
+  await saveConsents(deps, args)
+  await configureBdd(deps, args.bdd)
   return configuredResult(deps, configured)
+}
+
+const saveConsents = async (deps, args) => {
+  const keys = ['pullRequest', 'visuals'].filter((key) => args[key] !== undefined)
+  if (keys.length === 0) return
+  let text = (await deps.workspace.read(LOCAL_CONFIG_FILE)) ?? '{}'
+  for (const key of keys) text = withPublishSetting(JSON.parse(text), key, args[key])
+  await deps.workspace.write(LOCAL_CONFIG_FILE, text)
+}
+
+const configureBdd = async (deps, bdd) => {
+  if (bdd === undefined) return
+  const config = JSON.parse(await deps.workspace.read(CONFIG_FILE))
+  if (config.components.every((component) => component.bdd != null)) return
+  config.components = config.components.map((component) => ({ ...component, bdd: component.bdd ?? bdd }))
+  await deps.workspace.write(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
 }
 
 const configuredResult = async (deps, configured) => {

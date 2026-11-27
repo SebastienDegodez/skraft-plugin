@@ -1,7 +1,6 @@
 // The CI workflow's publication consent (#669): the team that commits the workflow consents to its
-// architecture pull requests and issue comments on this repository. The consent is kept in the job's
-// own ~/.skraft-deliver/config.json, never in the working copy; no model chooses it, so a run's `mode`
-// argument implies none. node ci-consent.mjs
+// architecture pull requests and issue comments on this repository. No model chooses it, so a
+// run's `mode` argument implies none. node ci-consent.mjs
 import { fileURLToPath } from 'node:url'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { runStandalone } from './standalone-run.mjs'

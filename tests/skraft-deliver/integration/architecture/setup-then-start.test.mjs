@@ -1,10 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { appendFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { mkdtemp, realpath, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createNodeAdapters } from '../../../../plugins/skraft-deliver/engine/infrastructure/node-adapters.mjs'
 import { createMergedRepository } from '../../../../plugins/skraft-deliver/engine/infrastructure/architecture/merged-repository.mjs'
 import { createConfigureComponents } from '../../../../plugins/skraft-deliver/engine/application/config/configure-components-usecase.mjs'
@@ -48,4 +49,27 @@ test('a run branch still refuses any other tracked change, .gitignore included',
   git(work, 'checkout', '--', '.gitignore')
   appendFileSync(join(work, 'README.md'), 'edit\n')
   assert.equal((await repository.branch({ name: 'deliver/issue-7', existing: false })).code, 'architecture-repository-unavailable')
+})
+
+test('CI consent and repeated setup leave an existing team configuration unchanged', async (t) => {
+  const { work } = await cloneWith(t)
+  const config = '{"components":[{"name":"web","root":".","stack":"react","paths":{"src":["src"],"tests":["tests"]},"commands":{"test":"npm test"},"bdd":true}]}\n'
+  writeFileSync(join(work, 'skraft-deliver-config.json'), config)
+  git(work, 'add', 'skraft-deliver-config.json')
+  git(work, 'commit', '-m', 'configure delivery')
+  git(work, 'remote', 'set-url', 'origin', 'https://github.com/acme/shop.git')
+  const home = join(dirname(work), 'home')
+  const driver = fileURLToPath(new URL('../../../../plugins/skraft-deliver/engine/drivers/cli/standalone-run.mjs', import.meta.url))
+  const consent = fileURLToPath(new URL('../../../../plugins/skraft-deliver/engine/drivers/cli/ci-consent.mjs', import.meta.url))
+  const plugin = fileURLToPath(new URL('../../../../plugins/skraft-deliver', import.meta.url))
+  const env = { ...process.env, HOME: home, USERPROFILE: home }
+  const first = spawnSync(process.execPath, [consent], { cwd: work, encoding: 'utf8', env })
+  assert.equal(first.status, 0, first.stdout + first.stderr)
+  assert.equal(readFileSync(join(work, 'skraft-deliver-config.json'), 'utf8'), config, 'CI consent must not change the team configuration')
+  const script = `import { runStandalone } from ${JSON.stringify(pathToFileURL(driver).href)}; process.exitCode = await runStandalone(['setup', '{}'], { cwd: process.cwd(), pluginFolder: () => ${JSON.stringify(plugin)} }, { out: console.log })`
+  const repeated = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: work, encoding: 'utf8', env })
+  assert.equal(repeated.status, 0, repeated.stdout + repeated.stderr)
+  assert.equal(readFileSync(join(work, 'skraft-deliver-config.json'), 'utf8'), config, 'repeated setup must not reformat the team configuration')
+  const local = JSON.parse(readFileSync(join(work, 'skraft-deliver-config.local.json'), 'utf8'))
+  assert.equal(local.publish.pullRequest, true)
 })
