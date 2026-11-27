@@ -27,7 +27,7 @@
  *   interrupt: () => void,
  *   chunk: (rid: number, text: string) => void,
  *   exited: (rid: number, result: Record<string, unknown>) => void,
- *   stop: () => void,
+ *   stop: () => Promise<void>,
  * }} Kernel
  *   lib: the modules of the project's REPL library (.repl/lib) the kernel loaded, and those it could not, by name;
  *   refused: the files of .repl/lib whose name is no JavaScript identifier, never loaded;
@@ -35,7 +35,9 @@
  *   busy: whether a cell is in flight, so that evaluate would answer busy;
  *   evaluate: runs a cell and answers when it ends or at the budget; wait: the same, for the cell
  *   already in flight; interrupt: stops the awaits of the cell in flight, and ends the kernel when
- *   the cell still does not end; chunk, exited: what a run the server started writes and how it ended.
+ *   the cell still does not end; chunk, exited: what a run the server started writes and how it ended;
+ *   stop: ends the kernel with every process its cells started, settled once the kernel is gone (or
+ *   after ten seconds), the same under Windows as under POSIX.
  * @typedef {{ start: (events: KernelEvents, cwd: string, options?: { firstRid?: number }) => Promise<Kernel> }} KernelHost
  *   firstRid: the id the kernel gives its first run; ids go on across the kernels of an attempt.
  *   start: rejects when the kernel cannot start, or has not said it is ready within ten seconds.

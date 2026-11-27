@@ -215,7 +215,7 @@ const startKernel = async (deps, entry) => {
     await recordProcesses(deps, entry)
     return null
   } catch (error) {
-    entry.kernel?.stop()
+    await entry.kernel?.stop()
     return { error }
   }
 }
@@ -260,7 +260,7 @@ const retire = async (deps, state) => {
   const entry = detach(state)
   if (entry === null) return
   endRuns(entry, 'SIGKILL', 0)
-  entry.kernel.stop()
+  await entry.kernel.stop()
   await settledWithin(deps, entry.pending, RETIRE_WAIT_MS)
   if (liveRuns(entry).length > 0) state.ending = [...(state.ending ?? []), entry]
   await entry.recording
