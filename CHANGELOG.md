@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.113](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.112...v2.0.0-alpha.113) (2026-11-27)
+
+### ✨ Features
+
+* **backlog:** take a context beside the PRD and follow the cut it imposes ([#678](https://github.com/SebastienDegodez/skraft-plugin/issues/678)) ([0165221](https://github.com/SebastienDegodez/skraft-plugin/commit/0165221884b26cc9733e0e2ecf10084c78d9054e))
+
 ## [2.0.0-alpha.112](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.111...v2.0.0-alpha.112) (2026-11-27)
 
 ### ✨ Features
