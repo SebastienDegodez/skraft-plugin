@@ -46,7 +46,7 @@ The canvas follows the PRD's language. The figures come from a run on a PRD writ
 
 **Read it to** know the run is alive and which stories are being written.
 
-**Act when** never: wait. The view fills in as the workflow writes. An example is in [Turn a PRD into a GitHub backlog](../how-to/prd-to-backlog.md), Figure 1.
+**Act when** never: wait. The view fills in as the workflow writes. An example is in [Turn a PRD into a backlog (GitHub or Azure Boards)](../how-to/prd-to-backlog.md), Figure 1.
 
 ### Stories <!-- #story-list -->
 
@@ -118,6 +118,6 @@ From the demo PRD, written in French:
 
 ## See also <!-- #see-also -->
 
-- [Turn a PRD into a GitHub backlog](../how-to/prd-to-backlog.md)
+- [Turn a PRD into a backlog (GitHub or Azure Boards)](../how-to/prd-to-backlog.md)
 - [Refine a backlog issue](../how-to/refine-backlog.md)
 - [Gates: DISCUSS](./gates.md#discuss)

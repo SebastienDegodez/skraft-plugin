@@ -188,8 +188,8 @@
     "description": "The label for the doc item 'Add a repository agent to the pipeline' in sidebar 'howTo', linking to the doc how-to/add-repository-agent"
   },
   "sidebar.howTo.doc.how-to/prd-to-backlog": {
-    "message": "Transformer un PRD en backlog GitHub",
-    "description": "The label for the doc item 'Turn a PRD into a GitHub backlog' in sidebar 'howTo', linking to the doc how-to/prd-to-backlog"
+    "message": "Transformer un PRD en backlog (GitHub ou Azure Boards)",
+    "description": "The label for the doc item 'Turn a PRD into a backlog (GitHub or Azure Boards)' in sidebar 'howTo', linking to the doc how-to/prd-to-backlog"
   },
   "sidebar.howTo.doc.how-to/refine-backlog": {
     "message": "Raffiner une issue du backlog",

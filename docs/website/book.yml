@@ -352,8 +352,8 @@ parts:
         pages:
           - id: prd-to-backlog
             type: editorial
-            label_fr: "Transformer un PRD en backlog GitHub"
-            label_en: "Turn a PRD into a GitHub backlog"
+            label_fr: "Transformer un PRD en backlog (GitHub ou Azure Boards)"
+            label_en: "Turn a PRD into a backlog (GitHub or Azure Boards)"
             doc: how-to/prd-to-backlog
             purpose_fr: "Lancer skraft-prd-backlog sur un PRD, repondre au cadrage, approuver la carte des stories, valider le handoff et publier."
             purpose_en: "Run skraft-prd-backlog on a PRD, answer the framing, approve the story map, validate the handoff and publish."

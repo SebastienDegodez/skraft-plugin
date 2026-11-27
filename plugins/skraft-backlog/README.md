@@ -7,7 +7,7 @@ runs without the engineering plugin (`skraft`), and the engineering plugin runs 
 
 User guides live in the [SKRAFT handbook](https://sebastiendegodez.github.io/skraft-plugin/) (FR and EN):
 [The backlog](https://sebastiendegodez.github.io/skraft-plugin/explanation/backlog) explains the three paths and each planning lens;
-[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/how-to/prd-to-backlog) and
+[Turn a PRD into a backlog (GitHub or Azure Boards)](https://sebastiendegodez.github.io/skraft-plugin/how-to/prd-to-backlog) and
 [Refine a backlog issue](https://sebastiendegodez.github.io/skraft-plugin/how-to/refine-backlog) give the steps. This file keeps what the
 plugin itself ships and how it behaves.
 
@@ -40,10 +40,10 @@ Skills: `github-issue-search`, `azure-boards-work-items`, `issue-triage`, `issue
 `discovery-review-criteria`, `planning-review-criteria`, `backlog-review-lenses`,
 `refinement-proposal`, `backlog-slicing`, `story-elaboration`.
 
-## From a PRD to a GitHub backlog (dynamic workflow)
+## From a PRD to a backlog on GitHub or Azure Boards (dynamic workflow)
 
-`skraft-prd-backlog` is a Copilot CLI dynamic workflow: it turns an approved PRD into epics as
-tracking issues and INVEST stories that pass the Definition of Ready as their sub-issues, with
+`skraft-prd-backlog` is a Copilot CLI dynamic workflow: it turns a PRD, read as written (skraft,
+HVE, BMad) and never rewritten, into epics as tracking issues (Features on Azure Boards) and INVEST stories that pass the Definition of Ready as their sub-issues, with
 blocked-by links and milestones. Ask Copilot to run it with the PRD path:
 
 ```text
@@ -52,7 +52,7 @@ Run the skraft-prd-backlog workflow with prd docs/project-planning/my-prd.md
 
 Its arguments (`prd`, `slug`, `repo`, `epics`, `approve`, `dryRun`, `frame`, `corrections`) and
 the two pauses are described step by step in
-[Turn a PRD into a GitHub backlog](https://sebastiendegodez.github.io/skraft-plugin/how-to/prd-to-backlog); any other key is refused. The
+[Turn a PRD into a backlog (GitHub or Azure Boards)](https://sebastiendegodez.github.io/skraft-plugin/how-to/prd-to-backlog); any other key is refused. The
 agents are the plugin's and run on the session's model.
 
 | Phase | Who decides | What happens |

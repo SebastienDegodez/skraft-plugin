@@ -1,13 +1,13 @@
 ---
-title: "Turn a PRD into a GitHub backlog"
-description: "Run skraft-prd-backlog on an approved PRD, answer the framing, approve the story map, validate the handoff, publish to GitHub with no duplicate."
+title: "Turn a PRD into a backlog (GitHub or Azure Boards)"
+description: "Run skraft-prd-backlog on a PRD as written, approve the epics then the stories, publish to GitHub or Azure Boards with no duplicate."
 persona: tech-lead
 ---
 
-# Turn a PRD into a GitHub backlog
+# Turn a PRD into a backlog (GitHub or Azure Boards)
 
-Go from an approved PRD to ready epics and stories on GitHub, with their dependencies and
-milestones.
+Go from a PRD, as the tool that wrote it left it, to ready epics and stories on GitHub or Azure
+Boards, with their dependencies and milestones.
 
 ## Prerequisites
 

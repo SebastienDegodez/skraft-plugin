@@ -100,7 +100,7 @@ outside contributor is refined only once a maintainer adds the label or comments
 
 ## Next steps <!-- #next-steps -->
 
-- [Turn a PRD into a GitHub backlog](./prd-to-backlog.md)
+- [Turn a PRD into a backlog (GitHub or Azure Boards)](./prd-to-backlog.md)
 - [The backlog: from idea to ready story](../explanation/backlog.md) — why
   a comment and never a rewritten issue.
 - [Gates: DISCUSS](../reference/gates.md#discuss) — INVEST, acceptance

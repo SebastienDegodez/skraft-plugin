@@ -1,13 +1,13 @@
 ---
-title: "Transformer un PRD en backlog GitHub"
-description: "Lancer skraft-prd-backlog sur un PRD approuvé, répondre au cadrage, approuver la carte, valider le handoff, publier sur GitHub sans doublon."
+title: "Transformer un PRD en backlog (GitHub ou Azure Boards)"
+description: "Lancer skraft-prd-backlog sur un PRD tel qu'il est écrit, approuver les epics puis les stories, publier sur GitHub ou Azure Boards sans doublon."
 persona: tech-lead
 ---
 
-# Transformer un PRD en backlog GitHub
+# Transformer un PRD en backlog (GitHub ou Azure Boards)
 
-Passez d'un PRD approuvé à des epics et des stories prêtes sur GitHub, avec leurs dépendances et
-leurs milestones.
+Passez d'un PRD, tel que l'outil qui l'a écrit l'a laissé, à des epics et des stories prêtes sur
+GitHub ou Azure Boards, avec leurs dépendances et leurs milestones.
 
 ## Prérequis
 

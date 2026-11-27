@@ -1,6 +1,6 @@
 ---
 title: "The backlog: from idea to ready story"
-description: "Why product preparation lives in its own plugin, skraft-backlog: PRD to GitHub backlog, refinement, triage and sprint automations, and the readiness lenses."
+description: "Why product preparation lives in its own plugin, skraft-backlog: PRD to GitHub or Azure Boards backlog, refinement, triage and sprint automations, and the readiness lenses."
 persona: tech-lead
 ---
 
@@ -25,7 +25,7 @@ the backlog writes into the tracking folder are the ones the engine can read, wh
 
 ```mermaid
 flowchart LR
-    PRD["approved PRD"] -->|skraft-prd-backlog<br/>workflow| BL["epics + stories<br/>on GitHub"]
+    PRD["PRD, as written"] -->|skraft-prd-backlog<br/>workflow| BL["epics + stories<br/>on GitHub or Azure Boards"]
     IS["existing issues"] -->|backlog-discoverer| TR["triage +<br/>sprint proposal"]
     TR -->|backlog-planner| ST["ready stories<br/>in the tracking folder"]
     ONE["one issue"] -->|"/skraft-refine (Claude Code)<br/>/skraft-backlog:skraft-refine (Copilot CLI)<br/>or gh-aw workflow"| CO["refinement proposal<br/>as a comment"]
@@ -37,13 +37,15 @@ refine, a single issue to refine; only the planner's stories go to the engine.*
 
 ### From PRD to backlog
 
-When a PRD is approved, the `skraft-prd-backlog` Copilot CLI dynamic workflow turns it into epics
-and INVEST stories on GitHub, with their dependencies and milestones. The workflow's principle
+The `skraft-prd-backlog` Copilot CLI dynamic workflow turns a PRD — read as the tool that wrote
+it left it, never rewritten — into epics and INVEST stories on GitHub or Azure Boards, with their
+dependencies and milestones. The workflow's principle
 fits in one sentence: **it decides nothing a script or a human decides.**
 
 - A script inventories every requirement of the PRD; the `backlog-slicer` agent cuts it into epics
-  and stories; a script checks that every requirement is covered and that the dependencies form a
-  graph with no cycle. The run then stops on the story map, for a human to approve it.
+  first, then a fresh agent cuts each epic into stories; a script checks that every requirement is
+  covered and that the dependencies form a graph with no cycle. The run stops on the epics, then
+  on the stories, for a human to approve them.
 - One `story-writer` per story writes each one in parallel; a script checks it against the
   Definition of Ready; the four planning lenses review it.
 - The run stops again: nothing is published until a human has ticked their review. Publication
@@ -135,7 +137,7 @@ back to the developer. The detail of the criteria and the computation:
 
 ## See also <!-- #see-also -->
 
-- [Turn a PRD into a GitHub backlog](../how-to/prd-to-backlog.md) — the `skraft-prd-backlog` workflow step by step.
+- [Turn a PRD into a backlog (GitHub or Azure Boards)](../how-to/prd-to-backlog.md) — the `skraft-prd-backlog` workflow step by step.
 - [Refine a backlog issue](../how-to/refine-backlog.md) — `/skraft-refine` and the gh-aw workflow.
 - [Reference: DISCOVER and DISCUSS](../reference/phases.md#discover) — inputs, outputs, effects on GitHub.
 - [Reference: DISCOVER and DISCUSS review criteria](../reference/gates.md#discover).
