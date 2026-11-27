@@ -212,6 +212,34 @@ iterations. Otherwise, or when the creation is refused, its cards carry the tag
 `milestone/<title>` and the result names the iterations to create by hand. The canvas does not
 create Azure Boards cards: the workflow does, at its handoff.
 
+## From an issue: the skraft-prd-slicer agentic workflow
+
+The product owner can slice a PRD without a terminal, from a GitHub issue. Install the
+workflow once in the repository:
+
+```bash
+gh aw add SebastienDegodez/skraft-plugin/plugins/skraft-backlog@v<version>
+```
+
+It needs the `COPILOT_GITHUB_TOKEN` secret of GitHub Agentic Workflows, and creates the
+`skraft:prd-slicer` label.
+
+1. Open an issue for the PRD and add the label `skraft:prd-slicer`. A 👀 reaction says the run
+   took it. The PRD is found from the issue: a file, link, file name or `prd_id` it mentions;
+   else the only PRD of the repository; else the closest to the issue's title, to confirm; else
+   the issue body itself when it carries requirements (`FR-001: …`). The PRD is never rewritten.
+2. One comment asks every framing question, options lettered, the recommendation marked ★.
+   Answer in one comment — `1B 2A 3C` — and add any context in prose: it is read as `notes`, and
+   the files the comments link (documents, images) as `context`.
+3. A last comment proposes the epics, their stories, the milestones, what is deferred and the
+   decisions. Comment what to change and the slicing is redone; comment `/skraft accept` and the
+   issues are created (sub-issues, blocked-by links, milestones), then the PRD issue is closed.
+
+Between two runs the run's files are kept on the branch `skraft/prd-slicer-state`, one folder
+per issue. The workflow runs the skraft-prd-backlog dynamic workflow headless
+(`copilot workflow run`); its agent only posts the comments, and the issues are created by a
+safe-output job with the skraft publisher, nothing twice.
+
 ## Troubleshooting
 
 | Message | Action |

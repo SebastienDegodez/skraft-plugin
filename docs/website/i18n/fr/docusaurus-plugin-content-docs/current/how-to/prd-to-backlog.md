@@ -215,6 +215,37 @@ le droit de créer des itérations. Sinon, ou si la création est refusée, ses 
 `milestone/<titre>` et le résultat nomme les itérations à créer à la main. Le canvas ne crée pas
 de cartes Azure Boards : c'est le workflow, à son handoff.
 
+## Depuis une issue : le workflow agentique skraft-prd-slicer
+
+Le product owner peut découper un PRD sans terminal, depuis une issue GitHub. Installez le
+workflow une fois dans le dépôt :
+
+```bash
+gh aw add SebastienDegodez/skraft-plugin/plugins/skraft-backlog@v<version>
+```
+
+Il a besoin du secret `COPILOT_GITHUB_TOKEN` de GitHub Agentic Workflows, et crée le label
+`skraft:prd-slicer`.
+
+1. Ouvrez une issue pour le PRD et ajoutez le label `skraft:prd-slicer`. Une réaction 👀 indique
+   que le run l'a prise. Le PRD est retrouvé depuis l'issue : un fichier, un lien, un nom de
+   fichier ou un `prd_id` qu'elle mentionne ; sinon le seul PRD du dépôt ; sinon le plus proche
+   du titre de l'issue, à confirmer ; sinon le corps de l'issue lui-même s'il porte des exigences
+   (`FR-001: …`). Le PRD n'est jamais réécrit.
+2. Un seul commentaire pose toutes les questions de cadrage, options en lettres, recommandation
+   marquée ★. Répondez en un seul commentaire — `1B 2A 3C` — et ajoutez librement du contexte en
+   prose : il est lu comme `notes`, et les fichiers que les commentaires lient (documents, images)
+   comme `context`.
+3. Un dernier commentaire propose les epics, leurs stories, les milestones, ce qui est différé et
+   les décisions. Commentez ce qu'il faut changer et le découpage est refait ; commentez
+   `/skraft accept` et les issues sont créées (sous-issues, liens blocked-by, milestones), puis
+   l'issue du PRD est fermée.
+
+Entre deux runs, les fichiers du run sont gardés sur la branche `skraft/prd-slicer-state`, un
+dossier par issue. Le workflow lance le workflow dynamique skraft-prd-backlog sans interface
+(`copilot workflow run`) ; son agent ne fait que poster les commentaires, et les issues sont
+créées par un job safe-output avec le publieur skraft, sans doublon.
+
 ## Dépannage
 
 | Message | Action |

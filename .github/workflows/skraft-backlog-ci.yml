@@ -127,7 +127,9 @@ jobs:
           consumer="$RUNNER_TEMP/consumer"
           mkdir -p "$consumer/.github/workflows/shared"
           cp plugins/skraft-backlog/workflows/skraft-refine.md "$consumer/.github/workflows/"
-          cp plugins/skraft-backlog/workflows/shared/apm.md plugins/skraft-backlog/workflows/shared/skraft-refine-marker.mjs "$consumer/.github/workflows/shared/"
+          cp plugins/skraft-backlog/workflows/skraft-prd-slicer.md "$consumer/.github/workflows/"
+          cp plugins/skraft-backlog/workflows/shared/apm.md plugins/skraft-backlog/workflows/shared/skraft-refine-marker.mjs plugins/skraft-backlog/workflows/shared/skraft-prd-slicer.mjs "$consumer/.github/workflows/shared/"
           cd "$consumer"
           git init -q
           gh aw compile skraft-refine
+          gh aw compile skraft-prd-slicer

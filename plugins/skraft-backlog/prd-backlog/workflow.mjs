@@ -655,8 +655,10 @@ const frame = async (ctx, run) => {
   if (ctx.args.frame === false) return null
   const path = join(run.dir, 'framing.json')
   let framing = framingOf((await readJson(path)).value)
+  let previous = null
   if (framing && (framing.sources ?? '') !== run.sources) {
     ctx.log('framing: the context beside the PRD changed; the slicing is framed again')
+    previous = framing
     framing = null
   }
   if (!framing) {
@@ -665,6 +667,7 @@ const frame = async (ctx, run) => {
     const asked = ctx.args.approve === true && !hasContext(run) ? { questions: [], constraints: [], cut: null } : await askSlicer(ctx, run, questions)
     framing = { version: 1, questions: [...questions, ...contextQuestions(asked, run.inventory.language), ...(ctx.args.approve === true ? [] : asked.questions)],
       answers: {}, constraints: asked.constraints, cut: asked.cut, ...(run.sources ? { sources: run.sources } : {}) }
+    framing.answers = keptAnswers(previous, framing.questions)
     await write(path, `${JSON.stringify(framing, null, 2)}\n`)
     ctx.log(`framing: ${framing.questions.length} question(s), ${framing.constraints.length} constraint(s) in ${display(run, path)}`)
   }
@@ -676,6 +679,14 @@ const frame = async (ctx, run) => {
   ctx.phase?.('SLICE')
   return framing
 }
+
+/**
+ * The answers of a previous framing that still apply: same question id and same wording.
+ * @param {import('./framing.mjs').Framing | null} previous @param {import('./framing.mjs').FramingQuestion[]} questions
+ */
+const keptAnswers = (previous, questions) => Object.fromEntries(questions
+  .filter((q) => previous?.answers[q.id] && previous.questions.some((p) => p.id === q.id && p.question === q.question))
+  .map((q) => [q.id, /** @type {any} */ (previous).answers[q.id]]))
 
 /** @param {Run} run */
 const hasContext = (run) => run.context.length > 0 || run.notes !== ''
