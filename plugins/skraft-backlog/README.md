@@ -186,6 +186,19 @@ missing or inconclusive lens never reads as approval. Three refused attempts sto
 The producers dispatch the lenses themselves, so no sub-agent dispatches another: the gate works
 in VS Code with `chat.subagents.allowInvocationsFromSubagents` left at its default.
 
+## The skraft-prd-slicer agentic workflow
+
+[workflows/skraft-prd-slicer.md](workflows/skraft-prd-slicer.md), installed by the same
+`gh aw add`, slices the PRD of an issue labelled `skraft:prd-slicer`. Pre-activation runs
+`shared/skraft-prd-slicer.mjs gate` (the label, a team comment on the open labelled issue,
+`/skraft accept`). The pre-agent steps check out skraft at the pinned release, install the
+`skraft-prd-backlog` extension and agents into the working copy, restore the run's files from
+the branch `skraft/prd-slicer-state`, find the PRD, apply the answers (`parseAnswers`) and run
+`copilot workflow run skraft-prd-backlog` with `dryRun`; `after` renders one comment: every
+question, or the proposal. The agent only posts it (`add_comment`) and calls the safe-output job
+`skraft_prd_slicer`, which pushes the files back and, on `/skraft accept`, publishes `plan.json`
+with `publish.mjs` and closes the issue. Its skills are pinned by `scripts/set-version.mjs`.
+
 ## The skraft-refine agentic workflow
 
 The same refinement, as a [GitHub Agentic Workflow](https://github.github.com/gh-aw/). Install

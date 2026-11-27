@@ -1,17 +1,24 @@
 # gh-aw package: `gh aw add SebastienDegodez/skraft-plugin/plugins/skraft-backlog@<tag>`
-# installs the skraft-refine workflow, its shared APM import and the marker check it runs
-# before the agent, and creates the label that triggers it.
+# installs the skraft-refine and skraft-prd-slicer workflows, their shared APM import and the
+# scripts they run before the agent, and creates the labels that trigger them.
 manifest-version: "1"
 name: SKRAFT backlog refinement
 emoji: 🧭
 description: Comments a refinement proposal on each new GitHub issue — Definition of Ready, Fibonacci size, proposed story, examples and acceptance criteria — in the issue's language.
 includes:
   - workflows/skraft-refine.md
+  - workflows/skraft-prd-slicer.md
 resources:
   - source: workflows/shared/skraft-refine-marker.mjs
     destination: .github/workflows/shared/skraft-refine-marker.mjs
+  - source: workflows/shared/skraft-prd-slicer.mjs
+    destination: .github/workflows/shared/skraft-prd-slicer.mjs
 config:
   - type: repo-label
     name: skraft-refine
     description: Ask skraft-backlog for a refinement proposal on this issue
     color: 1f6feb
+  - type: repo-label
+    name: skraft:prd-slicer
+    description: Slice the PRD of this issue into a backlog (skraft-prd-slicer)
+    color: 0e8a16

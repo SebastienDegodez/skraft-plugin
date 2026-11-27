@@ -948,10 +948,16 @@ test('a changed context frames the slicing again; a context outside the working 
   const args = { ...ARGS, context: ['docs/archi.md'] }
   const first = simulatedContext({ args, journal })
   assert.deepEqual(await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), first), { paused: 'framing-answered' })
+  const framingFile = join(backlogDir(cwd), 'framing.json')
+  const answered = JSON.parse(await readFile(framingFile, 'utf8'))
+  answered.answers.milestones = { text: 'Un seul jalon', at: NOW() }
+  await writeFile(framingFile, JSON.stringify(answered), 'utf8')
   await writeFile(join(cwd, 'docs', 'archi.md'), 'v2', 'utf8')
   const again = simulatedContext({ args })
   await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), again)
   assert.ok(again.logs.includes('framing: the context beside the PRD changed; the slicing is framed again'))
+  const reframed = JSON.parse(await readFile(join(backlogDir(cwd), 'framing.json'), 'utf8'))
+  assert.deepEqual(reframed.answers.milestones?.text, 'Un seul jalon', 'an answer to the same question is kept across a new framing')
   assert.deepEqual(again.calls.map((c) => c.label), ['frame'])
   for (const context of [['../secret.md'], ['docs/prd/plan.pdf'], ['docs/absent-sentinel.md']]) {
     const refused = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulatedContext({ args: { ...ARGS, context } }))

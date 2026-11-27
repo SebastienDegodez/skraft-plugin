@@ -35,6 +35,9 @@ const stamped = [
   ['plugins/skraft-backlog/workflows/skraft-refine.md', /SKRAFT_BACKLOG_VERSION: "[^"]*"/, `SKRAFT_BACKLOG_VERSION: "${version}"`],
   // The skills the workflow installs, pinned to the release tag that ships this workflow.
   ['plugins/skraft-backlog/workflows/skraft-refine.md', /(\/plugins\/skraft-backlog\/skills\/[\w-]+)#v[^\s]+/g, `$1#v${version}`],
+  // skraft-prd-slicer: the skills it installs and the release it checks out.
+  ['plugins/skraft-backlog/workflows/skraft-prd-slicer.md', /(\/plugins\/skraft-backlog\/skills\/[\w-]+)#v[^\s]+/g, `$1#v${version}`],
+  ['plugins/skraft-backlog/workflows/skraft-prd-slicer.md', /ref: v\d[^\s]*/g, `ref: v${version}`],
 ];
 
 for (const [rel, pattern, replacement] of stamped) {
