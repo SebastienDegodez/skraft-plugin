@@ -25,7 +25,7 @@ const eventsOf = async (deps, slug) => (await deps.journal.lines(slug)).map((lin
  * @param {any} deps @param {any} outcome
  */
 export const draftInCi = async (deps, outcome) => {
-  if (outcome.slug === null) return outcome
+  if (outcome.slug === null || outcome.slug === undefined) return outcome
   const events = await eventsOf(deps, outcome.slug)
   if (modeOf(events) !== 'ci') return outcome
   await markAnswered(deps, outcome.slug)
