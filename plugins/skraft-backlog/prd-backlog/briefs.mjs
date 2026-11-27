@@ -13,6 +13,13 @@ const bullets = (items) => items.map((item) => `- ${item}`).join('\n')
 /** The fields of a story of the map, as the slicer writes them. */
 const STORY_FIELDS = Object.freeze(['id', 'title', 'persona', 'description', 'covers', 'after', 'milestone', 'moscow', 'effort'])
 
+/** The context the product owner gave beside the PRD: read-only documents and images. @param {string[]} context */
+const contextLines = (context) => (context.length ? [
+  '',
+  'Context the product owner gave beside the PRD (read-only; read every file, look at every image):',
+  bullets(context),
+] : [])
+
 /** The plans another planner (HVE) left for this PRD: their epics are proposals the slicer keeps or explains. @param {string[]} plans */
 const plannerLines = (plans) => (plans.length ? [
   '',
@@ -24,12 +31,13 @@ const plannerLines = (plans) => (plans.length ? [
  * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[], framing?: string[], plans?: string[] }} brief
  * framing: the framing questions with the product owner's answers; plans: another planner's plan files
  */
-export const sliceBrief = ({ prd, inventory, output, language, attempt, problems, framing = [], plans = [] }) => lines([
+export const sliceBrief = ({ prd, inventory, output, language, attempt, problems, framing = [], plans = [], context = [] }) => lines([
   `Slice the PRD into epics (attempt ${attempt}): level 1, no story yet.`,
   'Load the skill `backlog-slicing` and follow it; it loads `sprint-planning`.',
   '',
   'Read:',
   bullets([`PRD: ${prd}`, `Requirement inventory (every id you must place): ${inventory}`]),
+  ...contextLines(context),
   ...plannerLines(plans),
   '',
   `Write only: ${output} — a story map following the schema of the skill, every epic with \`stories: []\`: each epic is cut into stories later, one at a time. Its directory exists; write no other file.`,
@@ -37,7 +45,7 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
   `Write every title, outcome, description, reason and decision in ${languageOf(language)}, the language of the PRD.`,
   languageRule(language),
   framing.length ? '' : null,
-  framing.length ? 'The product owner framed the slicing before you cut. Follow each answer:' : null,
+  framing.length ? 'The product owner framed the slicing before you cut. Follow each answer and each constraint; departing from an imposed cut the answers keep is one `decisions` line saying why:' : null,
   framing.length ? bullets(framing) : null,
   problems.length ? '' : null,
   problems.length ? `The previous story map at ${output} was refused. Fix exactly these problems, keep everything else and every id:` : null,
@@ -50,12 +58,13 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
  * Level 2 of the slicing: the stories of one epic, by a fresh agent, the approved epics fixed.
  * @param {{ prd: string, inventory: string, map: string, epic: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[], framing?: string[], plans?: string[] }} brief
  */
-export const epicSliceBrief = ({ prd, inventory, map, epic, output, language, attempt, problems, framing = [], plans = [] }) => lines([
+export const epicSliceBrief = ({ prd, inventory, map, epic, output, language, attempt, problems, framing = [], plans = [], context = [] }) => lines([
   `Cut epic ${epic} into stories (attempt ${attempt}): level 2, this epic only.`,
   'Load the skill `backlog-slicing` and follow it; it loads `sprint-planning` and `issue-refinement`.',
   '',
   'Read:',
   bullets([`PRD: ${prd}`, `Requirement inventory: ${inventory}`, `Approved story map (the epics are fixed; ${epic} gives the covers its stories share): ${map}`]),
+  ...contextLines(context),
   ...plannerLines(plans),
   '',
   `Write only: ${output} — { "stories": [ … ] }, the stories of ${epic} in build order. Its directory exists; write no other file; never change the story map.`,
@@ -64,7 +73,7 @@ export const epicSliceBrief = ({ prd, inventory, map, epic, output, language, at
   `Write every title, description and decision in ${languageOf(language)}, the language of the PRD.`,
   languageRule(language),
   framing.length ? '' : null,
-  framing.length ? 'The product owner framed the slicing. Follow each answer:' : null,
+  framing.length ? 'The product owner framed the slicing. Follow each answer and each constraint; departing from an imposed cut the answers keep is one `decisions` line saying why:' : null,
   framing.length ? bullets(framing) : null,
   problems.length ? '' : null,
   problems.length ? `The previous stories at ${output} were refused. Fix exactly these problems, keep everything else and every id:` : null,
@@ -163,14 +172,16 @@ export const splitBrief = ({ prd, map, story, output, language, attempt, problem
 
 /**
  * Before the first slice: the questions only a reader of the PRD can ask, so that the first cut is right.
- * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', asked: string[] }} brief asked: the questions the code already asks
+ * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', asked: string[], context?: string[] }} brief asked: the questions the code already asks; context: the files the product owner gave beside the PRD
  */
-export const frameBrief = ({ prd, inventory, output, language, asked }) => lines([
+export const frameBrief = ({ prd, inventory, output, language, asked, context = [] }) => lines([
   'Frame the slicing of this PRD: do not slice yet.',
   'Load the skill `backlog-slicing` (its Framing section is enough; load no other skill).',
   '',
   'Read:',
   bullets([`PRD: ${prd}`, `Requirement inventory: ${inventory}`]),
+  ...contextLines(context),
+  context.length ? 'From the context, also write in the same file: "constraints": [ { "text", "source" } ] — each statement that bends the cut (an epic split, an order, a boundary, a deployment unit), one line, with the file it comes from — and "cut": { "text", "source", "fine", "risks": [] } when the context imposes how the epics are cut, else null; "fine": false when you judge that cut worse than yours, "risks" what it costs. An imposed cut is followed: never ask whether to follow it, the workflow asks. A context statement that contradicts the PRD is one question: fix the context, or keep the PRD and note it.' : null,
   '',
   'The PRD is read-only and its format is not a question: never ask to reformat, restructure or renumber it. The inventory says what a script read; its `format`, `epicSource`, `cited`, `status` and `mvp` are already asked by the workflow when they need an answer.',
   `Write only: ${output} — { "questions": [ { "question", "why", "options": [2 to 4 answers], "recommended": <index of the option you recommend> } ] }. Its directory exists; write no other file.`,

@@ -36,6 +36,9 @@ brief names, never create a file or directory elsewhere.
 - Read the whole PRD and the inventory before writing; place every `kind: FR` id of the inventory
   in a story's `covers` or in `deferred` with the PRD's reason.
 - Epics the PRD proposes are kept; one you do not follow is a `decisions` line saying why.
+- Context the brief lists beside the PRD (notes, documents, images) is read-only and binds the
+  cut: read every file, look at every image; an imposed cut is followed even when you judge it
+  worse.
 - Never invent a requirement id, a persona or a milestone date the PRD does not give.
 - `after` holds real prerequisites only: no restated order, no pair of stories waiting on each
   other, no dependency on a later milestone.

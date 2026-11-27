@@ -179,6 +179,18 @@ A plan the HVE planner left for the PRD (`.copilot-tracking/{github-issues,worki
 slicer briefs and the framing: its epics are proposals the slicer keeps or explains in
 `decisions`. No script parses that plan.
 
+## Context beside the PRD
+
+`args.context` (files of the working copy: md, txt, png, jpg, gif, webp, svg; at most 10) and
+`args.notes` (prose, written to `notes.md` of the run) are read by the framing dispatch with
+`docs/backlog/slicing-rules.md` when it exists. The slicer returns `constraints` and the `cut`
+the context imposes; the code asks the product owner to confirm the constraints, whether to
+follow an imposed cut it judged worse (follow: recommended) and whether to keep that cut as the
+team rule (`keepTeamRule` appends it to `docs/backlog/slicing-rules.md`). Both slice briefs get
+the files and `framingLines` gives the constraints. `framing.json` keeps the context's
+fingerprint: another context frames again. A path outside the working copy, of another kind or
+missing is refused, never echoed.
+
 ## Epic by epic: create as each epic is ready
 
 As soon as an epic is reviewed, the workflow rewrites `plan.json` with its ready stories (the

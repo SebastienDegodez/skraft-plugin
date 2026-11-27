@@ -62,6 +62,8 @@ Run the skraft-prd-backlog workflow with prd docs/prds/commande-en-ligne.md
 | `frame` | `false` : découper sans questions de cadrage |
 | `format` | `hve` : lire les familles d'exigences que déclare un PRD HVE ; par défaut : détecté |
 | `forge` | `github` ou `azure-devops` ; par défaut : d'après le remote git. Avec `azure-devops`, `repo` vaut `organisation/projet` |
+| `context` | Fichiers à côté du PRD qui orientent la découpe : documents ou images d'architecture (md, txt, png, jpg, gif, webp, svg), 10 au plus |
+| `notes` | De la prose à côté du PRD, dans le même but |
 | `corrections` | `true` : appliquer les corrections acceptées dans le canvas (étape 5) |
 
 Toute autre clé est refusée (`invalid-args`) et rien ne démarre. Les fichiers de travail sont
@@ -102,6 +104,14 @@ corriger. Chaque compteur, statut et onglet : [Canvas du backlog](../reference/b
 ![Canvas skraft backlog, onglet Suivi, pendant ELABORATE : « 8 agents au travail », un story-writer par story avec sa tentative et depuis quand il tourne, puis 3 épics, 16 stories, 9/16 fiches écrites, aucune refusée pour l'instant](/img/screenshots/fr/backlog-canvas-elaborate.png)
 
 *Figure 1 — ELABORATE sur l'extrait d'un vrai PRD rédigé en français ([dépôt de démonstration](https://github.com/SebastienDegodez/skraft-demo-event-storming)) : huit agents `story-writer` au travail.*
+
+**Donnez plus que le PRD.** Passez `context` (un document d'architecture, un schéma en image) et
+`notes` (quelques phrases) : le découpeur les lit avec le PRD et le cadrage vous demande de
+confirmer les contraintes qu'il en a tirées. Quand ils imposent la découpe des epics, elle est
+suivie, même si le découpeur la juge moins bonne : le cadrage montre alors ses risques et demande
+s'il faut la suivre (recommandé) et la garder comme règle de l'équipe, ajoutée à
+`docs/backlog/slicing-rules.md` et lue à côté de chaque PRD suivant. Un contexte modifié relance
+le cadrage.
 
 **Pour le product owner : une epic à la fois, dans une session neuve.** Sur un gros PRD,
 approuvez les epics une fois, puis découpez et élaborez une epic par run, chaque run dans une

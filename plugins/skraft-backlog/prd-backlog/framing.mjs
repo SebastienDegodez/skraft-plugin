@@ -14,7 +14,9 @@ const TEMPLATE_SECTIONS = /^(?:\d+(?:\.\d+)*\.?\s+)?(mvp and release framing|mvp
 
 /**
  * @typedef {{ id: string, source: 'prd' | 'slicer', question: string, why?: string, options: string[], recommended: number, epic?: string }} FramingQuestion
- * @typedef {{ version: 1, questions: FramingQuestion[], answers: Record<string, { text: string, at: string }> }} Framing
+ * @typedef {{ version: 1, questions: FramingQuestion[], answers: Record<string, { text: string, at: string }>,
+ *   constraints: { text: string, source: string }[], cut: { text: string, source: string, fine: boolean, risks: string[] } | null, sources?: string }} Framing
+ *   sources: the fingerprint of the context it was framed on; another context frames again
  */
 
 const t = (language, fr, en) => (language === 'fr' ? fr : en)
@@ -202,7 +204,75 @@ export const slicerQuestions = (value) => {
 export const framingOf = (value) => {
   const record = /** @type {any} */ (value)
   if (!record || !Array.isArray(record.questions)) return null
-  return { version: 1, questions: record.questions, answers: record.answers && typeof record.answers === 'object' ? record.answers : {} }
+  return {
+    version: 1, questions: record.questions, answers: record.answers && typeof record.answers === 'object' ? record.answers : {},
+    constraints: constraintsOf(record), cut: cutOf(record), ...(isText(record.sources) ? { sources: record.sources } : {}),
+  }
+}
+
+/** The file where a team keeps its slicing rule, read as context of every PRD when it exists. */
+export const TEAM_RULES = 'docs/backlog/slicing-rules.md'
+
+/**
+ * What the context beside the PRD imposes on the cut, as the slicer read it: one line per
+ * statement, with the file it comes from.
+ * @param {unknown} value @returns {{ text: string, source: string }[]}
+ */
+export const constraintsOf = (value) => (Array.isArray(/** @type {any} */ (value)?.constraints) ? /** @type {any} */ (value).constraints : [])
+  .filter((c) => isText(c?.text)).slice(0, 20).map((c) => ({ text: c.text.trim(), source: isText(c.source) ? c.source.trim() : 'notes' }))
+
+/**
+ * The cut of the epics the context imposes, if any, with the slicer's judgment of it.
+ * @param {unknown} value @returns {{ text: string, source: string, fine: boolean, risks: string[] } | null}
+ */
+export const cutOf = (value) => {
+  const cut = /** @type {any} */ (value)?.cut
+  if (!cut || !isText(cut.text)) return null
+  return { text: cut.text.trim(), source: isText(cut.source) ? cut.source.trim() : 'notes', fine: cut.fine !== false,
+    risks: (Array.isArray(cut.risks) ? cut.risks : []).filter(isText).slice(0, 5).map((r) => r.trim()) }
+}
+
+/**
+ * The questions the context raises: the constraints read from it, for the product owner to
+ * confirm; a cut it imposes that the slicer judges bad, followed unless the product owner says
+ * otherwise; and whether to keep that cut as the team's rule for the next PRDs.
+ * @param {{ constraints: { text: string, source: string }[], cut: ReturnType<typeof cutOf> }} framed @param {'fr' | 'en'} language
+ * @returns {FramingQuestion[]}
+ */
+export const contextQuestions = ({ constraints, cut }, language) => [
+  constraints.length ? {
+    id: 'constraints', source: /** @type {const} */ ('prd'),
+    question: t(language, `Le contexte donné à côté du PRD impose ${constraints.length} contrainte(s) au découpage : sont-elles justes ?`, `The context given beside the PRD puts ${constraints.length} constraint(s) on the cut: are they right?`),
+    why: constraints.slice(0, 6).map((c) => `${c.text} (${c.source})`).join(' ; '),
+    options: [
+      t(language, 'Oui, le découpage les suit', 'Yes, the cut follows them'),
+      t(language, 'Non : je les corrige dans framing.json (constraints) avant de reprendre', 'No: I fix them in framing.json (constraints) before resuming'),
+    ],
+    recommended: 0,
+  } : null,
+  cut && !cut.fine ? {
+    id: 'imposed-cut', source: /** @type {const} */ ('prd'),
+    question: t(language, `${cut.source} impose ce découpage des épics : « ${cut.text} ». Le suivre ?`, `${cut.source} imposes this cut of the epics: "${cut.text}". Follow it?`),
+    why: t(language, `Le slicer le juge moins bon. Risques : ${cut.risks.join(' ; ') || 'non précisés'}.`, `The slicer judges it worse. Risks: ${cut.risks.join('; ') || 'not stated'}.`),
+    options: [
+      t(language, 'Le suivre : le document fait autorité', 'Follow it: the document has the last word'),
+      t(language, 'S’en écarter : le slicer dit pourquoi dans decisions', 'Depart from it: the slicer says why in decisions'),
+    ],
+    recommended: 0,
+  } : null,
+  cut && cut.source !== TEAM_RULES ? {
+    id: 'team-rule', source: /** @type {const} */ ('prd'),
+    question: t(language, 'Garder ce découpage comme règle de l’équipe pour les prochains PRD ?', 'Keep this cut as the team’s rule for the next PRDs?'),
+    why: t(language, `Il serait ajouté à ${TEAM_RULES}, lu à côté de chaque PRD.`, `It would be added to ${TEAM_RULES}, read beside every PRD.`),
+    options: [t(language, 'Non, pour ce PRD seulement', 'No, for this PRD only'), t(language, `Oui, dans ${TEAM_RULES}`, `Yes, in ${TEAM_RULES}`)],
+    recommended: 0,
+  } : null,
+].filter((q) => q !== null)
+
+/** The product owner chose to keep the imposed cut as the team's rule. @param {Framing} framing */
+export const keepsTeamRule = (framing) => {
+  const question = framing.questions.find((q) => q.id === 'team-rule')
+  return Boolean(question) && framing.answers['team-rule']?.text === question.options[1]
 }
 
 /** @param {Framing} framing */
@@ -213,7 +283,11 @@ export const unanswered = (framing) => framing.questions.filter((q) => !isText(f
  * product owner left it.
  * @param {Framing} framing @returns {string[]}
  */
-export const framingLines = (framing) => framing.questions.map((q) => {
-  const answer = framing.answers[q.id]?.text
-  return isText(answer) ? `${q.question} → ${answer}` : `${q.question} → ${q.options[q.recommended]} (recommended, not answered)`
-})
+export const framingLines = (framing) => [
+  ...framing.questions.map((q) => {
+    const answer = framing.answers[q.id]?.text
+    return isText(answer) ? `${q.question} → ${answer}` : `${q.question} → ${q.options[q.recommended]} (recommended, not answered)`
+  }),
+  ...(framing.constraints ?? []).map((c) => `Constraint (${c.source}): ${c.text}`),
+  ...(framing.cut ? [`Imposed cut of the epics (${framing.cut.source}): ${framing.cut.text} — followed unless the answer above says to depart from it`] : []),
+]

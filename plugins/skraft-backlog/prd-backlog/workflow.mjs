@@ -14,10 +14,10 @@
 //
 // The workflow decides nothing a script or a human decides: every verdict comes from a check.
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses/scripts/review-verdict.mjs'
 import { LENSES, epicSliceBrief, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
-import { framingLines, framingOf, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
+import { TEAM_RULES, constraintsOf, contextQuestions, cutOf, framingLines, framingOf, keepsTeamRule, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { CorrectionFailed, acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
 import { FORMATS, criteriaFor, fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
@@ -77,6 +77,7 @@ export const PRD_BACKLOG_META = Object.freeze({
     'elaborate (default: all), approve?: true to skip the story-map pause, dryRun?: true to simulate the publication, ' +
     'frame?: false to slice without the framing questions, format?: hve to read the requirement families an HVE PRD declares (default: detected), ' +
     'forge?: github or azure-devops (default: from the git remote; with azure-devops, repo is organization/project), ' +
+    'context?: paths of documents or images beside the PRD (md, txt, png, jpg, svg) that bend the cut, notes?: prose for the same, ' +
     'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch }. ' +
     'The agents are the plugin\'s; their model is the session\'s, never an argument.',
   limits: Object.freeze({ maxConcurrentSubagents: MAX_CONCURRENT_AGENTS }),
@@ -90,6 +91,7 @@ export const PRD_BACKLOG_META = Object.freeze({
       epics: { type: 'array', items: { type: 'string' } },
       approve: { type: 'boolean' }, dryRun: { type: 'boolean' }, corrections: { type: 'boolean' }, frame: { type: 'boolean' },
       format: { type: 'string', enum: [...FORMATS] }, forge: { type: 'string', enum: ['github', 'azure-devops'] },
+      context: { type: 'array', items: { type: 'string' } }, notes: { type: 'string' },
     }),
   }),
 })
@@ -101,7 +103,7 @@ const NO_AZURE_TARGET = Object.freeze({ status: 'refused', code: 'no-azure-targe
 const NO_REQUIREMENT = 'args.prd: the PRD defines no functional requirement — an id such as FR-001, US-001 or a prefix its frontmatter declares (requirement_id_prefixes), opening a heading, a bullet, a line, a bold run or the first cell of a table row; the PRD itself is never rewritten'
 
 /** Arguments are model-written: a key the workflow does not take is refused, never echoed. */
-const INVALID_ARGS = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame, format and forge; nothing was started' })
+const INVALID_ARGS = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame, format, forge, context and notes; nothing was started' })
 /** @param {unknown} args */
 const unknownKeys = (args) => Object.keys(args && typeof args === 'object' ? args : {}).some((key) => !Object.hasOwn(PRD_BACKLOG_META.argsSchema.properties, key))
 
@@ -259,7 +261,7 @@ const stages = async (ctx, run, host) => {
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string, slot: ReturnType<typeof slots>,
- *   unavailable?: AgentUnavailable, pausedAt?: string, plans: string[], forge: Forge, published: Record<string, { number: number, url?: string }>,
+ *   unavailable?: AgentUnavailable, pausedAt?: string, plans: string[], forge: Forge, context: string[], notes: string, sources: string, published: Record<string, { number: number, url?: string }>,
  *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
@@ -278,6 +280,8 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
   const slug = typeof ctx.args.slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(ctx.args.slug) ? ctx.args.slug : slugOf(path)
   const dir = join(cwd, '.copilot-tracking', 'skraft-plans', slug, 'backlog')
   if (ctx.args.format !== undefined && !FORMATS.includes(ctx.args.format)) return INVALID_FORMAT
+  const context = await contextOf(cwd, ctx.args)
+  if ('refused' in context) return { status: 'refused', code: 'invalid-args', reason: context.refused }
   const inventory = await ctx.step(`inventory-v2:${slug}`, () => inventoryOf(prdText, ctx.args.format ? { format: ctx.args.format } : {}))
   if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', code: 'no-requirement', reason: NO_REQUIREMENT, unread: inventory.cited.map((c) => `${c.id} (line ${c.lines[0]})`) }
   await write(join(dir, 'inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`)
@@ -298,10 +302,49 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
     progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
     progressWrite: Promise.resolve(), salt: sha256(pass).slice(0, 12), pass, slot: slots(MAX_CONCURRENT_AGENTS),
     prdUrl: forge.name === 'azure-devops' ? relativePrd : repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
-    plans: await plannerPlans(cwd, path),
+    plans: await plannerPlans(cwd, path), context: context.files, notes: context.notes, sources: context.fingerprint,
     published: record((await readJson(join(dir, 'published.json'))).value?.stories),
   }
 }
+
+/** What a context file may be: text the slicer reads, or an image it looks at. */
+const CONTEXT_EXTENSIONS = Object.freeze(['.md', '.markdown', '.txt', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'])
+const MAX_CONTEXT = 10
+const MAX_NOTES = 8000
+
+/**
+ * The context the product owner gives beside the PRD — files of the working copy and prose —
+ * plus the team's slicing rules when the file exists, and their fingerprint: another context
+ * frames the slicing again. A refused value is never echoed.
+ * @param {string} cwd @param {Record<string, any>} args
+ * @returns {Promise<{ files: string[], notes: string, fingerprint: string } | { refused: string }>}
+ */
+const contextOf = async (cwd, args) => {
+  const given = args.context ?? []
+  if (!Array.isArray(given) || given.length > MAX_CONTEXT || !given.every((p) => typeof p === 'string' && p.trim())) {
+    return { refused: `args.context: a list of at most ${MAX_CONTEXT} paths in the working copy; nothing was started` }
+  }
+  if (args.notes !== undefined && (typeof args.notes !== 'string' || args.notes.length > MAX_NOTES)) {
+    return { refused: `args.notes: prose of at most ${MAX_NOTES} characters; nothing was started` }
+  }
+  const files = []
+  for (const path of given) {
+    const absolute = resolve(cwd, path)
+    const inside = relative(cwd, absolute)
+    if (!inside || inside.startsWith('..') || isAbsolute(inside) || !CONTEXT_EXTENSIONS.includes(extname(absolute).toLowerCase()) || !(await isFile(absolute))) {
+      return { refused: `args.context: each path is a file of the working copy (${CONTEXT_EXTENSIONS.join(', ')}); nothing was started` }
+    }
+    files.push(absolute)
+  }
+  const team = join(cwd, ...TEAM_RULES.split('/'))
+  if ((await isFile(team)) && !files.includes(team)) files.push(team)
+  const notes = typeof args.notes === 'string' ? args.notes.trim() : ''
+  const hashes = await Promise.all(files.map(async (f) => `${relative(cwd, f)}:${sha256(await readFile(f, 'latin1'))}`))
+  return { files, notes, fingerprint: files.length || notes ? sha256(JSON.stringify([hashes.sort(), notes])) : '' }
+}
+
+/** @param {string} path */
+const isFile = async (path) => (await stat(path).catch(() => null))?.isFile() === true
 
 /** Where the HVE planner leaves its plan of a PRD, per platform. */
 const PLANNER_PLANS = Object.freeze([['github-issues', 'issues-plan.md'], ['workitems', 'work-items.md'], ['jira-issues', 'issues-plan.md']])
@@ -590,7 +633,7 @@ const slice = async (ctx, run) => {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     await dispatch(ctx, run, 'backlog-slicer', `slice · attempt ${attempt}`, sliceBrief({
       prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, attempt, problems,
-      framing: framing ? framingLines(framing) : [], plans: run.plans.map((path) => display(run, path)),
+      framing: framing ? framingLines(framing) : [], plans: run.plans.map((path) => display(run, path)), context: await contextFiles(ctx, run),
     }), { output })
     const checked = await checkedMap(ctx, run)
     problems = checked.problems
@@ -612,19 +655,43 @@ const frame = async (ctx, run) => {
   if (ctx.args.frame === false) return null
   const path = join(run.dir, 'framing.json')
   let framing = framingOf((await readJson(path)).value)
+  if (framing && (framing.sources ?? '') !== run.sources) {
+    ctx.log('framing: the context beside the PRD changed; the slicing is framed again')
+    framing = null
+  }
   if (!framing) {
     ctx.phase?.('FRAME')
     const questions = prdQuestions(run.inventory, run.prdText, { plans: run.plans.map((path) => display(run, path)) })
-    framing = { version: 1, questions: [...questions, ...(ctx.args.approve === true ? [] : await askSlicer(ctx, run, questions))], answers: {} }
+    const asked = ctx.args.approve === true && !hasContext(run) ? { questions: [], constraints: [], cut: null } : await askSlicer(ctx, run, questions)
+    framing = { version: 1, questions: [...questions, ...contextQuestions(asked, run.inventory.language), ...(ctx.args.approve === true ? [] : asked.questions)],
+      answers: {}, constraints: asked.constraints, cut: asked.cut, ...(run.sources ? { sources: run.sources } : {}) }
     await write(path, `${JSON.stringify(framing, null, 2)}\n`)
-    ctx.log(`framing: ${framing.questions.length} question(s) in ${display(run, path)}`)
+    ctx.log(`framing: ${framing.questions.length} question(s), ${framing.constraints.length} constraint(s) in ${display(run, path)}`)
   }
   if (unanswered(framing).length && ctx.args.approve !== true) {
     await pause(ctx, run, 'framing-answered')
     framing = framingOf((await readJson(path)).value) ?? framing
   }
+  if (keepsTeamRule(framing) && framing.cut) await keepTeamRule(ctx, run, framing.cut)
   ctx.phase?.('SLICE')
   return framing
+}
+
+/** @param {Run} run */
+const hasContext = (run) => run.context.length > 0 || run.notes !== ''
+
+/**
+ * The imposed cut, added once to the team's slicing rules: read beside every next PRD.
+ * @param {WorkflowContext} ctx @param {Run} run @param {{ text: string, source: string }} cut
+ */
+const keepTeamRule = async (ctx, run, cut) => {
+  const file = join(run.cwd, ...TEAM_RULES.split('/'))
+  const current = await readFile(file, 'utf8').catch(() => '')
+  if (current.includes(cut.text)) return
+  await ensureDir(ctx, run, dirname(file))
+  const head = current ? current.replace(/\s*$/, '\n') : '# Slicing rules\n\nThe cut of the epics the team imposes, read beside every PRD by skraft-prd-backlog.\n'
+  await write(file, `${head}\n- ${cut.text} (from ${cut.source}, ${run.now().slice(0, 10)})\n`)
+  ctx.log(`team rule kept in ${TEAM_RULES}`)
 }
 
 /** @param {WorkflowContext} ctx @param {Run} run @param {import('./framing.mjs').FramingQuestion[]} asked */
@@ -632,10 +699,24 @@ const askSlicer = async (ctx, run, asked) => {
   const output = join(run.dir, 'framing-questions.json')
   await dispatch(ctx, run, 'backlog-slicer', 'frame', frameBrief({
     prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, asked: asked.map((q) => q.question),
+    context: await contextFiles(ctx, run),
   }), { output })
   const read = await readJson(output)
   await rm(output, { force: true })
-  return 'value' in read ? slicerQuestions(read.value) : []
+  const value = 'value' in read ? read.value : null
+  return { questions: slicerQuestions(value), constraints: hasContext(run) ? constraintsOf(value) : [], cut: hasContext(run) ? cutOf(value) : null }
+}
+
+/**
+ * The context files as the agents read them: the product owner's notes written to a file of
+ * the run (data goes through files), then the documents and images.
+ * @param {WorkflowContext} ctx @param {Run} run @returns {Promise<string[]>}
+ */
+const contextFiles = async (ctx, run) => {
+  if (!hasContext(run)) return []
+  const notes = join(run.dir, 'notes.md')
+  if (run.notes) await write(notes, `${run.notes}\n`)
+  return [...(run.notes ? [notes] : []), ...run.context].map((path) => display(run, path))
 }
 
 /**
@@ -684,7 +765,7 @@ const cutEpic = async (ctx, run, epic, framing) => {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     await dispatch(ctx, run, 'backlog-slicer', `slice ${epic} · attempt ${attempt}`, epicSliceBrief({
       prd: run.prd, inventory: join(run.dir, 'inventory.json'), map: join(run.dir, 'story-map.json'), epic, output,
-      language: run.inventory.language, attempt, problems, framing, plans: run.plans.map((path) => display(run, path)),
+      language: run.inventory.language, attempt, problems, framing, plans: run.plans.map((path) => display(run, path)), context: await contextFiles(ctx, run),
     }), { output })
     if (run.unavailable) return []
     const tried = await triedCut(run, epic, output)
@@ -758,7 +839,7 @@ const prepareStoriesDir = async (ctx, run) => {
 
 /** What the workflow writes at the root of the backlog directory; anything else is stray. */
 const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json', 'story-map.md', 'plan.json', 'published.json',
-  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'framing.json', 'stories', 'plans', 'reviews', 'corrections', 'slices']))
+  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'framing.json', 'notes.md', 'stories', 'plans', 'reviews', 'corrections', 'slices']))
 
 /**
  * Removes, and logs, the files no step of the workflow plans: at the root of the backlog, and in
