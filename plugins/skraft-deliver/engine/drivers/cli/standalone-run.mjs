@@ -1,4 +1,4 @@
-import { basename, dirname } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { appendFile, mkdir } from 'node:fs/promises'
 import { createNodeAdapters } from '../../infrastructure/node-adapters.mjs'
 import { createArchitectureForge } from '../../infrastructure/architecture/forge.mjs'
@@ -40,18 +40,17 @@ const unexpected = async (services, console, error) => {
   try {
     const adapters = createNodeAdapters({ cwd: services.cwd, pluginRoot: services.pluginFolder() })
     const slug = await adapters.activePipeline.current()
-    if (slug === null) return output(console, { status: 'refused', code: 'unexpected-error', reason: 'Unexpected failure before an active run could be opened; no step was approved.' })
-    const path = await privateDiagnostic(adapters, slug, error)
+    const path = slug === null ? join(services.cwd, '.copilot-tracking', 'skraft-deliver-diagnostics', 'logs', 'unexpected.log') : adapters.files.location(slug, 'logs/unexpected.log')
+    await privateDiagnostic(path, error)
+    if (slug === null) return output(console, { status: 'refused', code: 'unexpected-error', reason: `Unexpected failure before an active run could be opened; private diagnostic: ${path}` })
     return output(console, { status: 'blocked', slug, code: 'unexpected-error', reason: `Unexpected failure; private diagnostic: ${path}` })
   } catch {
     return output(console, { status: 'refused', code: 'unexpected-log-unwritable', reason: 'Unexpected failure and the private diagnostic log could not be written; no step was approved.' })
   }
 }
-const privateDiagnostic = async (adapters, slug, error) => {
-  const path = adapters.files.location(slug, 'logs/unexpected.log')
-  await mkdir(dirname(path), { recursive: true })
-  await appendFile(path, `${error instanceof Error ? error.stack : String(error)}\n`)
-  return path
+const privateDiagnostic = async (path, error) => {
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 })
+  await appendFile(path, `${error instanceof Error ? error.stack : String(error)}\n`, { mode: 0o600 })
 }
 const output = (console, outcome) => {
   console.out(JSON.stringify(outcome))
