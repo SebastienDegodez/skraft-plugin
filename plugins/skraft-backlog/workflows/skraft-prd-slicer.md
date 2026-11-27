@@ -67,12 +67,12 @@ imports:
     with:
       target: copilot
       packages:
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-slicing#v2.0.0-alpha.113
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/sprint-planning#v2.0.0-alpha.113
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-refinement#v2.0.0-alpha.113
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/story-elaboration#v2.0.0-alpha.113
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/planning-review-criteria#v2.0.0-alpha.113
-        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-review-lenses#v2.0.0-alpha.113
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-slicing#v2.0.0-alpha.114
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/sprint-planning#v2.0.0-alpha.114
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/issue-refinement#v2.0.0-alpha.114
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/story-elaboration#v2.0.0-alpha.114
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/planning-review-criteria#v2.0.0-alpha.114
+        - SebastienDegodez/skraft-plugin/plugins/skraft-backlog/skills/backlog-review-lenses#v2.0.0-alpha.114
 
 # Deterministic steps outside the firewall: the dynamic workflow runs here, headless, with its own
 # agents; the agent of this workflow only posts the comment the steps rendered.
@@ -81,7 +81,7 @@ pre-agent-steps:
     uses: actions/checkout@v5
     with:
       repository: SebastienDegodez/skraft-plugin
-      ref: v2.0.0-alpha.113
+      ref: v2.0.0-alpha.114
       path: .skraft/skraft-plugin
       persist-credentials: false
   - name: Install the skraft-prd-backlog dynamic workflow and its agents
@@ -158,7 +158,7 @@ safe-outputs:
         - uses: actions/checkout@v5
           with:
             repository: SebastienDegodez/skraft-plugin
-            ref: v2.0.0-alpha.113
+            ref: v2.0.0-alpha.114
             path: .skraft/skraft-plugin
             persist-credentials: false
         - uses: actions/download-artifact@v4

@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.114](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.113...v2.0.0-alpha.114) (2026-11-27)
+
+### ✨ Features
+
+* **backlog:** skraft-prd-slicer, a GitHub Agentic Workflow that slices the PRD of an issue ([#679](https://github.com/SebastienDegodez/skraft-plugin/issues/679)) ([aa4406c](https://github.com/SebastienDegodez/skraft-plugin/commit/aa4406c6c39a8df86dd36acefb7d8fb7943ebcd4))
+
 ## [2.0.0-alpha.113](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.112...v2.0.0-alpha.113) (2026-11-27)
 
 ### ✨ Features
