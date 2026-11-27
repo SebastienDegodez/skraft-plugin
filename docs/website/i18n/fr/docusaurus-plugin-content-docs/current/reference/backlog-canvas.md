@@ -122,6 +122,6 @@ Extrait du PRD de démonstration :
 
 ## Voir aussi <!-- #see-also -->
 
-- [Transformer un PRD en backlog GitHub](../how-to/prd-to-backlog.md)
+- [Transformer un PRD en backlog (GitHub ou Azure Boards)](../how-to/prd-to-backlog.md)
 - [Raffiner une issue du backlog](../how-to/refine-backlog.md)
 - [Gates : DISCUSS](./gates.md#discuss)

@@ -48,6 +48,15 @@ test('a map is refused for an uncovered FR, an unknown id, a misplaced cover, a 
   assert.ok(problems.includes('FR-003 is both deferred and covered by a story'))
 })
 
+test('covering an id the PRD names but never defines is a warning, never a problem that sends the slicer round again', () => {
+  const map = storyMap()
+  map.epics[1].stories[0].covers.push('NFR-404')
+  map.epics[1].covers.push('NFR-404')
+  const { problems, warnings } = checkStoryMap(map, { ...inventory, cited: [{ id: 'NFR-404', lines: [12] }] })
+  assert.deepEqual(problems, [])
+  assert.ok(warnings.includes('EP-002-S01 covers NFR-404, which the PRD names but never defines'))
+})
+
 test('a map is refused for a cycle, a dependency on a later milestone, a missing tracer and an effort above 8', () => {
   const map = storyMap()
   map.epics[0].stories[1].after = ['EP-001-S03']

@@ -1,11 +1,11 @@
 ---
 name: backlog-slicing
-description: Use when an approved PRD must be cut into epics and stories before any story is written — the story map the skraft-prd-backlog workflow checks and a human approves. Covers epic boundaries, the tracer bullet, real prerequisites versus restated order, milestones from the PRD's release plan, coverage of every requirement id, and the story-map.json schema.
+description: Use when a PRD must be cut into epics and stories before any story is written — the story map the skraft-prd-backlog workflow checks and a human approves. Covers epic boundaries, the tracer bullet, real prerequisites versus restated order, milestones from the PRD's release plan, coverage of every requirement id, and the story-map.json schema.
 ---
 
 # Backlog Slicing
 
-You turn a PRD into a story map: epics, their stories in build order, milestones, and the
+You turn a PRD into a story map — whatever tool wrote it, the PRD is read-only and its format is never a question: epics, their stories in build order, milestones, and the
 requirements you defer. You write one file, `story-map.json`; a script checks it and a human
 approves it before any story is written. Write no story detail: one sentence per story.
 
@@ -13,17 +13,40 @@ This skill adds only what a PRD-wide map needs. Load `sprint-planning` for MoSCo
 naming and the dependency graph, and `issue-refinement` for personas, splitting patterns and the
 effort scale; follow them unless a rule below says otherwise.
 
+## Two levels
+
+- **Level 1, epics** (`Slice the PRD into epics`): write every epic of the PRD — id, title,
+  outcome, doneWhen, covers — the milestones, `deferred` and `decisions`, each epic with
+  `stories: []`. Every FR goes in the `covers` of exactly one epic or in `deferred`. The product
+  owner approves the epics.
+- **Level 2, one epic** (`Cut epic EP-… into stories`): write only `{ "stories": [ … ] }` for
+  that epic, the approved map unchanged. Its stories together cover every FR the epic covers and
+  nothing outside it; `after` names stories of this epic or of an epic already cut.
+- Another planner's plan (HVE) named in the brief proposes epics: keep them; each one merged,
+  split or dropped is one `decisions` line saying why.
+
 ## Inputs
 
-- The PRD.
-- `inventory.json`: every requirement id the PRD defines (`FR-###`, `NFR-###`, `AC-###`,
-  `CON-###`, `GOAL-###`) with the epic heading each FR sits under. Every `FR` id must end up in
-  one story's `covers` or in `deferred` with a reason. Never invent an id.
+- The PRD, read-only: never ask to reformat, restructure or renumber it.
+- `inventory.json`: what a script read in the PRD, ids kept as written (`FR-001`, `FR-1`,
+  `US-001`, a prefix of the PRD's frontmatter). `kind` gives the family: `FR` (must be placed),
+  `NFR`, `AC`, `CON`, `GOAL`, `DD` (a design decision: bounds the cut, never covered); `epic` the
+  epic each FR sits under; `links` the ids its definition names (an AC's FRs); `epicSource` where
+  the epics come from; `cited` the ids the PRD names without defining them; `mvp` its first-release
+  cut. Every `kind: FR` id ends up in one story's `covers` or in `deferred` with a reason. Never
+  invent an id; an id listed in `cited` goes in one `decisions` line, never in a question.
 
 ## Epics
 
-- One epic per PRD epic heading (`EP-###`) when the PRD has them; keep its id and title.
-  Without epic headings: one epic per capability delivered and deployed together.
+- The PRD proposes epics (`epicSource` `ep`, `feat` or `features`): one epic per proposed epic;
+  keep its id and title. Not following one (a merge, a split, a moved FR) is one `decisions`
+  line saying which and why.
+- The PRD proposes none (`epicSource: none`): one epic per capability delivered and deployed
+  together. A module, a service or a bounded context is an epic only when it also deploys on its
+  own. One epic until a distinct outcome or an early usable part justifies a cut. Number them
+  `EP-001`… in build order. The framing answer on epics wins.
+- Every epic delivers to production. An FR two epics need belongs to the epic that owns it; the
+  other epic touches it through an early story for the shared part; say so in `decisions`.
 - `covers`: every id its stories cover, plus the NFR and CON ids that bind it.
 - `outcome`: one sentence — for whom, what changes.
 - `doneWhen`: 2 to 5 end checks, one of them production delivery.
@@ -33,7 +56,8 @@ effort scale; follow them unless a rule below says otherwise.
 ## Stories
 
 - A story is one step toward its epic's `doneWhen`. `effort` is the time one developer assisted
-  by AI needs (`issue-refinement`): 1 ≈ 2 h, 2 ≈ ½ day, 3 ≈ 1 day; 5 and 8 stay allowed but are warned: prefer a split with a
+  by AI needs (`issue-refinement`): 1 ≈ 2 h (only the tracer, or a setup step a human does),
+  2 ≈ ½ day, 3 ≈ 1 day; 5 and 8 stay allowed but are warned: prefer a split with a
   pattern of `issue-refinement`; never shrink it ("for now", "placeholder", "simplified",
   "wired later" is a second story).
 - Neither too big nor too small: the smallest slice that still delivers a value a user can check
@@ -46,7 +70,7 @@ effort scale; follow them unless a rule below says otherwise.
 - The first story of each epic is its **tracer bullet**: the thinnest path through every layer the
   epic touches, demonstrable when done. You choose the order; the workflow sets `tracer: true` on
   the first story and removes it elsewhere. Then the story you are least sure of.
-- `covers`: the FR, NFR and AC ids this story delivers. Split an FR across stories only when each
+- `covers`: the FR, NFR and AC ids this story delivers (an AC goes with the FRs in its `links`). Split an FR across stories only when each
   delivers a distinct part; say which part in its `description`.
 - `persona`: the specific role from the PRD's personas who benefits (`issue-refinement`).
 - `description`: one sentence, what works when done.
@@ -68,8 +92,8 @@ The graph follows `sprint-planning` (one direction, no cycle). In addition:
 ## Milestones
 
 - One milestone per release slice of the PRD (lots, phases, increments): the PRD's slices win
-  over the milestone scope of `sprint-planning`. Without slices, cut by demonstrable user
-  journey segment.
+  over the milestone scope of `sprint-planning`. With an `mvp` in the inventory, its `inScope`
+  FRs make the first milestone. Without either, cut by demonstrable user journey segment.
 - `id`: short and stable (`L1`); `title`: the `sprint-planning` naming (`v0.1-socle`); `dueOn`:
   `YYYY-MM-DD` when the PRD dates it; `description`: one sentence.
 
@@ -82,11 +106,13 @@ The graph follows `sprint-planning` (one direction, no cycle). In addition:
 
 ## Framing
 
-Before the first cut the workflow asks the product owner the questions the PRD raises (channels
-of an epic, milestones, dense epics, where the NFRs go) and the ones you add when it asks you to
+Before the first cut the workflow asks the product owner the questions the PRD raises (a PRD in
+draft, ids named but never defined, how to cut epics the PRD does not propose, channels of an
+epic, milestones, dense epics, where the NFRs go) and the ones you add when it asks you to
 frame: the MVP scope, the tracer of an epic, an ambiguous order, one capability or several. Each
 has options and a recommendation. The slice brief lists every question with its answer, or with
-the recommendation when none was given: follow them.
+the recommendation when none was given: follow them. A PRD in draft sliced anyway: every story's
+`description` ends with the note the answer names.
 
 ## Schema
 

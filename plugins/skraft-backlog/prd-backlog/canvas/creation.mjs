@@ -98,6 +98,7 @@ export const runSelection = async ({ raw, assessment, ids, repo, gh, dryRun }) =
   const selection = selectionOf(assessment, ids)
   const refuse = (reason) => ({ status: /** @type {const} */ ('refused'), reason, selection })
   if (!raw.plan) return refuse('no plan.json yet: the workflow has not reached its handoff')
+  if (/** @type {any} */ (raw.plan).forge === 'azure-devops') return refuse('Azure Boards: the work items are created by the skraft-prd-backlog workflow at its handoff, not from the canvas')
   if (!repo) return refuse('no repository to publish to')
   if (selection.missing.length) return refuse(`${selection.missing.length} story(ies) cannot be created`)
   if (!selection.stories.length) return refuse('nothing to create')

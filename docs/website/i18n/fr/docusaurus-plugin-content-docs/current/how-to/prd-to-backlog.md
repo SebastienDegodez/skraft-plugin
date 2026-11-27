@@ -1,13 +1,13 @@
 ---
-title: "Transformer un PRD en backlog GitHub"
-description: "Lancer skraft-prd-backlog sur un PRD approuvé, répondre au cadrage, approuver la carte, valider le handoff, publier sur GitHub sans doublon."
+title: "Transformer un PRD en backlog (GitHub ou Azure Boards)"
+description: "Lancer skraft-prd-backlog sur un PRD tel qu'il est écrit, approuver les epics puis les stories, publier sur GitHub ou Azure Boards sans doublon."
 persona: tech-lead
 ---
 
-# Transformer un PRD en backlog GitHub
+# Transformer un PRD en backlog (GitHub ou Azure Boards)
 
-Passez d'un PRD approuvé à des epics et des stories prêtes sur GitHub, avec leurs dépendances et
-leurs milestones.
+Passez d'un PRD, tel que l'outil qui l'a écrit l'a laissé, à des epics et des stories prêtes sur
+GitHub ou Azure Boards, avec leurs dépendances et leurs milestones.
 
 ## Prérequis
 
@@ -16,9 +16,8 @@ leurs milestones.
   workflow `skraft-prd-backlog` est un workflow dynamique de Copilot CLI.
 - `gh` connecté (`gh auth status`) avec le droit de créer des issues, labels et milestones sur le
   dépôt cible.
-- Le PRD dans le dépôt, écrit sur le gabarit canonique : chaque exigence en puce
-  `` * `FR-001` : <énoncé> `` (de même `NFR-`, `AC-`, `CON-`, `GOAL-`), chaque epic en titre
-  `### EP-001 : <titre>`.
+- Le PRD dans le dépôt, tel que l'outil qui l'a écrit l'a laissé (skraft, `prd-builder` de HVE,
+  BMad ou à la main) : skraft le lit et ne le réécrit jamais.
 - Aucun `skraft-config.json` : `skraft-backlog` n'en lit aucune clé, donc il tourne dans un dépôt que `/skraft-init` n'a jamais touché. Le refus `skraft is not initialised` n'appartient qu'au pipeline d'ingénierie.
 
 ## 1. Vérifier le PRD
@@ -30,8 +29,19 @@ leurs milestones.
 * `FR-002` : Le client paie sa commande par carte.
 ```
 
-Une exigence `FR` appartient à l'epic du titre placé au-dessus d'elle. Un PRD sans aucune
-exigence `FR-###` est refusé.
+Une exigence est définie là où son id ouvre un titre, une puce, une ligne, un passage en gras ou
+la première cellule d'une ligne de tableau : `` * `FR-001` : … ``, `FR-001: …`,
+`**FR-1 Titre.** …`, `| FR-001 | … |`. Un id qui n'apparaît que dans une liste ou une matrice de
+traçabilité est une référence. En plus de `FR`, `US` compte comme exigence, et le frontmatter
+d'un PRD HVE (`requirement_id_prefixes`) ajoute ses propres préfixes.
+
+Les epics viennent du PRD quand il en propose : titres `### EP-001 : …`, features `FEAT-###`, ou
+titres sous une section de features. Quand il n'en propose aucune, le cadrage explique la
+découpe au product owner : une epic par capacité livrée et déployée ensemble (un bounded context
+n'est une epic que s'il se déploie seul). Une exigence `FR` appartient à l'epic sous laquelle
+elle est écrite. Un PRD encore en brouillon, ou qui cite une exigence sans jamais la définir,
+devient une question de cadrage : le PRD n'est jamais modifié. Un PRD sans aucune exigence est
+refusé.
 
 ## 2. Lancer le workflow
 
@@ -50,6 +60,8 @@ Run the skraft-prd-backlog workflow with prd docs/prds/commande-en-ligne.md
 | `approve` | `true` : ni questions du découpeur au cadrage, ni pause sur la carte des stories |
 | `dryRun` | `true` : simuler la publication |
 | `frame` | `false` : découper sans questions de cadrage |
+| `format` | `hve` : lire les familles d'exigences que déclare un PRD HVE ; par défaut : détecté |
+| `forge` | `github` ou `azure-devops` ; par défaut : d'après le remote git. Avec `azure-devops`, `repo` vaut `organisation/projet` |
 | `corrections` | `true` : appliquer les corrections acceptées dans le canvas (étape 5) |
 
 Toute autre clé est refusée (`invalid-args`) et rien ne démarre. Les fichiers de travail sont
@@ -57,7 +69,7 @@ sous `.copilot-tracking/skraft-plans/<slug>/backlog/`.
 
 ## 3. Répondre au cadrage, puis approuver la carte
 
-Le run s'arrête deux fois avant d'écrire les stories. Après chaque réponse, reprenez le workflow
+Le run s'arrête trois fois avant d'écrire les stories. Après chaque réponse, reprenez le workflow
 en pause depuis `/workflows`.
 
 1. **Cadrage** (`framing-answered`) : les questions sont dans `framing.json` (découpage des
@@ -70,8 +82,14 @@ en pause depuis `/workflows`.
    ```
 
    Une question sans réponse prend l'option recommandée.
-2. **Carte des stories** (`story-map-approved`) : relisez `story-map.md`. Pour changer le
-   découpage, modifiez `story-map.json` : la reprise le revérifie tel qu'il est. Ses tableaux : [story-map.md](../reference/backlog-canvas.md#story-map).
+2. **Epics** (`story-map-approved`) : relisez `story-map.md`. Le découpeur n'a découpé le PRD
+   qu'en epics, avec ce que chacune couvre et les milestones ; pas encore de story. Pour changer
+   la découpe, modifiez `story-map.json` : la reprise le revérifie tel qu'il est. Ses tableaux : [story-map.md](../reference/backlog-canvas.md#story-map).
+   Un plan que le planner HVE a laissé pour le PRD donne les epics dont le découpeur part ;
+   chacune qu'il ne suit pas a une ligne dans **Decisions**.
+3. **Stories** (`stories-approved`) : chaque epic du run (`epics`, par défaut toutes) est
+   découpée en stories par un agent neuf, une epic après l'autre. Relisez `story-map.md`,
+   modifiez `story-map.json` si besoin, reprenez.
 
 ## 4. Laisser écrire et relire les stories
 
@@ -84,6 +102,19 @@ corriger. Chaque compteur, statut et onglet : [Canvas du backlog](../reference/b
 ![Canvas skraft backlog, onglet Suivi, pendant ELABORATE : « 8 agents au travail », un story-writer par story avec sa tentative et depuis quand il tourne, puis 3 épics, 16 stories, 9/16 fiches écrites, aucune refusée pour l'instant](/img/screenshots/fr/backlog-canvas-elaborate.png)
 
 *Figure 1 — ELABORATE sur l'extrait d'un vrai PRD rédigé en français ([dépôt de démonstration](https://github.com/SebastienDegodez/skraft-demo-event-storming)) : huit agents `story-writer` au travail.*
+
+**Pour le product owner : une epic à la fois, dans une session neuve.** Sur un gros PRD,
+approuvez les epics une fois, puis découpez et élaborez une epic par run, chaque run dans une
+nouvelle session Copilot pour que son contexte reparte propre : `epics: ["EP-001"]`, puis
+`["EP-002"]`… La carte reste la référence : chaque run reprend `story-map.json` et `framing.json`
+tels qu'ils sont (reprenez la pause des epics sans rien changer), et crée dès que son epic est
+prête. Une story publiée par une session précédente compte comme prête : une story qui l'attend
+n'est pas retenue.
+
+Redécoupez régulièrement, quand le PRD ou ce que l'équipe a appris change la découpe : supprimez
+`story-map.json` (et `framing.json` pour reposer les questions de cadrage), puis relancez dans une
+nouvelle session. Les issues déjà créées ne sont jamais modifiées ni fermées, et une story que la
+nouvelle carte renomme est créée à nouveau : ne redécoupez que les epics pas encore publiées.
 
 ## 5. Corriger une story retenue (si besoin)
 
@@ -129,11 +160,59 @@ permet aussi de marquer chaque story relue et de créer un epic dès qu'il est p
 relue**, **Aperçu à blanc**, **Créer les issues**) ; ces actions sont réservées à la personne,
 jamais à l'agent.
 
+## Publier dans Azure DevOps Boards
+
+Avec un remote git sur `dev.azure.com` (ou `forge: azure-devops` et `repo: organisation/projet`),
+le même run publie dans Azure Boards par `az`. Le process du projet décide des cartes :
+
+| Process | PRD | Epic de la carte | Story |
+|---|---|---|---|
+| Agile | Epic | Feature | User Story |
+| Scrum | Epic | Feature | Product Backlog Item |
+| CMMI | Epic | Feature | Requirement |
+| Basic | — | Epic | Issue |
+
+Chaque story est l'enfant de sa Feature et la suivante des stories qu'elle attend (lien
+`Predecessor`) ; sa priorité, son effort et son statut sont des tags, jamais des Story Points ni
+une Priority. Le handoff est sous `.copilot-tracking/workitems/prds/<slug>/handoff.md`.
+
+### Connexion
+
+C'est vous qui vous connectez, une fois, dans votre propre terminal, avant de lancer le run —
+comme `gh auth login` pour GitHub. skraft ne se connecte jamais, ne demande aucun jeton et n'en
+lit aucun : il appelle `az`, qui utilise votre session. Aucun personal access token (PAT) n'est
+nécessaire sur un poste de développeur.
+
+```bash
+az extension add --name azure-devops
+az login
+```
+
+Le run vérifie l'accès avant qu'aucun agent ne travaille : déconnecté, il s'arrête tout de suite
+et demande de lancer `az login`. Un PAT ne sert qu'à un utilisateur invité de l'organisation,
+pour qui seul `az devops login --organization https://dev.azure.com/<org>` fonctionne (vous collez
+le PAT quand il le demande ; `az` le garde), ou à une automatisation, où `az` le lit dans la
+variable d'environnement `AZURE_DEVOPS_EXT_PAT` ; dans Azure Pipelines, préférez une service
+connection. Dans tous les cas, c'est vous qui le lancez, pas skraft.
+Le compte connecté crée des work items dans le projet (Contributors), et ne crée des itérations
+que si vous cochez la case ci-dessous (un droit souvent réservé aux administrateurs du projet).
+
+### Itérations
+
+Un milestone est une itération qui existe déjà, retrouvée par son nom. Une itération manquante
+n'est créée que si vous cochez `Create the missing iterations` dans le handoff, et seulement avec
+le droit de créer des itérations. Sinon, ou si la création est refusée, ses cartes portent le tag
+`milestone/<titre>` et le résultat nomme les itérations à créer à la main. Le canvas ne crée pas
+de cartes Azure Boards : c'est le workflow, à son handoff.
+
 ## Dépannage
 
 | Message | Action |
 |---|---|
-| `args.prd: the PRD defines no FR-### requirement` | Écrire les exigences en puces `` * `FR-001` : … ``. |
+| `Azure DevOps: pass args.repo as organization/project, …` | Passer `repo: organisation/projet`, ou lancer depuis une copie de travail dont le remote est sur `dev.azure.com`. |
+| `az cannot read the Azure DevOps project: sign in once in a terminal with az login …` | Lancer `az login` dans votre terminal (ou définir `AZURE_DEVOPS_EXT_PAT` dans une automatisation), vérifier l'extension `azure-devops` et `repo`, puis relancer. |
+| `az: … failed` | La session a expiré ou un droit manque : refaire `az login`, puis reprendre. |
+| `args.prd: the PRD defines no functional requirement — …` | Vérifier que chaque id d'exigence ouvre sa ligne, sa puce, son titre, son passage en gras ou sa ligne de tableau ; pour un PRD HVE à préfixes propres, passer `format: hve`. Le PRD lui-même n'est jamais réécrit. |
 | `agents not registered in this session: …` | Redémarrer la session Copilot, ou réinstaller `skraft-backlog`, puis relancer. |
 | `SLICE: N problem(s) left after 3 attempts` | Lire les problèmes listés, corriger `story-map.json` à la main, relancer. |
 | `args.epics: an epic it names is not in the story map` | Reprendre les identifiants `EP-…` de `story-map.json`. |

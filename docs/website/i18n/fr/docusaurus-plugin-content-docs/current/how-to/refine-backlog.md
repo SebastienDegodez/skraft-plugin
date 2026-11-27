@@ -102,7 +102,7 @@ label ou commente la commande.
 
 ## Étapes suivantes <!-- #next-steps -->
 
-- [Transformer un PRD en backlog GitHub](./prd-to-backlog.md)
+- [Transformer un PRD en backlog (GitHub ou Azure Boards)](./prd-to-backlog.md)
 - [Le backlog : de l'idée à la story prête](../explanation/backlog.md) —
   pourquoi un commentaire et jamais une issue réécrite.
 - [Gates : DISCUSS](../reference/gates.md#discuss) — critères INVEST,

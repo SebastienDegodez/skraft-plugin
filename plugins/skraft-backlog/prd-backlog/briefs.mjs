@@ -13,19 +13,27 @@ const bullets = (items) => items.map((item) => `- ${item}`).join('\n')
 /** The fields of a story of the map, as the slicer writes them. */
 const STORY_FIELDS = Object.freeze(['id', 'title', 'persona', 'description', 'covers', 'after', 'milestone', 'moscow', 'effort'])
 
+/** The plans another planner (HVE) left for this PRD: their epics are proposals the slicer keeps or explains. @param {string[]} plans */
+const plannerLines = (plans) => (plans.length ? [
+  '',
+  `Another planner proposed epics for this PRD: ${plans.join(', ')}. Keep its epics; for each one you merge, split or drop, write one \`decisions\` line saying why.`,
+] : [])
+
 /**
- * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[], framing?: string[] }} brief
- * framing: the framing questions with the product owner's answers
+ * Level 1 of the slicing: every epic of the PRD, with what it covers, and no story yet.
+ * @param {{ prd: string, inventory: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[], framing?: string[], plans?: string[] }} brief
+ * framing: the framing questions with the product owner's answers; plans: another planner's plan files
  */
-export const sliceBrief = ({ prd, inventory, output, language, attempt, problems, framing = [] }) => lines([
-  `Slice the PRD into epics and stories (attempt ${attempt}).`,
-  'Load the skill `backlog-slicing` and follow it; it loads `sprint-planning` and `issue-refinement`.',
+export const sliceBrief = ({ prd, inventory, output, language, attempt, problems, framing = [], plans = [] }) => lines([
+  `Slice the PRD into epics (attempt ${attempt}): level 1, no story yet.`,
+  'Load the skill `backlog-slicing` and follow it; it loads `sprint-planning`.',
   '',
   'Read:',
   bullets([`PRD: ${prd}`, `Requirement inventory (every id you must place): ${inventory}`]),
+  ...plannerLines(plans),
   '',
-  `Write only: ${output} — a story map following the schema of the skill. Its directory exists; write no other file.`,
-  `Every story carries exactly these fields: ${STORY_FIELDS.join(', ')} (tracer is set by the workflow). \`moscow\` is must, should or could on every story, even when the milestones already give the order.`,
+  `Write only: ${output} — a story map following the schema of the skill, every epic with \`stories: []\`: each epic is cut into stories later, one at a time. Its directory exists; write no other file.`,
+  'Every FR id of the inventory goes in the `covers` of exactly one epic or in `deferred`; an epic also lists the NFR and CON ids that bind it.',
   `Write every title, outcome, description, reason and decision in ${languageOf(language)}, the language of the PRD.`,
   languageRule(language),
   framing.length ? '' : null,
@@ -35,15 +43,43 @@ export const sliceBrief = ({ prd, inventory, output, language, attempt, problems
   problems.length ? `The previous story map at ${output} was refused. Fix exactly these problems, keep everything else and every id:` : null,
   problems.length ? bullets(problems) : null,
   '',
-  'Answer with one line: the number of epics and stories written.',
+  'Answer with one line: the number of epics written.',
+])
+
+/**
+ * Level 2 of the slicing: the stories of one epic, by a fresh agent, the approved epics fixed.
+ * @param {{ prd: string, inventory: string, map: string, epic: string, output: string, language: 'fr' | 'en', attempt: number, problems: string[], framing?: string[], plans?: string[] }} brief
+ */
+export const epicSliceBrief = ({ prd, inventory, map, epic, output, language, attempt, problems, framing = [], plans = [] }) => lines([
+  `Cut epic ${epic} into stories (attempt ${attempt}): level 2, this epic only.`,
+  'Load the skill `backlog-slicing` and follow it; it loads `sprint-planning` and `issue-refinement`.',
+  '',
+  'Read:',
+  bullets([`PRD: ${prd}`, `Requirement inventory: ${inventory}`, `Approved story map (the epics are fixed; ${epic} gives the covers its stories share): ${map}`]),
+  ...plannerLines(plans),
+  '',
+  `Write only: ${output} — { "stories": [ … ] }, the stories of ${epic} in build order. Its directory exists; write no other file; never change the story map.`,
+  `Every story carries exactly these fields: ${STORY_FIELDS.join(', ')} (tracer is set by the workflow). Ids read ${epic}-S01, ${epic}-S02… \`moscow\` is must, should or could on every story.`,
+  `Together the stories cover every FR id ${epic} lists in \`covers\`; a story covers nothing outside it. \`after\` names stories of ${epic} or of an epic already cut, never one of an epic still without stories.`,
+  `Write every title, description and decision in ${languageOf(language)}, the language of the PRD.`,
+  languageRule(language),
+  framing.length ? '' : null,
+  framing.length ? 'The product owner framed the slicing. Follow each answer:' : null,
+  framing.length ? bullets(framing) : null,
+  problems.length ? '' : null,
+  problems.length ? `The previous stories at ${output} were refused. Fix exactly these problems, keep everything else and every id:` : null,
+  problems.length ? bullets(problems) : null,
+  '',
+  `Answer with one line: the number of stories written for ${epic}.`,
 ])
 
 /**
  * @param {{ prd: string, map: string, story: string, epic: string, output: string, language: 'fr' | 'en',
  *   attempt: number, problems: string[], findings: string[], answers?: string[] }} brief
  * answers: the product owner's answers to open questions of the story, as "Q1: question → answer"
+ * criteria: the PRD's own acceptance criteria for what the story covers, as "AC-001: statement"
  */
-export const storyBrief = ({ prd, map, story, epic, output, language, attempt, problems, findings, answers = [] }) => lines([
+export const storyBrief = ({ prd, map, story, epic, output, language, attempt, problems, findings, answers = [], criteria = [] }) => lines([
   `Write story ${story} of epic ${epic} (attempt ${attempt}).`,
   'Load the skill `story-elaboration` and follow it; it loads `issue-refinement` for the story rules.',
   '',
@@ -55,6 +91,9 @@ export const storyBrief = ({ prd, map, story, epic, output, language, attempt, p
   `Each entry of \`dependencies\` reads exactly ${DEPENDENCY_EXAMPLE}, one per story of the map's \`after\`.`,
   `Write the story in ${languageOf(language)}, the language of the PRD; keep every id as written.`,
   languageRule(language),
+  criteria.length ? '' : null,
+  criteria.length ? 'The PRD writes these acceptance criteria for what this story covers: start from them, keep their meaning and their id, add none that contradicts them:' : null,
+  criteria.length ? bullets(criteria) : null,
   problems.length ? '' : null,
   problems.length ? `The checks refused ${output}. Fix exactly these problems:` : null,
   problems.length ? bullets(problems) : null,
@@ -128,11 +167,12 @@ export const splitBrief = ({ prd, map, story, output, language, attempt, problem
  */
 export const frameBrief = ({ prd, inventory, output, language, asked }) => lines([
   'Frame the slicing of this PRD: do not slice yet.',
-  'Load the skill `backlog-slicing`.',
+  'Load the skill `backlog-slicing` (its Framing section is enough; load no other skill).',
   '',
   'Read:',
   bullets([`PRD: ${prd}`, `Requirement inventory: ${inventory}`]),
   '',
+  'The PRD is read-only and its format is not a question: never ask to reformat, restructure or renumber it. The inventory says what a script read; its `format`, `epicSource`, `cited`, `status` and `mvp` are already asked by the workflow when they need an answer.',
   `Write only: ${output} — { "questions": [ { "question", "why", "options": [2 to 4 answers], "recommended": <index of the option you recommend> } ] }. Its directory exists; write no other file.`,
   'Ask at most 5 questions whose answer changes how you would cut epics and stories: the MVP scope, the tracer bullet of an epic, an ambiguous order, a capability that could be one story or several. Never ask what the PRD already states.',
   asked.length ? 'These are already asked; do not repeat them:' : null,

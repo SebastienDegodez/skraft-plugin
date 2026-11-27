@@ -10,6 +10,7 @@ import { runPrdBacklogWorkflow } from '../../../plugins/skraft-backlog/prd-backl
 import { assessBacklog } from '../../../plugins/skraft-backlog/prd-backlog/canvas/assess.mjs'
 import { loadBacklog } from '../../../plugins/skraft-backlog/prd-backlog/canvas/store.mjs'
 import { fakeGitHub } from './fake-github.mjs'
+import { fakeAzure, fakeGit } from './fake-azure.mjs'
 import { attempt, outputOf, scriptedAgents, simulatedContext, workingCopy, writeJson } from './simulated-ctx.mjs'
 import { storyFile, storyMap } from './fixtures/backlog-data.mjs'
 
@@ -19,12 +20,12 @@ const handoffPath = (cwd) => join(cwd, '.copilot-tracking', 'github-issues', 'pr
 const backlogDir = (cwd) => join(cwd, '.copilot-tracking', 'skraft-plans', 'eligibilite', 'backlog')
 
 /** Runs attempt after attempt as a human would: resume after each pause, checking the box when asked. */
-const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = true, journal = new Map() }) => {
+const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = true, journal = new Map(), host = {}, handoff = handoffPath(cwd), iterationsBox = false }) => {
   const resumed = new Set()
   const runs = []
   for (;;) {
     const simulated = simulatedContext({ args, agents, journal, resumed })
-    const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: github.run }), simulated)
+    const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: github?.run, ...host }), simulated)
     runs.push({ result, calls: simulated.calls, logs: simulated.logs })
     if (!('paused' in result)) return { result, runs }
     if (result.paused === 'framing-answered') {
@@ -34,8 +35,9 @@ const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = tru
       await writeFile(path, JSON.stringify(framing), 'utf8')
     }
     if (result.paused === 'handoff-reviewed' && approveHandoff) {
-      const handoff = await readFile(handoffPath(cwd), 'utf8')
-      await writeFile(handoffPath(cwd), handoff.replace('> - [ ] Reviewed and validated', '> - [x] Reviewed and validated'))
+      const text = await readFile(handoff, 'utf8')
+      const reviewed = text.replace('> - [ ] Reviewed and validated', '> - [x] Reviewed and validated')
+      await writeFile(handoff, iterationsBox ? reviewed.replace('> - [ ] Create the missing iterations', '> - [x] Create the missing iterations') : reviewed)
     }
     resumed.add(result.paused)
     if (runs.length > 5) throw new Error('the workflow does not settle')
@@ -250,7 +252,9 @@ test('the workflow refuses a missing PRD, a PRD without FR ids, and an unknown e
   assert.match((await run({})).reason, /args\.prd: the path of the PRD is required/)
   assert.equal((await run({ prd: 'docs/prd/absent-sentinel.md' })).reason, 'args.prd: the PRD cannot be read')
   await writeFile(join(cwd, 'docs', 'prd', 'vide-sentinel.md'), '# Vide\n\nAucune exigence.\n')
-  assert.equal((await run({ prd: 'docs/prd/vide-sentinel.md' })).reason, 'args.prd: the PRD defines no FR-### requirement')
+  assert.equal((await run({ prd: 'docs/prd/vide-sentinel.md' })).reason, 'args.prd: the PRD defines no functional requirement — an id such as FR-001, US-001 or a prefix its frontmatter declares (requirement_id_prefixes), opening a heading, a bullet, a line, a bold run or the first cell of a table row; the PRD itself is never rewritten')
+  const format = await run({ ...ARGS, format: 'bmad-sentinel' })
+  assert.deepEqual([format.code, format.reason.includes('sentinel')], ['invalid-args', false], 'a format it does not read is refused, never echoed')
   const unknown = await run({ ...ARGS, approve: true, epics: ['EP-404-sentinel'] })
   assert.equal(unknown.status, 'refused')
   assert.equal(unknown.reason, 'args.epics: an epic it names is not in the story map')
@@ -402,7 +406,7 @@ test('agents are called by their plugin id with no model; an argument that names
   for (const extra of [{ agentIds: { 'backlog-slicer': 'mine:backlog-slicer' } }, { models: { 'story-writer': 'some-model' } }, { 'unknown-key-sentinel': true }]) {
     const refused = simulatedContext({ args: { ...ARGS, frame: false, ...extra } })
     const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), refused)
-    assert.deepEqual(result, { status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections and frame; nothing was started' })
+    assert.deepEqual(result, { status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame, format and forge; nothing was started' })
     assert.deepEqual([refused.calls, refused.phases], [[], []], 'nothing ran')
   }
 })
@@ -762,4 +766,136 @@ test('epic by epic: once EP-001 is reviewed it can be reviewed and created in th
   assert.deepEqual(seen.created.issues.map((i) => i.id), ['EP-001', 'EP-001-S01', 'EP-001-S02', 'EP-001-S03'])
   assert.equal(result.status, 'published')
   assert.equal(github.state.issues.length, 6, 'the final publication creates only EP-002 and its story; nothing twice')
+})
+
+test('two levels: the PO approves the epics, then each selected epic is cut by a fresh agent and approved; a later session takes the next epic', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const github = fakeGitHub()
+  const full = storyMap()
+  const agents = scriptedAgents({
+    'backlog-slicer': async ({ prompt }) => {
+      const epic = /Cut epic (\S+) into stories/.exec(prompt)?.[1]
+      if (epic) {
+        await writeJson(outputOf(prompt), { stories: full.epics.find((e) => e.id === epic).stories.map(({ tracer, ...story }) => story) })
+        return `${epic} cut`
+      }
+      if (/do not slice yet/.test(prompt)) await writeJson(outputOf(prompt), { questions: [] })
+      else await writeJson(outputOf(prompt), { ...full, epics: full.epics.map((e) => ({ ...e, stories: [] })) })
+      return 'done'
+    },
+  })
+  const first = await runUntil({ cwd, github, agents, args: { ...ARGS, epics: ['EP-001'] } })
+  assert.deepEqual(first.runs.map((r) => r.result.paused ?? r.result.status), ['framing-answered', 'story-map-approved', 'stories-approved', 'handoff-reviewed', 'published'])
+  assert.deepEqual(first.runs[1].calls.map((c) => c.label), ['slice · attempt 1'], 'level 1: the epics only')
+  assert.match(first.runs[1].calls[0].prompt, /every epic with `stories: \[\]`/)
+  assert.deepEqual(first.runs[2].calls.map((c) => c.label), ['slice EP-001 · attempt 1'], 'level 2: only the selected epic, by its own agent')
+  assert.match(first.runs[2].calls[0].prompt, /Cut epic EP-001 into stories[\s\S]*never change the story map/)
+  const map = JSON.parse(await readFile(join(backlogDir(cwd), 'story-map.json'), 'utf8'))
+  assert.deepEqual(map.epics.map((e) => [e.id, e.stories.length, e.stories[0]?.tracer ?? null]), [['EP-001', 3, true], ['EP-002', 0, null]])
+  assert.ok(!existsSync(join(backlogDir(cwd), 'slices', 'EP-001.json')), 'the cut is merged into the map, then removed')
+  assert.equal(github.state.issues.length, 4, 'EP-001 and its three stories, nothing of EP-002')
+
+  const second = await runUntil({ cwd, github, agents, args: { ...ARGS, epics: ['EP-002'] } })
+  assert.deepEqual(second.runs.map((r) => r.result.paused ?? r.result.status), ['story-map-approved', 'stories-approved', 'handoff-reviewed', 'published'], 'a fresh session reuses the approved epics, no framing again')
+  assert.deepEqual(second.runs[0].calls.map((c) => c.label), [], 'the epics are not sliced again')
+  assert.deepEqual(second.runs[1].calls.map((c) => c.label), ['slice EP-002 · attempt 1'])
+  assert.equal(github.state.issues.length, 6, 'EP-002 and its story added, EP-001 created once')
+  const number = (title) => github.state.issues.find((i) => i.title.endsWith(title)).number
+  const late = github.state.issues.find((i) => i.title.endsWith('Déposer son permis'))
+  assert.match(late.body, new RegExp(`#${number("Recevoir la décision d'éligibilité")} \\(EP-001-S01\\)`), 'it names the story of the earlier session by its issue')
+  assert.ok(github.state.blockedBy.some((l) => l.issue === late.number && l.blocker === number("Recevoir la décision d'éligibilité")), 'and is blocked by it')
+})
+
+test('a plan the HVE planner left for the PRD reaches the slicer as proposed epics; the plan skraft wrote itself does not', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const hve = join(cwd, '.copilot-tracking', 'workitems', 'prds', 'eligibilite-plan')
+  await mkdir(hve, { recursive: true })
+  await writeFile(join(hve, 'work-items.md'), '# Work Items\n\n* **Source**: docs/prd/eligibilite.md\n\n## WI001 - Create - Epic: Éligibilité\n', 'utf8')
+  const own = join(cwd, '.copilot-tracking', 'github-issues', 'prds', 'eligibilite-old')
+  await mkdir(own, { recursive: true })
+  await writeFile(join(own, 'issues-plan.md'), '* **Source Scope**: docs/prd/eligibilite.md\n', 'utf8')
+  await writeFile(join(own, 'planning-log.md'), '* [x] Story map checked and approved; stories written.\n', 'utf8')
+  const { runs } = await runUntil({ cwd, github: fakeGitHub() })
+  const sliced = runs[1].calls.find((c) => c.label === 'slice · attempt 1')
+  assert.match(sliced.prompt, /Another planner proposed epics for this PRD: \.copilot-tracking\/workitems\/prds\/eligibilite-plan\/work-items\.md\. Keep its epics; for each one you merge, split or drop, write one `decisions` line saying why\./)
+  assert.doesNotMatch(sliced.prompt, /eligibilite-old/)
+})
+
+const boardsHandoff = (cwd) => join(cwd, '.copilot-tracking', 'workitems', 'prds', 'eligibilite', 'handoff.md')
+
+test('Azure DevOps (Agile, from the git remote): the PRD as an Epic, each epic a Feature, each story a User Story, linked; nothing created twice', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const azure = fakeAzure({ iterations: ['v0.1-eligibilite'] })
+  const host = { az: azure.run, git: fakeGit('https://contoso@dev.azure.com/contoso/Permis/_git/permis') }
+  const args = { prd: 'docs/prd/eligibilite.md' }
+  const { result } = await runUntil({ cwd, github: null, host, args, handoff: boardsHandoff(cwd) })
+  assert.equal(result.status, 'published', result.reason)
+  assert.deepEqual(result.hierarchy, { epic: 'Epic', feature: 'Feature', story: 'User Story' })
+  const byType = (type) => azure.state.items.filter((i) => i.type === type).map((i) => i.title)
+  assert.equal(byType('Epic').length, 1, 'one Epic for the PRD')
+  assert.deepEqual(byType('Feature'), ["Contrôle d'éligibilité", 'Justificatifs'], 'one Feature per epic, without the commit prefix')
+  assert.equal(byType('User Story').length, 4)
+  const id = (title) => azure.state.items.find((i) => i.title === title).id
+  const prd = azure.state.items.find((i) => i.type === 'Epic').id
+  assert.ok(azure.state.relations.some((r) => r.id === id("Contrôle d'éligibilité") && r.type === 'parent' && r.target === prd), 'the Feature sits under the PRD Epic')
+  const late = azure.state.items.find((i) => i.title === 'Déposer son permis')
+  assert.ok(azure.state.relations.some((r) => r.id === late.id && r.type === 'parent' && r.target === id('Justificatifs')))
+  assert.ok(azure.state.relations.some((r) => r.id === late.id && r.type === 'predecessor' && r.target === id("Recevoir la décision d'éligibilité")))
+  assert.deepEqual(late.tags.slice(0, 4), ['skraft-backlog', 'type/story', 'status/ready', 'priority/must'])
+  assert.equal(late.iteration, null, 'v0.2-justificatifs does not exist: no iteration path')
+  assert.ok(late.tags.includes('milestone/v0.2-justificatifs'), 'its milestone is a tag')
+  const first = azure.state.items.find((i) => i.title === "Recevoir la décision d'éligibilité")
+  assert.equal(first.iteration, 'Permis\\v0.1-eligibilite', 'an existing iteration is used')
+  assert.match(late.description, /^<h\d>|<p>/, 'the description is HTML')
+  assert.match(late.description, /skraft-backlog:item=EP-002-S01/)
+  assert.match(result.reason, /iterations to create by hand: v0\.2-justificatifs/)
+  assert.ok(azure.calls.every((args) => !args.some((a) => /\s&&\s|\|/.test(a) && a.startsWith('-'))), 'argv only')
+  const published = JSON.parse(await readFile(join(backlogDir(cwd), 'published.json'), 'utf8'))
+  assert.equal(published.stories['EP-002-S01'].url, `https://dev.azure.com/contoso/Permis/_workitems/edit/${late.id}`)
+
+  const count = azure.state.items.length
+  await rm(join(backlogDir(cwd), 'plan.json'), { force: true })
+  const again = await runUntil({ cwd, github: null, host, args: { ...args, approve: true }, handoff: boardsHandoff(cwd) })
+  assert.equal(again.result.status, 'published')
+  assert.equal(azure.state.items.length, count, 'a second run finds every work item by its marker')
+})
+
+test('Azure DevOps: a checked box creates the missing iteration; without the right, the items keep a milestone tag', async (t) => {
+  for (const [canCreateIterations, expected] of [[true, 'created'], [false, 'tagged']]) {
+    const { cwd, cleanup } = await workingCopy()
+    t.after(cleanup)
+    const azure = fakeAzure({ process: 'Scrum', canCreateIterations })
+    const host = { az: azure.run, git: fakeGit('') }
+    const { result } = await runUntil({ cwd, github: null, host, args: { prd: 'docs/prd/eligibilite.md', forge: 'azure-devops', repo: 'contoso/Permis' }, handoff: boardsHandoff(cwd), iterationsBox: true })
+    assert.equal(result.status, 'published', result.reason)
+    assert.equal(result.hierarchy.story, 'Product Backlog Item', 'Scrum')
+    assert.deepEqual([...new Set(result.iterations.map((i) => i.status))], [expected])
+    const story = azure.state.items.find((i) => i.type === 'Product Backlog Item')
+    if (expected === 'created') assert.match(String(story.iteration), /^Permis\\v0\.\d-/)
+    else assert.ok(story.tags.some((tag) => tag.startsWith('milestone/')) && story.iteration === null)
+  }
+})
+
+test('Azure DevOps Basic: no Feature level, an epic is an Epic and a story an Issue', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const azure = fakeAzure({ process: 'Basic' })
+  const { result } = await runUntil({ cwd, github: null, host: { az: azure.run, git: fakeGit('git@ssh.dev.azure.com:v3/contoso/Permis/permis') }, args: { prd: 'docs/prd/eligibilite.md' }, handoff: boardsHandoff(cwd) })
+  assert.equal(result.status, 'published', result.reason)
+  assert.deepEqual([...new Set(azure.state.items.map((i) => i.type))].sort(), ['Epic', 'Issue'])
+  assert.equal(azure.state.items.filter((i) => i.type === 'Epic').length, 2, 'no PRD Epic: one Epic per epic')
+})
+
+test('Azure DevOps, nobody signed in: the run stops before any agent and says who signs in, and how', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const azure = fakeAzure({ signedIn: false })
+  const { result, runs } = await runUntil({ cwd, github: null, host: { az: azure.run, git: fakeGit('https://dev.azure.com/contoso/Permis/_git/permis') }, args: { prd: 'docs/prd/eligibilite.md' } })
+  assert.deepEqual([result.status, result.code], ['refused', 'azure-sign-in'])
+  assert.match(result.reason, /^az cannot read the Azure DevOps project: sign in once in a terminal with `az login`/)
+  assert.doesNotMatch(result.reason, /Before you can run/, 'never the az text')
+  assert.deepEqual(runs.flatMap((r) => r.calls), [], 'no agent ran')
 })

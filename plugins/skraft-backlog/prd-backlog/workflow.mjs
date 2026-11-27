@@ -16,18 +16,19 @@
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { computeVerdict, parseLensResult } from '../skills/backlog-review-lenses/scripts/review-verdict.mjs'
-import { LENSES, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
+import { LENSES, epicSliceBrief, frameBrief, lensBrief, sliceBrief, splitBrief, storyBrief } from './briefs.mjs'
 import { framingLines, framingOf, prdQuestions, slicerQuestions, unanswered } from './framing.mjs'
 import { holdBackDependents, isReviewed, planOperations, planProblems, renderHandoffFiles } from './handoff.mjs'
 import { CorrectionFailed, acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
-import { fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
+import { FORMATS, criteriaFor, fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
 import { PublishBlocked, createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
+import { SIGN_IN, azCli, boardsTargetOf, createBoards, publishToBoards, publishedWorkItems } from './publish-azure.mjs'
 import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
 import { explanation } from './canvas/ui/i18n.mjs'
 import { judgedOnly, storyVerdicts, triageDefects } from './review.mjs'
 import { CORRECTION_RULES, checkStory, integrationsOf, normalizeStory, openQuestionsOf } from './story.mjs'
-import { checkStoryMap, normalizeStoryMap, storiesOf } from './story-map.mjs'
+import { checkStoryMap, normalizeStoryMap, pendingEpics, storiesOf, withEpicStories } from './story-map.mjs'
 
 export const MAX_ATTEMPTS = 3
 
@@ -69,12 +70,13 @@ export const BREAKER = Object.freeze({ share: 0.5, min: 3 })
 export const PRD_BACKLOG_META = Object.freeze({
   name: 'skraft-prd-backlog',
   description:
-    'Turn an approved PRD into a reviewed GitHub backlog: epics as tracking issues, INVEST stories that pass the ' +
+    'Turn a PRD, read as written and never rewritten, into a reviewed GitHub backlog: epics as tracking issues, INVEST stories that pass the ' +
     'Definition of Ready as sub-issues, blocked-by links and milestones. Pauses twice for a human: after the story ' +
     'map, and on the handoff review box. args: { prd: path of the PRD, slug?: kebab-case scope (default: the PRD file ' +
     'name), repo?: owner/repo to publish to (default: the repository of the working directory), epics?: epic ids to ' +
     'elaborate (default: all), approve?: true to skip the story-map pause, dryRun?: true to simulate the publication, ' +
-    'frame?: false to slice without the framing questions, ' +
+    'frame?: false to slice without the framing questions, format?: hve to read the requirement families an HVE PRD declares (default: detected), ' +
+    'forge?: github or azure-devops (default: from the git remote; with azure-devops, repo is organization/project), ' +
     'corrections?: true to apply the corrections and answers accepted in the backlog canvas, then review only the stories they touch }. ' +
     'The agents are the plugin\'s; their model is the session\'s, never an argument.',
   limits: Object.freeze({ maxConcurrentSubagents: MAX_CONCURRENT_AGENTS }),
@@ -87,12 +89,19 @@ export const PRD_BACKLOG_META = Object.freeze({
       prd: { type: 'string' }, slug: { type: 'string' }, repo: { type: 'string' },
       epics: { type: 'array', items: { type: 'string' } },
       approve: { type: 'boolean' }, dryRun: { type: 'boolean' }, corrections: { type: 'boolean' }, frame: { type: 'boolean' },
+      format: { type: 'string', enum: [...FORMATS] }, forge: { type: 'string', enum: ['github', 'azure-devops'] },
     }),
   }),
 })
 
+/** `args.format` names a format the workflow does not read: refused, never echoed. */
+const INVALID_FORMAT = Object.freeze({ status: 'refused', code: 'invalid-args', reason: `args.format: the workflow reads ${FORMATS.join(', ')} or, without format, any PRD; nothing was started` })
+const INVALID_FORGE = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'args.forge: github or azure-devops; nothing was started' })
+const NO_AZURE_TARGET = Object.freeze({ status: 'refused', code: 'no-azure-target', reason: 'Azure DevOps: pass args.repo as organization/project, or run from a working copy whose git remote is on dev.azure.com; nothing was started' })
+const NO_REQUIREMENT = 'args.prd: the PRD defines no functional requirement — an id such as FR-001, US-001 or a prefix its frontmatter declares (requirement_id_prefixes), opening a heading, a bullet, a line, a bold run or the first cell of a table row; the PRD itself is never rewritten'
+
 /** Arguments are model-written: a key the workflow does not take is refused, never echoed. */
-const INVALID_ARGS = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections and frame; nothing was started' })
+const INVALID_ARGS = Object.freeze({ status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame, format and forge; nothing was started' })
 /** @param {unknown} args */
 const unknownKeys = (args) => Object.keys(args && typeof args === 'object' ? args : {}).some((key) => !Object.hasOwn(PRD_BACKLOG_META.argsSchema.properties, key))
 
@@ -105,7 +114,7 @@ const unknownKeys = (args) => Object.keys(args && typeof args === 'object' ? arg
  *   pause: (key: string) => Promise<void>,
  *   session?: { rpc?: { agent?: { list?: (request?: object) => Promise<{ agents?: { id?: string, name?: string, displayName?: string }[] }> } } },
  * }} WorkflowContext
- * @typedef {{ cwd: string | null, now?: () => string, gh?: import('./publish.mjs').GhRun }} Host
+ * @typedef {{ cwd: string | null, now?: () => string, gh?: import('./publish.mjs').GhRun, az?: import('./publish-azure.mjs').AzRun, git?: import('./publish.mjs').GhRun }} Host
  *   cwd: the session's working directory when the run starts, null while unknown
  */
 
@@ -192,6 +201,17 @@ const stages = async (ctx, run, host) => {
   if (approved.problems.length) return blocked(run, 'SLICE', approved.problems)
   run.map = /** @type {import('./story-map.mjs').StoryMap} */ (approved.map)
   if (unknownEpics(run).length) return outcome(run, 'refused', 'args.epics: an epic it names is not in the story map')
+  if (!correcting) {
+    const cut = await cutEpics(ctx, run)
+    if (run.unavailable) return unavailable(run, 'SLICE')
+    if (cut.problems.length) return blocked(run, 'SLICE', cut.problems)
+    if (cut.epics.length && ctx.args.approve !== true) {
+      await pause(ctx, run, 'stories-approved')
+      const again = await approvedMap(ctx, run)
+      if (again.problems.length) return blocked(run, 'SLICE', again.problems)
+      run.map = /** @type {import('./story-map.mjs').StoryMap} */ (again.map)
+    }
+  }
   if (correcting) {
     ctx.phase?.('CORRECT')
     const corrected = await correct(ctx, run)
@@ -239,14 +259,14 @@ const stages = async (ctx, run, host) => {
  *   now: () => string, repo: string | null, prdUrl: string, epics: string[] | null,
  *   answers: Record<string, import('./story.mjs').Answers>, touched: Map<string, string[]> | null,
  *   progress: Progress, progressWrite: Promise<void>, planWrite?: Promise<void>, salt: string, pass: string, slot: ReturnType<typeof slots>,
- *   unavailable?: AgentUnavailable, pausedAt?: string,
+ *   unavailable?: AgentUnavailable, pausedAt?: string, plans: string[], forge: Forge, published: Record<string, { number: number, url?: string }>,
  *   reasons?: Record<string, Record<string, string>>, verify?: Array<{ decision: string, story: string, before: string | null, rules: string[] }>,
  * }} Run epics: the epics to elaborate, null for all; answers: the draft answers of the canvas;
  *   touched: in a correction session, the stories the accepted corrections touch, with what the writer is told
  */
 
 /** @param {WorkflowContext} ctx @param {Host} host @returns {Promise<Run | { status: string, reason: string }>} */
-const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
+const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined, { signal: ctx.signal }), git = ghCli(cwd ?? undefined, { signal: ctx.signal, program: 'git' }), az = azCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
   if (cwd === null) return NO_DIRECTORY
   if (unknownKeys(ctx.args)) return INVALID_ARGS
   ctx.phase?.('INVENTORY')
@@ -257,23 +277,95 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
   if (prdText === null) return { status: 'refused', reason: 'args.prd: the PRD cannot be read' }
   const slug = typeof ctx.args.slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(ctx.args.slug) ? ctx.args.slug : slugOf(path)
   const dir = join(cwd, '.copilot-tracking', 'skraft-plans', slug, 'backlog')
-  const inventory = await ctx.step(`inventory-v1:${slug}`, () => inventoryOf(prdText))
-  if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', reason: 'args.prd: the PRD defines no FR-### requirement' }
+  if (ctx.args.format !== undefined && !FORMATS.includes(ctx.args.format)) return INVALID_FORMAT
+  const inventory = await ctx.step(`inventory-v2:${slug}`, () => inventoryOf(prdText, ctx.args.format ? { format: ctx.args.format } : {}))
+  if (!inventory.requirements.some((r) => r.kind === 'FR')) return { status: 'refused', code: 'no-requirement', reason: NO_REQUIREMENT, unread: inventory.cited.map((c) => `${c.id} (line ${c.lines[0]})`) }
   await write(join(dir, 'inventory.json'), `${JSON.stringify(inventory, null, 2)}\n`)
-  const repoInfo = await ctx.step('repo-v1', () => repositoryOf(ctx.args.repo, gh))
+  if (ctx.args.forge !== undefined && !['github', 'azure-devops'].includes(ctx.args.forge)) return INVALID_FORGE
+  const forge = await ctx.step('forge-v1', () => forgeOf(ctx.args, git))
+  if (forge.name === 'azure-devops' && !forge.target) return NO_AZURE_TARGET
+  if (forge.name === 'azure-devops' && !(await ctx.step('boards-access-v1', () => canReadBoards(az, forge.target)))) return { status: 'refused', code: 'azure-sign-in', reason: SIGN_IN }
+  const repoInfo = forge.name === 'azure-devops' ? { repo: `${forge.target?.org}/${forge.target?.project}`, branch: 'main' } : await ctx.step('repo-v1', () => repositoryOf(ctx.args.repo, gh))
   const pass = await ctx.step('pass-v1', () => `${now()}|${Math.random().toString(36).slice(2, 10)}`)
   const relativePrd = relative(cwd, path).split(sep).join('/')
-  ctx.log(`${slug}: ${inventory.requirements.length} requirement ids, ${inventory.epics.length} epics in the PRD`)
+  ctx.log(`${slug}: ${inventory.requirements.length} requirement ids, ${inventory.epics.length} epics in the PRD (format ${inventory.format}, ${inventory.formatSource}; epics from ${inventory.epicSource})`)
   return {
     cwd, slug, prd: path, prdText, dir, inventory, map: /** @type {any} */ (null),
-    handoffDir: join(cwd, '.copilot-tracking', 'github-issues', 'prds', slug),
+    handoffDir: join(cwd, '.copilot-tracking', forge.name === 'azure-devops' ? 'workitems' : 'github-issues', 'prds', slug), forge,
     pluginName: 'skraft-backlog', log: (/** @type {string} */ message) => ctx.log(message),
     listed: await listAgents(ctx), now, repo: repoInfo.repo, epics: Array.isArray(ctx.args.epics) ? ctx.args.epics.map(String) : null,
     answers: record((await readJson(join(dir, 'answers.json'))).value?.stories), touched: null,
     progress: { version: 1, run: { startedAt: now(), phase: 'INVENTORY', status: 'running', mode: ctx.args.corrections === true ? 'corrections' : 'full' }, stories: {} },
     progressWrite: Promise.resolve(), salt: sha256(pass).slice(0, 12), pass, slot: slots(MAX_CONCURRENT_AGENTS),
-    prdUrl: repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
+    prdUrl: forge.name === 'azure-devops' ? relativePrd : repoInfo.repo ? `https://github.com/${repoInfo.repo}/blob/${repoInfo.branch}/${relativePrd}` : relativePrd,
+    plans: await plannerPlans(cwd, path),
+    published: record((await readJson(join(dir, 'published.json'))).value?.stories),
   }
+}
+
+/** Where the HVE planner leaves its plan of a PRD, per platform. */
+const PLANNER_PLANS = Object.freeze([['github-issues', 'issues-plan.md'], ['workitems', 'work-items.md'], ['jira-issues', 'issues-plan.md']])
+/** The line skraft writes in its own planning log: a plan skraft wrote is no proposal. */
+const SKRAFT_LOG = 'Story map checked and approved'
+
+/**
+ * The plans another planner (HVE) wrote for this PRD: a plan file under
+ * `.copilot-tracking/<platform>/prds/<name>/` that names the PRD's file, skraft's own excepted.
+ * Only their paths: the slicer reads them, no script parses them.
+ * @param {string} cwd @param {string} prd @returns {Promise<string[]>}
+ */
+const plannerPlans = async (cwd, prd) => {
+  const found = []
+  for (const [platform, file] of PLANNER_PLANS) {
+    const root = join(cwd, '.copilot-tracking', platform, 'prds')
+    for (const entry of await readdir(root, { withFileTypes: true }).catch(() => [])) {
+      if (entry.isDirectory() && await isPlannerPlan(join(root, entry.name), file, basename(prd))) found.push(join(root, entry.name, file))
+    }
+  }
+  return found
+}
+
+/** @param {string} dir @param {string} file @param {string} prdName */
+const isPlannerPlan = async (dir, file, prdName) => {
+  const plan = await readFile(join(dir, file), 'utf8').catch(() => null)
+  if (plan === null || !plan.includes(prdName)) return false
+  const log = await readFile(join(dir, 'planning-log.md'), 'utf8').catch(() => '')
+  return !log.includes(SKRAFT_LOG)
+}
+
+/**
+ * @typedef {{ name: 'github' | 'azure-devops', target: import('./publish-azure.mjs').BoardsTarget | null }} Forge
+ */
+
+/**
+ * The forge the backlog goes to: `args.forge` when given, else the host of the git remote
+ * (`origin`, else the first one). On Azure DevOps the organization and project come from
+ * `args.repo` (`organization/project`), else from that remote.
+ * @param {Record<string, any>} args @param {import('./publish.mjs').GhRun} git @returns {Promise<Forge>}
+ */
+const forgeOf = async (args, git) => {
+  const url = args.forge === 'github' ? '' : await remoteUrl(git)
+  const fromRemote = url ? boardsTargetOf(url) : null
+  const name = args.forge ?? (fromRemote || /dev\.azure\.com|visualstudio\.com/i.test(url) ? 'azure-devops' : 'github')
+  if (name === 'github') return { name, target: null }
+  const given = typeof args.repo === 'string' ? /^([^/\s]+)\/([^/]+)$/.exec(args.repo.trim()) : null
+  return { name, target: given ? { org: given[1], project: given[2] } : fromRemote }
+}
+
+/** Checked before any agent runs: a run that cannot publish stops at once, not after the slicing. @param {import('./publish-azure.mjs').AzRun} az @param {any} target */
+const canReadBoards = async (az, target) => {
+  try { await createBoards(az, target).types(); return true } catch { return false }
+}
+
+/** @param {import('./publish.mjs').GhRun} git */
+const remoteUrl = async (git) => {
+  const remotes = await git(['remote'])
+  if (remotes.status !== 0) return ''
+  const names = remotes.stdout.split(/\r?\n/).map((n) => n.trim()).filter(Boolean)
+  const name = names.includes('origin') ? 'origin' : names[0]
+  if (!name) return ''
+  const answer = await git(['remote', 'get-url', name])
+  return answer.status === 0 ? answer.stdout.trim() : ''
 }
 
 /** @param {unknown} repo @param {import('./publish.mjs').GhRun} gh */
@@ -498,7 +590,7 @@ const slice = async (ctx, run) => {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     await dispatch(ctx, run, 'backlog-slicer', `slice · attempt ${attempt}`, sliceBrief({
       prd: run.prd, inventory: join(run.dir, 'inventory.json'), output, language: run.inventory.language, attempt, problems,
-      framing: framing ? framingLines(framing) : [],
+      framing: framing ? framingLines(framing) : [], plans: run.plans.map((path) => display(run, path)),
     }), { output })
     const checked = await checkedMap(ctx, run)
     problems = checked.problems
@@ -522,7 +614,7 @@ const frame = async (ctx, run) => {
   let framing = framingOf((await readJson(path)).value)
   if (!framing) {
     ctx.phase?.('FRAME')
-    const questions = prdQuestions(run.inventory, run.prdText)
+    const questions = prdQuestions(run.inventory, run.prdText, { plans: run.plans.map((path) => display(run, path)) })
     framing = { version: 1, questions: [...questions, ...(ctx.args.approve === true ? [] : await askSlicer(ctx, run, questions))], answers: {} }
     await write(path, `${JSON.stringify(framing, null, 2)}\n`)
     ctx.log(`framing: ${framing.questions.length} question(s) in ${display(run, path)}`)
@@ -563,6 +655,59 @@ const checkedMap = async (ctx, run) => {
   const findings = checkStoryMap(map, run.inventory)
   if (!findings.problems.length) await write(join(run.dir, 'story-map.md'), renderStoryMap(/** @type {any} */ (map), { prd: display(run, run.prd), findings }))
   return { problems: findings.problems, map: /** @type {import('./story-map.mjs').StoryMap} */ (map) }
+}
+
+/**
+ * Level 2 of the slicing: each selected epic still without stories is cut by a fresh agent, one
+ * epic at a time in map order (a story may wait on a story of an epic cut before it). The map is
+ * written after each epic that passes the checks.
+ * @param {WorkflowContext} ctx @param {Run} run
+ * @returns {Promise<{ epics: string[], problems: string[] }>}
+ */
+const cutEpics = async (ctx, run) => {
+  const selected = new Set(selectedEpics(run).map((e) => e.id))
+  const todo = pendingEpics(run.map).filter((e) => selected.has(e.id))
+  if (!todo.length) return { epics: [], problems: [] }
+  await ensureDir(ctx, run, join(run.dir, 'slices'))
+  const framing = framingOf((await readJson(join(run.dir, 'framing.json'))).value)
+  for (const epic of todo) {
+    const problems = await cutEpic(ctx, run, epic.id, framing ? framingLines(framing) : [])
+    if (run.unavailable || problems.length) return { epics: [], problems }
+  }
+  return { epics: todo.map((e) => e.id), problems: [] }
+}
+
+/** @param {WorkflowContext} ctx @param {Run} run @param {string} epic @param {string[]} framing @returns {Promise<string[]>} */
+const cutEpic = async (ctx, run, epic, framing) => {
+  const output = join(run.dir, 'slices', `${epic}.json`)
+  let problems = []
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    await dispatch(ctx, run, 'backlog-slicer', `slice ${epic} · attempt ${attempt}`, epicSliceBrief({
+      prd: run.prd, inventory: join(run.dir, 'inventory.json'), map: join(run.dir, 'story-map.json'), epic, output,
+      language: run.inventory.language, attempt, problems, framing, plans: run.plans.map((path) => display(run, path)),
+    }), { output })
+    if (run.unavailable) return []
+    const tried = await triedCut(run, epic, output)
+    problems = tried.problems
+    ctx.log(`${epic} stories attempt ${attempt}: ${problems.length ? `${problems.length} problem(s)` : 'checks pass'}`)
+    if (!problems.length) {
+      run.map = /** @type {import('./story-map.mjs').StoryMap} */ (tried.map)
+      await write(join(run.dir, 'story-map.json'), `${JSON.stringify(run.map, null, 2)}\n`)
+      await write(join(run.dir, 'story-map.md'), renderStoryMap(run.map, { prd: display(run, run.prd), findings: checkStoryMap(run.map, run.inventory) }))
+      await rm(output, { force: true })
+      return []
+    }
+  }
+  return problems.map((p) => `${epic}: ${p}`)
+}
+
+/** The map with the stories the agent wrote for one epic, normalized and checked. @param {Run} run @param {string} epic @param {string} output */
+const triedCut = async (run, epic, output) => {
+  const read = await readJson(output)
+  const stories = 'value' in read ? /** @type {any} */ (read.value)?.stories : undefined
+  if (!Array.isArray(stories) || !stories.length) return { problems: [`${display(run, output)} must hold { "stories": [ … ] } with at least one story`], map: null }
+  const { map } = normalizeStoryMap(withEpicStories(run.map, epic, stories))
+  return { problems: checkStoryMap(map, run.inventory).problems, map }
 }
 
 /** On resume the human may have edited the map: it is checked again, as it reads now. @param {WorkflowContext} ctx @param {Run} run */
@@ -613,7 +758,7 @@ const prepareStoriesDir = async (ctx, run) => {
 
 /** What the workflow writes at the root of the backlog directory; anything else is stray. */
 const BACKLOG_ENTRIES = Object.freeze(new Set(['inventory.json', 'story-map.json', 'story-map.md', 'plan.json', 'published.json',
-  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'framing.json', 'stories', 'plans', 'reviews', 'corrections']))
+  'review.json', 'slice-proposals.json', 'corrections.json', 'answers.json', 'progress.json', 'framing.json', 'stories', 'plans', 'reviews', 'corrections', 'slices']))
 
 /**
  * Removes, and logs, the files no step of the workflow plans: at the root of the backlog, and in
@@ -670,6 +815,7 @@ const writeStory = async (ctx, run, planned, { findings = [], problems = [], fir
       prd: run.prd, map: join(run.dir, 'story-map.json'), story: planned.id, epic: planned.epic, output: storyPath(run, planned.id),
       language: run.inventory.language, attempt, problems: last.problems, findings: attempt === first ? findings : [],
       answers: await pendingAnswers(run, planned.id),
+      criteria: criteriaFor(run.inventory, planned.covers).map((c) => `${c.id}: ${c.statement}`),
     }), { output: storyPath(run, planned.id) })
     const read = await readStory(run, planned, answers)
     await track(run, planned.id, read.file ? 'written' : needsCorrection(read) ? 'held' : 'refused', attempt)
@@ -1218,7 +1364,8 @@ const planOf = (run, epics, results) => {
   const files = new Map()
   const held = new Map()
   const language = run.inventory.language
-  for (const story of storiesOf(run.map)) held.set(story.id, [say(language, 'notElaborated')])
+  const published = run.published ?? {}
+  for (const story of storiesOf(run.map)) if (!Object.hasOwn(published, story.id)) held.set(story.id, [say(language, 'notElaborated')])
   epics.forEach((epic, index) => {
     const result = results[index]
     for (const story of epic.stories) held.set(story.id, [result === undefined ? say(language, 'inProgress') : say(language, 'elaborationFailed', { epic: epic.id })])
@@ -1228,13 +1375,14 @@ const planOf = (run, epics, results) => {
     for (const [id, file] of Object.entries(result.files)) files.set(id, file)
   })
   const notReady = holdBackDependents(run.map, held, language)
-  const ready = new Set(storiesOf(run.map).map((s) => s.id).filter((id) => !notReady.has(id)))
-  const backlog = { slug: run.slug, prd: display(run, run.prd), repo: run.repo, language, prdUrl: run.prdUrl, map: run.map, files, ready, notReady }
+  const elaborated = new Set(epics.flatMap((e) => e.stories.map((s) => s.id)))
+  const ready = new Set(storiesOf(run.map).map((s) => s.id).filter((id) => !notReady.has(id) && elaborated.has(id)))
+  const backlog = { slug: run.slug, prd: display(run, run.prd), repo: run.repo, language, prdUrl: run.prdUrl, map: run.map, files, ready, notReady, published }
   return { plan: planOperations(backlog), backlog, notReady }
 }
 
 /** @param {Run} run @param {import('./handoff.mjs').Plan} plan */
-const writePlan = (run, plan) => write(join(run.dir, 'plan.json'), `${JSON.stringify({ ...plan, repo: run.repo, notReady: Object.fromEntries(plan.notReady) }, null, 2)}\n`)
+const writePlan = (run, plan) => write(join(run.dir, 'plan.json'), `${JSON.stringify({ ...plan, repo: run.repo, forge: run.forge.name, notReady: Object.fromEntries(plan.notReady) }, null, 2)}\n`)
 
 /**
  * As soon as an epic is reviewed, its ready stories can be reviewed and created in the canvas
@@ -1259,7 +1407,7 @@ const writeHandoff = async (ctx, run, epics, results) => {
   const problems = planProblems(plan)
   if (problems.length) return blocked(run, 'HANDOFF', problems)
   if (!plan.issues.length) return outcome(run, 'blocked', 'no story passed the planning review: nothing to publish', { phase: 'REVIEW', notReady: Object.fromEntries(notReady) })
-  for (const [name, text] of Object.entries(renderHandoffFiles(plan, backlog, { now: run.now() }))) {
+  for (const [name, text] of Object.entries(renderHandoffFiles(plan, backlog, { now: run.now(), forge: run.forge.name }))) {
     if (name === 'handoff.md' && (await sameHandoff(join(run.handoffDir, name), text))) continue
     await write(join(run.handoffDir, name), text)
   }
@@ -1276,14 +1424,16 @@ const writeHandoff = async (ctx, run, epics, results) => {
  */
 const sameHandoff = async (path, text) => {
   const current = await readFile(path, 'utf8').catch(() => null)
-  const unchecked = (handoff) => handoff.replace(/^(>?\s*-\s+)\[[xX]\](\s+Reviewed and validated)/m, '$1[ ]$2')
+  const unchecked = (handoff) => handoff.replace(/^(>?\s*-\s+)\[[xX]\](\s+(?:Reviewed and validated|Create the missing iterations))/gm, '$1[ ]$2')
   return current !== null && unchecked(current) === text
 }
 
 /**
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./handoff.mjs').Plan} plan @param {Host} host
  */
-const publishHandoff = async (ctx, run, plan, { cwd, gh = ghCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
+const publishHandoff = async (ctx, run, plan, host) => {
+  if (run.forge.name === 'azure-devops') return publishBoards(ctx, run, plan, host)
+  const { cwd, gh = ghCli(cwd ?? undefined, { signal: ctx.signal }) } = host
   const dryRun = ctx.args.dryRun === true
   if (!run.repo) return outcome(run, 'refused', 'no repository to publish to: pass args.repo (owner/repo)')
   let report
@@ -1302,3 +1452,41 @@ const publishHandoff = async (ctx, run, plan, { cwd, gh = ghCli(cwd ?? undefined
   return outcome(run, status, `${created} issues created on ${run.repo}${status === 'blocked' ? `; resume the run to retry: ${display(run, join(run.handoffDir, 'handoff-logs.md'))}` : ''}`,
     { phase: 'PUBLISH', mapping: report.mapping, failed: report.failed, skipped: report.skipped, notReady: Object.fromEntries(plan.notReady) })
 }
+
+/**
+ * PUBLISH on Azure DevOps Boards: the PRD as an Epic, the epics as Features, the stories as the
+ * process's requirement type; the missing iterations are created only when the human checked
+ * their box in the handoff.
+ * @param {WorkflowContext} ctx @param {Run} run @param {import('./handoff.mjs').Plan} plan @param {Host} host
+ */
+const publishBoards = async (ctx, run, plan, { cwd, az = azCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
+  const dryRun = ctx.args.dryRun === true
+  const target = /** @type {import('./publish-azure.mjs').BoardsTarget} */ (run.forge.target)
+  const handoff = await readFile(join(run.handoffDir, 'handoff.md'), 'utf8')
+  const prd = { id: `prd-${run.slug}`, title: prdTitle(run), body: say(run.inventory.language, 'prdItem', { prd: run.prdUrl }) }
+  let report
+  try {
+    report = await publishToBoards({ plan, target, boards: createBoards(az, target), prd, createIterations: wantsIterations(handoff), dryRun,
+      once: (key, produce) => ctx.step(`publish-${run.slug}-${key}`, produce) })
+  } catch (error) {
+    if (isHostStop(ctx, error)) throw error
+    const reason = error instanceof PublishBlocked ? error.message : 'the publication stopped on an unexpected error; resume the run to retry'
+    return outcome(run, 'blocked', reason, { phase: 'PUBLISH', code: 'publish-blocked' })
+  }
+  const logs = renderHandoffLogs(report, { slug: run.slug, now: run.now(), dryRun })
+  const iterations = report.iterations.length ? ['', '## Iterations', '', ...report.iterations.map((i) => `* ${i.status} - ${i.detail}`), ''].join('\n') : ''
+  await write(join(run.handoffDir, dryRun ? 'handoff-dryrun.md' : 'handoff-logs.md'), `${logs}${iterations}`)
+  if (!dryRun) await writePublished(run.cwd, run.slug, publishedWorkItems(plan, report, target))
+  const created = report.operations.filter((o) => o.status === 'created').length
+  const tagged = report.iterations.filter((i) => i.status === 'tagged').map((i) => i.title)
+  ctx.log(`${report.binding}: ${created} created, ${report.failed} failed, ${report.skipped} skipped${dryRun ? ' (dry run)' : ''}`)
+  const status = report.failed + report.skipped ? 'blocked' : dryRun ? 'simulated' : 'published'
+  return outcome(run, status, `${created} work items created on ${report.binding}${tagged.length ? `; iterations to create by hand: ${tagged.join(', ')} (their items carry a milestone/ tag)` : ''}${status === 'blocked' ? `; resume the run to retry: ${display(run, join(run.handoffDir, 'handoff-logs.md'))}` : ''}`,
+    { phase: 'PUBLISH', mapping: report.mapping, failed: report.failed, skipped: report.skipped, hierarchy: report.hierarchy, iterations: report.iterations, notReady: Object.fromEntries(plan.notReady) })
+}
+
+/** The PRD's title: its first heading, else its file name. @param {Run} run */
+const prdTitle = (run) => /^#\s+(.+)$/m.exec(run.prdText)?.[1]?.trim() ?? basename(run.prd)
+
+/** The human checked, in the handoff, that the missing iterations may be created. @param {string} handoff */
+const wantsIterations = (handoff) => /^>?\s*-\s+\[[xX]\]\s+Create the missing iterations/m.test(handoff)
