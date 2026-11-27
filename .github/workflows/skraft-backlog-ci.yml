@@ -131,5 +131,10 @@ jobs:
           cp plugins/skraft-backlog/workflows/shared/apm.md plugins/skraft-backlog/workflows/shared/skraft-refine-marker.mjs plugins/skraft-backlog/workflows/shared/skraft-prd-slicer.mjs "$consumer/.github/workflows/shared/"
           cd "$consumer"
           git init -q
-          gh aw compile skraft-refine
-          gh aw compile skraft-prd-slicer
+          # A compile error becomes an annotation: readable from the pull request's checks.
+          for workflow in skraft-refine skraft-prd-slicer; do
+            if ! gh aw compile "$workflow" > "$RUNNER_TEMP/$workflow.log" 2>&1; then
+              while IFS= read -r line; do echo "::error title=gh aw compile $workflow::$line"; done < "$RUNNER_TEMP/$workflow.log"
+              exit 1
+            fi
+          done

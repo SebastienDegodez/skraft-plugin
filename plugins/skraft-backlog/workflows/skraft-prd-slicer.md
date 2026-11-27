@@ -100,7 +100,8 @@ pre-agent-steps:
     env:
       GH_TOKEN: ${{ github.token }}
       SLICER_ISSUE: ${{ needs.pre_activation.outputs.issue }}
-    run: node .github/workflows/shared/skraft-prd-slicer.mjs prepare --action "${{ needs.pre_activation.outputs.action }}"
+      SLICER_ACTION: ${{ needs.pre_activation.outputs.action }}
+    run: node .github/workflows/shared/skraft-prd-slicer.mjs prepare --action "$SLICER_ACTION"
   - name: Run skraft-prd-backlog
     if: steps.slicer_prepare.outputs.step == 'run'
     id: slicer_run
@@ -108,12 +109,14 @@ pre-agent-steps:
       COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
       GH_TOKEN: ${{ github.token }}
       SLICER_ISSUE: ${{ needs.pre_activation.outputs.issue }}
-    run: node .github/workflows/shared/skraft-prd-slicer.mjs run --args "${{ steps.slicer_prepare.outputs.args }}"
+      SLICER_ARGS: ${{ steps.slicer_prepare.outputs.args }}
+    run: node .github/workflows/shared/skraft-prd-slicer.mjs run --args "$SLICER_ARGS"
   - name: Render the comment
     if: steps.slicer_prepare.outputs.step == 'run'
     env:
       SLICER_ISSUE: ${{ needs.pre_activation.outputs.issue }}
-    run: node .github/workflows/shared/skraft-prd-slicer.mjs after --result "${{ steps.slicer_run.outputs.result }}"
+      SLICER_RESULT: ${{ steps.slicer_run.outputs.result }}
+    run: node .github/workflows/shared/skraft-prd-slicer.mjs after --result "$SLICER_RESULT"
   - name: Keep the run's files for the next run
     uses: actions/upload-artifact@v4
     with:
