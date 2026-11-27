@@ -61,6 +61,8 @@ Run the skraft-prd-backlog workflow with prd docs/prds/online-ordering.md
 | `frame` | `false`: slice without framing questions |
 | `format` | `hve`: read the requirement families an HVE PRD declares; default: detected |
 | `forge` | `github` or `azure-devops`; default: from the git remote. With `azure-devops`, `repo` is `organization/project` |
+| `context` | Files beside the PRD that bend the cut: documents or images of the architecture (md, txt, png, jpg, gif, webp, svg), at most 10 |
+| `notes` | Prose beside the PRD, for the same purpose |
 | `corrections` | `true`: apply the corrections accepted in the canvas (step 5) |
 
 Any other key is refused (`invalid-args`) and nothing starts. The working files are under
@@ -100,6 +102,14 @@ each story is approved, refused, or held back because it waits on a refused stor
 ![skraft backlog canvas, Suivi tab, during ELABORATE: "8 agents au travail", one story-writer per story with its attempt and how long it has run, then 3 epics, 16 stories, 9/16 written, none refused yet](/img/screenshots/fr/backlog-canvas-elaborate.png)
 
 *Figure 1 — ELABORATE on an extract of a real PRD, written in French ([demo repository](https://github.com/SebastienDegodez/skraft-demo-event-storming)): eight `story-writer` agents at work.*
+
+**Give more than the PRD.** Pass `context` (an architecture document, a diagram as an image) and
+`notes` (a few sentences): the slicer reads them with the PRD and the framing asks you to confirm
+the constraints it took from them. When they impose how the epics are cut, that cut is followed,
+even if the slicer judges it worse: the framing then shows its risks and asks whether to follow
+it (recommended) and whether to keep it as the team's rule, added to
+`docs/backlog/slicing-rules.md` and read beside every next PRD. A changed context frames the
+slicing again.
 
 **For the product owner: work one epic at a time, in a fresh session.** On a large PRD, approve the
 epics once, then cut and elaborate one epic per run, each run in a new Copilot session so that

@@ -20,7 +20,7 @@ const handoffPath = (cwd) => join(cwd, '.copilot-tracking', 'github-issues', 'pr
 const backlogDir = (cwd) => join(cwd, '.copilot-tracking', 'skraft-plans', 'eligibilite', 'backlog')
 
 /** Runs attempt after attempt as a human would: resume after each pause, checking the box when asked. */
-const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = true, journal = new Map(), host = {}, handoff = handoffPath(cwd), iterationsBox = false }) => {
+const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = true, journal = new Map(), host = {}, handoff = handoffPath(cwd), iterationsBox = false, answers = {} }) => {
   const resumed = new Set()
   const runs = []
   for (;;) {
@@ -32,6 +32,7 @@ const runUntil = async ({ cwd, github, agents, args = ARGS, approveHandoff = tru
       const path = join(backlogDir(cwd), 'framing.json')
       const framing = JSON.parse(await readFile(path, 'utf8'))
       framing.answers.milestones = { text: 'Un jalon par lot : v0.1-eligibilite puis v0.2-justificatifs', at: NOW() }
+      for (const [id, text] of Object.entries(answers)) framing.answers[id] = { text, at: NOW() }
       await writeFile(path, JSON.stringify(framing), 'utf8')
     }
     if (result.paused === 'handoff-reviewed' && approveHandoff) {
@@ -57,7 +58,7 @@ test('from the PRD to a published backlog, in a working copy skraft was never in
   assert.deepEqual(runs[0].calls.map((c) => c.label), ['frame'], 'the slicer frames before it cuts')
   assert.match(runs[0].calls[0].prompt, /do not slice yet[\s\S]*These are already asked; do not repeat them:\n- Comment découper en jalons \?/)
   const sliced = runs[1].calls.find((c) => c.label === 'slice · attempt 1')
-  assert.match(sliced.prompt, /Follow each answer:\n- Comment découper en jalons \? → Un jalon par lot : v0\.1-eligibilite puis v0\.2-justificatifs/)
+  assert.match(sliced.prompt, /Follow each answer and each constraint; departing from an imposed cut the answers keep is one `decisions` line saying why:\n- Comment découper en jalons \? → Un jalon par lot : v0\.1-eligibilite puis v0\.2-justificatifs/)
   assert.match(sliced.prompt, /exigences non fonctionnelles \? → Dans les stories qu’elles contraignent \(recommended, not answered\)/)
   runs.splice(0, 1)
   const firstCalls = runs[0].calls.map((c) => c.label)
@@ -406,7 +407,7 @@ test('agents are called by their plugin id with no model; an argument that names
   for (const extra of [{ agentIds: { 'backlog-slicer': 'mine:backlog-slicer' } }, { models: { 'story-writer': 'some-model' } }, { 'unknown-key-sentinel': true }]) {
     const refused = simulatedContext({ args: { ...ARGS, frame: false, ...extra } })
     const result = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), refused)
-    assert.deepEqual(result, { status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame, format and forge; nothing was started' })
+    assert.deepEqual(result, { status: 'refused', code: 'invalid-args', reason: 'the workflow takes only prd, slug, repo, epics, approve, dryRun, corrections, frame, format, forge, context and notes; nothing was started' })
     assert.deepEqual([refused.calls, refused.phases], [[], []], 'nothing ran')
   }
 })
@@ -898,4 +899,63 @@ test('Azure DevOps, nobody signed in: the run stops before any agent and says wh
   assert.match(result.reason, /^az cannot read the Azure DevOps project: sign in once in a terminal with `az login`/)
   assert.doesNotMatch(result.reason, /Before you can run/, 'never the az text')
   assert.deepEqual(runs.flatMap((r) => r.calls), [], 'no agent ran')
+})
+
+test('context beside the PRD (a document, an image, prose): the slicer reads it, the PO confirms its constraints, an imposed cut is followed, and kept as the team rule when asked', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  await mkdir(join(cwd, 'docs', 'architecture'), { recursive: true })
+  await writeFile(join(cwd, 'docs', 'architecture', 'decoupage.md'), '# Découpage\n\nUne épic par service déployé : eligibility-api, documents-api.\n', 'utf8')
+  await writeFile(join(cwd, 'docs', 'architecture', 'services.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+  const cut = 'Une épic par service : eligibility-api, documents-api'
+  const agents = scriptedAgents({
+    'backlog-slicer': async ({ prompt }) => {
+      if (/do not slice yet/.test(prompt)) {
+        await writeJson(outputOf(prompt), { questions: [], constraints: [{ text: 'Les justificatifs passent par documents-api', source: 'docs/architecture/decoupage.md' }],
+          cut: { text: cut, source: 'docs/architecture/decoupage.md', fine: false, risks: ['deux épics qui ne se démontrent pas seules'] } })
+        return '0 questions'
+      }
+      await writeJson(outputOf(prompt), storyMap())
+      return 'done'
+    },
+  })
+  const args = { ...ARGS, context: ['docs/architecture/decoupage.md', 'docs/architecture/services.png'], notes: 'Le PO veut voir le service d’éligibilité en premier.' }
+  const { runs } = await runUntil({ cwd, github: fakeGitHub(), agents, args, answers: { 'team-rule': 'Oui, dans docs/backlog/slicing-rules.md' } })
+  const framePrompt = runs[0].calls[0].prompt
+  assert.match(framePrompt, /Context the product owner gave beside the PRD \(read-only; read every file, look at every image\):\n- \.copilot-tracking\/skraft-plans\/eligibilite\/backlog\/notes\.md\n- docs\/architecture\/decoupage\.md\n- docs\/architecture\/services\.png/)
+  assert.match(framePrompt, /An imposed cut is followed: never ask whether to follow it, the workflow asks\./)
+  const framing = JSON.parse(await readFile(join(backlogDir(cwd), 'framing.json'), 'utf8'))
+  assert.deepEqual(framing.questions.filter((q) => ['constraints', 'imposed-cut', 'team-rule'].includes(q.id)).map((q) => [q.id, q.options[q.recommended]]), [
+    ['constraints', 'Oui, le découpage les suit'],
+    ['imposed-cut', 'Le suivre : le document fait autorité'],
+    ['team-rule', 'Non, pour ce PRD seulement'],
+  ])
+  assert.match(framing.questions.find((q) => q.id === 'imposed-cut').why, /Risques : deux épics qui ne se démontrent pas seules/)
+  assert.equal(await readFile(join(backlogDir(cwd), 'notes.md'), 'utf8'), 'Le PO veut voir le service d’éligibilité en premier.\n')
+  const sliced = runs[1].calls.find((c) => c.label === 'slice · attempt 1').prompt
+  assert.match(sliced, /- docs\/architecture\/services\.png/)
+  assert.match(sliced, /Constraint \(docs\/architecture\/decoupage\.md\): Les justificatifs passent par documents-api/)
+  assert.match(sliced, /Imposed cut of the epics \(docs\/architecture\/decoupage\.md\): Une épic par service/)
+  const rules = await readFile(join(cwd, 'docs', 'backlog', 'slicing-rules.md'), 'utf8')
+  assert.match(rules, /^# Slicing rules[\s\S]*- Une épic par service : eligibility-api, documents-api \(from docs\/architecture\/decoupage\.md, 2026-/)
+})
+
+test('a changed context frames the slicing again; a context outside the working copy or of another kind is refused, never echoed', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  await writeFile(join(cwd, 'docs', 'archi.md'), 'v1', 'utf8')
+  const journal = new Map()
+  const args = { ...ARGS, context: ['docs/archi.md'] }
+  const first = simulatedContext({ args, journal })
+  assert.deepEqual(await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), first), { paused: 'framing-answered' })
+  await writeFile(join(cwd, 'docs', 'archi.md'), 'v2', 'utf8')
+  const again = simulatedContext({ args })
+  await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), again)
+  assert.ok(again.logs.includes('framing: the context beside the PRD changed; the slicing is framed again'))
+  assert.deepEqual(again.calls.map((c) => c.label), ['frame'])
+  for (const context of [['../secret.md'], ['docs/prd/plan.pdf'], ['docs/absent-sentinel.md']]) {
+    const refused = await attempt((ctx) => runPrdBacklogWorkflow(ctx, { cwd, now: NOW, gh: fakeGitHub().run }), simulatedContext({ args: { ...ARGS, context } }))
+    assert.deepEqual([refused.status, refused.code], ['refused', 'invalid-args'])
+    assert.doesNotMatch(refused.reason, /secret|sentinel|plan\.pdf/)
+  }
 })

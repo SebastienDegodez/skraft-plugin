@@ -19,6 +19,7 @@ la route Items à leur commit. Le contrôle de chaque fichier passe par Git seul
 
 | Contrôle | Hôte | Verdict | Observé |
 | --- | --- | --- | --- |
+| le modèle de l'hôte lit une image (png, jpg) que le brief lui désigne par son chemin (`context` de `skraft-prd-backlog`) | Copilot CLI (version du développeur au 2026-11-27) ; Claude Code | pass (constaté par le développeur, non sondé) | `plugins/skraft-backlog/prd-backlog/briefs.mjs` (`contextLines`) |
 | `gh pr create --help` nomme `--attach` (aide lue sur la machine du développeur) | gh **2.103.3** | pass (lecture de l'aide) | « Use `--attach` to upload an image or video… If the body references an attached file, such as `![alt](./login.png)`, that reference is rewritten… Paths in a `--body-file` are relative to its directory, falling back to the working directory… up to 50 files per command… If some attachments upload and others fail, the pull request is still created… exits with a non-zero status, but the new pull request's URL is still printed » |
 | `gh-pr-attach` (`eng/host-probe/copilot-probe.mjs`, aide de `gh pr create`, aucun appel réseau) | gh local | not measured (sonde non lancée sur cette branche) | — |
 | première version de gh qui propose `--attach` (le plan dit v2.88.0) | gh | not measured | — |

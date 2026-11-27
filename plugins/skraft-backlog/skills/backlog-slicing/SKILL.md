@@ -114,6 +114,17 @@ has options and a recommendation. The slice brief lists every question with its 
 the recommendation when none was given: follow them. A PRD in draft sliced anyway: every story's
 `description` ends with the note the answer names.
 
+Context beside the PRD — the product owner's notes, documents, images of the architecture, the
+team's `docs/backlog/slicing-rules.md` — is read-only and binds the cut like the PRD. Framing it:
+- `constraints`: each statement that bends the cut (an epic split, an order, a boundary, a
+  deployment unit), one line with its file.
+- `cut`: the cut of the epics it imposes, if any; `fine: false` with its `risks` when yours would
+  be better. The imposed cut is followed even then: the workflow asks the product owner, never
+  you.
+- A statement that contradicts the PRD: one question, fix the context or keep the PRD.
+Slicing, the brief lists the constraints and the imposed cut: follow them; departing from one is
+a `decisions` line saying why.
+
 ## Schema
 
 The exact shape is in [story-map-schema.md](references/story-map-schema.md). Keep every id you
