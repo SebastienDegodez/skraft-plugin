@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet sont documentées ici.
 Format basé sur [Conventional Commits](https://www.conventionalcommits.org/) — versionnage [SemVer](https://semver.org/).
 
+## [2.0.0-alpha.112](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.111...v2.0.0-alpha.112) (2026-11-27)
+
+### ✨ Features
+
+* **backlog:** read any PRD as written, slice in two levels, publish to Azure Boards ([#677](https://github.com/SebastienDegodez/skraft-plugin/issues/677)) ([ba5f5f0](https://github.com/SebastienDegodez/skraft-plugin/commit/ba5f5f0828bf8d9b58ff88b01bd24d37c7757741))
+
 ## [2.0.0-alpha.111](https://github.com/SebastienDegodez/skraft-plugin/compare/v2.0.0-alpha.110...v2.0.0-alpha.111) (2026-11-26)
 
 ### ✨ Features
