@@ -56,15 +56,17 @@ const published = (events, key) => {
 
 /**
  * What a CI job ends on: a run that waits on a question nobody can read fails the job, so the
- * question is not lost while the job reads as passed; a run that waits on a published question,
- * or on no one, passes it (#662).
+ * question is not lost while the job reads as passed; a finished run or one waiting on a
+ * published question passes it (#662).
  * @param {any} deps
  */
 export const checkInCi = async (deps) => {
   const opened = await openActiveRun(deps, null)
   if (!opened.ok) return { ok: false, code: opened.outcome.code, reason: opened.outcome.reason }
-  const question = waitingOn(deriveRun(opened.journal.events))
-  if (question === null) return { ok: true, code: null, reason: 'the run waits on no one' }
+  const run = deriveRun(opened.journal.events)
+  const question = waitingOn(run)
+  if (question === null && run.finished) return { ok: true, code: null, reason: 'the run is finished' }
+  if (question === null) return { ok: false, code: 'run-incomplete', reason: 'the run is unfinished and has no published question' }
   if (published(opened.journal.events, question.key)) return { ok: true, code: null, reason: 'the question the run waits on is published' }
   return { ok: false, code: 'question-unpublished', reason: `the run waits on ${question.key}, which neither a draft nor an issue comment holds: publish it again (skraft_deliver_draft)` }
 }

@@ -28,6 +28,16 @@ const ciSession = () => {
 
 const questionComments = (comments) => comments.filter(({ body }) => body.startsWith('<!-- skraft-deliver:question:v1 key='))
 
+test('CI fails when the delivery is refused before it can dispatch or publish a question', async () => {
+  const { host, deps, run } = ciSession()
+  const config = JSON.parse(await host.workspace.read('skraft-deliver-config.json'))
+  delete config.components[0].bdd
+  await host.workspace.write('skraft-deliver-config.json', JSON.stringify(config))
+  assert.equal((await run.start({ issue: 42, mode: 'ci' })).status, 'ready')
+  assert.equal((await createRunPipeline(deps).run()).code, 'configuration-incomplete')
+  assert.equal((await checkInCi(deps)).ok, false)
+})
+
 test('in CI a delivery asks each question in a comment of its own: on the story before it commits anything, then on its draft, each answer marked with who gave it', async () => {
   const { host, deps, run } = ciSession()
   const started = await draftInCi(deps, await run.start({ issue: 42, mode: 'ci' }))
