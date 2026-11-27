@@ -17,7 +17,7 @@ skills:
 
 Find every test that proves nothing (test theater) and every test changed to pass (Iron Rule) in the DELIVER changes. Report; never repair.
 
-Read the skill file your brief lists under Skill before any other input; judge with its C12, its reference `references/test-theater-patterns.md` and your table.
+Your first turn loads `craft-discipline` by name, in parallel with the first inputs you read; then read its reference `references/test-theater-patterns.md` once. Read each file once in the pass; judge with its C12, that reference and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - The patch holds every change since the base of the run, DISTILL's acceptance tests included: a test written and then weakened inside the run shows only in its final form, so check its values against the `.feature` rather than against removed lines.

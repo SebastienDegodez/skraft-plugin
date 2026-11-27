@@ -182,8 +182,11 @@ const commitCommand = (type, text, { slug, issue }) => `git commit -s -m "${type
 /** What the agent checks its work against before it writes its result. @param {Brief} brief */
 const selfCheckLines = ({ tdd, components, checklists }) => [
   ...gateLines(tdd, components),
-  ...checklists.map((path) => `- Before you write your result, check your outputs against every gate of ${path}, the gates the review of your phase judges them by, and fix each one they fail.`),
+  ...checklists.map((path) => `- Before you write your result, check your outputs against every gate of the skill \`${skillNameOf(path)}\` you loaded, the gates the review of your phase judges them by, and fix each one they fail.`),
 ]
+
+/** The name of a skill: the folder of its SKILL.md. @param {string} path */
+const skillNameOf = (path) => /** @type {string} */ (path.split(/[\\/]/).at(-2))
 
 const COMMIT_EVERY_CHANGE = '- Commit every file you change outside the tracking folder before you write your result, as `type(<story>): subject` (`docs(<story>): …` for a document); the engine refuses a change left uncommitted.'
 

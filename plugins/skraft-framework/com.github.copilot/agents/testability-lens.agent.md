@@ -18,7 +18,7 @@ skills:
 
 Find every scenario or committed acceptance test that cannot be implemented and checked as written. Report; never repair.
 
-Read the skill files your brief lists under Skill before any other input; judge with their criteria and your table.
+Your first turn loads `acceptance-review-criteria` and `acceptance-review-testability` by name, in parallel with the first inputs you read; read each file once in the pass. Judge with their criteria and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - Judge test files from the changed-files list and the patch, never from what a plan says exists.

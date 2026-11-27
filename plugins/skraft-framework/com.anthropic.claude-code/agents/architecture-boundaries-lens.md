@@ -17,7 +17,7 @@ skills:
 
 Find every Clean Architecture breach in the production code and unit tests the DELIVER changes hold. Report; never repair.
 
-Read the skill files your brief lists under Skill before any other input; judge with their criteria and your table.
+Your first turn loads `clean-architecture-testing` and `craft-discipline` by name, in parallel with the first inputs you read; read each file once in the pass. Judge with their criteria and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - Open `docs/adr/decisions-index.md` and the tactical design `docs/architecture/{bounded-context}.md` of each context the patch touches.

@@ -12,10 +12,10 @@ import { PULL_REQUEST_FILE } from './pull-request.mjs'
  * @typedef {{
  *   lens: import('./lenses.mjs').Lens, phase: string, slug: string,
  *   story: { issue?: number | null, title?: string | null } | null,
- *   inputs: LensInput[], skills: string[], known: Finding[], unchanged: boolean, retry: string | null,
+ *   inputs: LensInput[], known: Finding[], unchanged: boolean, retry: string | null,
  *   baseRules: BaseRules, instructions: string[],
  * }} LensBrief
- *   skills: the absolute paths of the SKILL.md files the lens declares; known: the findings the
+ *   known: the findings the
  *   engine already reports on these changes; unchanged: the lens reads the changes and the run
  *   changed nothing outside the tracking folder; retry: why the previous answer was refused, on the
  *   one retry; baseRules: what the brief says of the working copy's rule files, when the
@@ -40,9 +40,8 @@ const TITLES = Object.freeze({
 })
 
 /** @param {LensBrief} brief */
-export const composeLensBrief = ({ lens, phase, slug, story, inputs, skills, known, unchanged, retry, baseRules, instructions }) => [
+export const composeLensBrief = ({ lens, phase, slug, story, inputs, known, unchanged, retry, baseRules, instructions }) => [
   ...(lens.blind ? [`## Skraft review lens: ${lens.name}`] : [`## Skraft review lens: ${lens.name} (${phase})`, `- Story: ${storyLine(story)}`, `- Feature scope: ${slug}`]),
-  ...skillLines(skills),
   ...inputLines(inputs, baseRules),
   ...degradedLines(lens, inputs),
   ...passLines({ unchanged, known, instructions }),

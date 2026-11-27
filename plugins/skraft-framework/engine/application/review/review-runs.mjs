@@ -576,7 +576,7 @@ const lensDispatch = ({ deps, slug, sources, step, assignments, inputs: given, r
   agent: lens.agent,
   source: sources[lens.agent],
   label: reviewLabel({ slug, step: step.node.id, visit: step.visit, what: lens.id, attempt }),
-  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), skills: pathsOf(skills), known, unchanged, retry, baseRules: rulesBrief ?? null, instructions: humanInstructions(step) }),
+  prompt: composeLensBrief({ lens, phase: step.phase, slug, story: given.story, inputs: located(deps, slug, inputs), known, unchanged, retry, baseRules: rulesBrief ?? null, instructions: humanInstructions(step) }),
   ...modelOf(assignments.lenses[lens.agent]),
 })
 
