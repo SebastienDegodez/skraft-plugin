@@ -4,6 +4,7 @@ import { agent, API, pipelineHost } from '../support/pipeline-host.mjs'
 import { lightDesigner } from '../support/light-designer.mjs'
 import { createDeliveryRun } from '../../../../plugins/skraft-deliver/engine/application/architecture/delivery-run.mjs'
 import { createAgentLoop } from '../../../../plugins/skraft-deliver/engine/drivers/cli/agent-loop.mjs'
+import { createLoopAgentRunner, HandedOver, pendingDispatches } from '../../../../plugins/skraft-deliver/engine/drivers/cli/loop-agent-runner.mjs'
 import { createRunPipeline } from '../../../../plugins/skraft-deliver/engine/application/pipeline/run-pipeline-usecase.mjs'
 import { createDecide } from '../../../../plugins/skraft-deliver/engine/application/decisions/decide-usecase.mjs'
 import { createHash, createHmac } from 'node:crypto'
@@ -32,10 +33,30 @@ test('no architecture starts with a light design before DISTILL, never RESEARCH,
   const step = await loop.next()
   assert.equal(step.status, 'dispatch', step.reason)
   assert.deepEqual(step.dispatches.map(({ agent }) => agent), ['deliver-light-designer'])
+  const reply = step.dispatches[0].reply.slice(host.tracking.location('issue-42', '').length)
+  assert.equal(await host.tracking.read('issue-42', reply), null, 'the host can create the reply file')
   assert.equal((await run.prepare()).status, 'ready')
   assert.equal((await loop.next()).code, 'not-recorded')
   assert.deepEqual(branches, [{ name: 'deliver/issue-42', existing: false }])
   assert.equal(host.events().some(({ phase }) => phase === 'RESEARCH'), false)
+})
+
+test('a later handoff lets the host create a new reply without overwriting an earlier reply', async () => {
+  const { host } = session()
+  const tokens = ['first', 'second']
+  const runner = createLoopAgentRunner({ files: host.tracking, slug: 'issue-42', replies: new Map(), token: () => tokens.shift() })
+  const dispatch = { label: 'review', agent: 'reviewer', prompt: 'Review the work.' }
+  await assert.rejects(runner.run(dispatch), HandedOver)
+  const [first] = await pendingDispatches(host.tracking, 'issue-42')
+  assert.equal(await host.tracking.read('issue-42', first.reply), null)
+  await host.tracking.write('issue-42', first.reply, 'earlier answer')
+
+  await assert.rejects(runner.run(dispatch), HandedOver)
+  const [second] = await pendingDispatches(host.tracking, 'issue-42')
+
+  assert.notEqual(second.reply, first.reply)
+  assert.equal(await host.tracking.read('issue-42', second.reply), null)
+  assert.equal(await host.tracking.read('issue-42', first.reply), 'earlier answer')
 })
 
 test('delivery retains human scenario approval, TDD, gates and final review before its local PR', async () => {

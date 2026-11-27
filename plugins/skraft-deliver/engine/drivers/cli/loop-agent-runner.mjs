@@ -59,13 +59,12 @@ const answersOf = async ({ files, slug, replies, token, host = 'copilot' }, disp
 }
 
 /**
- * Writes each brief, ending with its token, and an empty reply, then the list of what is pending.
+ * Writes each brief, ending with its token, then the list of what is pending.
  * @param {TrackingFiles} files @param {string} slug @param {Array<{ dispatch: AgentDispatch, handed: HandedDispatch }>} each
  */
 const handOver = async (files, slug, each) => {
   for (const { dispatch, handed } of each) {
     await files.write(slug, handed.brief, `${dispatch.prompt}\n\n## Reply token\nEnd your reply with this line, as it is: ${tokenLine(handed.token)}\n`)
-    await files.write(slug, handed.reply, '')
   }
   await files.write(slug, PENDING_FILE, `${JSON.stringify({ dispatches: each.map(({ handed }) => handed) }, null, 2)}\n`)
 }
@@ -80,7 +79,7 @@ const handedOf = ({ label, agent, models, effort }, index, token, host) => ({
   model: models?.[host]?.[0] ?? null,
   effort: effort?.[host] ?? null,
   brief: `${LOOP_FOLDER}/dispatch-${index + 1}.brief.md`,
-  reply: `${LOOP_FOLDER}/dispatch-${index + 1}.reply.md`,
+  reply: `${LOOP_FOLDER}/dispatch-${index + 1}.${token}.reply.md`,
   token,
 })
 
