@@ -24,7 +24,10 @@ const POLICY = Object.freeze([
   '- api (dotnet) internal gateway: in-memory (targeted), testcontainers (walking skeleton) — Testcontainers; source plugin',
   '- api (dotnet) external gateway: in-process (targeted), in-process (walking skeleton) — WebApplicationFactory; source skraft-config.json (mocking.strategy)',
   '- api (dotnet) clock: fake (targeted), fake (walking skeleton); source plugin',
-  '- Before you write your result, check your outputs against every gate of /plugin/skills/acceptance-review-criteria/SKILL.md, the gates the review of your phase judges them by, and fix each one they fail.',
+  '- Before you write your result, check your outputs against every gate of the skill `acceptance-review-coverage` you loaded, the gates the review of your phase judges them by, and fix each one they fail.',
+  '- Before you write your result, check your outputs against every gate of the skill `acceptance-review-business-alignment` you loaded, the gates the review of your phase judges them by, and fix each one they fail.',
+  '- Before you write your result, check your outputs against every gate of the skill `acceptance-review-testability` you loaded, the gates the review of your phase judges them by, and fix each one they fail.',
+  '- Before you write your result, check your outputs against every gate of the skill `acceptance-review-boundary-enforcement` you loaded, the gates the review of your phase judges them by, and fix each one they fail.',
 ])
 
 test('the nominal run goes through RESEARCH, DESIGN, DISTILL and DELIVER, the traced gate runs and the delivery review closing it, then PUBLISH writes the pull request', async () => {

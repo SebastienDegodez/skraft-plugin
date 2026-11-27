@@ -123,9 +123,10 @@ cases: G1), **business alignment** (no implementation detail in a step), **testa
 can be implemented, the reds are the right ones, the tests hold the walking skeleton and the
 acceptance test of every scenario, and the Gherkin is well formed: T4), and **boundaries** (the walking skeleton walks S1 from the real entry
 point, each acceptance test drives only the use case). The lenses judge the criteria, the form of the Gherkin, the walking-skeleton tag and any exemption; the engine computes the verdict; a
-`NEEDS_REWORK` sends the acceptance-designer back with the findings that stand. Its brief gives the
-path of `acceptance-review-criteria`, the gates these lenses judge by: it checks its outputs
-against every one before it writes its result.
+`NEEDS_REWORK` sends the acceptance-designer back with the findings that stand. Each lens loads the skill of its
+own gates (`acceptance-review-coverage`, `-business-alignment`, `-testability`,
+`-boundary-enforcement`). The acceptance-designer's brief gives the paths of all four: it checks
+its outputs against every gate before it writes its result.
 
 ## Sources
 

@@ -135,8 +135,10 @@ portent le walking skeleton et le test d'acceptation de chaque scénario, et le 
 (le walking skeleton parcourt S1 depuis le vrai point d'entrée, chaque test d'acceptation ne
 pilote que le cas d'usage).
 Les lentilles jugent les critères, la forme du Gherkin, le tag walking skeleton et l'éventuelle exemption ; le moteur calcule le verdict ; un `NEEDS_REWORK` renvoie l'acceptance-designer avec les findings
-retenus. Son brief donne le chemin d'`acceptance-review-criteria`, les gates selon lesquels ces
-lentilles jugent : il vérifie ses sorties contre chacun avant d'écrire son résultat.
+retenus. Chaque lentille charge la skill de ses propres gates
+(`acceptance-review-coverage`, `-business-alignment`, `-testability`, `-boundary-enforcement`).
+Le brief de l'acceptance-designer donne le chemin des quatre : il vérifie ses sorties contre
+chaque gate avant d'écrire son résultat.
 
 ## Sources
 

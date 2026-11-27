@@ -17,7 +17,7 @@ skills:
 
 Find every place where the DESIGN documents contradict each other, the research or the story. Report; never repair.
 
-Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
+Your first turn loads `architecture-review-criteria` by name, in parallel with the first inputs you read; read each file once in the pass. Judge with its criteria and your table.
 
 - Read `docs/adr/decisions-index.md` first when your inputs list it; open an ADR body only for an ADR this pass wrote or changed, or when a finding needs its rationale.
 - An ADR the pass under review wrote is `Proposed`: it satisfies every criterion that asks for an `Accepted` ADR and falls under every criterion that forbids one. Never report an ADR for being `Proposed`.

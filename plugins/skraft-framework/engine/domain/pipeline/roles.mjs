@@ -95,7 +95,7 @@ const ROLES = Object.freeze({
 })
 
 /** The skills whose gates the review of an agent's phase judges its outputs by, by agent. */
-const CHECKLISTS = /** @type {Readonly<Record<string, readonly string[]>>} */ (Object.freeze({ 'acceptance-designer': Object.freeze(['acceptance-review-criteria']) }))
+const CHECKLISTS = /** @type {Readonly<Record<string, readonly string[]>>} */ (Object.freeze({ 'acceptance-designer': Object.freeze(['acceptance-review-coverage', 'acceptance-review-business-alignment', 'acceptance-review-testability', 'acceptance-review-boundary-enforcement']) }))
 
 /**
  * The skills an agent checks its outputs against before its result: the gates the review of its

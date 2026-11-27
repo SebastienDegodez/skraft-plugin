@@ -17,7 +17,7 @@ skills:
 
 Find every Clean Architecture or DDD breach in the documents DESIGN wrote and in the changes since the run base. Report; never repair.
 
-Read the skill file your brief lists under Skill before any other input; judge with its criteria and your table.
+Your first turn loads `architecture-review-criteria` by name, in parallel with the first inputs you read; read each file once in the pass. Judge with its criteria and your table.
 
 - Read the patch; open a whole file only when the patch lacks the context a finding needs.
 - The context map, the diagrams and the event model are the `docs/architecture/` and `docs/domain/event-model/` paths among the changed files: judge what the patch adds or changes in them.
