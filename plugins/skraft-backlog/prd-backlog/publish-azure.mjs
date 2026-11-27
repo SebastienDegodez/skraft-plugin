@@ -8,12 +8,18 @@
 // PRD level: an epic is an Epic, a story an Issue. A milestone is an iteration that already
 // exists; a missing one is created only when the human checked it in the handoff, and when it
 // cannot be, the items carry a `milestone/<title>` tag and the report says to create it by hand.
-import { PublishBlocked } from './publish.mjs'
+import { existsSync } from 'node:fs'
+import { delimiter, dirname, join } from 'node:path'
+
+import { PublishBlocked, ghCli } from './publish.mjs'
 import { leaksOf } from './render.mjs'
 
 /** The marker a work item carries: plain text, which the description sanitizer keeps. */
 export const BOARDS_MARKER = /skraft-backlog:item=([A-Za-z0-9._-]+)/
 const markerLine = (id) => `<p><sub>skraft-backlog:item=${id}</sub></p>`
+
+/** The developer signs in once, in a terminal; skraft never does and never reads a token. */
+export const SIGN_IN = 'az cannot read the Azure DevOps project: sign in once in a terminal with `az login` (or set AZURE_DEVOPS_EXT_PAT where no one can sign in), check the azure-devops extension (`az extension add --name azure-devops`) and the organization/project, then run again'
 
 /** The requirement type of each process, in the order a project is tried. */
 const REQUIREMENT_TYPES = Object.freeze(['User Story', 'Product Backlog Item', 'Requirement', 'Issue'])
@@ -28,6 +34,22 @@ const REQUIREMENT_TYPES = Object.freeze(['User Story', 'Product Backlog Item', '
  * @typedef {{ binding: string, mapping: Record<string, string>, operations: OperationLog[], failed: number, skipped: number,
  *   hierarchy: Hierarchy | null, iterations: { title: string, status: 'existing' | 'created' | 'tagged', detail: string }[] }} BoardsReport
  */
+
+/**
+ * An `az` runner over argv arrays, never a shell. Under Windows `az` is `az.cmd`, which only
+ * cmd.exe can start and whose quoting would mangle a description: the runner starts the Python
+ * that `az.cmd` wraps (`<CLI2>\\python.exe -IBm azure.cli`), as `az.cmd` itself does.
+ * @param {string | undefined} cwd @param {{ signal?: AbortSignal, platform?: NodeJS.Platform, path?: string }} [options]
+ * @returns {AzRun}
+ */
+export const azCli = (cwd, { signal, platform = process.platform, path = process.env.PATH ?? '' } = {}) => {
+  if (platform !== 'win32') return ghCli(cwd, { signal, program: 'az' })
+  const wrapper = path.split(delimiter).map((dir) => join(dir, 'az.cmd')).find((file) => existsSync(file))
+  const python = wrapper ? join(dirname(wrapper), '..', 'python.exe') : null
+  if (!python || !existsSync(python)) return () => ({ status: 1, stdout: '', stderr: 'az.cmd and its python.exe were not found on the PATH' })
+  const run = ghCli(cwd, { signal, program: python, platform })
+  return (args, input) => run(['-IBm', 'azure.cli', ...args], input)
+}
 
 /** The organization and project of an Azure DevOps remote URL, or null. @param {string} url @returns {BoardsTarget | null} */
 export const boardsTargetOf = (url) => {
@@ -69,8 +91,12 @@ export const createBoards = (run, target) => {
   }
   return Object.freeze({
     /** The work item types of the project. */
-    types: async () => ((await json(['devops', 'invoke', ...scope, '--area', 'wit', '--resource', 'workitemtypes',
-      '--route-parameters', `project=${target.project}`, '--api-version', '7.1'], 'reading the work item types'))?.value ?? []).map((t) => t.name),
+    types: async () => {
+      const result = await run(['devops', 'invoke', ...scope, '--area', 'wit', '--resource', 'workitemtypes',
+        '--route-parameters', `project=${target.project}`, '--api-version', '7.1', '--output', 'json'])
+      if (result.status !== 0) throw new PublishBlocked(SIGN_IN)
+      return (parsed(result)?.value ?? []).map((t) => t.name)
+    },
     /** Every work item tagged skraft-backlog, with its description. */
     tagged: async () => (await json(['boards', 'query', ...project, '--wiql',
       `SELECT [System.Id], [System.Description] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.Tags] CONTAINS 'skraft-backlog'`], 'reading the skraft work items')) ?? [],

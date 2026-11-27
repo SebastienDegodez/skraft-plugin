@@ -888,3 +888,14 @@ test('Azure DevOps Basic: no Feature level, an epic is an Epic and a story an Is
   assert.deepEqual([...new Set(azure.state.items.map((i) => i.type))].sort(), ['Epic', 'Issue'])
   assert.equal(azure.state.items.filter((i) => i.type === 'Epic').length, 2, 'no PRD Epic: one Epic per epic')
 })
+
+test('Azure DevOps, nobody signed in: the run stops before any agent and says who signs in, and how', async (t) => {
+  const { cwd, cleanup } = await workingCopy()
+  t.after(cleanup)
+  const azure = fakeAzure({ signedIn: false })
+  const { result, runs } = await runUntil({ cwd, github: null, host: { az: azure.run, git: fakeGit('https://dev.azure.com/contoso/Permis/_git/permis') }, args: { prd: 'docs/prd/eligibilite.md' } })
+  assert.deepEqual([result.status, result.code], ['refused', 'azure-sign-in'])
+  assert.match(result.reason, /^az cannot read the Azure DevOps project: sign in once in a terminal with `az login`/)
+  assert.doesNotMatch(result.reason, /Before you can run/, 'never the az text')
+  assert.deepEqual(runs.flatMap((r) => r.calls), [], 'no agent ran')
+})

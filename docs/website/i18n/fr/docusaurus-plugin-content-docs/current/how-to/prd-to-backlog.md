@@ -163,8 +163,7 @@ jamais à l'agent.
 ## Publier dans Azure DevOps Boards
 
 Avec un remote git sur `dev.azure.com` (ou `forge: azure-devops` et `repo: organisation/projet`),
-le même run publie dans Azure Boards par `az` (extension `azure-devops`, connecté :
-`az account show`). Le process du projet décide des cartes :
+le même run publie dans Azure Boards par `az`. Le process du projet décide des cartes :
 
 | Process | PRD | Epic de la carte | Story |
 |---|---|---|---|
@@ -177,6 +176,27 @@ Chaque story est l'enfant de sa Feature et la suivante des stories qu'elle atten
 `Predecessor`) ; sa priorité, son effort et son statut sont des tags, jamais des Story Points ni
 une Priority. Le handoff est sous `.copilot-tracking/workitems/prds/<slug>/handoff.md`.
 
+### Connexion
+
+C'est vous qui vous connectez, une fois, dans votre propre terminal, avant de lancer le run —
+comme `gh auth login` pour GitHub. skraft ne se connecte jamais, ne demande aucun jeton et n'en
+lit aucun : il appelle `az`, qui utilise votre session. Aucun personal access token (PAT) n'est
+nécessaire sur un poste de développeur.
+
+```bash
+az extension add --name azure-devops
+az login
+```
+
+Le run vérifie l'accès avant qu'aucun agent ne travaille : déconnecté, il s'arrête tout de suite
+et demande de lancer `az login`. Un PAT ne sert que là où personne ne peut se connecter — un
+utilisateur invité de l'organisation, ou une automatisation : `az` le lit dans la variable
+d'environnement `AZURE_DEVOPS_EXT_PAT` ; dans Azure Pipelines, préférez une service connection.
+Le compte connecté crée des work items dans le projet (Contributors), et ne crée des itérations
+que si vous cochez la case ci-dessous (un droit souvent réservé aux administrateurs du projet).
+
+### Itérations
+
 Un milestone est une itération qui existe déjà, retrouvée par son nom. Une itération manquante
 n'est créée que si vous cochez `Create the missing iterations` dans le handoff, et seulement avec
 le droit de créer des itérations. Sinon, ou si la création est refusée, ses cartes portent le tag
@@ -188,7 +208,8 @@ de cartes Azure Boards : c'est le workflow, à son handoff.
 | Message | Action |
 |---|---|
 | `Azure DevOps: pass args.repo as organization/project, …` | Passer `repo: organisation/projet`, ou lancer depuis une copie de travail dont le remote est sur `dev.azure.com`. |
-| `az: … failed` | Vérifier `az account show` et l'extension `azure-devops` (`az extension show --name azure-devops`), puis reprendre. |
+| `az cannot read the Azure DevOps project: sign in once in a terminal with az login …` | Lancer `az login` dans votre terminal (ou définir `AZURE_DEVOPS_EXT_PAT` dans une automatisation), vérifier l'extension `azure-devops` et `repo`, puis relancer. |
+| `az: … failed` | La session a expiré ou un droit manque : refaire `az login`, puis reprendre. |
 | `args.prd: the PRD defines no functional requirement — …` | Vérifier que chaque id d'exigence ouvre sa ligne, sa puce, son titre, son passage en gras ou sa ligne de tableau ; pour un PRD HVE à préfixes propres, passer `format: hve`. Le PRD lui-même n'est jamais réécrit. |
 | `agents not registered in this session: …` | Redémarrer la session Copilot, ou réinstaller `skraft-backlog`, puis relancer. |
 | `SLICE: N problem(s) left after 3 attempts` | Lire les problèmes listés, corriger `story-map.json` à la main, relancer. |

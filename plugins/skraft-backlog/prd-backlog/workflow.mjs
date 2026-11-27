@@ -22,7 +22,7 @@ import { holdBackDependents, isReviewed, planOperations, planProblems, renderHan
 import { CorrectionFailed, acceptedOf, applyDependency, applyMerge, applySplit, correctionsOf, proposeCorrections, SPLIT_KINDS, splitProblems, withDecisions } from './corrections.mjs'
 import { FORMATS, criteriaFor, fingerprintOf, inventoryOf, sha256 } from './prd-inventory.mjs'
 import { PublishBlocked, createGitHub, ghCli, publish, publishedItems, renderHandoffLogs } from './publish.mjs'
-import { boardsTargetOf, createBoards, publishToBoards, publishedWorkItems } from './publish-azure.mjs'
+import { SIGN_IN, azCli, boardsTargetOf, createBoards, publishToBoards, publishedWorkItems } from './publish-azure.mjs'
 import { loadBacklog, writeCorrections, writePublished } from './canvas/store.mjs'
 import { renderAcDraft, renderStoriesFile, renderStoryMap, say } from './render.mjs'
 import { explanation } from './canvas/ui/i18n.mjs'
@@ -266,7 +266,7 @@ const stages = async (ctx, run, host) => {
  */
 
 /** @param {WorkflowContext} ctx @param {Host} host @returns {Promise<Run | { status: string, reason: string }>} */
-const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined, { signal: ctx.signal }), git = ghCli(cwd ?? undefined, { signal: ctx.signal, program: 'git' }) }) => {
+const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = ghCli(cwd ?? undefined, { signal: ctx.signal }), git = ghCli(cwd ?? undefined, { signal: ctx.signal, program: 'git' }), az = azCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
   if (cwd === null) return NO_DIRECTORY
   if (unknownKeys(ctx.args)) return INVALID_ARGS
   ctx.phase?.('INVENTORY')
@@ -284,6 +284,7 @@ const prepare = async (ctx, { cwd, now = () => new Date().toISOString(), gh = gh
   if (ctx.args.forge !== undefined && !['github', 'azure-devops'].includes(ctx.args.forge)) return INVALID_FORGE
   const forge = await ctx.step('forge-v1', () => forgeOf(ctx.args, git))
   if (forge.name === 'azure-devops' && !forge.target) return NO_AZURE_TARGET
+  if (forge.name === 'azure-devops' && !(await ctx.step('boards-access-v1', () => canReadBoards(az, forge.target)))) return { status: 'refused', code: 'azure-sign-in', reason: SIGN_IN }
   const repoInfo = forge.name === 'azure-devops' ? { repo: `${forge.target?.org}/${forge.target?.project}`, branch: 'main' } : await ctx.step('repo-v1', () => repositoryOf(ctx.args.repo, gh))
   const pass = await ctx.step('pass-v1', () => `${now()}|${Math.random().toString(36).slice(2, 10)}`)
   const relativePrd = relative(cwd, path).split(sep).join('/')
@@ -349,6 +350,11 @@ const forgeOf = async (args, git) => {
   if (name === 'github') return { name, target: null }
   const given = typeof args.repo === 'string' ? /^([^/\s]+)\/([^/]+)$/.exec(args.repo.trim()) : null
   return { name, target: given ? { org: given[1], project: given[2] } : fromRemote }
+}
+
+/** Checked before any agent runs: a run that cannot publish stops at once, not after the slicing. @param {import('./publish-azure.mjs').AzRun} az @param {any} target */
+const canReadBoards = async (az, target) => {
+  try { await createBoards(az, target).types(); return true } catch { return false }
 }
 
 /** @param {import('./publish.mjs').GhRun} git */
@@ -1453,7 +1459,7 @@ const publishHandoff = async (ctx, run, plan, host) => {
  * their box in the handoff.
  * @param {WorkflowContext} ctx @param {Run} run @param {import('./handoff.mjs').Plan} plan @param {Host} host
  */
-const publishBoards = async (ctx, run, plan, { cwd, az = ghCli(cwd ?? undefined, { signal: ctx.signal, program: 'az' }) }) => {
+const publishBoards = async (ctx, run, plan, { cwd, az = azCli(cwd ?? undefined, { signal: ctx.signal }) }) => {
   const dryRun = ctx.args.dryRun === true
   const target = /** @type {import('./publish-azure.mjs').BoardsTarget} */ (run.forge.target)
   const handoff = await readFile(join(run.handoffDir, 'handoff.md'), 'utf8')

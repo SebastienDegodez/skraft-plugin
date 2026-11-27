@@ -160,8 +160,8 @@ never to the agent.
 ## Publish to Azure DevOps Boards
 
 With a git remote on `dev.azure.com` (or `forge: azure-devops` and `repo: organization/project`),
-the same run publishes to Azure Boards through `az` (the `azure-devops` extension, signed in:
-`az account show`). The process of the project decides the cards:
+the same run publishes to Azure Boards through `az`. The process of the project decides the
+cards:
 
 | Process | PRD | Epic of the map | Story |
 |---|---|---|---|
@@ -174,6 +174,26 @@ Each story is the child of its Feature and the successor of the stories it waits
 (`Predecessor` link); its priority, effort and status are tags, never Story Points or Priority.
 The handoff is under `.copilot-tracking/workitems/prds/<slug>/handoff.md`.
 
+### Sign in
+
+You sign in, once, in your own terminal, before you start the run — as `gh auth login` for
+GitHub. skraft never signs in, never asks for a token and never reads one: it calls `az`, which
+uses your session. No personal access token (PAT) is needed on a developer machine.
+
+```bash
+az extension add --name azure-devops
+az login
+```
+
+The run checks the access before any agent works: signed out, it stops at once and says to run
+`az login`. A PAT is only for where no one can sign in — a guest user of the organization, or an
+automation: `az` reads it from the `AZURE_DEVOPS_EXT_PAT` environment variable; in Azure
+Pipelines prefer a service connection. The signed-in account creates work items in the project
+(Contributors), and creates iterations only if you check the box below (a right often kept for
+project administrators).
+
+### Iterations
+
 A milestone is an iteration that already exists, matched by name. A missing one is created only
 if you check `Create the missing iterations` in the handoff, and only with the right to create
 iterations. Otherwise, or when the creation is refused, its cards carry the tag
@@ -185,7 +205,8 @@ create Azure Boards cards: the workflow does, at its handoff.
 | Message | Action |
 |---|---|
 | `Azure DevOps: pass args.repo as organization/project, …` | Pass `repo: organization/project`, or run from a working copy whose remote is on `dev.azure.com`. |
-| `az: … failed` | Check `az account show` and the `azure-devops` extension (`az extension show --name azure-devops`), then resume. |
+| `az cannot read the Azure DevOps project: sign in once in a terminal with az login …` | Run `az login` in your terminal (or set `AZURE_DEVOPS_EXT_PAT` in an automation), check the `azure-devops` extension and `repo`, then run again. |
+| `az: … failed` | The session expired or a right is missing: `az login` again, then resume. |
 | `args.prd: the PRD defines no functional requirement — …` | Check that each requirement id opens its line, bullet, heading, bold run or table row; for an HVE PRD with prefixes of its own, pass `format: hve`. The PRD itself is never rewritten. |
 | `agents not registered in this session: …` | Restart the Copilot session, or reinstall `skraft-backlog`, then run again. |
 | `SLICE: N problem(s) left after 3 attempts` | Read the problems listed, fix `story-map.json` by hand, run again. |

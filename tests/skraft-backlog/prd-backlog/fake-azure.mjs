@@ -10,9 +10,9 @@ const PROCESSES = Object.freeze({
 })
 
 /**
- * @param {{ org?: string, project?: string, process?: keyof typeof PROCESSES, iterations?: string[], canCreateIterations?: boolean }} [options]
+ * @param {{ org?: string, project?: string, process?: keyof typeof PROCESSES, iterations?: string[], canCreateIterations?: boolean, signedIn?: boolean }} [options]
  */
-export const fakeAzure = ({ org = 'contoso', project = 'Permis', process = 'Agile', iterations = [], canCreateIterations = true } = {}) => {
+export const fakeAzure = ({ org = 'contoso', project = 'Permis', process = 'Agile', iterations = [], canCreateIterations = true, signedIn = true } = {}) => {
   const state = {
     items: /** @type {Array<{ id: number, type: string, title: string, description: string, tags: string[], iteration: string | null }>} */ ([]),
     relations: /** @type {Array<{ id: number, type: string, target: number }>} */ ([]),
@@ -33,6 +33,7 @@ export const fakeAzure = ({ org = 'contoso', project = 'Permis', process = 'Agil
   /** @param {string[]} args */
   const run = (args) => {
     calls.push(args)
+    if (!signedIn) return fail("Before you can run Azure DevOps commands, you need to run the login command (az login if using AAD/MSA identity else az devops login if using PAT token) to setup credentials.")
     if (wrongTarget(args)) return fail('TF400813: wrong organization or project')
     const verb = args.slice(0, args.findIndex((a) => a.startsWith('--'))).join(' ')
     if (verb.startsWith('devops invoke')) return ok({ value: PROCESSES[process].map((name) => ({ name })) })
