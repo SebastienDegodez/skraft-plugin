@@ -189,9 +189,11 @@ az login
 ```
 
 Le run vérifie l'accès avant qu'aucun agent ne travaille : déconnecté, il s'arrête tout de suite
-et demande de lancer `az login`. Un PAT ne sert que là où personne ne peut se connecter — un
-utilisateur invité de l'organisation, ou une automatisation : `az` le lit dans la variable
-d'environnement `AZURE_DEVOPS_EXT_PAT` ; dans Azure Pipelines, préférez une service connection.
+et demande de lancer `az login`. Un PAT ne sert qu'à un utilisateur invité de l'organisation,
+pour qui seul `az devops login --organization https://dev.azure.com/<org>` fonctionne (vous collez
+le PAT quand il le demande ; `az` le garde), ou à une automatisation, où `az` le lit dans la
+variable d'environnement `AZURE_DEVOPS_EXT_PAT` ; dans Azure Pipelines, préférez une service
+connection. Dans tous les cas, c'est vous qui le lancez, pas skraft.
 Le compte connecté crée des work items dans le projet (Contributors), et ne crée des itérations
 que si vous cochez la case ci-dessous (un droit souvent réservé aux administrateurs du projet).
 

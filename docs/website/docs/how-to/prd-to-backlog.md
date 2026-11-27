@@ -186,9 +186,11 @@ az login
 ```
 
 The run checks the access before any agent works: signed out, it stops at once and says to run
-`az login`. A PAT is only for where no one can sign in — a guest user of the organization, or an
-automation: `az` reads it from the `AZURE_DEVOPS_EXT_PAT` environment variable; in Azure
-Pipelines prefer a service connection. The signed-in account creates work items in the project
+`az login`. A PAT is only for a guest user of the organization, for whom only
+`az devops login --organization https://dev.azure.com/<org>` works (you paste the PAT when it asks;
+`az` keeps it), or for an automation, where `az` reads it from the `AZURE_DEVOPS_EXT_PAT`
+environment variable; in Azure Pipelines prefer a service connection. Either way you run it, not
+skraft. The signed-in account creates work items in the project
 (Contributors), and creates iterations only if you check the box below (a right often kept for
 project administrators).
 

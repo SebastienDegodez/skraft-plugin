@@ -19,7 +19,7 @@ export const BOARDS_MARKER = /skraft-backlog:item=([A-Za-z0-9._-]+)/
 const markerLine = (id) => `<p><sub>skraft-backlog:item=${id}</sub></p>`
 
 /** The developer signs in once, in a terminal; skraft never does and never reads a token. */
-export const SIGN_IN = 'az cannot read the Azure DevOps project: sign in once in a terminal with `az login` (or set AZURE_DEVOPS_EXT_PAT where no one can sign in), check the azure-devops extension (`az extension add --name azure-devops`) and the organization/project, then run again'
+export const SIGN_IN = 'az cannot read the Azure DevOps project: sign in once in a terminal with `az login` (a guest of the organization: `az devops login` with a PAT; an automation: AZURE_DEVOPS_EXT_PAT), check the azure-devops extension (`az extension add --name azure-devops`) and the organization/project, then run again'
 
 /** The requirement type of each process, in the order a project is tried. */
 const REQUIREMENT_TYPES = Object.freeze(['User Story', 'Product Backlog Item', 'Requirement', 'Issue'])
