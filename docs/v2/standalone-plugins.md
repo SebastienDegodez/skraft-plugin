@@ -75,8 +75,9 @@ request itself, the pending question in its body, and asks each question in a co
 there, its marker naming the question's key (`<!-- skraft-design:question:v1 key=… -->`); while its
 branch holds no commit (GitHub opens no pull request without one), it pushes the branch and asks in
 a comment on the issue or epic instead. A question is posted once, never rewritten by the next one;
-once a person answered it, the engine rewrites its comment to say what it recorded, and the pull
-request's decisions list every answer. A design run always ends on a pull request ready for review,
+once a person answered it, the engine rewrites its comment to say what it recorded, keeping the
+question as it was asked folded below, without the reply to copy, and the pull request's decisions
+list every answer. A design run always ends on a pull request ready for review,
 whatever `publish.draft` says, its merge being the ratification: it opens it ready, or makes ready
 the draft it opened to ask a person; a forge that refuses leaves the publication local, saying why.
 `publish.draft` keeps its meaning for skraft-deliver. `skraft_deliver_start` takes the same `mode`,

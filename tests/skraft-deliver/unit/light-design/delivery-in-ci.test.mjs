@@ -64,6 +64,9 @@ test('in CI a delivery asks each question in a comment of its own: on the story 
   const [onDraft] = questionComments(host.codeHost.pullRequestComments)
   assert.ok(onDraft.body.startsWith('<!-- skraft-deliver:question:v1 key=light_design_review-1 -->'), onDraft.body)
   assert.match(onIssue.body, /^\*\*Recorded answer, from maintainer:\*\* `CONTINUE`/m)
+  assert.match(onIssue.body, /^<summary>The question as it was asked<\/summary>$/m)
+  assert.match(onIssue.body, /^\| `CONTINUE` \| /m)
+  assert.doesNotMatch(onIssue.body, /\/skraft-answer|Reply in one comment/)
   assert.equal(host.events().find(({ type, key }) => type === 'question.answered' && key === 'design_wait-1').author, 'maintainer')
 })
 

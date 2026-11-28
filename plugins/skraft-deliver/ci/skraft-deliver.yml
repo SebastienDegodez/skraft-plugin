@@ -3,7 +3,8 @@
 # - Run it by hand (workflow_dispatch) with one story issue: the delivery runs in mode "ci". When it
 #   waits on a person, the engine asks each question in a comment of its own: on the story while
 #   the delivery's branch holds no commit, then on its draft pull request. A new question never
-#   rewrites an earlier one; once answered, its comment says what was recorded and by whom.
+#   rewrites an earlier one; once answered, its comment says what was recorded and by whom,
+#   and keeps the question, folded.
 # - Answer with one comment: /skraft-answer, then one option (`/skraft-answer approved`), or a
 #   refusal and your corrections (`/skraft-answer REVISE mail the receipt from orders`), or an
 #   instruction in your own words for a blocked step. The comment resumes the same delivery: the

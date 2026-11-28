@@ -33,10 +33,14 @@ const fenced = (lines) => ['```text', ...lines, '```']
 export const questionComment = (question, language, on = 'issue') => {
   const words = wordsOf(language)
   const body = bodyOf(question, words)
-  return [questionMarker(question.key), '', ...body.title, '', words.intro[on], '', ...body.lines, '', `<sub>${words.key(code(question.key))}</sub>`, ''].join('\n')
+  return [questionMarker(question.key), '', ...body.title, '', words.intro[on], '', ...body.lines, ...body.reply, '', `<sub>${words.key(code(question.key))}</sub>`, ''].join('\n')
 }
 
-/** What a question's comment says, by what the question holds. @param {any} question @param {any} words */
+/**
+ * What a question's comment says, by what the question holds: its title, what it asks (`lines`),
+ * then the reply to copy (`reply`), which an answered comment leaves out.
+ * @param {any} question @param {any} words
+ */
 const bodyOf = (question, words) => {
   if (question.questions) return questionsBody(question, words)
   if (question.block) return blockBody(question, words)
@@ -46,8 +50,8 @@ const bodyOf = (question, words) => {
 /** REFRESH stopped on a merge conflict: the person merges the branch, then answers again. @param {any} question @param {any} words */
 const conflictBody = ({ options }, words) => ({
   title: [`### ${words.instructionTitle}`],
-  lines: [words.refreshConflict, '', ...answerTable(['instruction', 'REFRESH', ...options], 'blocked', words), '',
-    `**${words.reply}**`, ...fenced(['/skraft-answer REFRESH'])],
+  lines: [words.refreshConflict, '', ...answerTable(['instruction', 'REFRESH', ...options], 'blocked', words)],
+  reply: ['', `**${words.reply}**`, ...fenced(['/skraft-answer REFRESH'])],
 })
 
 /** A step blocked: what blocks it, what it left, then the answers. @param {any} question @param {any} words */
@@ -56,9 +60,9 @@ const blockBody = ({ block, options }, words) => ({
   lines: [
     blockHeadline(block, words),
     ...leftLines(block, words), '',
-    ...answerTable(['instruction', ...(block.refresh ? ['REFRESH'] : []), ...options], 'blocked', words), '',
-    `**${words.reply}**`, ...fenced([`/skraft-answer ${words.instructionExample}`]),
+    ...answerTable(['instruction', ...(block.refresh ? ['REFRESH'] : []), ...options], 'blocked', words),
   ],
+  reply: ['', `**${words.reply}**`, ...fenced([`/skraft-answer ${words.instructionExample}`])],
 })
 
 /** What blocks the step, and why, in one line. @param {any} block @param {any} words */
@@ -72,10 +76,9 @@ const decisionBody = ({ kind, text, options, refusals = [], facts }, words) => (
   title: [`### ${words.decisionTitle}`],
   lines: [
     `**${words.question}**`, '', ...(facts && words.texts[kind] ? words.texts[kind](facts) : quotedText(text)), '',
-    ...answerTable(options, kind, words), '',
-    `**${words.reply}**`, ...fenced([`/skraft-answer ${options[0]}`]),
-    ...refusals.map((refusal) => `\n${words.refusalHint(refusal)}`),
+    ...answerTable(options, kind, words),
   ],
+  reply: ['', `**${words.reply}**`, ...fenced([`/skraft-answer ${options[0]}`]), ...refusals.map((refusal) => `\n${words.refusalHint(refusal)}`)],
 })
 
 /** The question's text as a quote, line by line, without the REFRESH sentence the table says already. @param {string} text */
@@ -96,11 +99,8 @@ const effectOf = (words, kind, answer) => words.effects[kind]?.[answer] ?? words
 /** The architect's open questions: each with its options, the assumed one marked, then one reply for all. @param {any} question @param {any} words */
 const questionsBody = ({ questions }, words) => ({
   title: [`### ${words.questionsTitle(questions.length)}`],
-  lines: [
-    ...questions.flatMap((asked) => openQuestion(asked, words)),
-    `**${words.replyAll}**`, ...fenced(['/skraft-answer', ...questions.map(({ id }) => `${id}: ${words.optionOrWords}`)]),
-    '', words.ownWords,
-  ],
+  lines: questions.flatMap((asked) => openQuestion(asked, words)),
+  reply: [`**${words.replyAll}**`, ...fenced(['/skraft-answer', ...questions.map(({ id }) => `${id}: ${words.optionOrWords}`)]), '', words.ownWords],
 })
 
 /** @param {any} asked @param {any} words */
@@ -111,8 +111,8 @@ const openQuestion = (asked, words) => [
 ]
 
 /**
- * The comment of a question once answered: the answer the run recorded, then the question as it
- * was asked, without the reply it asked for.
+ * The comment of a question once answered: the answer the run recorded, what the question asked in
+ * one line, then the question as it was asked, folded, without the reply it asked for.
  * @param {{ key: string, text: string, block?: any, questions?: any[] }} question @param {string} answer
  * @param {import('../reporting/language.mjs').Language} language @param {string | null} [author] the forge login of who answered, when the journal holds it
  */
@@ -120,7 +120,17 @@ export const answeredComment = (question, answer, language, author = null) => {
   const words = wordsOf(language)
   const recorded = author === null ? words.recorded : words.recordedFrom(cell(author))
   return [questionMarker(question.key), '', `### ${words.answeredTitle}`, '', `**${recorded}** ${code(quoted(answer))}`, '',
-    `> ${askedLine(question, words)}`, '', `<sub>${words.key(code(question.key))}</sub>`, ''].join('\n')
+    `> ${askedLine(question, words)}`, '', ...askedFolded(question, words), `<sub>${words.key(code(question.key))}</sub>`, ''].join('\n')
+}
+
+/**
+ * The question as it was asked, in a folded block; nothing for a question the journal no longer
+ * holds, which has no options to show.
+ * @param {any} question @param {any} words
+ */
+const askedFolded = (question, words) => {
+  if (!question.questions && !Array.isArray(question.options)) return []
+  return ['<details>', `<summary>${words.askedAsIs}</summary>`, '', ...bodyOf(question, words).lines, '', '</details>', '']
 }
 
 /** What the question asked, in one line: a block's headline, the architect's questions, else its text's first line. @param {any} question @param {any} words */

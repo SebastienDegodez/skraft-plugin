@@ -567,6 +567,11 @@ test('in CI a block met after something is committed goes to the draft, and a re
   assert.match(first.body, /^### Question answered\n\n\*\*Recorded answer, from maintainer:\*\* `Q1 \(#42 AC-1\): A/m)
   assert.match(first.body, /^> The architect's questions \(2\)$/m)
   assert.match(first.bodies[0], /How is the receipt proved in this slice\?/)
+  // The answered comment still shows the question as it was asked, folded, without the reply it asked for.
+  assert.match(first.body, /^<details>\n<summary>The question as it was asked<\/summary>$/m)
+  assert.match(first.body, /How is the receipt proved in this slice\?/)
+  assert.match(first.body, /^\| `A` \*\(assumed meanwhile\)\* \| /m)
+  assert.doesNotMatch(first.body, /\/skraft-answer|Reply in one comment/)
   assert.match(host.codeHost.pullRequests[0].body, new RegExp(`Answered by maintainer \\(key \`${asked.question.key}\`\\): Q1 \\(#42 AC-1\\): A`))
   assert.equal(host.events().find(({ type, key }) => type === 'question.answered' && key === asked.question.key).author, 'maintainer')
   assert.equal(blocked.draft.on, 'pull-request')
@@ -989,6 +994,9 @@ test('in CI a question reads in the story\'s language: the stories the architect
   await createCommentAnswer(deps).answer({ author: 'maintainer', body: '/skraft-answer continue' })
   await draftInCi(deps, { status: 'waiting', slug: 'epic-42' })
   assert.match(asked.body, /^\*\*Réponse enregistrée, de maintainer :\*\* `CONTINUE`\n\n> L’architecte ne peut pas concevoir ces stories :$/m)
+  assert.match(asked.body, /^<summary>La question telle qu’elle a été posée<\/summary>$/m)
+  assert.match(asked.body, /^\| `CONTINUE` \| continue sans les stories bloquées \|$/m)
+  assert.doesNotMatch(asked.body, /\/skraft-answer|Répondez en un seul commentaire/)
 })
 
 test('in CI the open design branches that change the same contexts are listed in the question\'s comment, one per line', async () => {
